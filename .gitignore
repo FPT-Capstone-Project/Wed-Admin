@@ -27,6 +27,3 @@ dist-ssr
 .env
 .env.*
 
-# Bỏ qua các file ảnh/script tạm
-_tmp_*
-*.png
