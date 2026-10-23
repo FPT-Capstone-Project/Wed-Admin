@@ -22,3 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Bỏ qua file môi trường
+.env
+.env.*
+
+# Bỏ qua các file ảnh/script tạm
+_tmp_*
+*.png
