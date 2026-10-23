@@ -1,4 +1,4 @@
-import { ApiOutlined, CloudOutlined, FireOutlined } from '@ant-design/icons'
+import { CloudOutlined, FireOutlined } from '@ant-design/icons'
 import { Flex, Tag, Typography } from 'antd'
 import type { Tier, Tray } from '../../../types/room.types'
 import { TrayStatusTag } from './TrayStatusTag'
@@ -21,18 +21,13 @@ export function RackView({ tiers, selectedTrayId, onSelectTray }: RackViewProps)
           aria-labelledby={`tier-${tier.tierId}-title`}
         >
           <Flex className="rack-tier-header" align="center" justify="space-between" gap={12} wrap>
-            <div>
-              <Typography.Title
-                id={`tier-${tier.tierId}-title`}
-                level={5}
-                style={{ margin: 0 }}
-              >
-                {tier.name}
-              </Typography.Title>
-              <Typography.Text type="secondary">
-                <ApiOutlined /> {tier.nodeId}
-              </Typography.Text>
-            </div>
+            <Typography.Title
+              id={`tier-${tier.tierId}-title`}
+              level={5}
+              style={{ margin: 0 }}
+            >
+              {tier.name}
+            </Typography.Title>
 
             <Flex gap={8} wrap>
               <Tag icon={<FireOutlined />} color="volcano">
@@ -41,8 +36,8 @@ export function RackView({ tiers, selectedTrayId, onSelectTray }: RackViewProps)
               <Tag icon={<CloudOutlined />} color="cyan">
                 {tier.telemetry.humidity}%RH
               </Tag>
-              <Tag color={tier.telemetry.co2 > 850 ? 'warning' : 'success'}>
-                CO₂ {tier.telemetry.co2} ppm
+              <Tag color="default" aria-label="CO2 sensor chưa được IoT BE expose">
+                CO₂ — ppm
               </Tag>
             </Flex>
           </Flex>

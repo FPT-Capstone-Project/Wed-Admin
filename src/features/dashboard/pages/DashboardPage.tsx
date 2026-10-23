@@ -68,10 +68,16 @@ export function DashboardPage() {
       averageCo2:
         tierCount > 0
           ? Math.round(
-              tiers.reduce(
-                (total, tier) => total + tier.telemetry.co2,
-                0,
-              ) / tierCount,
+              tiers
+                .map((tier) => tier.telemetry.co2)
+                .filter((value): value is number => value != null)
+                .reduce((total, value) => total + value, 0) /
+                Math.max(
+                  tiers.filter(
+                    (tier) => tier.telemetry.co2 != null,
+                  ).length,
+                  1,
+                ),
             )
           : 0,
     }

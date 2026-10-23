@@ -1,3 +1,4 @@
 npm warn Unknown env config "devdir". This will stop working in the next major version of npm.
 12:02:41 AM [vite] (client) [console.error] Warning: [antd: Spin] `tip` is deprecated. Please use `description` instead.
 12:02:41 AM [vite] (client) [console.error] Warning: [antd: List] The `List` component is deprecated. And will be removed in next major version.
+12:03:43 AM [vite] (client) [console.error] Warning: [antd: Tag] `bordered={false}` is deprecated. Please use `variant="filled"` instead.

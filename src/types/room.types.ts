@@ -90,13 +90,9 @@ export interface Tray {
 export interface TierTelemetry {
   temperature: number
   humidity: number
-  co2: number
+  /** null khi BE chưa expose CO₂ sensor. */
+  co2: number | null
   updatedAt: string
-}
-
-export interface TierRelayState {
-  irrigationValves: Record<TrayPosition, boolean>
-  fan: boolean
 }
 
 export interface Tier {
@@ -105,7 +101,6 @@ export interface Tier {
   nodeId: NodeId
   trays: Tray[]
   telemetry: TierTelemetry
-  relays: TierRelayState
 }
 
 export function getTrayPosition(code: TrayCode): TrayPosition {

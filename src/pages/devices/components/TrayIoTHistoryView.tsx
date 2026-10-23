@@ -3,6 +3,7 @@ import {
   CalendarOutlined,
   CloudOutlined,
   CloudServerOutlined,
+  ExperimentOutlined,
   FireOutlined,
   HistoryOutlined,
   LineChartOutlined,
@@ -36,6 +37,7 @@ import { OrderLifecycleLog } from './OrderLifecycleLog'
 import { OrderStatusLogTable } from './OrderStatusLogTable'
 import { RentalHistoryTable } from './RentalHistoryTable'
 import { RentalSessionSummary } from './RentalSessionSummary'
+import { TrayIoTHistoryApiView } from './TrayIoTHistoryApiView'
 
 const RANGE_OPTIONS: Array<{ value: HistoryRangePreset; label: string }> = [
   { value: 'LAST_12_MONTHS', label: '1 năm qua' },
@@ -393,6 +395,16 @@ export function TrayIoTHistoryView() {
               </span>
             ),
             children: longTermContent,
+          },
+          {
+            key: 'api',
+            label: (
+              <span>
+                <ExperimentOutlined aria-hidden="true" />
+                Lịch sử IoT API (Master/Sensor)
+              </span>
+            ),
+            children: <TrayIoTHistoryApiView />,
           },
         ]}
       />

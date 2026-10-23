@@ -3,17 +3,6 @@ import type { NodeId, TierId } from './room.types'
 export const DEVICE_STATUSES = ['ONLINE', 'OFFLINE', 'WARNING', 'ERROR'] as const
 export type DeviceStatus = (typeof DEVICE_STATUSES)[number]
 
-export type GatewayRelayKey =
-  | 'mainPump'
-  | 'exhaustFan'
-  | 'rackLighting'
-
-export interface GatewayRelayState {
-  mainPump: boolean
-  exhaustFan: boolean
-  rackLighting: boolean
-}
-
 export interface GatewayMaster {
   id: 'gateway-esp32-s3-master'
   model: 'ESP32-S3'
@@ -23,7 +12,6 @@ export interface GatewayMaster {
   lastPingTimestamp: string
   wifiRssi: number
   status: DeviceStatus
-  relays: GatewayRelayState
 }
 
 export interface Rs485Node {

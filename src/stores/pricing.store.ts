@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 import type {
   GlobalServiceFee,
   MushroomVariety,
@@ -129,60 +130,80 @@ function getNextVarietyId(varieties: MushroomVariety[]) {
   return `VAR-${String(highest + 1).padStart(3, '0')}`
 }
 
-export const usePricingStore = create<PricingState>((set) => ({
-  serviceFee: DEFAULT_SERVICE_FEE,
-  varieties: MOCK_MUSHROOM_VARIETIES,
+/**
+ * Pricing store với PERSIST cho serviceFee.
+ *
+ * Chỉ persist `serviceFee` vì:
+ * - varieties đến từ API (luôn fetch mới từ /api/mushroom-types)
+ * - serviceFee là cấu hình local mà BE chưa hỗ trợ lưu
+ *
+ * Key localStorage: 'mcms-pricing-store'
+ */
+export const usePricingStore = create<PricingState>()(
+  persist(
+    (set) => ({
+      serviceFee: DEFAULT_SERVICE_FEE,
+      varieties: MOCK_MUSHROOM_VARIETIES,
 
-  updateServiceFee: (next) =>
-    set((state) => ({
-      serviceFee: {
-        ...state.serviceFee,
-        ...next,
-      },
-    })),
+      updateServiceFee: (next) =>
+        set((state) => ({
+          serviceFee: {
+            ...state.serviceFee,
+            ...next,
+          },
+        })),
 
-  addVariety: (values) =>
-    set((state) => ({
-      varieties: [
-        {
-          ...values,
-          id: getNextVarietyId(state.varieties),
-          createdAt: getToday(),
-        },
-        ...state.varieties,
-      ],
-    })),
-
-  updateVariety: (id, values) =>
-    set((state) => ({
-      varieties: state.varieties.map((item) =>
-        item.id === id
-          ? {
-              ...item,
+      addVariety: (values) =>
+        set((state) => ({
+          varieties: [
+            {
               ...values,
-            }
-          : item,
-      ),
-    })),
+              id: getNextVarietyId(state.varieties),
+              createdAt: getToday(),
+            },
+            ...state.varieties,
+          ],
+        })),
 
-  toggleVarietyAvailability: (id) =>
-    set((state) => ({
-      varieties: state.varieties.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              availability:
-                item.availability === 'AVAILABLE' ? 'OUT_OF_STOCK' : 'AVAILABLE',
-            }
-          : item,
-      ),
-    })),
+      updateVariety: (id, values) =>
+        set((state) => ({
+          varieties: state.varieties.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  ...values,
+                }
+              : item,
+          ),
+        })),
 
-  deleteVariety: (id) =>
-    set((state) => ({
-      varieties: state.varieties.filter((item) => item.id !== id),
-    })),
-}))
+      toggleVarietyAvailability: (id) =>
+        set((state) => ({
+          varieties: state.varieties.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  availability:
+                    item.availability === 'AVAILABLE' ? 'OUT_OF_STOCK' : 'AVAILABLE',
+                }
+              : item,
+          ),
+        })),
+
+      deleteVariety: (id) =>
+        set((state) => ({
+          varieties: state.varieties.filter((item) => item.id !== id),
+        })),
+    }),
+    {
+      name: 'mcms-pricing-store',
+      // Chỉ persist serviceFee — varieties luôn từ API
+      partialize: (state) => ({
+        serviceFee: state.serviceFee,
+      }),
+    },
+  ),
+)
 
 export const PRICING_CYCLE_OPTIONS: Array<{
   value: PricingCycleWeeks

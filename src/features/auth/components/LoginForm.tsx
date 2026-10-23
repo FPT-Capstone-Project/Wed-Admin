@@ -1,6 +1,7 @@
 import { LockOutlined, MailOutlined } from '@ant-design/icons'
-import { Alert, Button, Card, Checkbox, Form, Input, Typography } from 'antd'
+import { Alert, App, Button, Card, Checkbox, Form, Input, Typography } from 'antd'
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
 import type { LoginCredentials } from '../types/auth.types'
 
@@ -11,22 +12,29 @@ interface LoginFormProps {
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const login = useAuthStore((state) => state.login)
   const rememberedEmail = useAuthStore((state) => state.rememberedEmail)
+  const lastError = useAuthStore((state) => state.lastError)
+  const clearError = useAuthStore((state) => state.clearError)
+  const { message: messageApi } = App.useApp()
+
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
   const handleSubmit = async (credentials: LoginCredentials) => {
     setIsSubmitting(true)
     setErrorMessage(null)
+    clearError()
 
     try {
       await login(credentials)
+      messageApi.success('Đăng nhập thành công.')
       onSuccess?.()
     } catch (error) {
-      setErrorMessage(
+      const text =
         error instanceof Error
           ? error.message
-          : 'Không thể đăng nhập. Vui lòng thử lại.',
-      )
+          : 'Không thể đăng nhập. Vui lòng thử lại.'
+      setErrorMessage(text)
+      messageApi.error(text)
     } finally {
       setIsSubmitting(false)
     }
@@ -34,22 +42,24 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
   return (
     <Card className="login-card" variant="outlined">
-      <div className="login-mobile-brand" aria-hidden="true">
-        <img src="/mcms-mark.svg" alt="" width="38" height="38" />
-        <strong>MCMS</strong>
-      </div>
-      <span className="login-form-kicker">CHÀO MỪNG TRỞ LẠI</span>
-      <Typography.Title level={2}>Đăng nhập quản trị</Typography.Title>
-      <Typography.Paragraph>
+      <Typography.Title level={2} className="login-card-title">
+        Đăng nhập
+      </Typography.Title>
+      <Typography.Paragraph type="secondary" className="login-card-desc">
         Sử dụng tài khoản được cấp để tiếp tục vào hệ thống.
       </Typography.Paragraph>
 
-      {errorMessage && (
+      {(errorMessage ?? lastError) && (
         <Alert
           type="error"
-          message={errorMessage}
+          message={errorMessage ?? lastError}
           showIcon
-          style={{ marginBottom: 20 }}
+          closable
+          onClose={() => {
+            setErrorMessage(null)
+            clearError()
+          }}
+          className="login-card-error"
         />
       )}
 
@@ -74,7 +84,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           <Input
             type="email"
             autoComplete="email"
-            placeholder="admin@mcms.vn"
+            inputMode="email"
+            placeholder="user@example.com"
             prefix={<MailOutlined aria-hidden="true" />}
             size="large"
           />
@@ -93,13 +104,18 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           />
         </Form.Item>
 
-        <Form.Item<LoginCredentials>
-          name="rememberMe"
-          valuePropName="checked"
-          className="login-remember-row"
-        >
-          <Checkbox>Ghi nhớ đăng nhập</Checkbox>
-        </Form.Item>
+        <div className="login-remember-row">
+          <Form.Item<LoginCredentials>
+            name="rememberMe"
+            valuePropName="checked"
+            noStyle
+          >
+            <Checkbox>Ghi nhớ đăng nhập</Checkbox>
+          </Form.Item>
+          <Link to="/forgot-password" className="login-forgot">
+            Quên mật khẩu?
+          </Link>
+        </div>
 
         <Button
           type="primary"
@@ -112,9 +128,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         </Button>
       </Form>
 
-      <div className="login-security-note">
-        <LockOutlined aria-hidden="true" />
-        Phiên đăng nhập được bảo vệ và tự động xác thực.
+      <div className="login-alt">
+        Tài khoản được cấp bởi quản trị viên hệ thống.
       </div>
     </Card>
   )

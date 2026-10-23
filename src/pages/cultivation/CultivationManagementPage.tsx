@@ -78,7 +78,7 @@ export function CultivationManagementPage() {
 
     return batches.filter((batch) => {
       const isVisibleToCustomer =
-        canManage || batch.tenantName === authUser?.name
+        canManage || batch.tenantName === authUser?.fullName
       const matchesSearch = normalizedSearch
         ? [batch.batchCode, batch.trayId, batch.trayName].some((value) =>
             value.toLowerCase().includes(normalizedSearch),
@@ -103,7 +103,7 @@ export function CultivationManagementPage() {
       )
     })
   }, [
-    authUser?.name,
+    authUser?.fullName,
     batches,
     canManage,
     mushroomFilter,

@@ -1,26 +1,31 @@
 import { useMemo, useState } from 'react'
 import {
+  CreditCardOutlined,
   EnvironmentOutlined,
-  InboxOutlined,
+  EyeOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
 import {
+  Alert,
   Badge,
   Button,
+  Descriptions,
+  Drawer,
   Empty,
   Flex,
   Input,
-  Popconfirm,
   Segmented,
   Space,
+  Table,
   Tag,
   Typography,
-  message,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import type { AppOrder, OrderStatus } from '../../types/order.types'
-import { useOrderStore } from '../../stores/order.store'
-import { TrayAssignmentModal } from './components/TrayAssignmentModal'
+import { CreateRentalFromOrderModal } from '../../features/rentals/components/CreateRentalFromOrderModal'
+import { useOrders } from '../../features/orders/hooks/useOrders'
+import { useOrderPaymentStatus } from '../../features/orders/hooks/usePayments'
+import { beOrdersToUiOrders } from '../../types/order.mapper'
 
 const STATUS_CONFIG: Record<
   OrderStatus,
@@ -65,6 +70,9 @@ const PAYMENT_STATUS_CONFIG: Record<
   PAID: { color: 'success', label: 'Đã thanh toán' },
   UNPAID: { color: 'warning', label: 'Chưa thanh toán' },
   REFUNDED: { color: 'error', label: 'Đã hoàn tiền' },
+  PENDING: { color: 'processing', label: 'Đang xử lý' },
+  FAILED: { color: 'error', label: 'Thất bại' },
+  REFUND_PENDING: { color: 'warning', label: 'Chờ hoàn tiền' },
 }
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -99,14 +107,26 @@ const TAB_OPTIONS: Array<{ value: OrderTab; label: string }> = [
 ]
 
 export function OrderManagementPage() {
-  const orders = useOrderStore((state) => state.orders)
-  const assignTrayToOrder = useOrderStore((state) => state.assignTrayToOrder)
-  const cancelOrder = useOrderStore((state) => state.cancelOrder)
+  // ── Data from API (read-only) ──────────────────────────────────────────
+  const {
+    data: apiOrders = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useOrders()
+
+  const orders = useMemo(() => beOrdersToUiOrders(apiOrders), [apiOrders])
 
   const [searchText, setSearchText] = useState('')
   const [activeTab, setActiveTab] = useState<OrderTab>('ALL')
-  const [assignModalOpen, setAssignModalOpen] = useState(false)
-  const [orderToAssign, setOrderToAssign] = useState<AppOrder | null>(null)
+  const [detailOrder, setDetailOrder] = useState<AppOrder | null>(null)
+  const [createRentalFor, setCreateRentalFor] = useState<AppOrder | null>(null)
+
+  // Payment status polling — chỉ khi đang mở drawer chi tiết
+  const { data: payosStatus } = useOrderPaymentStatus(
+    detailOrder ? Number(detailOrder.id) : null,
+  )
 
   const filteredOrders = useMemo(() => {
     const q = searchText.trim().toLowerCase()
@@ -120,8 +140,7 @@ export function OrderManagementPage() {
           ].some((v) => v.toLowerCase().includes(q))
         : true
 
-      const matchesTab =
-        activeTab === 'ALL' || order.status === activeTab
+      const matchesTab = activeTab === 'ALL' || order.status === activeTab
 
       return matchesSearch && matchesTab
     })
@@ -134,28 +153,6 @@ export function OrderManagementPage() {
     })
     return counts
   }, [orders])
-
-  const handleOpenAssign = (order: AppOrder) => {
-    setOrderToAssign(order)
-    setAssignModalOpen(true)
-  }
-
-  const handleConfirmAssign = (trayId: string) => {
-    if (!orderToAssign) return
-
-    const batchId = `BATCH-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`
-    assignTrayToOrder(orderToAssign.id, trayId, batchId)
-    message.success(
-      `Đã gán đơn ${orderToAssign.orderCode} vào khay ${trayId}.`,
-    )
-    setAssignModalOpen(false)
-    setOrderToAssign(null)
-  }
-
-  const handleCancelOrder = (order: AppOrder) => {
-    cancelOrder(order.id)
-    message.warning(`Đơn ${order.orderCode} đã bị hủy.`)
-  }
 
   const columns: ColumnsType<AppOrder> = [
     {
@@ -177,7 +174,7 @@ export function OrderManagementPage() {
         <Flex vertical gap={2}>
           <Typography.Text strong>{record.tenantName}</Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.tenantPhone}
+            {record.tenantPhone || '—'}
           </Typography.Text>
         </Flex>
       ),
@@ -188,17 +185,23 @@ export function OrderManagementPage() {
       width: 260,
       render: (_, record) => (
         <Flex vertical gap={4}>
-          {record.items.map((item, idx) => (
-            <Flex key={idx} vertical gap={2}>
-              <Flex gap={4} align="center" wrap>
-                <Tag color="green">{item.mushroomType}</Tag>
-                <Tag color="cyan">× {item.weeks} Tuần</Tag>
+          {record.items.length === 0 ? (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              (Đơn chưa có chi tiết nấm)
+            </Typography.Text>
+          ) : (
+            record.items.map((item, idx) => (
+              <Flex key={idx} vertical gap={2}>
+                <Flex gap={4} align="center" wrap>
+                  <Tag color="green">{item.mushroomType}</Tag>
+                  <Tag color="cyan">× {item.weeks} Tuần</Tag>
+                </Flex>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  ×{item.quantity} khay · {VND.format(item.unitPrice)}/khay/tuần
+                </Typography.Text>
               </Flex>
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                ×{item.quantity} khay · {VND.format(item.unitPrice)}/kay/tuần
-              </Typography.Text>
-            </Flex>
-          ))}
+            ))
+          )}
         </Flex>
       ),
     },
@@ -245,7 +248,8 @@ export function OrderManagementPage() {
             color={PAYMENT_STATUS_CONFIG[record.paymentStatus]?.color}
             style={{ width: 'fit-content', fontSize: 11 }}
           >
-            {PAYMENT_STATUS_CONFIG[record.paymentStatus]?.label}
+            {PAYMENT_STATUS_CONFIG[record.paymentStatus]?.label ??
+              record.paymentStatus}
           </Tag>
         </Flex>
       ),
@@ -283,48 +287,21 @@ export function OrderManagementPage() {
     {
       title: 'Hành động',
       key: 'actions',
-      width: 180,
+      width: 130,
       fixed: 'right',
-      render: (_, record) => {
-        if (record.status === 'PENDING_TRAY_ASSIGNMENT') {
-          return (
-            <Space direction="vertical" size={4} style={{ width: '100%' }}>
-              <Button
-                type="primary"
-                size="small"
-                icon={<InboxOutlined />}
-                onClick={() => handleOpenAssign(record)}
-              >
-                Gán khay trống
-              </Button>
-              <Popconfirm
-                title="Hủy đơn đặt này?"
-                description="Thao tác này không thể hoàn tác."
-                okText="Hủy đơn"
-                cancelText="Giữ"
-                okButtonProps={{ danger: true }}
-                onConfirm={() => handleCancelOrder(record)}
-              >
-                <Button danger size="small">
-                  Hủy đơn
-                </Button>
-              </Popconfirm>
-            </Space>
-          )
-        }
-
-        if (record.status === 'CANCELLED') {
-          return <Typography.Text type="secondary">—</Typography.Text>
-        }
-
-        return (
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {record.trayId ? `Khay ${record.trayId}` : '—'}
-          </Typography.Text>
-        )
-      },
+      render: (_, record) => (
+        <Button
+          size="small"
+          icon={<EyeOutlined />}
+          onClick={() => setDetailOrder(record)}
+        >
+          Chi tiết
+        </Button>
+      ),
     },
   ]
+
+  const livePayment = payosStatus?.data
 
   return (
     <div>
@@ -338,14 +315,18 @@ export function OrderManagementPage() {
       >
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Quản lý đơn đặt từ App
+            Đơn đặt từ App
           </Typography.Title>
           <Typography.Text type="secondary">
-            Danh sách đơn đặt khay từ ứng dụng khách hàng — Shopee-like order management
+            Theo dõi đơn khách đặt từ ứng dụng — chế độ chỉ xem, thao tác tạo /
+            thanh toán / hủy thực hiện trên app người dùng.
           </Typography.Text>
         </div>
 
-        <Badge count={tabCounts['PENDING_TRAY_ASSIGNMENT'] ?? 0} overflowCount={99}>
+        <Badge
+          count={tabCounts['PENDING_TRAY_ASSIGNMENT'] ?? 0}
+          overflowCount={99}
+        >
           <Tag color="warning" style={{ fontSize: 13, padding: '4px 12px' }}>
             {tabCounts['PENDING_TRAY_ASSIGNMENT'] ?? 0} đơn chờ gán khay
           </Tag>
@@ -378,230 +359,257 @@ export function OrderManagementPage() {
         style={{ marginBottom: 20 }}
       />
 
-      {/* Table */}
-      {filteredOrders.length === 0 ? (
-        <Empty description="Không có đơn đặt nào" />
-      ) : (
-        <div
-          style={{
-            overflowX: 'auto',
-            borderRadius: 8,
-            border: '1px solid #f0f0f0',
-          }}
-        >
-          <table
-            style={{
-              width: '100%',
-              borderCollapse: 'collapse',
-              background: '#fff',
-            }}
-          >
-            <thead>
-              <tr
-                style={{
-                  background: '#fafafa',
-                  borderBottom: '1px solid #f0f0f0',
-                }}
-              >
-                {columns.map((col) => (
-                  <th
-                    key={col.key as string}
-                    style={{
-                      padding: '12px 8px',
-                      textAlign: 'left' as const,
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: '#6b7280',
-                      whiteSpace: 'nowrap' as const,
-                      width: (col as { width?: number | string }).width
-                        ? (col as { width?: number | string }).width
-                        : 'auto',
-                    }}
-                  >
-                    {col.title as string}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {filteredOrders.map((order) => {
-                const statusCfg = STATUS_CONFIG[order.status]
-                return (
-                  <tr
-                    key={order.id}
-                    style={{
-                      borderBottom: '1px solid #f5f5f5',
-                      background:
-                        order.status === 'PENDING_TRAY_ASSIGNMENT'
-                          ? '#fffbf0'
-                          : undefined,
-                    }}
-                  >
-                    {/* Mã đơn */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <Typography.Text code style={{ fontSize: 13 }}>
-                        {order.orderCode}
-                      </Typography.Text>
-                    </td>
-
-                    {/* Khách hàng */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <Flex vertical gap={2}>
-                        <Typography.Text strong>
-                          {order.tenantName}
-                        </Typography.Text>
-                        <Typography.Text
-                          type="secondary"
-                          style={{ fontSize: 12 }}
-                        >
-                          {order.tenantPhone}
-                        </Typography.Text>
-                      </Flex>
-                    </td>
-
-                    {/* Loại nấm & Thời gian */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <Flex vertical gap={4}>
-                        {order.items.map((item, idx) => (
-                          <Flex key={idx} vertical gap={2}>
-                            <Flex gap={4} align="center" wrap>
-                              <Tag color="green">{item.mushroomType}</Tag>
-                              <Tag color="cyan">× {item.weeks} Tuần</Tag>
-                            </Flex>
-                            <Typography.Text
-                              type="secondary"
-                              style={{ fontSize: 12 }}
-                            >
-                              ×{item.quantity} khay · {VND.format(item.unitPrice)}/kay/tuần
-                            </Typography.Text>
-                          </Flex>
-                        ))}
-                      </Flex>
-                    </td>
-
-                    {/* Nhận hàng */}
-                    <td style={{ padding: '12px 8px' }}>
-                      {order.deliveryMethod === 'PICKUP' ? (
-                        <Tag icon={<EnvironmentOutlined />} color="blue">
-                          Tự đến hái
-                        </Tag>
-                      ) : (
-                        <Flex vertical gap={2}>
-                          <Tag color="orange">Giao tận nhà</Tag>
-                          <Typography.Text
-                            type="secondary"
-                            style={{ fontSize: 11 }}
-                            ellipsis={{
-                              tooltip:
-                                order.deliveryAddress ?? order.tenantAddress,
-                            }}
-                          >
-                            {order.deliveryAddress ?? order.tenantAddress}
-                          </Typography.Text>
-                        </Flex>
-                      )}
-                    </td>
-
-                    {/* Tổng tiền */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <Flex vertical gap={2}>
-                        <Typography.Text strong type="danger">
-                          {VND.format(order.totalAmount)}
-                        </Typography.Text>
-                        <Typography.Text
-                          type="secondary"
-                          style={{ fontSize: 11 }}
-                        >
-                          {PAYMENT_METHOD_LABELS[order.paymentMethod] ??
-                            order.paymentMethod}
-                        </Typography.Text>
-                        <Tag
-                          color={
-                            PAYMENT_STATUS_CONFIG[order.paymentStatus]?.color
-                          }
-                          style={{ width: 'fit-content', fontSize: 11 }}
-                        >
-                          {PAYMENT_STATUS_CONFIG[order.paymentStatus]?.label}
-                        </Tag>
-                      </Flex>
-                    </td>
-
-                    {/* Trạng thái */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <Flex vertical gap={4}>
-                        <Tag color={statusCfg.color}>{statusCfg.label}</Tag>
-                        {order.trayId && (
-                          <Typography.Text code style={{ fontSize: 12 }}>
-                            {order.trayId}
-                          </Typography.Text>
-                        )}
-                      </Flex>
-                    </td>
-
-                    {/* Ngày tạo */}
-                    <td style={{ padding: '12px 8px' }}>
-                      <Typography.Text
-                        type="secondary"
-                        style={{ fontSize: 12 }}
-                      >
-                        {DATE_FORMATTER.format(new Date(order.createdAt))}
-                      </Typography.Text>
-                    </td>
-
-                    {/* Hành động */}
-                    <td style={{ padding: '12px 8px' }}>
-                      {order.status === 'PENDING_TRAY_ASSIGNMENT' ? (
-                        <Space direction="vertical" size={4}>
-                          <Button
-                            type="primary"
-                            size="small"
-                            icon={<InboxOutlined />}
-                            onClick={() => handleOpenAssign(order)}
-                          >
-                            Gán khay trống
-                          </Button>
-                          <Popconfirm
-                            title="Hủy đơn đặt này?"
-                            description="Thao tác này không thể hoàn tác."
-                            okText="Hủy đơn"
-                            cancelText="Giữ"
-                            okButtonProps={{ danger: true }}
-                            onConfirm={() => handleCancelOrder(order)}
-                          >
-                            <Button danger size="small">
-                              Hủy đơn
-                            </Button>
-                          </Popconfirm>
-                        </Space>
-                      ) : order.status === 'CANCELLED' ? (
-                        <Typography.Text type="secondary">—</Typography.Text>
-                      ) : (
-                        <Typography.Text
-                          type="secondary"
-                          style={{ fontSize: 12 }}
-                        >
-                          {order.trayId ? `Khay ${order.trayId}` : '—'}
-                        </Typography.Text>
-                      )}
-                    </td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {/* Tray Assignment Modal */}
-      <TrayAssignmentModal
-        open={assignModalOpen}
-        order={orderToAssign}
-        onCancel={() => {
-          setAssignModalOpen(false)
-          setOrderToAssign(null)
+      {/* Table — Ant Design Table thay thế manual <table> */}
+      <Table<AppOrder>
+        dataSource={filteredOrders}
+        columns={columns}
+        rowKey="id"
+        size="middle"
+        loading={isLoading}
+        pagination={{
+          pageSize: 20,
+          showSizeChanger: true,
+          showTotal: (total) => `${total} đơn`,
         }}
-        onConfirm={handleConfirmAssign}
+        scroll={{ x: 1200 }}
+        locale={{
+          emptyText: isError ? (
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={
+                <Flex vertical align="center" gap={8}>
+                  <Typography.Text type="danger">
+                    Không tải được danh sách đơn đặt.
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {error?.message ?? 'Lỗi không xác định.'}
+                  </Typography.Text>
+                  <Typography.Text
+                    type="secondary"
+                    style={{ fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}
+                    onClick={() => void refetch()}
+                  >
+                    Nhấn để thử lại
+                  </Typography.Text>
+                </Flex>
+              }
+            />
+          ) : (
+            <Empty description="Không có đơn đặt nào" />
+          ),
+        }}
       />
+
+      {/* ── Drawer chi tiết đơn (read-only) ───────────────────────────── */}
+      <Drawer
+        title={
+          detailOrder ? (
+            <Space>
+              <Typography.Text code>{detailOrder.orderCode}</Typography.Text>
+              <Tag color={STATUS_CONFIG[detailOrder.status].color}>
+                {STATUS_CONFIG[detailOrder.status].label}
+              </Tag>
+            </Space>
+          ) : (
+            'Chi tiết đơn'
+          )
+        }
+        open={Boolean(detailOrder)}
+        onClose={() => setDetailOrder(null)}
+        width={520}
+        destroyOnHidden
+      >
+        {detailOrder && (
+          <Flex vertical gap={20}>
+            <Descriptions
+              column={1}
+              size="small"
+              bordered
+              title="Thông tin đơn"
+              items={[
+                {
+                  key: 'tenant',
+                  label: 'Khách hàng',
+                  children: (
+                    <Flex vertical gap={2}>
+                      <Typography.Text strong>
+                        {detailOrder.tenantName}
+                      </Typography.Text>
+                      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                        {detailOrder.tenantPhone || '—'}
+                      </Typography.Text>
+                    </Flex>
+                  ),
+                },
+                {
+                  key: 'createdAt',
+                  label: 'Ngày tạo',
+                  children: DATE_FORMATTER.format(
+                    new Date(detailOrder.createdAt),
+                  ),
+                },
+                {
+                  key: 'delivery',
+                  label: 'Nhận hàng',
+                  children:
+                    detailOrder.deliveryMethod === 'PICKUP' ? (
+                      <Tag icon={<EnvironmentOutlined />} color="blue">
+                        Tự đến hái
+                      </Tag>
+                    ) : (
+                      <Flex vertical gap={2}>
+                        <Tag color="orange">Giao tận nhà</Tag>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                          {detailOrder.deliveryAddress ??
+                            detailOrder.tenantAddress}
+                        </Typography.Text>
+                      </Flex>
+                    ),
+                },
+                {
+                  key: 'tray',
+                  label: 'Khay được gán',
+                  children: detailOrder.trayId ? (
+                    <Typography.Text code>{detailOrder.trayId}</Typography.Text>
+                  ) : (
+                    <Typography.Text type="secondary">Chưa gán</Typography.Text>
+                  ),
+                },
+              ]}
+            />
+
+            <div>
+              <Typography.Title level={5} style={{ marginTop: 0 }}>
+                Chi tiết nấm
+              </Typography.Title>
+              {detailOrder.items.length === 0 ? (
+                <Typography.Text type="secondary">
+                  Đơn chưa có chi tiết nấm.
+                </Typography.Text>
+              ) : (
+                <Descriptions
+                  column={1}
+                  size="small"
+                  bordered
+                  items={detailOrder.items.map((item, idx) => ({
+                    key: `item-${idx}`,
+                    label: `${item.mushroomType} · ${item.weeks} tuần`,
+                    children: (
+                      <Flex vertical gap={2}>
+                        <Typography.Text>
+                          ×{item.quantity} khay ·{' '}
+                          {VND.format(item.unitPrice)}/khay/tuần
+                        </Typography.Text>
+                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                          Thành tiền:{' '}
+                          {VND.format(item.unitPrice * item.quantity * item.weeks)}
+                        </Typography.Text>
+                      </Flex>
+                    ),
+                  }))}
+                />
+              )}
+            </div>
+
+            <Descriptions
+              column={1}
+              size="small"
+              bordered
+              title={
+                <Space>
+                  <CreditCardOutlined />
+                  Thanh toán
+                </Space>
+              }
+              items={[
+                {
+                  key: 'method',
+                  label: 'Hình thức',
+                  children:
+                    PAYMENT_METHOD_LABELS[detailOrder.paymentMethod] ??
+                    detailOrder.paymentMethod,
+                },
+                {
+                  key: 'status',
+                  label: 'Trạng thái',
+                  children: (
+                    <Tag
+                      color={
+                        PAYMENT_STATUS_CONFIG[
+                          livePayment?.paymentStatus ??
+                            detailOrder.paymentStatus
+                        ]?.color
+                      }
+                    >
+                      {PAYMENT_STATUS_CONFIG[
+                        livePayment?.paymentStatus ??
+                          detailOrder.paymentStatus
+                      ]?.label ??
+                        livePayment?.paymentStatus ??
+                        detailOrder.paymentStatus}
+                    </Tag>
+                  ),
+                },
+                {
+                  key: 'code',
+                  label: 'Mã thanh toán',
+                  children: livePayment?.paymentCode ? (
+                    <Typography.Text code>
+                      {livePayment.paymentCode}
+                    </Typography.Text>
+                  ) : (
+                    <Typography.Text type="secondary">—</Typography.Text>
+                  ),
+                },
+                {
+                  key: 'amount',
+                  label: 'Số tiền',
+                  children: (
+                    <Typography.Text strong type="danger">
+                      {VND.format(
+                        livePayment?.amount ?? detailOrder.totalAmount,
+                      )}
+                    </Typography.Text>
+                  ),
+                },
+              ]}
+            />
+
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Đơn đặt được tạo và thanh toán trên ứng dụng khách hàng. Trang
+              quản trị chỉ theo dõi trạng thái, không thực hiện thao tác ghi.
+            </Typography.Text>
+
+            {/* Đường khắc phục thủ công: đơn đã trả tiền nhưng webhook
+                thanh toán lỗi nên chưa sinh vụ thuê. */}
+            {detailOrder.paymentStatus === 'PAID' && (
+              <Alert
+                type="warning"
+                showIcon
+                message="Chưa thấy vụ thuê cho đơn này?"
+                description="Trong trường hợp webhook thanh toán bị lỗi, bạn có thể tạo vụ thuê thủ công. Thao tác này an toàn — hệ thống không tạo trùng."
+                action={
+                  <Button
+                    size="small"
+                    type="primary"
+                    onClick={() => setCreateRentalFor(detailOrder)}
+                  >
+                    Tạo vụ thuê từ đơn
+                  </Button>
+                }
+              />
+            )}
+          </Flex>
+        )}
+      </Drawer>
+
+      {createRentalFor && (
+        <CreateRentalFromOrderModal
+          orderId={createRentalFor.id}
+          open
+          onClose={() => setCreateRentalFor(null)}
+        />
+      )}
     </div>
   )
 }

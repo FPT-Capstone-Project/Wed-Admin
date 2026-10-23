@@ -11,6 +11,17 @@ import { PageFallback } from './PageFallback'
 // truy cập. Giúp giảm Initial JS payload từ ~2MB xuống ~400-500KB.
 // ──────────────────────────────────────────────────────────────────────────
 
+const ForgotPasswordPage = lazy(() =>
+  import('../../features/auth/pages/ForgotPasswordPage').then((m) => ({
+    default: m.ForgotPasswordPage,
+  })),
+)
+const ChangePasswordPage = lazy(() =>
+  import('../../features/auth/pages/ChangePasswordPage').then((m) => ({
+    default: m.ChangePasswordPage,
+  })),
+)
+
 const DashboardPage = lazy(() =>
   import('../../features/dashboard/pages/DashboardPage').then((m) => ({
     default: m.DashboardPage,
@@ -44,6 +55,11 @@ const IoTHistoryPage = lazy(() =>
 const OrderManagementPage = lazy(() =>
   import('../../pages/orders/OrderManagementPage').then((m) => ({
     default: m.OrderManagementPage,
+  })),
+)
+const RentalListPage = lazy(() =>
+  import('../../features/rentals/pages/RentalListPage').then((m) => ({
+    default: m.RentalListPage,
   })),
 )
 const PackageManagementPage = lazy(() =>
@@ -91,6 +107,10 @@ export const router = createBrowserRouter([
   {
     path: '/login',
     element: withSuspense(<LoginPage />),
+  },
+  {
+    path: '/forgot-password',
+    element: withSuspense(<ForgotPasswordPage />),
   },
   {
     path: '/',
@@ -141,6 +161,16 @@ export const router = createBrowserRouter([
         element: withSuspense(<OrderManagementPage />),
       },
       {
+        // Vụ thuê: BE yêu cầu role_id 1 (Admin) hoặc 2 (Farm Operator).
+        // Customer không được truy cập — RoleGuard chặn trước khi gọi API.
+        path: 'rentals',
+        element: (
+          <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
+            {withSuspense(<RentalListPage />)}
+          </RoleGuard>
+        ),
+      },
+      {
         path: 'cultivation',
         element: withSuspense(<CultivationManagementPage />),
       },
@@ -179,6 +209,17 @@ export const router = createBrowserRouter([
       {
         path: 'settings',
         element: withSuspense(<SettingsPage />),
+      },
+      {
+        // Yêu cầu token (bearerAuth) — nằm trong AuthGuard nên chỉ render
+        // khi user đã đăng nhập.
+        path: 'change-password',
+        element: withSuspense(<ChangePasswordPage />),
+      },
+      // 404: redirect tất cả URL không khớp về dashboard
+      {
+        path: '*',
+        element: <Navigate to="/" replace />,
       },
     ],
   },

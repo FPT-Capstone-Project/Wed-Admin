@@ -6,7 +6,7 @@ import {
   FireOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { Card, Col, Row, Statistic, Tag, Tooltip } from 'antd'
+import { Card, Col, Row, Tag, Tooltip, Typography } from 'antd'
 import type { TierTelemetry } from '../../../types/room.types'
 import type { FloorTargetThresholds } from '../utils/floor-climate.utils'
 
@@ -15,16 +15,16 @@ interface DeviceMetricsGridProps {
   thresholds: FloorTargetThresholds
 }
 
-type MetricTone = 'normal' | 'warning' | 'danger'
+type MetricTone = 'normal' | 'warning' | 'danger' | 'unknown'
 
 interface MetricDefinition {
-  key: keyof Pick<TierTelemetry, 'temperature' | 'humidity' | 'co2'>
+  key: keyof Pick<TierTelemetry, 'temperature' | 'humidity'> | 'co2'
   title: string
   unit: string
   icon: ReactNode
   getTargetLabel: (thresholds: FloorTargetThresholds) => string
   getTone: (
-    value: number,
+    value: number | null,
     thresholds: FloorTargetThresholds,
   ) => MetricTone
   precision?: number
@@ -34,10 +34,18 @@ const TONE_CONFIG: Record<MetricTone, { color: string; label: string }> = {
   normal: { color: 'var(--mcms-primary)', label: 'Bình thường' },
   warning: { color: 'var(--mcms-amber)', label: 'Cận ngưỡng' },
   danger: { color: 'var(--mcms-coral)', label: 'Nguy hiểm' },
+  unknown: { color: 'var(--mcms-divider, #d9d9d9)', label: 'BE chưa expose' },
 }
+
+const PLACEHOLDER = '—'
 
 function formatThresholdValue(value: number) {
   return Number.isInteger(value) ? String(value) : value.toFixed(1)
+}
+
+function formatReading(value: number | null, precision?: number): string {
+  if (value == null) return PLACEHOLDER
+  return precision != null ? value.toFixed(precision) : String(value)
 }
 
 const METRICS: MetricDefinition[] = [
@@ -49,12 +57,14 @@ const METRICS: MetricDefinition[] = [
     getTargetLabel: (thresholds) =>
       `Mục tiêu TB: ${formatThresholdValue(thresholds.tempMin)} - ${formatThresholdValue(thresholds.tempMax)}°C`,
     precision: 1,
-    getTone: (value, thresholds) =>
-      value < thresholds.tempMin - 2 || value > thresholds.tempMax + 2
+    getTone: (value, thresholds) => {
+      if (value == null) return 'unknown'
+      return value < thresholds.tempMin - 2 || value > thresholds.tempMax + 2
         ? 'danger'
         : value < thresholds.tempMin || value > thresholds.tempMax
           ? 'warning'
-          : 'normal',
+          : 'normal'
+    },
   },
   {
     key: 'humidity',
@@ -63,12 +73,15 @@ const METRICS: MetricDefinition[] = [
     icon: <CloudOutlined />,
     getTargetLabel: (thresholds) =>
       `Mục tiêu TB: ${formatThresholdValue(thresholds.humidityMin)} - ${formatThresholdValue(thresholds.humidityMax)}%RH`,
-    getTone: (value, thresholds) =>
-      value < thresholds.humidityMin - 10 || value > thresholds.humidityMax + 3
+    getTone: (value, thresholds) => {
+      if (value == null) return 'unknown'
+      return value < thresholds.humidityMin - 10 ||
+        value > thresholds.humidityMax + 3
         ? 'danger'
         : value < thresholds.humidityMin || value > thresholds.humidityMax
           ? 'warning'
-          : 'normal',
+          : 'normal'
+    },
   },
   {
     key: 'co2',
@@ -77,12 +90,14 @@ const METRICS: MetricDefinition[] = [
     icon: <CloudServerOutlined />,
     getTargetLabel: (thresholds) =>
       `Ngưỡng an toàn: < ${formatThresholdValue(thresholds.co2Max)} ppm`,
-    getTone: (value, thresholds) =>
-      value > thresholds.co2Max * 1.3
+    getTone: (value, thresholds) => {
+      if (value == null) return 'unknown'
+      return value > thresholds.co2Max * 1.3
         ? 'danger'
         : value > thresholds.co2Max
           ? 'warning'
-          : 'normal',
+          : 'normal'
+    },
   },
 ]
 
@@ -110,34 +125,54 @@ export function DeviceMetricsGrid({
   return (
     <Row gutter={[10, 10]}>
       {METRICS.map((metric) => {
-        const value = telemetry[metric.key]
+        const raw = telemetry[metric.key]
+        const value = raw as number | null
         const tone = metric.getTone(value, thresholds)
         const toneConfig = TONE_CONFIG[tone]
         const targetLabel = metric.getTargetLabel(thresholds)
+        const hasReading = value != null
+        const reading = formatReading(value, metric.precision)
 
         return (
           <Col key={metric.key} xs={24} sm={8}>
             <Card
               className="device-metric-card"
               size="small"
-              style={{ height: '100%', borderTop: `3px solid ${toneConfig.color}` }}
+              style={{
+                height: '100%',
+                borderTop: `3px solid ${toneConfig.color}`,
+              }}
             >
-              <Statistic
-                title={metric.title}
-                value={value}
-                precision={metric.precision}
-                suffix={metric.unit}
-                prefix={
-                  <span aria-hidden="true" style={{ color: toneConfig.color }}>
-                    {metric.icon}
-                  </span>
-                }
-              />
+              <div className="device-metric-value">
+                <span
+                  className="device-metric-value-prefix"
+                  aria-hidden="true"
+                  style={{ color: toneConfig.color }}
+                >
+                  {metric.icon}
+                </span>
+                <span
+                  className={`device-metric-value-number device-metric-value-number--${tone}`}
+                  aria-label={
+                    hasReading
+                      ? `${metric.title}: ${reading} ${metric.unit}`
+                      : `${metric.title}: BE chưa expose`
+                  }
+                >
+                  {reading}
+                </span>
+                <span className="device-metric-value-unit">
+                  {hasReading ? metric.unit : ''}
+                </span>
+              </div>
+              <Typography.Text type="secondary" className="device-metric-title">
+                {metric.title}
+              </Typography.Text>
               <div className="device-metric-status-row">
                 <span
                   className={`device-metric-tone device-metric-tone--${tone}`}
                 >
-                  {tone === 'normal' ? (
+                  {tone === 'normal' || tone === 'unknown' ? (
                     <CheckCircleOutlined aria-hidden="true" />
                   ) : (
                     <WarningOutlined aria-hidden="true" />
@@ -157,7 +192,9 @@ export function DeviceMetricsGrid({
                             ? 'success'
                             : tone === 'warning'
                               ? 'warning'
-                              : 'error'
+                              : tone === 'danger'
+                                ? 'error'
+                                : 'default'
                         }
                       >
                         {targetLabel}

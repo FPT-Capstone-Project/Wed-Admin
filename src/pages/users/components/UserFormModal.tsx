@@ -11,7 +11,7 @@ interface UserFormModalProps {
 
 const ROLE_OPTIONS = [
   { value: 'ADMIN', label: 'Quản trị viên' },
-  { value: 'OPERATOR', label: 'Vận hành kỹ thuật' },
+  { value: 'OPERATOR', label: 'Vận hành trang trại' },
   { value: 'CUSTOMER', label: 'Khách thuê khay' },
 ] satisfies Array<{ value: User['role']; label: string }>
 

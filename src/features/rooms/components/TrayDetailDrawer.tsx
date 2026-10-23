@@ -12,6 +12,7 @@ import type { InvoiceMode } from './TrayInvoiceModal'
 import { TrayInvoiceModal } from './TrayInvoiceModal'
 import { TrayStaffActionWorkflow } from './TrayStaffActionWorkflow'
 import { TrayStatusTag } from './TrayStatusTag'
+import { useAllUiTrays } from '../hooks/useCultivation'
 
 interface TrayDetailDrawerProps {
   trayId: string | null
@@ -38,6 +39,8 @@ export function TrayDetailDrawer({
     useState<ClosureDialogAction | null>(null)
   const [invoiceRequest, setInvoiceRequest] =
     useState<InvoiceRequest | null>(null)
+
+  // Vẫn dùng room.store cho các action vận hành (mock cho đến khi có BE endpoints)
   const tiers = useRoomStore((state) => state.tiers)
   const closeTraySession = useRoomStore((state) => state.closeTraySession)
   const confirmTrayCustomerContact = useRoomStore(
@@ -46,6 +49,13 @@ export function TrayDetailDrawer({
   const addTrayCareLog = useRoomStore((state) => state.addTrayCareLog)
   const tenants = useTenantStore((state) => state.tenants)
 
+  // Nếu có API trayId → thử lookup từ API; fallback về mock store
+  const { data: apiTrays = [] } = useAllUiTrays()
+  const apiTray = trayId
+    ? apiTrays.find((t) => t.id === trayId)
+    : undefined
+
+  // Ưu tiên tray từ API nếu có, không thì dùng mock
   const detail = findTrayDetail(tiers, trayId)
   const rental = detail?.tray.rental ?? null
   const effectiveCurrentDate = currentDate ?? new Date()
@@ -122,17 +132,19 @@ export function TrayDetailDrawer({
             <span>
               {detail
                 ? `${detail.tray.code} · ${detail.tier.name}`
-                : 'Thông tin vận hành'}
+                : apiTray
+                  ? `${apiTray.code} · Tầng ${apiTray.tierId}`
+                  : 'Thông tin vận hành'}
             </span>
           </div>
         }
         size={680}
-        open={Boolean(detail)}
+        open={Boolean(detail || (trayId && apiTray))}
         onClose={handleClose}
         destroyOnHidden
         styles={{ body: { padding: 0 } }}
       >
-        {detail && (
+        {detail ? (
           <div className="tray-detail-content">
             <div className="tray-context-bar">
               <Flex align="center" gap={8} wrap>
@@ -204,7 +216,32 @@ export function TrayDetailDrawer({
               </section>
             )}
           </div>
-        )}
+        ) : apiTray ? (
+          // Tray từ API nhưng chưa có rental trong mock → hiển thị trạng thái cơ bản
+          <div className="tray-detail-content">
+            <div className="tray-context-bar">
+              <Flex align="center" gap={8} wrap>
+                <TrayStatusTag status={apiTray.status} />
+              </Flex>
+              <div className="tray-context-meta">
+                <span>
+                  <small>Tầng</small>
+                  <strong>Tầng {apiTray.tierId}</strong>
+                </span>
+                <span>
+                  <small>Mã khay</small>
+                  <strong>{apiTray.code}</strong>
+                </span>
+              </div>
+            </div>
+            <section className="tray-detail-section tray-empty-rental">
+              <Empty
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                description="Khay này chưa có mẻ trồng hoặc dữ liệu mẻ đang được tải từ máy chủ."
+              />
+            </section>
+          </div>
+        ) : null}
       </Drawer>
 
       {dialogAction && detail && (
@@ -235,13 +272,12 @@ export function TrayDetailDrawer({
 }
 
 function findTrayDetail(tiers: Tier[], trayId: string | null) {
+  if (!trayId) return null
   for (const tier of tiers) {
     const tray = tier.trays.find((item) => item.id === trayId)
-
     if (tray) {
       return { tier, tray }
     }
   }
-
   return null
 }

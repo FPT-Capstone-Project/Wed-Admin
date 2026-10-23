@@ -32,12 +32,18 @@ import {
   findMushroomThresholdProfile,
   getActiveClimateSourceTrays,
 } from '../utils/floor-climate.utils'
+import {
+  useEvaluateAutoMisting,
+  useFloorAutoControlStatus,
+  useStartAutoMisting,
+  useStopAutoMisting,
+} from '../../../features/devices/hooks/useIoT'
+import { AutoMistingControlPanel } from './AutoMistingControlPanel'
+import type { AutoControlEvaluateResult } from '../../../types/iot'
 
 interface TraySourceSelection {
   trayId: string
-  /** ID của profile đang chọn; rỗng = chưa gán giống */
   selectedMushroomId: string
-  /** Khay tham gia tính trung bình */
   isEnabled: boolean
 }
 
@@ -51,12 +57,6 @@ interface FloorClimateConfigModalProps {
   onSubmit: (values: FloorClimateThresholdValues) => void
 }
 
-/**
- * Resolve profile mặc định cho một khay:
- * 1. Ưu tiên: mushroomType đang trồng trùng với profile
- * 2. Fallback: profile mặc định hệ thống
- * 3. Rỗng nếu không khớp gì
- */
 function resolveDefaultProfileId(
   tray: Tray,
   mushroomProfiles: MushroomThresholdProfile[],
@@ -80,8 +80,6 @@ export function FloorClimateConfigModal({
 }: FloorClimateConfigModalProps) {
   const { message } = AntdApp.useApp()
   const [form] = Form.useForm<FloorClimateThresholdValues>()
-
-  // Khởi tạo tray sources: auto-assign profile theo giống nấm đang trồng
   const [traySources, setTraySources] = useState<TraySourceSelection[]>(() => {
     const activeIds = new Set(
       getActiveClimateSourceTrays(trays).map((t) => t.id),
@@ -93,7 +91,48 @@ export function FloorClimateConfigModal({
     }))
   })
 
-  /** Profile hợp lệ: đang check + có gán giống cụ thể */
+  // ── Auto-misting hooks (dùng tierId làm floorId) ───────────────────
+  const numericFloorId = config.tierId // 1|2|3|4
+
+  const {
+    data: runtimeStatus,
+    isLoading: statusLoading,
+  } = useFloorAutoControlStatus(numericFloorId, {
+    enabled: open,
+    staleTime: 5_000,
+  })
+
+  const [evaluateResult, setEvaluateResult] = useState<AutoControlEvaluateResult | null>(null)
+
+  const startMutation = useStartAutoMisting({
+    onSuccess: () => {
+      message.success(`Đã bắt đầu tưới tự động cho ${floorName}.`)
+    },
+    onError: (err) => {
+      message.error(`Lỗi bắt đầu AUTO: ${err.message}`)
+    },
+  })
+
+  const stopMutation = useStopAutoMisting({
+    onSuccess: () => {
+      message.success(`Đã dừng tưới tự động cho ${floorName}.`)
+      setEvaluateResult(null)
+    },
+    onError: (err) => {
+      message.error(`Lỗi dừng AUTO: ${err.message}`)
+    },
+  })
+
+  const evaluateMutation = useEvaluateAutoMisting({
+    onSuccess: (result) => {
+      setEvaluateResult(result)
+    },
+    onError: (err) => {
+      message.error(`Lỗi đánh giá: ${err.message}`)
+    },
+  })
+
+  // ── Tray source logic ─────────────────────────────────────────────────
   const validProfiles = useMemo(
     () =>
       traySources
@@ -105,7 +144,6 @@ export function FloorClimateConfigModal({
     [mushroomProfiles, traySources],
   )
 
-  /** Danh sách giống nấm cho Select */
   const mushroomOptions = useMemo(
     () => [
       { value: '', label: '-- Để trống / Không chọn --' },
@@ -129,12 +167,9 @@ export function FloorClimateConfigModal({
     )
   }
 
-  /** Nút Tính trung bình: lọc khay check + gán nấm → average rồi điền vào form */
   const handleSyncThresholds = () => {
     if (validProfiles.length === 0) {
-      message.warning(
-        'Vui lòng chọn ít nhất 1 khay có loại nấm cụ thể.',
-      )
+      message.warning('Vui lòng chọn ít nhất 1 khay có loại nấm cụ thể.')
       return
     }
     const calc = calculateMushroomProfileAverages(validProfiles)
@@ -204,6 +239,25 @@ export function FloorClimateConfigModal({
       destroyOnHidden
       afterClose={() => form.resetFields()}
     >
+      {/* ── Auto-misting control panel ───────────────────────────────── */}
+      <AutoMistingControlPanel
+        floorName={floorName}
+        runState={runtimeStatus?.state ?? null}
+        startedAt={runtimeStatus?.startedAt ?? null}
+        lastEvaluationAt={runtimeStatus?.lastEvaluationAt ?? null}
+        isLoadingStatus={statusLoading}
+        evaluateResult={evaluateResult}
+        isEvaluating={evaluateMutation.isPending}
+        isStarting={startMutation.isPending}
+        isStopping={stopMutation.isPending}
+        onStart={() => startMutation.mutate(numericFloorId)}
+        onStop={() => stopMutation.mutate(numericFloorId)}
+        onEvaluate={() => evaluateMutation.mutate(numericFloorId)}
+      />
+
+      <Divider className="floor-climate-sync-divider" />
+
+      {/* ── Threshold source sync ────────────────────────────────────── */}
       <Alert
         type="info"
         showIcon
@@ -212,15 +266,12 @@ export function FloorClimateConfigModal({
         className="floor-climate-info-alert"
       />
 
-      {/* ── Khu vực nguồn tính ─────────────────────────────────────── */}
       <div className="floor-climate-sync-panel">
         <div className="floor-climate-sync-copy">
           <div className="floor-climate-source-heading">
             <Typography.Text strong>Nguồn tính hiện tại</Typography.Text>
             <Badge
-              status={
-                validProfiles.length > 0 ? 'success' : 'default'
-              }
+              status={validProfiles.length > 0 ? 'success' : 'default'}
               text={
                 <span className="floor-source-badge-text">
                   {validProfiles.length}/{trays.length} khay hợp lệ
@@ -257,7 +308,6 @@ export function FloorClimateConfigModal({
                     .filter(Boolean)
                     .join(' ')}
                 >
-                  {/* Checkbox bật/tắt nguồn tính */}
                   <Checkbox
                     className="floor-source-checkbox"
                     checked={source.isEnabled}
@@ -272,12 +322,8 @@ export function FloorClimateConfigModal({
                         : 'Tắt nguồn tính'
                     }`}
                   />
-
-                  {/* Nhãn mã khay + badge giống đang trồng */}
                   <label className="floor-source-label">
-                    <span className="floor-source-label-code">
-                      K{pos}:
-                    </span>
+                    <span className="floor-source-label-code">K{pos}:</span>
                     {tray.rental ? (
                       <Tooltip
                         title={`${tray.rental.tenantName} · ${tray.rental.mushroomType}`}
@@ -295,8 +341,6 @@ export function FloorClimateConfigModal({
                       </Tag>
                     )}
                   </label>
-
-                  {/* Select giống nấm */}
                   <Select
                     className="floor-source-select"
                     value={source.selectedMushroomId || undefined}
@@ -312,8 +356,6 @@ export function FloorClimateConfigModal({
                     }
                     aria-label={`Gán giống nấm cho K${pos}`}
                   />
-
-                  {/* Subtext preview ngưỡng giống */}
                   <span
                     className={[
                       'floor-source-preview',
@@ -335,14 +377,12 @@ export function FloorClimateConfigModal({
                         </span>
                       </>
                     ) : (
-                      <>
-                        <span className="floor-source-preview-placeholder">
-                          Chưa gán giống nấm —
-                          {tray.rental
-                            ? ' giống đang trồng không khớp profile'
-                            : ' khay trống'}
-                        </span>
-                      </>
+                      <span className="floor-source-preview-placeholder">
+                        Chưa gán giống nấm —
+                        {tray.rental
+                          ? ' giống đang trồng không khớp profile'
+                          : ' khay trống'}
+                      </span>
                     )}
                   </span>
                 </div>
@@ -360,8 +400,6 @@ export function FloorClimateConfigModal({
           )}
         </div>
 
-        <Divider className="floor-climate-sync-divider" />
-
         <Button
           block
           className="floor-climate-sync-button"
@@ -373,7 +411,7 @@ export function FloorClimateConfigModal({
         </Button>
       </div>
 
-      {/* ── Form ngưỡng vi khí hậu — luôn controlled, cho phép sửa tay ── */}
+      {/* ── Threshold form ───────────────────────────────────────────── */}
       <Form<FloorClimateThresholdValues>
         form={form}
         layout="vertical"

@@ -1,0 +1,787 @@
+{
+  "swagger": [
+    {
+      "method": "GET",
+      "path": "/health",
+      "summary": "Check API health",
+      "tags": "Health",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/users/me",
+      "summary": "Get the current authenticated user",
+      "tags": "Users",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/rental-packages",
+      "summary": "Get rental packages",
+      "tags": "Rental Packages",
+      "params": "status:query"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rental-packages",
+      "summary": "Create a rental package",
+      "tags": "Rental Packages",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/rental-packages/{id}",
+      "summary": "Get a rental package by id",
+      "tags": "Rental Packages",
+      "params": "id*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/rental-packages/{id}",
+      "summary": "Update a rental package",
+      "tags": "Rental Packages",
+      "params": "id*:path"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/rental-packages/{id}",
+      "summary": "Delete a rental package",
+      "tags": "Rental Packages",
+      "params": "id*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rentals/admin",
+      "summary": "List rentals managed by admin or farm operator",
+      "tags": "Rentals",
+      "params": "status:query userId:query packageId:query trayId:query startDateFrom:query startDateTo:query page:query pageSize:query"
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/admin/from-order",
+      "summary": "Manually create a rental from a paid rental order",
+      "tags": "Rentals",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/rentals/admin/{rentalId}/cultivation-session",
+      "summary": "Start cultivation for a paid rental",
+      "tags": "Rentals",
+      "params": "rentalId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/rentals/admin/{rentalId}",
+      "summary": "Get a rental record with customer, order, package, tray and room details",
+      "tags": "Rentals",
+      "params": "rentalId*:path"
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/rentals/admin/{rentalId}",
+      "summary": "Update rental fields or change its status",
+      "tags": "Rentals",
+      "params": "rentalId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/orders/{orderId}/status",
+      "summary": "Get the current PayOS payment status for an order",
+      "tags": "Payments",
+      "params": "orderId*:path"
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/orders/{orderId}/payos",
+      "summary": "Create or reuse a PayOS payment link for an order",
+      "tags": "Payments",
+      "params": "orderId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/payments/payos/webhook",
+      "summary": "Verify that the PayOS webhook URL is reachable",
+      "tags": "Payments",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/payments/payos/webhook",
+      "summary": "Receive a PayOS payment webhook",
+      "tags": "Payments",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/orders",
+      "summary": "List orders belonging to the authenticated customer",
+      "tags": "Orders",
+      "params": ""
+    },
+    {
+      "method": "PATCH",
+      "path": "/api/orders/{orderId}/cancel",
+      "summary": "Cancel a pending order belonging to the authenticated customer",
+      "tags": "Orders",
+      "params": "orderId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/orders/{orderId}",
+      "summary": "Get details of an order belonging to the authenticated customer",
+      "tags": "Orders",
+      "params": "orderId*:path"
+    },
+    {
+      "method": "POST",
+      "path": "/api/orders/rentals",
+      "summary": "Create an order for a mushroom, optionally with a rental package",
+      "tags": "Orders",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/mushroom-types",
+      "summary": "Get all mushroom types",
+      "tags": "Mushroom Types",
+      "params": "status:query"
+    },
+    {
+      "method": "POST",
+      "path": "/api/mushroom-types",
+      "summary": "Create a new mushroom type with optional image upload",
+      "tags": "Mushroom Types",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/mushroom-types/{id}",
+      "summary": "Get a mushroom type by id",
+      "tags": "Mushroom Types",
+      "params": "id*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/mushroom-types/{id}",
+      "summary": "Update a mushroom type with optional image upload",
+      "tags": "Mushroom Types",
+      "params": "id*:path"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/mushroom-types/{id}",
+      "summary": "Delete a mushroom type",
+      "tags": "Mushroom Types",
+      "params": "id*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/mushroom-conditions",
+      "summary": "Get all mushroom conditions",
+      "tags": "Mushroom Conditions",
+      "params": "mushroomTypeId:query"
+    },
+    {
+      "method": "POST",
+      "path": "/api/mushroom-conditions",
+      "summary": "Create a mushroom condition for a mushroom type",
+      "tags": "Mushroom Conditions",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/mushroom-conditions/{id}",
+      "summary": "Get a mushroom condition by id",
+      "tags": "Mushroom Conditions",
+      "params": "id*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/mushroom-conditions/{id}",
+      "summary": "Update a mushroom condition",
+      "tags": "Mushroom Conditions",
+      "params": "id*:path"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/mushroom-conditions/{id}",
+      "summary": "Delete a mushroom condition",
+      "tags": "Mushroom Conditions",
+      "params": "id*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cultivation-trays",
+      "summary": "List cultivation trays",
+      "tags": "Cultivation Trays",
+      "params": "roomId:query floorId:query status:query"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cultivation-trays",
+      "summary": "Create a cultivation tray",
+      "tags": "Cultivation Trays",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/cultivation-trays/{id}",
+      "summary": "Get a cultivation tray by id",
+      "tags": "Cultivation Trays",
+      "params": "id*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cultivation-trays/{id}",
+      "summary": "Update a cultivation tray",
+      "tags": "Cultivation Trays",
+      "params": "id*:path"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/cultivation-trays/{id}",
+      "summary": "Delete a cultivation tray",
+      "tags": "Cultivation Trays",
+      "params": "id*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cultivation-rooms",
+      "summary": "List cultivation rooms",
+      "tags": "Cultivation Rooms",
+      "params": "status:query"
+    },
+    {
+      "method": "POST",
+      "path": "/api/cultivation-rooms",
+      "summary": "Create a cultivation room",
+      "tags": "Cultivation Rooms",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/cultivation-rooms/{id}/trays",
+      "summary": "List cultivation trays belonging to a room",
+      "tags": "Cultivation Trays",
+      "params": "id*:path status:query"
+    },
+    {
+      "method": "GET",
+      "path": "/api/cultivation-rooms/{id}",
+      "summary": "Get a cultivation room by id",
+      "tags": "Cultivation Rooms",
+      "params": "id*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/cultivation-rooms/{id}",
+      "summary": "Update a cultivation room",
+      "tags": "Cultivation Rooms",
+      "params": "id*:path"
+    },
+    {
+      "method": "DELETE",
+      "path": "/api/cultivation-rooms/{id}",
+      "summary": "Delete a cultivation room",
+      "tags": "Cultivation Rooms",
+      "params": "id*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/google",
+      "summary": "Start Gmail API authorization for the OTP sender account",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/google/callback",
+      "summary": "Complete Gmail API authorization and return a refresh token",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register",
+      "summary": "Register a user without email OTP verification",
+      "tags": "Authentication",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/login",
+      "summary": "Login and receive a JWT token",
+      "tags": "Authentication",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/auth/me",
+      "summary": "Get the current authenticated user",
+      "tags": "Authentication",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/register-otp",
+      "summary": "Register an unverified customer and send a registration OTP",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/verify-registration-otp",
+      "summary": "Verify a registration OTP",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/forgot-password",
+      "summary": "Request a password-reset OTP",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/reset-password-otp",
+      "summary": "Reset a password with a password-reset OTP",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/auth/request-change-password-otp",
+      "summary": "Request an OTP to change the current password",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/auth/change-password-otp",
+      "summary": "Change the current password with an OTP",
+      "tags": "Auth OTP",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/masters",
+      "summary": "List registered masters",
+      "tags": "IoT",
+      "params": ""
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/masters/{masterId}/sensors",
+      "summary": "Latest sensors, preserving last valid values on failure",
+      "tags": "IoT",
+      "params": "masterId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/masters/{masterId}/nodes/{nodeId}/sensors/{sensorId}",
+      "summary": "Get latest sensor state",
+      "tags": "IoT",
+      "params": "masterId*:path nodeId*:path sensorId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/masters/{masterId}/nodes/{nodeId}/sensors/{sensorId}/history",
+      "summary": "Sensor history ordered by receivedAt descending",
+      "tags": "IoT",
+      "params": "masterId*:path nodeId*:path sensorId*:path from:query to:query limit:query offset:query"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/masters/{masterId}/ssr",
+      "summary": "All eight SSR channels; unreported values are null",
+      "tags": "IoT",
+      "params": "masterId*:path"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iot/masters/{masterId}/ssr/{channel}/commands",
+      "summary": "Request manual SSR ON/OFF",
+      "tags": "IoT",
+      "params": "masterId*:path channel*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/commands/{commandId}",
+      "summary": "Persisted command publication status (no correlated acknowledgment)",
+      "tags": "IoT",
+      "params": "commandId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/floors",
+      "summary": "List floor mappings",
+      "tags": "Automatic misting",
+      "params": ""
+    },
+    {
+      "method": "POST",
+      "path": "/api/iot/floors",
+      "summary": "Create floor mapping",
+      "tags": "Automatic misting",
+      "params": ""
+    },
+    {
+      "method": "PUT",
+      "path": "/api/iot/floors/{floorId}",
+      "summary": "Replace floor mapping",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/iot/floors/{floorId}/trays/{trayId}",
+      "summary": "Assign a same-room tray to a stopped floor",
+      "tags": "Automatic misting",
+      "params": "floorId*:path trayId*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/iot/floors/{floorId}/trays/{trayId}/cultivation",
+      "summary": "Select a mushroom type for a rented tray",
+      "tags": "Automatic misting",
+      "params": "floorId*:path trayId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/floors/{floorId}/environment",
+      "summary": "Get three sensors, averages, freshness and thresholds",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/floors/{floorId}/auto-control",
+      "summary": "Read saved configuration, mode, cultivation conflicts and suggestions",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "PUT",
+      "path": "/api/iot/floors/{floorId}/auto-control",
+      "summary": "Save configuration without starting AUTO",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/floors/{floorId}/auto-control/suggestions",
+      "summary": "Suggest a shared floor climate configuration",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iot/floors/{floorId}/auto-control/start",
+      "summary": "Explicitly start a run",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iot/floors/{floorId}/auto-control/stop",
+      "summary": "Stop AUTO and request OFF",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/floors/{floorId}/auto-control/status",
+      "summary": "Get run, operator, desired/reported SSR, deadlines and errors",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    },
+    {
+      "method": "GET",
+      "path": "/api/iot/floors/{floorId}/auto-control/logs",
+      "summary": "Read paginated decision history",
+      "tags": "Automatic misting",
+      "params": "floorId*:path limit:query offset:query"
+    },
+    {
+      "method": "POST",
+      "path": "/api/iot/floors/{floorId}/auto-control/evaluate",
+      "summary": "Preview current algorithm decision without side effects",
+      "tags": "Automatic misting",
+      "params": "floorId*:path"
+    }
+  ],
+  "fe": [
+    {
+      "method": "POST",
+      "raw": "/api/auth/login",
+      "file": "features/auth/api/auth.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/users/me",
+      "file": "features/auth/api/auth.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/auth/register",
+      "file": "features/auth/api/auth.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/auth/register-otp",
+      "file": "features/auth/api/auth.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/auth/verify-registration-otp",
+      "file": "features/auth/api/auth.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/auth/forgot-password",
+      "file": "features/auth/api/auth.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/auth/reset-password-otp",
+      "file": "features/auth/api/auth.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/masters",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/masters/${masterId}/sensors",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/masters/${masterId}/nodes/${nodeId}/sensors/${sensorId}",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/masters/${masterId}/nodes/${nodeId}/sensors/${sensorId}/history",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/masters/${masterId}/ssr",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/iot/masters/${masterId}/ssr/${channel}/commands",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/commands/${commandId}",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/floors",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/iot/floors",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/iot/floors/${floorId}",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/iot/floors/${floorId}/trays/${trayId}",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/floors/${floorId}/environment",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/floors/${floorId}/auto-control",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/iot/floors/${floorId}/auto-control",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/iot/floors/${floorId}/auto-control/start",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/iot/floors/${floorId}/auto-control/stop",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/floors/${floorId}/auto-control/status",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/iot/floors/${floorId}/auto-control/logs",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/iot/floors/${floorId}/auto-control/evaluate",
+      "file": "features/devices/api/iot.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/orders",
+      "file": "features/orders/api/order.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/orders/${orderId}",
+      "file": "features/orders/api/order.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/payments/orders/${orderId}/status",
+      "file": "features/orders/api/payment.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/mushroom-conditions",
+      "file": "features/packages/api/mushroom-condition.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/mushroom-conditions/${id}",
+      "file": "features/packages/api/mushroom-condition.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/mushroom-conditions",
+      "file": "features/packages/api/mushroom-condition.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/mushroom-conditions/${id}",
+      "file": "features/packages/api/mushroom-condition.api.ts"
+    },
+    {
+      "method": "DELETE",
+      "raw": "/api/mushroom-conditions/${id}",
+      "file": "features/packages/api/mushroom-condition.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/mushroom-types",
+      "file": "features/packages/api/mushroom-type.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/mushroom-types/${id}",
+      "file": "features/packages/api/mushroom-type.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/mushroom-types",
+      "file": "features/packages/api/mushroom-type.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/mushroom-types/${id}",
+      "file": "features/packages/api/mushroom-type.api.ts"
+    },
+    {
+      "method": "DELETE",
+      "raw": "/api/mushroom-types/${id}",
+      "file": "features/packages/api/mushroom-type.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/rental-packages",
+      "file": "features/packages/api/rental-package.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/rental-packages/${id}",
+      "file": "features/packages/api/rental-package.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/rental-packages",
+      "file": "features/packages/api/rental-package.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/rental-packages/${id}",
+      "file": "features/packages/api/rental-package.api.ts"
+    },
+    {
+      "method": "DELETE",
+      "raw": "/api/rental-packages/${id}",
+      "file": "features/packages/api/rental-package.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/cultivation-rooms",
+      "file": "features/rooms/api/cultivation-room.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/cultivation-rooms/${id}",
+      "file": "features/rooms/api/cultivation-room.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/cultivation-rooms",
+      "file": "features/rooms/api/cultivation-room.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/cultivation-rooms/${id}",
+      "file": "features/rooms/api/cultivation-room.api.ts"
+    },
+    {
+      "method": "DELETE",
+      "raw": "/api/cultivation-rooms/${id}",
+      "file": "features/rooms/api/cultivation-room.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/cultivation-trays",
+      "file": "features/rooms/api/cultivation-tray.api.ts"
+    },
+    {
+      "method": "GET",
+      "raw": "/api/cultivation-trays/${id}",
+      "file": "features/rooms/api/cultivation-tray.api.ts"
+    },
+    {
+      "method": "POST",
+      "raw": "/api/cultivation-trays",
+      "file": "features/rooms/api/cultivation-tray.api.ts"
+    },
+    {
+      "method": "PUT",
+      "raw": "/api/cultivation-trays/${id}",
+      "file": "features/rooms/api/cultivation-tray.api.ts"
+    },
+    {
+      "method": "DELETE",
+      "raw": "/api/cultivation-trays/${id}",
+      "file": "features/rooms/api/cultivation-tray.api.ts"
+    }
+  ]
+}

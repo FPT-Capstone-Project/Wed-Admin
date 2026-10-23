@@ -5,6 +5,7 @@
 
 # Guidelines
 - Strictly adhere to existing code structure, patterns, and type definitions.
+- Apply UI/UX Pro Max design principles: maintain consistent spacing, typography, color palette, and clear state handling (loading, empty, error, success).
 - Do not refactor unrelated files or functions.
 - Do not install new packages unless explicitly requested.
 - Use strict TypeScript; reuse interfaces/types in `types/`.

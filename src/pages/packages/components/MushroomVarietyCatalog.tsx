@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react'
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
 import {
+  App,
   Button,
   Empty,
   Flex,
@@ -16,20 +15,19 @@ import {
   Popconfirm,
   Segmented,
   Space,
-  Switch,
   Table,
   Tag,
   Tooltip,
   Typography,
-  message,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import type { MushroomVariety } from '../../../types/pricing.types'
-import { getPricePerTray } from '../../../types/pricing.types'
+import type { MushroomType, MushroomTypeStatus } from '../../../types/mushroom-type'
 import {
-  PRICING_CYCLE_OPTIONS,
-  usePricingStore,
-} from '../../../stores/pricing.store'
+  useDeleteMushroomType,
+  useMushroomTypes,
+  useUpdateMushroomType,
+} from '../../../features/packages/hooks/useMushroomTypes'
+import { translateMushroomName } from '../../../shared/i18n/translate'
 import { MushroomVarietyFormModal } from './MushroomVarietyFormModal'
 
 const VND = new Intl.NumberFormat('vi-VN', {
@@ -38,7 +36,7 @@ const VND = new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 0,
 })
 
-type FilterStatus = 'ALL' | 'AVAILABLE' | 'OUT_OF_STOCK'
+type FilterStatus = 'ALL' | MushroomTypeStatus
 
 interface MushroomVarietyCatalogProps {
   canManage: boolean
@@ -47,28 +45,47 @@ interface MushroomVarietyCatalogProps {
 export function MushroomVarietyCatalog({
   canManage,
 }: MushroomVarietyCatalogProps) {
-  const varieties = usePricingStore((state) => state.varieties)
-  const serviceFee = usePricingStore((state) => state.serviceFee)
-  const toggleVarietyAvailability = usePricingStore(
-    (state) => state.toggleVarietyAvailability,
-  )
-  const deleteVariety = usePricingStore((state) => state.deleteVariety)
+  const { message: messageApi } = App.useApp()
+
+  const {
+    data: varieties = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useMushroomTypes()
+
+  const updateMutation = useUpdateMushroomType({
+    onSuccess: (updated) => {
+      messageApi.success(
+        updated.status === 'ACTIVE'
+          ? `Đã mở nhận đơn cho "${updated.name}".`
+          : `Đã tạm ngưng nhận đơn cho "${updated.name}".`,
+      )
+    },
+    onError: (err) => messageApi.error(err.message),
+  })
+
+  const deleteMutation = useDeleteMushroomType({
+    onSuccess: () => messageApi.success('Đã xóa giống nấm.'),
+    onError: (err) => messageApi.error(err.message),
+  })
 
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
   const [modalOpen, setModalOpen] = useState(false)
   const [editingVariety, setEditingVariety] =
-    useState<MushroomVariety | null>(null)
+    useState<MushroomType | null>(null)
 
   const filteredVarieties = useMemo(() => {
     const q = searchText.trim().toLowerCase()
     return varieties.filter((variety) => {
       const matchesSearch = q
         ? variety.name.toLowerCase().includes(q) ||
-          variety.description.toLowerCase().includes(q)
+          (variety.description ?? '').toLowerCase().includes(q)
         : true
       const matchesStatus =
-        statusFilter === 'ALL' || variety.availability === statusFilter
+        statusFilter === 'ALL' || variety.status === statusFilter
       return matchesSearch && matchesStatus
     })
   }, [statusFilter, searchText, varieties])
@@ -78,35 +95,37 @@ export function MushroomVarietyCatalog({
     setModalOpen(true)
   }
 
-  const handleOpenEdit = (variety: MushroomVariety) => {
+  const handleOpenEdit = (variety: MushroomType) => {
     setEditingVariety(variety)
     setModalOpen(true)
   }
 
-  const handleToggleAvailability = (variety: MushroomVariety) => {
-    toggleVarietyAvailability(variety.id)
-    message.success(
-      variety.availability === 'AVAILABLE'
-        ? `Đã tạm ngưng nhận đơn cho "${variety.name}".`
-        : `Đã mở nhận đơn cho "${variety.name}".`,
-    )
+  const handleDelete = (variety: MushroomType) => {
+    deleteMutation.mutate(variety.mushroom_type_id)
   }
 
-  const handleDelete = (variety: MushroomVariety) => {
-    deleteVariety(variety.id)
-    message.success(`Đã xóa giống nấm "${variety.name}".`)
+  const handleToggleStatus = (variety: MushroomType) => {
+    const nextStatus: MushroomTypeStatus =
+      variety.status === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE'
+    updateMutation.mutate({
+      id: variety.mushroom_type_id,
+      payload: { values: { status: nextStatus } },
+    })
   }
 
-  const columns: ColumnsType<MushroomVariety> = [
+  const isToggling = (recordId: number) =>
+    updateMutation.isPending &&
+    updateMutation.variables?.id === recordId
+
+  const columns: ColumnsType<MushroomType> = [
     {
       title: 'Giống nấm',
       key: 'name',
-      width: 260,
+      width: 280,
       render: (_, record) => (
         <Flex gap={12} align="center">
           <Image
-            src={record.imageUrl}
-            alt={record.name}
+            src={record.image_url ?? ''}
             width={56}
             height={56}
             style={{
@@ -114,122 +133,87 @@ export function MushroomVarietyCatalog({
               objectFit: 'cover',
               border: '1px solid #e5e7eb',
               flexShrink: 0,
+              background: '#f8fafc',
             }}
             fallback="🍄"
             preview={false}
+            alt={translateMushroomName(record.name)}
           />
-          <Flex vertical gap={2}>
-            <Typography.Text strong>{record.name}</Typography.Text>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 11, maxWidth: 180 }}
-              ellipsis={{ tooltip: record.description }}
-            >
-              {record.description}
-            </Typography.Text>
+          <Flex vertical gap={2} style={{ minWidth: 0 }}>
+            <Typography.Text strong>{translateMushroomName(record.name)}</Typography.Text>
+            {record.description && (
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 12, maxWidth: 200 }}
+                ellipsis={{ tooltip: record.description }}
+              >
+                {record.description}
+              </Typography.Text>
+            )}
           </Flex>
         </Flex>
       ),
     },
     {
-      title: 'Chu kỳ gói chuẩn',
-      key: 'cycle',
-      width: 150,
-      render: (_, record) => {
-        const opt = PRICING_CYCLE_OPTIONS.find((o) => o.value === record.cycleWeeks)
-        const cycleLabel = opt?.label ?? `${record.cycleWeeks} tuần`
-        return (
-          <Flex vertical gap={2}>
-            <Tag color="green" style={{ width: 'fit-content' }}>
-              {cycleLabel}
-            </Tag>
-            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-              {record.cycleWeeks * 7} ngày
-            </Typography.Text>
-          </Flex>
-        )
-      },
+      title: 'Thời gian sinh trưởng',
+      key: 'growing_days',
+      width: 170,
+      render: (_, record) => (
+        <Tag color="geekblue" style={{ fontWeight: 500, fontSize: 13 }}>
+          {record.growing_days} ngày
+        </Tag>
+      ),
     },
     {
-      title: 'Giá phôi / khay',
-      dataIndex: 'spawnPricePerTray',
-      key: 'spawnPricePerTray',
-      width: 130,
+      title: 'Đơn giá phôi / khay',
+      key: 'price',
+      width: 180,
       align: 'right',
-      render: (price: number) => (
-        <Tooltip title={`Giá phôi giống = ${VND.format(price)}`}>
-          <Typography.Text strong>{VND.format(price)}</Typography.Text>
+      render: (_, record) => (
+        <Tooltip title={`Đơn giá phôi giống = ${VND.format(record.price)}`}>
+          <Typography.Text strong style={{ fontSize: 15 }}>
+            {VND.format(record.price)}
+          </Typography.Text>
         </Tooltip>
       ),
     },
     {
-      title: 'Tổng thuê 1 khay (Tự hái)',
-      key: 'totalPickup',
-      width: 200,
-      render: (_, record) => {
-        const total = getPricePerTray(record, serviceFee)
-        const breakdown = `${VND.format(serviceFee.serviceFeePerTrayPerWeek)} × ${record.cycleWeeks} tuần + ${VND.format(record.spawnPricePerTray)}`
-        return (
-          <Flex vertical gap={2}>
-            <Typography.Text strong type="success" style={{ fontSize: 16 }}>
-              {VND.format(total)}
-            </Typography.Text>
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 11 }}
-              ellipsis={{ tooltip: breakdown }}
-            >
-              {breakdown}
-            </Typography.Text>
-          </Flex>
-        )
-      },
-    },
-    {
-      title: 'Tổng thuê 1 khay (Giao tận nhà)',
-      key: 'totalDelivery',
-      width: 200,
-      render: (_, record) => {
-        const trayTotal = getPricePerTray(record, serviceFee)
-        const total = trayTotal + serviceFee.deliveryFeePerOrder
-        return (
-          <Flex vertical gap={2}>
-            <Typography.Text strong style={{ color: '#7c3aed' }}>
-              {VND.format(total)}
-            </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-              + Ship {VND.format(serviceFee.deliveryFeePerOrder)}
-            </Typography.Text>
-          </Flex>
-        )
-      },
-    },
-    {
       title: 'Trạng thái',
-      key: 'availability',
-      width: 130,
-      render: (_, record) =>
-        record.availability === 'AVAILABLE' ? (
-          <Flex align="center" gap={6}>
-            <CheckCircleOutlined style={{ color: '#16a34a' }} />
-            <Typography.Text style={{ color: '#16a34a', fontWeight: 500 }}>
-              Đang nhận đơn
-            </Typography.Text>
-          </Flex>
+      key: 'status',
+      width: 180,
+      render: (_, record) => {
+        const isActive = record.status === 'ACTIVE'
+        return canManage ? (
+          <Button
+            type="link"
+            size="small"
+            loading={isToggling(record.mushroom_type_id)}
+            onClick={() => handleToggleStatus(record)}
+            style={{
+              padding: 0,
+              color: isActive ? '#16a34a' : '#9ca3af',
+              fontWeight: 500,
+            }}
+          >
+            {isActive ? '● Đang nhận đơn' : '○ Tạm ngưng'}
+          </Button>
+        ) : isActive ? (
+          <Typography.Text style={{ color: '#16a34a', fontWeight: 500 }}>
+            ● Đang nhận đơn
+          </Typography.Text>
         ) : (
-          <Flex align="center" gap={6}>
-            <CloseCircleOutlined style={{ color: '#9ca3af' }} />
-            <Typography.Text type="secondary">Tạm ngưng</Typography.Text>
-          </Flex>
-        ),
+          <Typography.Text type="secondary">○ Tạm ngưng</Typography.Text>
+        )
+      },
     },
     ...(canManage
       ? [
           {
             title: 'Hành động',
             key: 'actions',
-            width: 220,
-            render: (_: unknown, record: MushroomVariety) => (
+            width: 160,
+            fixed: 'right' as const,
+            render: (_: unknown, record: MushroomType) => (
               <Space size={6}>
                 <Button
                   size="small"
@@ -238,22 +222,8 @@ export function MushroomVarietyCatalog({
                   icon={<EditOutlined />}
                   onClick={() => handleOpenEdit(record)}
                 >
-                  Sửa giá phôi
+                  Sửa
                 </Button>
-
-                <Tooltip
-                  title={
-                    record.availability === 'AVAILABLE'
-                      ? 'Tạm ngưng nhận đơn'
-                      : 'Mở nhận đơn trở lại'
-                  }
-                >
-                  <Switch
-                    size="small"
-                    checked={record.availability === 'AVAILABLE'}
-                    onChange={() => handleToggleAvailability(record)}
-                  />
-                </Tooltip>
 
                 <Popconfirm
                   title="Xóa giống nấm?"
@@ -273,23 +243,23 @@ export function MushroomVarietyCatalog({
                 </Popconfirm>
               </Space>
             ),
-          } as ColumnsType<MushroomVariety>[number],
+          } as ColumnsType<MushroomType>[number],
         ]
       : []),
   ]
 
   return (
     <div>
-      {/* Header */}
-      <Flex align="center" justify="space-between" gap={16} wrap style={{ marginBottom: 16 }}>
-        <div>
-          <Typography.Title level={5} style={{ margin: 0 }}>
-            Danh mục Bảng giá theo Giống nấm
-          </Typography.Title>
-          <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-            Tổng hợp giống nấm và đơn giá đồng bộ với logic đặt thuê trên App khách hàng.
-          </Typography.Text>
-        </div>
+      <Flex
+        align="center"
+        justify="space-between"
+        gap={16}
+        wrap
+        style={{ marginBottom: 16 }}
+      >
+        <Typography.Title level={5} style={{ margin: 0 }}>
+          Danh sách giống nấm
+        </Typography.Title>
 
         {canManage && (
           <Button
@@ -302,7 +272,6 @@ export function MushroomVarietyCatalog({
         )}
       </Flex>
 
-      {/* Filters */}
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
         <Input
           allowClear
@@ -317,22 +286,44 @@ export function MushroomVarietyCatalog({
           onChange={setStatusFilter}
           options={[
             { label: 'Tất cả', value: 'ALL' },
-            { label: 'Đang nhận đơn', value: 'AVAILABLE' },
-            { label: 'Tạm ngưng', value: 'OUT_OF_STOCK' },
+            { label: 'Đang nhận đơn', value: 'ACTIVE' },
+            { label: 'Tạm ngưng', value: 'INACTIVE' },
           ]}
         />
+        <Button
+          size="small"
+          onClick={() => {
+            void refetch()
+          }}
+          loading={isLoading}
+        >
+          Tải lại
+        </Button>
       </Flex>
 
-      {/* Table */}
-      {filteredVarieties.length === 0 ? (
+      {isError ? (
+        <Empty
+          description={
+            <Flex vertical align="center" gap={4}>
+              <Typography.Text type="danger">
+                Không tải được danh sách giống nấm.
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {error?.message ?? 'Lỗi không xác định.'}
+              </Typography.Text>
+            </Flex>
+          }
+        />
+      ) : filteredVarieties.length === 0 && !isLoading ? (
         <Empty description="Chưa có giống nấm nào" />
       ) : (
-        <Table<MushroomVariety>
+        <Table<MushroomType>
           dataSource={filteredVarieties}
           columns={columns}
-          rowKey="id"
+          rowKey="mushroom_type_id"
+          loading={isLoading}
           pagination={false}
-          scroll={{ x: 1100 }}
+          scroll={{ x: 900 }}
           size="middle"
         />
       )}

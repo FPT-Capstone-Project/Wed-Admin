@@ -90,7 +90,7 @@ export function AlertManagementPage() {
     }
 
     return tenants
-      .filter((tenant) => tenant.name === authUser.name)
+      .filter((tenant) => tenant.name === authUser.fullName)
       .map((tenant) => tenant.assignedTrayId)
   }, [authUser, tenants])
 
@@ -147,7 +147,7 @@ export function AlertManagementPage() {
     (alert) => !alert.isAcknowledged,
   ).length
   const unreadCount = scopedAlerts.filter((alert) => !alert.isRead).length
-  const acknowledgedBy = authUser?.name ?? 'Quản trị viên MCMS'
+  const acknowledgedBy = authUser?.fullName ?? 'Quản trị viên MCMS'
 
   const handleMarkRead = (alert: SystemAlert) => {
     markAlertRead(alert.id)

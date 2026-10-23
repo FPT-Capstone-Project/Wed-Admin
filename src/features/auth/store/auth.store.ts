@@ -1,156 +1,196 @@
 import { create } from 'zustand'
-import type { LoginCredentials, User } from '../types/auth.types'
+import { authApi } from '../api/auth.api'
+import { tokenStorage } from '../../../shared/api/token-storage'
+import {
+  backendUserToUiUser,
+  type LoginRequest,
+  type User,
+  type UserRole,
+} from '../../../types/auth'
 
-const AUTH_STORAGE_KEY = 'mcms-auth-session'
+const REMEMBERED_EMAIL_KEY = 'mcms-remembered-email'
+const USER_CACHE_KEY = 'mcms-user-cache'
 
-interface PersistedAuthSession {
-  user: User
-  token: string
-  rememberedEmail: string
+function readUserCache(): User | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = window.localStorage.getItem(USER_CACHE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as User | null
+    return parsed && typeof parsed === 'object' ? parsed : null
+  } catch {
+    return null
+  }
+}
+
+function writeUserCache(user: User | null) {
+  if (typeof window === 'undefined') return
+  try {
+    if (user) {
+      window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user))
+    } else {
+      window.localStorage.removeItem(USER_CACHE_KEY)
+    }
+  } catch {
+    /* storage blocked → bỏ qua */
+  }
 }
 
 interface AuthState {
   user: User | null
-  token: string | null
+  accessToken: string | null
   isAuthenticated: boolean
+  isHydrating: boolean
   rememberedEmail: string
-  login: (credentials: LoginCredentials) => Promise<string>
+  /** Lỗi cuối cùng để component có thể reset sau khi hiển thị. */
+  lastError: string | null
+
+  login: (credentials: LoginRequest & { rememberMe?: boolean }) => Promise<void>
   logout: () => void
+  /**
+   * Gọi `/api/users/me` để xác thực lại session sau khi F5.
+   * - Trả về `true` nếu còn phiên hợp lệ.
+   * - Trả về `false` nếu token sai/hết hạn (đã được interceptor clear).
+   */
+  hydrate: () => Promise<boolean>
+  clearError: () => void
 }
 
-const MOCK_CREDENTIALS: LoginCredentials = {
-  email: 'admin@mcms.vn',
-  password: 'Admin@123',
-}
-
-const MOCK_USER: User = {
-  id: 'mcms-admin-001',
-  email: MOCK_CREDENTIALS.email,
-  role: 'admin',
-  name: 'Quản trị viên MCMS',
-}
-
-const MOCK_TOKEN = 'mcms-mock-access-token'
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
-}
-
-function isAuthRole(value: unknown): value is User['role'] {
-  return (
-    value === 'admin' ||
-    value === 'farm_manager' ||
-    value === 'operator'
-  )
-}
-
-function readPersistedSession(): PersistedAuthSession | null {
-  if (typeof window === 'undefined') {
-    return null
-  }
-
+function readRememberedEmail(): string {
+  if (typeof window === 'undefined') return ''
   try {
-    const rawValue = window.localStorage.getItem(AUTH_STORAGE_KEY)
-    const parsedValue: unknown = rawValue ? JSON.parse(rawValue) : null
-
-    if (!isRecord(parsedValue) || !isRecord(parsedValue.user)) {
-      return null
-    }
-
-    const userValue = parsedValue.user
-
-    if (
-      typeof userValue.id !== 'string' ||
-      typeof userValue.email !== 'string' ||
-      typeof userValue.name !== 'string' ||
-      !isAuthRole(userValue.role) ||
-      typeof parsedValue.token !== 'string' ||
-      typeof parsedValue.rememberedEmail !== 'string'
-    ) {
-      return null
-    }
-
-    return {
-      user: {
-        id: userValue.id,
-        email: userValue.email,
-        role: userValue.role,
-        name: userValue.name,
-      },
-      token: parsedValue.token,
-      rememberedEmail: parsedValue.rememberedEmail,
-    }
+    return window.localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''
   } catch {
-    return null
+    return ''
   }
 }
 
-function persistSession(session: PersistedAuthSession | null) {
-  if (typeof window === 'undefined') {
-    return
-  }
-
+function writeRememberedEmail(value: string) {
+  if (typeof window === 'undefined') return
   try {
-    if (session) {
-      window.localStorage.setItem(
-        AUTH_STORAGE_KEY,
-        JSON.stringify(session),
-      )
+    if (value) {
+      window.localStorage.setItem(REMEMBERED_EMAIL_KEY, value)
     } else {
-      window.localStorage.removeItem(AUTH_STORAGE_KEY)
+      window.localStorage.removeItem(REMEMBERED_EMAIL_KEY)
     }
   } catch {
-    // Memory state remains available when storage is blocked or full.
+    /* storage blocked → bỏ qua */
   }
 }
 
-const persistedSession = readPersistedSession()
+/**
+ * Đảm bảo user.role luôn là UPPERCASE UserRole.
+ * Phòng trường hợp backend trả string role ('admin') thay vì role_id.
+ */
+function ensureUpperCaseRole(user: User): User {
+  return {
+    ...user,
+    role: (user.role?.toUpperCase() ?? 'CUSTOMER') as UserRole,
+  }
+}
 
-export const useAuthStore = create<AuthState>((set) => ({
-  user: persistedSession?.user ?? null,
-  token: persistedSession?.token ?? null,
-  isAuthenticated: Boolean(persistedSession),
-  rememberedEmail: persistedSession?.rememberedEmail ?? '',
-  login: async ({ email, password, rememberMe = false }) => {
-    await new Promise((resolve) => window.setTimeout(resolve, 300))
+export const useAuthStore = create<AuthState>((set) => {
+  const cachedToken = tokenStorage.getAccessToken()
+  const cachedUser = readUserCache()
+  return {
+    user: cachedToken ? cachedUser : null,
+    accessToken: cachedToken,
+    isAuthenticated: Boolean(cachedToken),
+    isHydrating: false,
+    rememberedEmail: readRememberedEmail(),
+    lastError: null,
 
-    const normalizedEmail = email.trim().toLowerCase()
-    const isValidCredentials =
-      normalizedEmail === MOCK_CREDENTIALS.email &&
-      password === MOCK_CREDENTIALS.password
+    login: async ({ email, password, rememberMe = false }) => {
+    set({ lastError: null })
+    try {
+      const response = await authApi.login({ email, password })
+      if (!response) {
+        throw new Error('Đăng nhập thất bại. Vui lòng thử lại.')
+      }
 
-    if (!isValidCredentials) {
-      throw new Error('Email hoặc mật khẩu không chính xác.')
+      // Chuẩn hóa role về UPPERCASE để RoleGuard so sánh chính xác
+      const user = ensureUpperCaseRole(backendUserToUiUser(response.user))
+
+      tokenStorage.setTokens(response.token)
+      writeUserCache(user)
+      if (rememberMe) {
+        writeRememberedEmail(email.trim().toLowerCase())
+      } else {
+        writeRememberedEmail('')
+      }
+
+      set({
+        user,
+        accessToken: response.token,
+        isAuthenticated: true,
+        rememberedEmail: rememberMe ? email.trim().toLowerCase() : '',
+      })
+    } catch (cause) {
+      const message =
+        cause instanceof Error
+          ? cause.message
+          : 'Đăng nhập thất bại. Vui lòng thử lại.'
+      set({ lastError: message })
+      throw new Error(message)
     }
-
-    const rememberedEmail = rememberMe ? normalizedEmail : ''
-
-    set({
-      user: MOCK_USER,
-      token: MOCK_TOKEN,
-      isAuthenticated: true,
-      rememberedEmail,
-    })
-
-    persistSession(
-      rememberMe
-        ? {
-            user: MOCK_USER,
-            token: MOCK_TOKEN,
-            rememberedEmail,
-          }
-        : null,
-    )
-
-    return MOCK_TOKEN
   },
+
   logout: () => {
+    tokenStorage.clear()
+    writeUserCache(null)
     set({
       user: null,
-      token: null,
+      accessToken: null,
       isAuthenticated: false,
-      rememberedEmail: '',
+      lastError: null,
     })
-    persistSession(null)
   },
-}))
+
+  hydrate: async () => {
+    const token = tokenStorage.getAccessToken()
+    if (!token) {
+      writeUserCache(null)
+      set({ isAuthenticated: false, user: null })
+      return false
+    }
+
+    set({ isHydrating: true })
+    try {
+      const response = await authApi.me()
+      if (!response) {
+        writeUserCache(null)
+        set({ isAuthenticated: false, user: null, isHydrating: false })
+        return false
+      }
+
+      // Chuẩn hóa role về UPPERCASE để RoleGuard so sánh chính xác
+      const user = ensureUpperCaseRole(backendUserToUiUser(response.user))
+      writeUserCache(user)
+      set({
+        user,
+        isAuthenticated: true,
+        accessToken: token,
+        isHydrating: false,
+      })
+      return true
+    } catch {
+      // Interceptor đã clear token + dispatch event rồi.
+      writeUserCache(null)
+      set({
+        user: null,
+        accessToken: null,
+        isAuthenticated: false,
+        isHydrating: false,
+      })
+      return false
+    }
+  },
+
+  clearError: () => set({ lastError: null }),
+  }
+})
+
+// Selector tiện ích cho component không muốn subscribe to:
+export const selectIsAuthenticated = (state: AuthState) =>
+  state.isAuthenticated
+export const selectCurrentUser = (state: AuthState) => state.user

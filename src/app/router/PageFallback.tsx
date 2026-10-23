@@ -12,7 +12,7 @@ export function PageFallback() {
       aria-live="polite"
       aria-label="Đang tải trang"
     >
-      <Spin size="large" tip="Đang tải trang..." />
+      <Spin size="large" description="Đang tải trang..." />
     </div>
   )
 }

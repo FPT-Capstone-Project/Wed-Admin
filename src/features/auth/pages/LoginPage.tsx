@@ -1,9 +1,3 @@
-import {
-  CheckCircleFilled,
-  CloudOutlined,
-  FireOutlined,
-  SafetyCertificateOutlined,
-} from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { LoginForm } from '../components/LoginForm'
 
@@ -16,69 +10,36 @@ export function LoginPage() {
 
   return (
     <main className="login-page">
-      <section className="login-brand-panel" aria-labelledby="login-brand-title">
-        <div className="login-brand-lockup">
-          <img
-            className="login-brand-mark"
-            src="/mcms-mark.svg"
-            alt=""
-            width="46"
-            height="46"
-          />
-          <span>
+      {/* Cột trái: ảnh full-bleed + overlay + 1 hook duy nhất */}
+      <aside
+        className="login-hero"
+        aria-label="Trang trại nấm thông minh MCMS"
+      >
+        <img
+          className="login-hero-img"
+          src="/auth/hero-mushroom-rows.jpg"
+          alt=""
+          width="1400"
+          height="933"
+          loading="eager"
+          decoding="async"
+          fetchPriority="high"
+        />
+        <div className="login-hero-overlay" aria-hidden="true" />
+        <div className="login-hero-content">
+          <span className="login-hero-mark" aria-hidden="true">
+            <img src="/mcms-mark.svg" alt="" width="32" height="32" />
             <strong>MCMS</strong>
-            <small>Mushroom Cultivation Management System</small>
           </span>
-        </div>
-
-        <div className="login-brand-content">
-          <span className="login-eyebrow">QUẢN LÝ TRANG TRẠI IOT</span>
-          <h1 id="login-brand-title">
-            Môi trường tối ưu,
+          <p className="login-hero-hook">
+            Nuôi mùa vụ.
             <br />
-            mùa vụ bền vững.
-          </h1>
-          <p>
-            Một không gian điều hành tập trung cho toàn bộ trang trại nấm.
+            <em>Giữ bình yên cho kệ nấm.</em>
           </p>
-
-          <div className="login-status-panel" role="status">
-            <div className="login-status-heading">
-              <span>
-                <CheckCircleFilled aria-hidden="true" />
-                Môi trường ổn định
-              </span>
-              <small>4 tầng đang kết nối</small>
-            </div>
-            <div className="login-status-metrics">
-              <div>
-                <FireOutlined aria-hidden="true" />
-                <span>
-                  <strong>25,6°C</strong>
-                  <small>Nhiệt độ</small>
-                </span>
-              </div>
-              <div>
-                <CloudOutlined aria-hidden="true" />
-                <span>
-                  <strong>87%</strong>
-                  <small>Độ ẩm</small>
-                </span>
-              </div>
-              <div>
-                <SafetyCertificateOutlined aria-hidden="true" />
-                <span>
-                  <strong>An toàn</strong>
-                  <small>Trạng thái</small>
-                </span>
-              </div>
-            </div>
-          </div>
         </div>
+      </aside>
 
-        <span className="login-copyright">© 2026 MCMS · Smart Farm Platform</span>
-      </section>
-
+      {/* Cột phải: form đăng nhập */}
       <section className="login-form-panel" aria-label="Đăng nhập hệ thống">
         <LoginForm onSuccess={handleLoginSuccess} />
       </section>

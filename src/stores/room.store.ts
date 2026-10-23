@@ -100,10 +100,6 @@ function createTier(
       ...telemetry,
       updatedAt: '2026-09-12T09:30:00+07:00',
     },
-    relays: {
-      irrigationValves: { 1: false, 2: false, 3: false },
-      fan: tierId === 2,
-    },
   }
 }
 
@@ -239,11 +235,8 @@ export const MOCK_TIERS: Tier[] = [
 interface RoomState {
   tiers: Tier[]
   closureRecords: TrayClosureRecord[]
-  telemetrySimulationEnabled: boolean
   assignCustomerToTray: (trayId: string, customerId: string) => void
   releaseCustomerTrays: (customerId: string) => void
-  toggleTierFan: (tierId: TierId) => void
-  toggleTrayValve: (tierId: TierId, position: TrayPosition) => void
   updateTrayHarvestStatus: (
     trayId: string,
     harvestStatus: HarvestStatus,
@@ -251,8 +244,6 @@ interface RoomState {
   confirmTrayCustomerContact: (trayId: string) => void
   addTrayCareLog: (trayId: string, note: string) => void
   closeTraySession: (input: CloseTraySessionInput) => TrayClosureRecord
-  setTelemetrySimulationEnabled: (enabled: boolean) => void
-  simulateTelemetry: () => void
 }
 
 export function getAllTrays(tiers: Tier[]) {
@@ -263,18 +254,9 @@ export function findTray(tiers: Tier[], trayId: string) {
   return getAllTrays(tiers).find((tray) => tray.id === trayId)
 }
 
-function getRandomDelta(range: number) {
-  return (Math.random() - 0.5) * range
-}
-
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.max(minimum, Math.min(maximum, value))
-}
-
 export const useRoomStore = create<RoomState>((set, get) => ({
   tiers: MOCK_TIERS,
   closureRecords: [],
-  telemetrySimulationEnabled: false,
 
   assignCustomerToTray: (trayId, customerId) => {
     const tray = findTray(get().tiers, trayId)
@@ -329,33 +311,6 @@ export const useRoomStore = create<RoomState>((set, get) => ({
             : tray,
         ),
       })),
-    })),
-
-  toggleTierFan: (tierId) =>
-    set((state) => ({
-      tiers: state.tiers.map((tier) =>
-        tier.tierId === tierId
-          ? { ...tier, relays: { ...tier.relays, fan: !tier.relays.fan } }
-          : tier,
-      ),
-    })),
-
-  toggleTrayValve: (tierId, position) =>
-    set((state) => ({
-      tiers: state.tiers.map((tier) =>
-        tier.tierId === tierId
-          ? {
-              ...tier,
-              relays: {
-                ...tier.relays,
-                irrigationValves: {
-                  ...tier.relays.irrigationValves,
-                  [position]: !tier.relays.irrigationValves[position],
-                },
-              },
-            }
-          : tier,
-      ),
     })),
 
   updateTrayHarvestStatus: (trayId, harvestStatus) =>
@@ -460,26 +415,4 @@ export const useRoomStore = create<RoomState>((set, get) => ({
 
     return record
   },
-
-  setTelemetrySimulationEnabled: (enabled) =>
-    set({ telemetrySimulationEnabled: enabled }),
-
-  simulateTelemetry: () =>
-    set((state) => ({
-      tiers: state.tiers.map((tier) => ({
-        ...tier,
-        telemetry: {
-          temperature: Number(
-            clamp(tier.telemetry.temperature + getRandomDelta(0.6), 18, 34).toFixed(1),
-          ),
-          humidity: Math.round(
-            clamp(tier.telemetry.humidity + getRandomDelta(3), 55, 99),
-          ),
-          co2: Math.round(
-            clamp(tier.telemetry.co2 + getRandomDelta(60), 350, 1600),
-          ),
-          updatedAt: new Date().toISOString(),
-        },
-      })),
-    })),
 }))

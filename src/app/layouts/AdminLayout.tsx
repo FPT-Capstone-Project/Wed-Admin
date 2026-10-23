@@ -8,6 +8,7 @@ import {
   DashboardOutlined,
   ExperimentOutlined,
   FundOutlined,
+  KeyOutlined,
   LogoutOutlined,
   MenuOutlined,
   OrderedListOutlined,
@@ -29,9 +30,10 @@ import {
   Typography,
 } from 'antd'
 import type { MenuProps } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../features/auth/store/auth.store'
+import { AUTH_EXPIRED_EVENT } from '../../shared/api/client'
 import { useAlertStore } from '../../stores/alert.store'
 
 const { Content, Header, Sider } = Layout
@@ -99,6 +101,11 @@ const MENU_ITEMS: MenuProps['items'] = [
         label: 'Đơn đặt từ App',
       },
       {
+        key: '/rentals',
+        icon: <FundOutlined />,
+        label: 'Vụ thuê',
+      },
+      {
         key: '/packages',
         icon: <TagsOutlined />,
         label: 'Gói cước thuê',
@@ -127,9 +134,11 @@ const PAGE_TITLES: Record<string, string> = {
   '/reports': 'Báo cáo & phân tích',
   '/customers': 'Quản lý khách thuê',
   '/orders': 'Quản lý đơn đặt',
+  '/rentals': 'Quản lý vụ thuê',
   '/packages': 'Gói cước thuê',
   '/users': 'Quản lý tài khoản',
   '/settings': 'Hồ sơ Vi khí hậu',
+  '/change-password': 'Đổi mật khẩu',
 }
 
 function getSelectedMenuKey(pathname: string) {
@@ -227,12 +236,31 @@ export function AdminLayout() {
     (state) => state.alerts.filter((alert) => !alert.isAcknowledged).length,
   )
 
+  // ── Lắng nghe event "auth expired" từ axios interceptor ──────────────
+  // Khi backend trả 401 ở bất kỳ request nào → axios interceptor sẽ
+  // clear token và dispatch `mcms:auth-expired`. Ta clear store + về /login.
+  useEffect(() => {
+    const handler = () => {
+      logout()
+      if (location.pathname !== '/login') {
+        navigate('/login', { replace: true })
+      }
+    }
+    window.addEventListener(AUTH_EXPIRED_EVENT, handler)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handler)
+  }, [logout, navigate, location.pathname])
+
   const selectedMenuKey = getSelectedMenuKey(location.pathname)
   const pageTitle = location.pathname.startsWith('/devices/history')
     ? 'Lịch sử Telemetry IoT'
     : PAGE_TITLES[selectedMenuKey]
+
+  // User.fullName là field mới (chuẩn hoá) — fallback an toàn nếu BE chưa trả
+  const displayName = user?.fullName ?? 'Quản trị viên MCMS'
+  const displayEmail = user?.email ?? 'admin@mcms.vn'
+
   const initials =
-    user?.name
+    displayName
       .split(' ')
       .slice(-2)
       .map((part) => part[0])
@@ -245,12 +273,17 @@ export function AdminLayout() {
       disabled: true,
       label: (
         <div className="account-menu-copy">
-          <strong>{user?.name ?? 'Quản trị viên MCMS'}</strong>
-          <span>{user?.email ?? 'admin@mcms.vn'}</span>
+          <strong>{displayName}</strong>
+          <span>{displayEmail}</span>
         </div>
       ),
     },
     { type: 'divider' },
+    {
+      key: 'change-password',
+      icon: <KeyOutlined />,
+      label: 'Đổi mật khẩu',
+    },
     {
       key: 'logout',
       danger: true,
@@ -262,6 +295,16 @@ export function AdminLayout() {
   const handleLogout = () => {
     logout()
     navigate('/login', { replace: true })
+  }
+
+  const handleAccountMenuClick = ({ key }: { key: string }) => {
+    if (key === 'logout') {
+      handleLogout()
+      return
+    }
+    if (key === 'change-password') {
+      navigate('/change-password')
+    }
   }
 
   return (
@@ -335,7 +378,7 @@ export function AdminLayout() {
                 trigger={['click']}
                 menu={{
                   items: accountItems,
-                  onClick: ({ key }) => key === 'logout' && handleLogout(),
+                  onClick: handleAccountMenuClick,
                 }}
               >
                 <Button
@@ -345,7 +388,7 @@ export function AdminLayout() {
                 >
                   <Avatar className="account-avatar">{initials}</Avatar>
                   <span className="account-trigger-copy">
-                    <strong>{user?.name ?? 'Quản trị viên'}</strong>
+                    <strong>{displayName}</strong>
                     <small>Quản trị hệ thống</small>
                   </span>
                 </Button>

@@ -44,7 +44,7 @@ export function SettingsPage() {
     }
 
     const assignedTrayIds = tenants
-      .filter((tenant) => tenant.name === authUser.name)
+      .filter((tenant) => tenant.name === authUser.fullName)
       .map((tenant) => tenant.assignedTrayId)
 
     return [
