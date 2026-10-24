@@ -3,7 +3,6 @@ import { TagsOutlined } from '@ant-design/icons'
 import { Typography } from 'antd'
 import { MushroomVarietyCatalog } from './components/MushroomVarietyCatalog'
 import { RentalPackageCatalog } from './components/RentalPackageCatalog'
-import { MushroomConditionCatalog } from './components/MushroomConditionCatalog'
 
 /**
  * Admin section — mọi tài khoản đã qua AuthGuard đều có quyền CRUD.
@@ -39,11 +38,6 @@ export function PackageManagementPage() {
               key: 'packages',
               label: 'Gói thuê',
               children: <RentalPackageCatalog canManage={CAN_MANAGE} />,
-            },
-            {
-              key: 'conditions',
-              label: 'Thông số canh tác',
-              children: <MushroomConditionCatalog canManage={CAN_MANAGE} />,
             },
           ]}
         />

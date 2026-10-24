@@ -95,8 +95,8 @@ export function SettingsPage() {
             <ExperimentOutlined /> Hồ sơ Vi khí hậu &amp; Ngưỡng AUTO
           </Typography.Title>
           <Typography.Text type="secondary">
-            Thiết lập dải thông số nhiệt độ, độ ẩm và CO₂ chuẩn cho từng giống nấm
-            để áp dụng tự động cho các tầng nuôi trồng.
+            Thiết lập dải thông số nhiệt độ, độ ẩm, CO₂ và ẩm giá thể chuẩn
+            cho từng giống nấm để áp dụng tự động cho các tầng nuôi trồng.
           </Typography.Text>
         </div>
 

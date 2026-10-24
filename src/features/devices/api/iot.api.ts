@@ -243,7 +243,23 @@ export const autoMistingApi = {
     const response = await apiClient.post<unknown>(
       `/api/iot/floors/${floorId}/auto-control/evaluate`,
     )
-    return ensureObject<AutoControlEvaluateResult>(response.data)
+    const result = ensureObject<AutoControlEvaluateResult>(response.data)
+    if (!result) return null
+
+    // BE trả `{ dryRun, decision, environment }` — `environment` là nguồn số
+    // đo thật, nên suy ra `metrics` từ đó thay vì để UI tự tính lại.
+    const env = result.environment
+    return {
+      ...result,
+      metrics:
+        env != null
+          ? {
+              avgHumidity: env.avgHumidity,
+              spreadPercent: env.spread,
+              validSensors: env.sensors.filter((s) => s.valid).length,
+            }
+          : result.metrics,
+    }
   },
 }
 
@@ -263,6 +279,7 @@ function normalizeFloorEnvironment(raw: unknown): FloorEnvironmentResponse | nul
     nodeId: pickNumber(obj, 'nodeId') ?? 0,
     avgHumidity: pickNumber(obj, 'averageHumidity', 'avgHumidity'),
     avgTemperature: pickNumber(obj, 'averageTemperature', 'avgTemperature'),
+    spread: pickNumber(obj, 'spread', 'spreadPercent'),
     temperatureSpread: pickNumber(obj, 'temperatureSpread'),
     healthy: typeof obj.healthy === 'boolean' ? obj.healthy : null,
     reason: pickString(obj, 'reason'),
@@ -270,6 +287,7 @@ function normalizeFloorEnvironment(raw: unknown): FloorEnvironmentResponse | nul
       (sensor) => ({
         sensorId: pickNumber(sensor, 'sensorId', 'id') ?? 0,
         humidity: pickNumber(sensor, 'humidity'),
+        temperature: pickNumber(sensor, 'temperature'),
         valid: typeof sensor.valid === 'boolean' ? sensor.valid : false,
         ageMs: pickNumber(sensor, 'ageMs'),
         retained: typeof sensor.retained === 'boolean' ? sensor.retained : false,

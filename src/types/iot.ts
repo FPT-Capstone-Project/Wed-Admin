@@ -181,15 +181,37 @@ export type AutoControlMode = 'MANUAL' | 'AUTO'
 
 export interface AutoControlRun {
   id?: number
-  status: 'RUNNING' | 'STOPPED'
-  /** BE có thể chạy thử không gửi lệnh thật — `dry_run: true`. */
+  /** BE `SELECT *` từ `iot_auto_control_runs` — còn 'FAULT' ngoài Swagger. */
+  status: 'RUNNING' | 'STOPPED' | 'FAULT' | string
+  /** BE có thể chạy thử không gửi lệnh thật — `dry_run: true` (mặc định DB). */
   dry_run?: boolean
-  started_by?: number
+  config_snapshot?: Record<string, unknown> | null
+  started_by?: number | null
+  started_at?: string | null
+  stopped_at?: string | null
+  stop_reason?: string | null
 }
 
 export interface AutoControlRuntime {
-  control_state: string
+  /** ENUM trong DB — dùng để biết đang chờ OFF hay đang tưới. */
+  control_state:
+    | 'DISABLED'
+    | 'IDLE'
+    | 'ON_REQUESTED'
+    | 'MISTING'
+    | 'OFF_PENDING'
+    | 'COOLDOWN'
+    | 'SENSOR_FAULT'
+    | 'DEVICE_OFFLINE'
+    | 'FAULT'
+    | string
+  /** = `true` khi xung tưới đang chạy (`ON_REQUESTED` / `MISTING`). */
+  pulse_started_at?: string | null
   pulse_deadline_at?: string | null
+  cooldown_until?: string | null
+  last_evaluated_at?: string | null
+  last_average_humidity?: number | null
+  last_reason?: string | null
   last_error?: string | null
 }
 
@@ -209,19 +231,34 @@ export interface AutoControlState {
   lastDecision?: AutoControlDecision | null
 }
 
+/**
+ * Response `GET /api/iot/floors/{floorId}/auto-control/status`.
+ *
+ * Swagger: *"State includes mode, run, runtime, environment, ssr,
+ * cooldownRemainingMs and lastDecision"* — cùng shape với `AutoControlState`.
+ */
+export type AutoControlRuntimeStatus = AutoControlState
+
 /** Quyết định thuật toán — dùng cho `lastDecision` và response của `/evaluate`. */
 export interface AutoControlDecision {
-  action: 'ON' | 'OFF' | 'NONE'
+  action: 'ON' | 'OFF' | 'FAULT' | 'NONE'
   state: string
   reason: string
+  /** Cờ hysteresis — BE set cho nhánh lạnh (`coolingDemand`). */
+  demand?: boolean
+  coolingDemand?: boolean
 }
 
 export interface AutoControlEvaluateResult {
+  /** `POST /evaluate` xem trước → luôn `true` (không gửi lệnh thật). */
   dryRun: boolean
   decision: AutoControlDecision
+  /** Môi trường tại thời điểm đánh giá — BE attach trực tiếp. */
+  environment?: FloorEnvironmentResponse | null
   /** Một số response cũ chỉ có `matched` — giữ để tương thích UI cũ. */
   matched?: boolean
   reason?: string
+  /** Chuẩn hoá từ `environment` để UI không phải tự tính lại. */
   metrics?: {
     avgHumidity: number | null
     spreadPercent: number | null
@@ -229,10 +266,24 @@ export interface AutoControlEvaluateResult {
   }
 }
 
-/** Trang log quyết định — `GET /api/iot/floors/{floorId}/auto-control/logs`. */
+/**
+ * Trang log quyết định — `GET /api/iot/floors/{floorId}/auto-control/logs`.
+ *
+ * BE trả `SELECT *` từ `iot_auto_control_logs`, nên có đủ cột:
+ * `id, floor_id, run_id, event_type, average_humidity, sensor_values_json,
+ *  thresholds_snapshot_json, command_id, reason, created_at, ...`
+ */
 export interface AutoControlLogEntry {
+  id?: number
+  floor_id?: number
+  run_id?: number | null
+  /** VD: DECISION / PULSE_RESERVED / OFF_CONFIRMED / FAULT / RETRY_WAIT … */
   event_type: string
-  reason: string
+  reason: string | null
+  average_humidity?: number | null
+  created_at?: string
+  /** Lý do bị chặn bởi cổng an toàn — BE ghi vào `reason` khi FAULT. */
+  safety_blocked_reason?: string | null
 }
 
 /**
@@ -245,6 +296,12 @@ export interface FloorEnvironmentSensor {
   /** 1..3 */
   sensorId: number
   humidity: number | null
+  /**
+   * Nhiệt độ — BE spread nguyên row DB vào sensor
+   * (`{ sensorId, ...row, valid, ageMs }` trong `autoMisting.algorithm.js`).
+   * Chỉ dùng cho `cooling_enabled`; có thể `null` nếu sensor không có trường này.
+   */
+  temperature?: number | null
   valid: boolean
   /** Tuổi dữ liệu (ms) — BE dùng để đánh giá độ mới. */
   ageMs: number | null
@@ -256,6 +313,8 @@ export interface FloorEnvironmentResponse {
   nodeId: number
   avgHumidity: number | null
   avgTemperature: number | null
+  /** Độ lệch giữa max/min độ ẩm (đơn vị %). */
+  spread: number | null
   temperatureSpread: number | null
   /** `null` khi BE không trả. */
   healthy: boolean | null
@@ -284,12 +343,22 @@ export interface AutoControlLogsQuery {
  * null for missing, conflicting or too narrow conditions. No database writes
  * or device commands."*
  */
+/**
+ * Một profile nấm làm nguồn — BE `summarize()` chọn đúng 7 cột này
+ * (xem `autoMisting.profile.js`) rồi sort theo `mushroom_type_id`.
+ */
 export interface AutoControlSuggestionProfile {
   /** Tên profile nấm dùng làm nguồn. */
   profileName?: string | null
   mushroomTypeId?: number | null
   /** Số khay đang dùng profile này. */
   trayCount?: number
+  temperature_min?: number | null
+  temperature_max?: number | null
+  humidity_min?: number | null
+  humidity_max?: number | null
+  co2_min?: number | null
+  co2_max?: number | null
 }
 
 export interface AutoControlSuggestionConflict {

@@ -151,6 +151,50 @@ export interface CompleteRentalRequest {
   note?: string
 }
 
+/**
+ * `POST /api/rentals/admin/{rentalId}/notifications` — gửi thông báo cho
+ * khách thuê. BE tự suy ra người nhận từ `rental.user_id`.
+ *
+ * ⚠ BE chỉ bắt buộc `message`; `title` và `notification_type` có giá trị
+ * mặc định.
+ * ⚠ 409 khi vụ thuê đã đóng (COMPLETED/CANCELLED) hoặc tài khoản khách
+ * không còn ACTIVE — nên kiểm tra trạng thái rental trước khi cho gửi.
+ */
+export interface SendRentalNotificationRequest {
+  /** Bắt buộc — 1 đến 1000 ký tự. */
+  message: string
+  /** 1 đến 100 ký tự. Mặc định BE: 'Thông báo từ SmartMush Farm'. */
+  title?: string
+  /** Loại thông báo — BE dùng để app phân loại. Mặc định `OPERATOR_MESSAGE`. */
+  notification_type?: RentalNotificationType
+}
+
+/**
+ * Loại thông báo — đúng 3 giá trị BE chấp nhận
+ * (`notification.service.js` → `NOTIFICATION_TYPES`).
+ * Gửi giá trị ngoài danh sách này sẽ bị BE trả 400.
+ */
+export type RentalNotificationType =
+  | 'OPERATOR_MESSAGE'
+  | 'MUSHROOM_DISEASE'
+  | 'DEVICE_ISSUE'
+
+/**
+ * Response của endpoint trên — BE trả `{ data: SentRentalNotification }`.
+ *
+ * ⚠ Tên field là `notification_type` (không phải `type`) và **không** có
+ * `is_read` — khớp `sentNotificationColumns` trong `notification.model.js`.
+ */
+export interface SentRentalNotification {
+  notification_id: number
+  user_id: number
+  rental_id: number
+  notification_type: RentalNotificationType
+  title: string
+  message: string
+  created_at: string
+}
+
 /** `POST /api/rentals/admin/{rentalId}/cancel` — chỉ Admin (role_id 1). */
 export interface CancelRentalRequest {
   /** 3 – 500 ký tự */

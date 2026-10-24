@@ -9,6 +9,8 @@ import type {
   Rental,
   RentalListQuery,
   RentalPagination,
+  SendRentalNotificationRequest,
+  SentRentalNotification,
   StartCultivationSessionRequest,
   UpdateRentalRequest,
 } from '../types/rental.types'
@@ -185,5 +187,47 @@ export const rentalApi = {
       payload,
     )
     return ensureObject<Rental>(response.data)
+  },
+
+  /**
+   * POST /api/rentals/admin/{rentalId}/notifications — gửi thông báo cho
+   * khách thuê. BE tự suy ra người nhận từ `rental.user_id`.
+   *
+   * ⚠ Tên field loại thông báo: UI gửi `notification_type` (đúng tên field
+   * trong schema `Notification`), nhưng service BE hiện đọc `body.type`
+   * (`notification.service.js` → `normalizeType(body.type)`). BE không có
+   * middleware validate body nên field thừa bị bỏ qua — vì vậy ta gửi **cả
+   * hai** key với cùng giá trị:
+   *   - BE đọc `type`              → vẫn đúng (BE hiện tại).
+   *   - BE đổi sang `notification_type` → vẫn đúng, không cần sửa FE.
+   * Nếu chỉ gửi một trong hai, loại thông báo sẽ bị BE bỏ qua và âm thầm
+   * fallback về `OPERATOR_MESSAGE` — không có lỗi nhưng sai ý người dùng.
+   *
+   * @throws 400 khi title/message vượt giới hạn hoặc type không hợp lệ
+   * @throws 409 khi vụ thuê đã đóng hoặc tài khoản khách không ACTIVE
+   */
+  async sendNotification(
+    rentalId: number,
+    payload: SendRentalNotificationRequest,
+  ): Promise<SentRentalNotification | null> {
+    const body: Record<string, unknown> = { message: payload.message }
+
+    // Trim ở tầng API để title chỉ khoảng trắng không bị gửi lên (BE trả
+    // 400 vì title rỗng). Caller khác cũng được an toàn mà không cần tự trim.
+    const title = payload.title?.trim()
+    if (title) {
+      body.title = title
+    }
+
+    if (payload.notification_type) {
+      body.notification_type = payload.notification_type
+      body.type = payload.notification_type
+    }
+
+    const response = await apiClient.post<unknown>(
+      `${BASE}/${rentalId}/notifications`,
+      body,
+    )
+    return ensureObject<SentRentalNotification>(response.data)
   },
 }

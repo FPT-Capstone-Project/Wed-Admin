@@ -8,13 +8,31 @@ import { defineConfig, loadEnv } from 'vite'
 // - API: đọc VITE_API_BASE_URL từ .env (chỉ 1 file).
 //   • Production: client gọi thẳng URL thật (HTTPS, không CORS).
 //   • Dev local: Vite proxy forward /api/* → URL thật để tránh CORS.
+//
+// ⚠ Proxy target phải là ORIGIN (không kèm /api):
+//   Client dev dùng baseURL = '' → axios gọi `localhost:5173/api/users`.
+//   Nếu target chứa sẵn `/api` mà `rewrite` giữ nguyên path, request ra
+//   `https://backend.../api/api/users` → 404. Xem `stripApiSuffix()` bên dưới.
 // ─────────────────────────────────────────────────────────────────────────
+
+/**
+ * Bỏ dấu `/` cuối và hậu tố `/api` khỏi base URL để làm proxy target.
+ *
+ * `.env` có thể khai báo theo 2 kiểu:
+ *   VITE_API_BASE_URL=https://backend-75e1.onrender.com      (origin)
+ *   VITE_API_BASE_URL=https://backend-75e1.onrender.com/api  (kèm /api)
+ * Cả hai đều phải ra cùng một origin: `https://backend-75e1.onrender.com`.
+ */
+function stripApiSuffix(rawUrl: string): string {
+  return rawUrl.trim().replace(/\/+$/, '').replace(/\/api$/i, '')
+}
 
 export default defineConfig(({ mode }) => {
   // loadEnv chạy ở Node context (vite.config.ts) nên an toàn.
   const env = loadEnv(mode, process.cwd(), '')
-  const apiBaseUrl =
-    env.VITE_API_BASE_URL || 'https://backend-75e1.onrender.com'
+  const apiOrigin = stripApiSuffix(
+    env.VITE_API_BASE_URL || 'https://backend-75e1.onrender.com',
+  )
 
   return {
     plugins: [react()],
@@ -23,15 +41,17 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       // ─── Dev proxy — bypass CORS khi gọi backend Render ───
       proxy: {
+        // Context giữ nguyên là `/api`: path của request (vd `/api/users`)
+        // được append thẳng vào `target` (origin) → URL đúng 1 lần `/api`.
         '/api': {
-          target: apiBaseUrl,
+          target: apiOrigin,
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path,
           configure: (proxy) => {
             proxy.on('error', (err, req) => {
               console.error(
-                `[MCMS Proxy Error] ${req.method} ${req.url}:`,
+                `[MCMS Proxy Error] ${req.method} ${req.url} → ${apiOrigin}:`,
                 err.message,
               )
             })

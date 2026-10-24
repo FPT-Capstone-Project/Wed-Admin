@@ -1,76 +1,87 @@
-import { useEffect, useState } from 'react'
-import { Form, Input, Modal, Select } from 'antd'
-import type { User, UserFormValues } from '../../../types/user.types'
+import { useEffect } from 'react'
+import { App, Form, Input, Modal, Select } from 'antd'
+import { useCreateUser } from '../../../features/users/hooks/useUsers'
+import { ROLE_OPTIONS } from '../../../features/users/user-status.config'
+import type {
+  CreateManagedUserRequest,
+  UserAccountDetail,
+} from '../../../types/user.types'
 
 interface UserFormModalProps {
   open: boolean
   onCancel: () => void
-  onSubmit: (values: UserFormValues) => Promise<void>
-  initialValues?: Partial<UserFormValues>
+  onCreated?: (user: UserAccountDetail) => void
 }
 
-const ROLE_OPTIONS = [
-  { value: 'ADMIN', label: 'Quản trị viên' },
-  { value: 'OPERATOR', label: 'Vận hành trang trại' },
-  { value: 'CUSTOMER', label: 'Khách thuê khay' },
-] satisfies Array<{ value: User['role']; label: string }>
+/**
+ * Tạo tài khoản mới — chỉ có "create" vì BE chưa expose endpoint update
+ * profile user (không có `PATCH /api/users/{userId}`, chỉ có
+ * `PATCH /api/users/{userId}/status`).
+ */
+type FormShape = CreateManagedUserRequest
 
-const STATUS_OPTIONS = [
-  { value: 'ACTIVE', label: 'Hoạt động' },
-  { value: 'LOCKED', label: 'Tạm khóa' },
-  { value: 'PENDING', label: 'Chờ kích hoạt' },
-] satisfies Array<{ value: User['status']; label: string }>
+const DEFAULT_ROLE_ID = 3
 
 export function UserFormModal({
   open,
   onCancel,
-  onSubmit,
-  initialValues,
+  onCreated,
 }: UserFormModalProps) {
-  const [form] = Form.useForm<UserFormValues>()
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { message: messageApi } = App.useApp()
+  const [form] = Form.useForm<FormShape>()
+  const createMutation = useCreateUser()
 
   useEffect(() => {
-    if (!open) {
-      return
-    }
-
+    if (!open) return
     form.resetFields()
     form.setFieldsValue({
-      role: 'CUSTOMER',
-      status: 'PENDING',
-      ...initialValues,
+      email: '',
+      password: '',
+      fullName: '',
+      phone: '',
+      address: '',
+      roleId: DEFAULT_ROLE_ID,
     })
-  }, [form, initialValues, open])
+  }, [form, open])
 
-  const handleFinish = async (values: UserFormValues) => {
-    setIsSubmitting(true)
-
+  const handleFinish = async (values: FormShape) => {
     try {
-      await onSubmit(values)
-      form.resetFields()
-    } finally {
-      setIsSubmitting(false)
+      const created = await createMutation.mutateAsync({
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+        fullName: values.fullName.trim(),
+        roleId: values.roleId,
+        phone: values.phone?.trim() || undefined,
+        address: values.address?.trim() || undefined,
+      })
+
+      messageApi.success(`Đã tạo tài khoản "${created.full_name}".`)
+      onCancel()
+      onCreated?.(created)
+    } catch (err) {
+      messageApi.error(
+        err instanceof Error ? err.message : 'Lỗi không xác định.',
+      )
     }
   }
 
   return (
     <Modal
-      title={initialValues ? 'Cập nhật tài khoản' : 'Thêm tài khoản mới'}
+      title="Thêm tài khoản mới"
       open={open}
       onCancel={onCancel}
       onOk={() => form.submit()}
-      okText="Lưu"
+      okText="Tạo tài khoản"
       cancelText="Hủy"
-      confirmLoading={isSubmitting}
-      cancelButtonProps={{ disabled: isSubmitting }}
-      closable={!isSubmitting}
-      maskClosable={!isSubmitting}
-      keyboard={!isSubmitting}
+      confirmLoading={createMutation.isPending}
+      cancelButtonProps={{ disabled: createMutation.isPending }}
+      closable={!createMutation.isPending}
+      maskClosable={!createMutation.isPending}
+      keyboard={!createMutation.isPending}
       destroyOnHidden
-      afterClose={() => form.resetFields()}
+      width={640}
     >
-      <Form<UserFormValues>
+      <Form<FormShape>
         form={form}
         layout="vertical"
         requiredMark={false}
@@ -78,32 +89,15 @@ export function UserFormModal({
         onFinish={handleFinish}
       >
         <Form.Item
-          label="Họ tên"
-          name="name"
+          label="Họ và tên"
+          name="fullName"
           rules={[
             { required: true, message: 'Vui lòng nhập họ tên.' },
             { whitespace: true, message: 'Họ tên không được để trống.' },
+            { max: 100, message: 'Họ tên tối đa 100 ký tự.' },
           ]}
         >
-          <Input placeholder="Nhập họ tên người dùng" maxLength={100} />
-        </Form.Item>
-
-        <Form.Item
-          label="Username"
-          name="username"
-          rules={[
-            { required: true, message: 'Vui lòng nhập username.' },
-            {
-              min: 4,
-              message: 'Username phải có ít nhất 4 ký tự.',
-            },
-            {
-              pattern: /^[a-zA-Z0-9._-]+$/,
-              message: 'Username chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang.',
-            },
-          ]}
-        >
-          <Input placeholder="Nhập username" maxLength={50} />
+          <Input placeholder="VD: Nguyễn Văn A" maxLength={100} />
         </Form.Item>
 
         <Form.Item
@@ -119,46 +113,71 @@ export function UserFormModal({
         >
           <Input
             type="email"
-            autoComplete="email"
-            placeholder="user@example.com"
+            autoComplete="off"
+            placeholder="staff@mcms.vn"
             maxLength={150}
           />
         </Form.Item>
 
         <Form.Item
-          label="Số điện thoại"
-          name="phone"
+          label="Mật khẩu khởi tạo"
+          name="password"
+          extra="Tối thiểu 8 ký tự. Hãy gửi riêng cho người dùng và yêu cầu họ đổi sau lần đăng nhập đầu."
           rules={[
-            { required: true, message: 'Vui lòng nhập số điện thoại.' },
-            {
-              pattern: /^(0|\+84)\d{9,10}$/,
-              message: 'Số điện thoại Việt Nam không đúng định dạng.',
-            },
+            { required: true, message: 'Vui lòng nhập mật khẩu.' },
+            { min: 8, message: 'Mật khẩu phải có ít nhất 8 ký tự.' },
           ]}
         >
-          <Input
-            type="tel"
-            inputMode="tel"
-            autoComplete="tel"
-            placeholder="0901234567"
-            maxLength={14}
+          <Input.Password
+            autoComplete="new-password"
+            placeholder="Ít nhất 8 ký tự"
+            maxLength={64}
           />
         </Form.Item>
 
-        <Form.Item
-          label="Vai trò"
-          name="role"
-          rules={[{ required: true, message: 'Vui lòng chọn vai trò.' }]}
-        >
-          <Select options={ROLE_OPTIONS} />
-        </Form.Item>
+        <div style={{ display: 'flex', gap: 16 }}>
+          <Form.Item
+            label="Vai trò"
+            name="roleId"
+            rules={[{ required: true, message: 'Vui lòng chọn vai trò.' }]}
+            style={{ flex: 1, marginBottom: 0 }}
+          >
+            <Select
+              options={ROLE_OPTIONS.map((option) => ({
+                value: option.roleId,
+                label: option.label,
+                title: option.description,
+              }))}
+            />
+          </Form.Item>
+
+          <Form.Item
+            label="Số điện thoại"
+            name="phone"
+            style={{ flex: 1, marginBottom: 0 }}
+            rules={[
+              {
+                pattern: /^(0|\+84)\d{9,10}$/,
+                message: 'SĐT VN không đúng định dạng (vd: 0901234567).',
+              },
+            ]}
+          >
+            <Input
+              type="tel"
+              inputMode="tel"
+              placeholder="0901234567"
+              maxLength={14}
+            />
+          </Form.Item>
+        </div>
 
         <Form.Item
-          label="Trạng thái"
-          name="status"
-          rules={[{ required: true, message: 'Vui lòng chọn trạng thái.' }]}
+          label="Địa chỉ"
+          name="address"
+          style={{ marginTop: 16, marginBottom: 0 }}
+          rules={[{ max: 255, message: 'Địa chỉ tối đa 255 ký tự.' }]}
         >
-          <Select options={STATUS_OPTIONS} />
+          <Input placeholder="TP. Hồ Chí Minh" maxLength={255} />
         </Form.Item>
       </Form>
     </Modal>

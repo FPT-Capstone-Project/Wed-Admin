@@ -1,15 +1,23 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
 import { tokenStorage } from './token-storage'
 import { extractApiError } from './error'
+import { installErrorToast } from './error-toast'
+import { normalizeResponse } from './response-adapter'
 
 /**
  * Base URL — đọc từ Vite env `VITE_API_BASE_URL` trong file `.env`.
- * Ví dụ: VITE_API_BASE_URL=https://backend-75e1.onrender.com
  *
  * Phân biệt theo mode:
- *   - Dev   : '' → axios dùng window.location.origin (cùng-origin với Vite proxy).
- *             Vite (xem vite.config.ts) sẽ forward /api/* → backend thật → né CORS.
- *   - Prod  : URL thật trong .env để client gọi trực tiếp (HTTPS không bị CORS).
+ *   - Dev  : '' → axios dùng window.location.origin (cùng-origin với Vite proxy).
+ *            Vite (xem vite.config.ts) sẽ forward /api/* → backend thật → né CORS.
+ *   - Prod : **origin** của backend để client gọi thẳng (HTTPS, không CORS).
+ *
+ * ⚠ `VITE_API_BASE_URL` có thể được khai báo 2 kiểu:
+ *     https://backend-75e1.onrender.com        (origin — chuẩn, nên dùng)
+ *     https://backend-75e1.onrender.com/api    (kèm hậu tố /api)
+ *   Endpoint trong `*.api.ts` đã chứa sẵn `/api/...` và axios cộng chuỗi,
+ *   nên giữ hậu tố `/api` sẽ tạo ra `/api/api/users` → 404. Vì vậy hàm này
+ *   luôn chuẩn hoá về origin (bỏ dấu `/` cuối và hậu tố `/api`).
  */
 function resolveApiBaseUrl(): string {
   // Trong dev: luôn trả '' → axios dùng window.location.origin,
@@ -19,7 +27,7 @@ function resolveApiBaseUrl(): string {
   if (import.meta.env.DEV) return ''
 
   const raw = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
-  const cleaned = raw.replace(/\/+$/, '')
+  const cleaned = raw.trim().replace(/\/+$/, '').replace(/\/api$/i, '')
 
   if (!cleaned) {
     // eslint-disable-next-line no-console
@@ -79,14 +87,22 @@ apiClient.interceptors.request.use(
 )
 
 // ─── Response interceptor ────────────────────────────────────────────────
+const globalErrorToast = installErrorToast()
+
 apiClient.interceptors.response.use(
-  (response) => response,
+  // Bọc data + meta về shape chuẩn (không thay `data` → không phá
+  // các `ensureArray()`/`ensureObject()` hiện hữu).
+  normalizeResponse,
   (error: AxiosError) => {
     // 401: token sai / hết hạn → clear + phát event
     if (error.response?.status === 401) {
       tokenStorage.clear()
       notifyAuthExpired(error)
     }
+
+    // Toast thông báo lỗi từ `message` của BE (tự bỏ qua 401/403/404).
+    globalErrorToast(error)
+
     return Promise.reject(error)
   },
 )
@@ -99,6 +115,7 @@ export async function unwrapApiCall<T>(
     return await factory()
   } catch (cause) {
     const { message } = extractApiError(cause)
-    throw new Error(message)
+    // Giữ `cause` để stack gốc (AxiosError) không bị mất khi debug.
+    throw new Error(message, { cause })
   }
 }

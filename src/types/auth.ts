@@ -1,3 +1,5 @@
+import { rolePermissionsFor, type Permission } from '../features/auth/permissions'
+
 /**
  * Authentication DTOs — khớp 100% với Swagger schema.
  *
@@ -5,7 +7,7 @@
  * Quy ước mapping trong codebase MCMS:
  *   - Giữ nguyên snake_case cho field do backend trả (vd: `user_id`).
  *   - Chuẩn hoá Role về UPPERCASE ('ADMIN' | 'OPERATOR' | 'CUSTOMER')
- *     để đồng bộ với `RoleGuard` và `user.store.ts`.
+ *     để đồng bộ với `RoleGuard`.
  */
 
 // ─── POST /api/auth/login ─────────────────────────────────────────────────
@@ -78,6 +80,15 @@ export interface User {
   role: UserRole
   roleId: number
   status: string
+  /**
+   * Quyền của tài khoản.
+   *
+   * ⚠ `GET /api/auth/me` **không** trả field này (chỉ `{ user: User }`), và
+   * BE check quyền server-side qua bảng `role_permissions`. FE chỉ dùng để
+   * ẩn/disable nút nhằm tránh gọi vào endpoint chắc chắn 403.
+   * Giá trị được suy ra từ `roleId` — xem `features/auth/permissions.ts`.
+   */
+  permissions: Permission[]
 }
 
 export function backendRoleIdToUiRole(roleId: number): UserRole {
@@ -102,6 +113,7 @@ export function backendUserToUiUser(backend: BackendUser): User {
     roleId: backend.role_id,
     role: backendRoleIdToUiRole(backend.role_id),
     status: backend.status,
+    permissions: [...rolePermissionsFor(backend.role_id)],
   }
 }
 

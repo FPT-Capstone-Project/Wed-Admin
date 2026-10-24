@@ -1,14 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
-  DeleteOutlined,
-  EditOutlined,
-  KeyOutlined,
+  EyeOutlined,
   LockOutlined,
   PlusOutlined,
+  ReloadOutlined,
   SearchOutlined,
   UnlockOutlined,
 } from '@ant-design/icons'
 import {
+  App,
   Button,
   Empty,
   Flex,
@@ -16,260 +16,280 @@ import {
   Popconfirm,
   Select,
   Space,
+  Statistic,
   Table,
   Tag,
   Tooltip,
   Typography,
 } from 'antd'
-import type { TableColumnsType } from 'antd'
-import { ResetPasswordModal } from './components/ResetPasswordModal'
-import { UserFormModal } from './components/UserFormModal'
-import { useUserStore } from '../../stores/user.store'
+import type { ColumnsType } from 'antd/es/table'
+import {
+  ROLE_OPTIONS,
+  USER_STATUS_CONFIG,
+  USER_STATUS_OPTIONS,
+  getRoleLabel,
+  nextToggleStatus,
+} from '../../features/users/user-status.config'
+import {
+  useUpdateUserStatus,
+  useUsers,
+} from '../../features/users/hooks/useUsers'
+import { useAuthStore } from '../../features/auth/store/auth.store'
+import { getApiErrorMessage } from '../../shared/api/error'
 import type {
-  User,
-  UserFormValues,
-  UserRole,
+  UserListQuery,
   UserStatus,
+  UserWithRole,
 } from '../../types/user.types'
+import { UserDetailDrawer } from './components/UserDetailDrawer'
+import { UserFormModal } from './components/UserFormModal'
 
-const ROLE_OPTIONS = [
-  { value: 'ADMIN', label: 'Quản trị viên' },
-  { value: 'OPERATOR', label: 'Vận hành trang trại' },
-  { value: 'CUSTOMER', label: 'Khách thuê khay' },
-] satisfies Array<{ value: UserRole; label: string }>
-
-const STATUS_OPTIONS = [
-  { value: 'ACTIVE', label: 'Hoạt động' },
-  { value: 'LOCKED', label: 'Tạm khóa' },
-  { value: 'PENDING', label: 'Chờ kích hoạt' },
-] satisfies Array<{ value: UserStatus; label: string }>
-
-const STATUS_CONFIG: Record<
-  UserStatus,
-  { color: string; label: string }
-> = {
-  ACTIVE: { color: 'success', label: 'Hoạt động' },
-  LOCKED: { color: 'error', label: 'Tạm khóa' },
-  PENDING: { color: 'warning', label: 'Chờ kích hoạt' },
-}
-
-const PAGE_SIZE = 10
-
-function toUserFormValues(user: User): UserFormValues {
-  return {
-    username: user.username,
-    name: user.name,
-    email: user.email,
-    phone: user.phone,
-    role: user.role,
-    status: user.status,
-  }
-}
+const PAGE_SIZE = 20
 
 export function UserManagementPage() {
-  const users = useUserStore((state) => state.users)
-  const addUser = useUserStore((state) => state.addUser)
-  const updateUser = useUserStore((state) => state.updateUser)
-  const deleteUser = useUserStore((state) => state.deleteUser)
-  const toggleUserStatus = useUserStore((state) => state.toggleUserStatus)
-  const resetPassword = useUserStore((state) => state.resetPassword)
+  const { message: messageApi } = App.useApp()
+  const currentUserId = useAuthStore((state) => state.user?.id)
 
   const [searchText, setSearchText] = useState('')
-  const [roleFilter, setRoleFilter] = useState<UserRole | undefined>()
+  const [roleFilter, setRoleFilter] = useState<number | undefined>()
   const [statusFilter, setStatusFilter] = useState<UserStatus | undefined>()
   const [currentPage, setCurrentPage] = useState(1)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-  const [resettingUser, setResettingUser] = useState<User | null>(null)
+  const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
 
+  // ── Query params ───────────────────────────────────────────────────────
+  // useMemo giữ object identity ổn định, nếu không queryKey đổi mỗi render
+  // → refetch vô hạn (xem `useRentals`).
+  const listQuery = useMemo<UserListQuery>(
+    () => ({ roleId: roleFilter }),
+    [roleFilter],
+  )
+
+  const {
+    data: users = [],
+    isLoading,
+    isFetching,
+    isError,
+    error,
+    refetch,
+  } = useUsers(listQuery)
+
+  const statusMutation = useUpdateUserStatus({
+    onSuccess: (updated) =>
+      messageApi.success(
+        `Đã chuyển "${updated.full_name}" sang trạng thái "${
+          USER_STATUS_CONFIG[updated.status]?.label ?? updated.status
+        }".`,
+      ),
+    onError: (err) => messageApi.error(getApiErrorMessage(err)),
+  })
+
+  // BE chỉ hỗ trợ lọc theo roleId → tìm kiếm + lọc status làm phía client.
   const filteredUsers = useMemo(() => {
-    const normalizedSearch = searchText.trim().toLowerCase()
+    const keyword = searchText.trim().toLowerCase()
 
     return users.filter((user) => {
-      const matchesSearch = normalizedSearch
-        ? [user.name, user.username, user.email, user.phone].some((value) =>
-            value.toLowerCase().includes(normalizedSearch),
+      const matchesSearch = keyword
+        ? [user.full_name, user.email, user.phone ?? '', user.address ?? ''].some(
+            (value) => value.toLowerCase().includes(keyword),
           )
         : true
-      const matchesRole = roleFilter ? user.role === roleFilter : true
       const matchesStatus = statusFilter ? user.status === statusFilter : true
 
-      return matchesSearch && matchesRole && matchesStatus
+      return matchesSearch && matchesStatus
     })
-  }, [roleFilter, searchText, statusFilter, users])
+  }, [searchText, statusFilter, users])
+
+  const stats = useMemo(
+    () => ({
+      total: users.length,
+      active: users.filter((u) => u.status === 'ACTIVE').length,
+      blocked: users.filter((u) => u.status === 'BLOCKED').length,
+    }),
+    [users],
+  )
+
+  const selectedUser = useMemo(
+    () => users.find((user) => user.user_id === selectedUserId) ?? null,
+    [selectedUserId, users],
+  )
 
   const maxPage = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
   const visiblePage = Math.min(currentPage, maxPage)
 
-  const handleAddUser = () => {
-    setEditingUser(null)
-    setIsFormOpen(true)
-  }
+  const handleToggleStatus = useCallback(
+    (user: UserWithRole) => {
+      statusMutation.mutate({
+        userId: user.user_id,
+        payload: { status: nextToggleStatus(user.status) },
+      })
+    },
+    [statusMutation],
+  )
 
-  const handleEditUser = (user: User) => {
-    setEditingUser(user)
-    setIsFormOpen(true)
-  }
-
-  const handleSubmit = async (values: UserFormValues) => {
-    await new Promise((resolve) => window.setTimeout(resolve, 300))
-
-    if (editingUser) {
-      updateUser(editingUser.id, values)
-    } else {
-      addUser(values)
-    }
-
-    setIsFormOpen(false)
-    setEditingUser(null)
-  }
-
-  const handleResetPassword = async (userId: string) => {
-    await new Promise((resolve) => window.setTimeout(resolve, 300))
-
-    return resetPassword(userId)
-  }
-
-  const columns = useMemo<TableColumnsType<User>>(
+  const columns = useMemo<ColumnsType<UserWithRole>>(
     () => [
       {
-        title: 'Mã người dùng',
-        dataIndex: 'id',
-        key: 'id',
-        width: 140,
+        title: 'Mã',
+        dataIndex: 'user_id',
+        key: 'user_id',
+        width: 80,
+        render: (value: number) => (
+          <Typography.Text strong>#{value}</Typography.Text>
+        ),
       },
       {
-        title: 'Họ tên',
-        dataIndex: 'name',
-        key: 'name',
-        width: 180,
-      },
-      {
-        title: 'Username',
-        dataIndex: 'username',
-        key: 'username',
-        width: 160,
+        title: 'Họ và tên',
+        dataIndex: 'full_name',
+        key: 'full_name',
+        width: 200,
+        render: (value: string, user) => (
+          <Flex vertical gap={0}>
+            <Typography.Text strong>{value}</Typography.Text>
+            {user.address && (
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 12 }}
+                ellipsis={{ tooltip: user.address }}
+              >
+                {user.address}
+              </Typography.Text>
+            )}
+          </Flex>
+        ),
       },
       {
         title: 'Email',
         dataIndex: 'email',
         key: 'email',
-        width: 220,
+        width: 240,
       },
       {
         title: 'Số điện thoại',
         dataIndex: 'phone',
         key: 'phone',
-        width: 140,
+        width: 150,
+        render: (value: string | null) =>
+          value ?? <Typography.Text type="secondary">—</Typography.Text>,
       },
       {
         title: 'Vai trò',
-        dataIndex: 'role',
-        key: 'role',
-        width: 190,
-        render: (role: UserRole, user) => (
-          <Select<UserRole>
-            size="small"
-            value={role}
-            options={ROLE_OPTIONS}
-            onChange={(nextRole) =>
-              updateUser(user.id, { ...toUserFormValues(user), role: nextRole })
-            }
-            style={{ minWidth: 165 }}
-            aria-label={`Vai trò của ${user.username}`}
-          />
+        dataIndex: 'role_id',
+        key: 'role_id',
+        width: 200,
+        render: (roleId: number, user) => (
+          <Space direction="vertical" size={2}>
+            <Tag color="geekblue">{getRoleLabel(roleId, user.role_name)}</Tag>
+            {user.role_description && (
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 12 }}
+                ellipsis={{ tooltip: user.role_description }}
+              >
+                {user.role_description}
+              </Typography.Text>
+            )}
+          </Space>
         ),
       },
       {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',
-        width: 150,
+        width: 130,
         render: (status: UserStatus) => {
-          const config = STATUS_CONFIG[status]
+          const config = USER_STATUS_CONFIG[status]
 
-          return <Tag color={config.color}>{config.label}</Tag>
+          return (
+            <Tag color={config?.color ?? 'default'}>
+              {config?.label ?? status}
+            </Tag>
+          )
+        },
+      },
+      {
+        title: 'Ngày tạo',
+        dataIndex: 'created_at',
+        key: 'created_at',
+        width: 160,
+        render: (value: string) => {
+          const date = new Date(value)
+
+          return Number.isNaN(date.getTime()) ? (
+            value
+          ) : (
+            new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(
+              date,
+            )
+          )
         },
       },
       {
         title: 'Hành động',
         key: 'actions',
-        width: 190,
+        width: 120,
         align: 'right',
+        fixed: 'right',
         render: (_, user) => {
+          const isSelf = currentUserId === user.user_id
           const isActive = user.status === 'ACTIVE'
-          const statusActionLabel =
-            user.status === 'PENDING'
-              ? 'Kích hoạt tài khoản'
-              : isActive
-                ? 'Khóa tài khoản'
-                : 'Mở khóa tài khoản'
+          const actionLabel = isActive
+            ? 'Khoá tài khoản'
+            : 'Kích hoạt lại tài khoản'
+          const isToggling =
+            statusMutation.isPending &&
+            statusMutation.variables?.userId === user.user_id
 
           return (
             <Space size={2}>
-              <Tooltip title="Sửa tài khoản">
+              <Tooltip title="Xem chi tiết">
                 <Button
                   type="text"
-                  icon={<EditOutlined />}
-                  onClick={() => handleEditUser(user)}
-                  aria-label={`Sửa ${user.username}`}
+                  icon={<EyeOutlined />}
+                  onClick={() => setSelectedUserId(user.user_id)}
+                  aria-label={`Xem chi tiết ${user.full_name}`}
                 />
               </Tooltip>
 
-              <Popconfirm
-                title={`${statusActionLabel}?`}
-                description={`Bạn có chắc muốn ${statusActionLabel.toLowerCase()} ${user.username}?`}
-                okText="Xác nhận"
-                cancelText="Hủy"
-                onConfirm={() => toggleUserStatus(user.id)}
-              >
-                <Tooltip title={statusActionLabel}>
+              {isSelf ? (
+                <Tooltip title="Không thể tự khoá tài khoản đang đăng nhập">
                   <Button
                     type="text"
-                    icon={
-                      user.status === 'ACTIVE' ? (
-                        <LockOutlined />
-                      ) : (
-                        <UnlockOutlined />
-                      )
-                    }
-                    aria-label={`${statusActionLabel} ${user.username}`}
+                    icon={<LockOutlined />}
+                    disabled
+                    aria-label="Không thể tự khoá"
                   />
                 </Tooltip>
-              </Popconfirm>
-
-              <Tooltip title="Đặt lại mật khẩu">
-                <Button
-                  type="text"
-                  icon={<KeyOutlined />}
-                  onClick={() => setResettingUser(user)}
-                  aria-label={`Đặt lại mật khẩu cho ${user.username}`}
-                />
-              </Tooltip>
-
-              <Popconfirm
-                title="Xóa tài khoản?"
-                description={`Bạn có chắc muốn xóa ${user.username}? Thao tác này không thể hoàn tác.`}
-                okText="Xóa"
-                cancelText="Hủy"
-                okButtonProps={{ danger: true }}
-                onConfirm={() => deleteUser(user.id)}
-              >
-                <Tooltip title="Xóa tài khoản">
-                  <Button
-                    type="text"
-                    danger
-                    icon={<DeleteOutlined />}
-                    aria-label={`Xóa ${user.username}`}
-                  />
-                </Tooltip>
-              </Popconfirm>
+              ) : (
+                <Popconfirm
+                  title={`${actionLabel}?`}
+                  description={
+                    isActive
+                      ? `${user.full_name} sẽ không đăng nhập được tới khi được mở khoá.`
+                      : `${user.full_name} sẽ đăng nhập lại được ngay.`
+                  }
+                  okText="Xác nhận"
+                  cancelText="Hủy"
+                  okButtonProps={{ danger: isActive }}
+                  onConfirm={() => handleToggleStatus(user)}
+                >
+                  <Tooltip title={actionLabel}>
+                    <Button
+                      type="text"
+                      danger={isActive}
+                      loading={isToggling}
+                      icon={isActive ? <LockOutlined /> : <UnlockOutlined />}
+                      aria-label={`${actionLabel} ${user.full_name}`}
+                    />
+                  </Tooltip>
+                </Popconfirm>
+              )}
             </Space>
           )
         },
       },
     ],
-    [deleteUser, toggleUserStatus, updateUser],
+    [currentUserId, handleToggleStatus, statusMutation],
   )
 
   return (
@@ -285,82 +305,126 @@ export function UserManagementPage() {
           Quản lý tài khoản
         </Typography.Title>
 
-        <Button type="primary" icon={<PlusOutlined />} onClick={handleAddUser}>
+        <Button
+          type="primary"
+          icon={<PlusOutlined />}
+          onClick={() => setIsFormOpen(true)}
+        >
           Thêm người dùng
         </Button>
+      </Flex>
+
+      <Flex gap={24} wrap style={{ marginBottom: 20 }}>
+        <Statistic title="Tổng tài khoản" value={stats.total} />
+        <Statistic
+          title="Đang hoạt động"
+          value={stats.active}
+          valueStyle={{ color: '#16a34a' }}
+        />
+        <Statistic
+          title="Đã khoá"
+          value={stats.blocked}
+          valueStyle={{ color: '#dc2626' }}
+        />
       </Flex>
 
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm tên, username, email, SĐT"
+          placeholder="Tìm tên, email, SĐT, địa chỉ"
           value={searchText}
           onChange={(event) => {
             setSearchText(event.target.value)
             setCurrentPage(1)
           }}
           style={{ width: 320, maxWidth: '100%' }}
+          aria-label="Tìm tài khoản"
         />
 
-        <Select<UserRole>
+        <Select
           allowClear
           placeholder="Lọc theo vai trò"
-          options={ROLE_OPTIONS}
           value={roleFilter}
           onChange={(value) => {
             setRoleFilter(value)
             setCurrentPage(1)
           }}
-          style={{ width: 190 }}
+          options={ROLE_OPTIONS.map((option) => ({
+            value: option.roleId,
+            label: option.label,
+          }))}
+          style={{ width: 200 }}
           aria-label="Lọc theo vai trò"
         />
 
-        <Select<UserStatus>
+        <Select
           allowClear
           placeholder="Lọc theo trạng thái"
-          options={STATUS_OPTIONS}
           value={statusFilter}
           onChange={(value) => {
             setStatusFilter(value)
             setCurrentPage(1)
           }}
+          options={USER_STATUS_OPTIONS}
           style={{ width: 190 }}
           aria-label="Lọc theo trạng thái"
         />
+
+        <Button
+          icon={<ReloadOutlined />}
+          onClick={() => void refetch()}
+          loading={isFetching}
+        >
+          Tải lại
+        </Button>
       </Flex>
 
-      <Table<User>
-        rowKey="id"
-        columns={columns}
-        dataSource={filteredUsers}
-        locale={{ emptyText: <Empty description="Không có tài khoản phù hợp" /> }}
-        pagination={{
-          current: visiblePage,
-          pageSize: PAGE_SIZE,
-          total: filteredUsers.length,
-          showSizeChanger: false,
-          showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
-          onChange: setCurrentPage,
-        }}
-        scroll={{ x: 1300 }}
-      />
+      {isError ? (
+        <Empty
+          description={
+            <Flex vertical align="center" gap={4}>
+              <Typography.Text type="danger">
+                Không tải được danh sách tài khoản.
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {error?.message ?? 'Lỗi không xác định.'}
+              </Typography.Text>
+            </Flex>
+          }
+        />
+      ) : filteredUsers.length === 0 && !isLoading ? (
+        <Empty description="Chưa có tài khoản phù hợp" />
+      ) : (
+        <Table<UserWithRole>
+          rowKey="user_id"
+          columns={columns}
+          dataSource={filteredUsers}
+          loading={isLoading}
+          locale={{
+            emptyText: <Empty description="Không có tài khoản phù hợp" />,
+          }}
+          pagination={{
+            current: visiblePage,
+            pageSize: PAGE_SIZE,
+            total: filteredUsers.length,
+            showSizeChanger: false,
+            showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
+            onChange: setCurrentPage,
+          }}
+          scroll={{ x: 1280 }}
+        />
+      )}
 
       <UserFormModal
         open={isFormOpen}
-        initialValues={editingUser ? toUserFormValues(editingUser) : undefined}
-        onCancel={() => {
-          setIsFormOpen(false)
-          setEditingUser(null)
-        }}
-        onSubmit={handleSubmit}
+        onCancel={() => setIsFormOpen(false)}
       />
 
-      <ResetPasswordModal
-        open={Boolean(resettingUser)}
-        user={resettingUser}
-        onCancel={() => setResettingUser(null)}
-        onReset={handleResetPassword}
+      <UserDetailDrawer
+        userId={selectedUserId}
+        user={selectedUser}
+        onClose={() => setSelectedUserId(null)}
       />
     </div>
   )

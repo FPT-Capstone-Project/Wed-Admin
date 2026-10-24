@@ -21,6 +21,7 @@ import type {
   AutoControlEvaluateResult,
   AutoControlLogEntry,
   AutoControlLogsQuery,
+  AutoControlRuntimeStatus,
   AutoControlState,
   AutoControlSuggestions,
   AutoMistingConfiguration,
@@ -296,25 +297,35 @@ export function useAssignFloorToTray(
   })
 }
 
-/** Môi trường thực tế của tầng: sensors + độ ẩm trung bình. */
+/**
+ * Môi trường thực tế của tầng.
+ *
+ * ⚠ Endpoint `/environment` trả `FloorEnvironmentSensor` (`sensorId` +
+ * `humidity`), **khác** `IotSensor` của `/masters/{id}/sensors` (`nodeId` +
+ * `temperature`). Giữ đúng shape của endpoint để không mất `temperature`.
+ */
 export function useFloorEnvironment(
   floorId: number | null,
-  options?: Partial<
-    UseQueryOptions<
-      { sensors: IotSensor[]; avgHumidity: number | null },
-      Error
-    >
-  >,
+  options?: Partial<UseQueryOptions<FloorEnvironmentResponse, Error>>,
 ) {
-  return useQuery<{ sensors: IotSensor[]; avgHumidity: number | null }, Error>({
+  return useQuery<FloorEnvironmentResponse, Error>({
     queryKey: [...iotKeys.floor(floorId ?? -1), 'environment'],
     queryFn: async () => {
       const result = await autoMistingApi.getEnvironment(floorId as number)
-      if (!result) return { sensors: [], avgHumidity: null }
-      return {
-        sensors: filterActiveSensors(result.sensors ?? []),
-        avgHumidity: result.avgHumidity,
-      }
+      return (
+        result ?? {
+          masterId: '',
+          nodeId: 0,
+          avgHumidity: null,
+          avgTemperature: null,
+          spread: null,
+          temperatureSpread: null,
+          healthy: null,
+          reason: null,
+          sensors: [],
+          thresholds: null,
+        }
+      )
     },
     enabled: floorId !== null && floorId > 0,
     staleTime: 15_000,
@@ -326,6 +337,8 @@ export function useFloorEnvironment(
 export interface ResolvedFloorEnvironment {
   sensors: IotSensor[]
   avgHumidity: number | null
+  /** Nhiệt độ trung bình — chỉ có khi endpoint `/environment` trả về. */
+  avgTemperature: number | null
   /** `true` khi dữ liệu lấy từ telemetry Master thay vì từ API environment. */
   isFallback: boolean
   /** Master mà fallback dùng để lấy telemetry (chỉ có khi `isFallback`). */
@@ -358,14 +371,29 @@ export function useResolvedFloorEnvironment(
   })
 
   const resolved = useMemo<ResolvedFloorEnvironment>(() => {
-    const apiSensors = floorEnv.data?.sensors ?? []
+    // Chuẩn hoá sensor của endpoint `/environment` sang `IotSensor` để các
+    // consumer dùng chung một shape (nodeId + temperature + humidity).
+    const apiSensors: IotSensor[] = (floorEnv.data?.sensors ?? []).map((s) => ({
+      masterId: floorEnv.data?.masterId ?? '',
+      nodeId: floorEnv.data?.nodeId ?? 0,
+      sensorId: s.sensorId,
+      temperature: s.temperature ?? null,
+      humidity: s.humidity,
+      ok: s.valid,
+      lastReceivedAt: null,
+      lastValidAt: null,
+      measuredAt: null,
+      retained: s.retained,
+    }))
     const apiAvgHumidity = floorEnv.data?.avgHumidity ?? null
+    const apiAvgTemperature = floorEnv.data?.avgTemperature ?? null
 
     // API đã có sensor → dùng luôn, không fallback.
     if (apiSensors.length > 0) {
       return {
         sensors: apiSensors,
         avgHumidity: apiAvgHumidity,
+        avgTemperature: apiAvgTemperature,
         isFallback: false,
         masterId: null,
       }
@@ -377,6 +405,7 @@ export function useResolvedFloorEnvironment(
       return {
         sensors: [],
         avgHumidity: apiAvgHumidity,
+        avgTemperature: apiAvgTemperature,
         isFallback: false,
         masterId: null,
       }
@@ -390,6 +419,7 @@ export function useResolvedFloorEnvironment(
       return {
         sensors: [],
         avgHumidity: apiAvgHumidity,
+        avgTemperature: apiAvgTemperature,
         isFallback: false,
         masterId: null,
       }
@@ -399,11 +429,19 @@ export function useResolvedFloorEnvironment(
       .map((sensor) => sensor.humidity)
       .filter((h): h is number => typeof h === 'number' && Number.isFinite(h))
 
+    const temps = fallbackSensors
+      .map((sensor) => sensor.temperature)
+      .filter((t): t is number => typeof t === 'number' && Number.isFinite(t))
+
     return {
       sensors: fallbackSensors,
       avgHumidity:
         values.length > 0
           ? values.reduce((sum, h) => sum + h, 0) / values.length
+          : null,
+      avgTemperature:
+        temps.length > 0
+          ? temps.reduce((sum, t) => sum + t, 0) / temps.length
           : null,
       isFallback: true,
       masterId: masterId ?? null,
@@ -425,29 +463,54 @@ export function useResolvedFloorEnvironment(
   }
 }
 
+/**
+ * Cấu hình auto-misting đang lưu của tầng.
+ *
+ * ⚠ Trả `null` khi BE chưa có config (tầng chưa được thiết lập lần đầu) —
+ *   đây là trạng thái **bình thường**, không phải lỗi. Consumer phải xử lý
+ *   cả `null` (thường là mở form với giá trị mặc định).
+ */
 export function useFloorConfig(
   floorId: number | null,
-  options?: Partial<UseQueryOptions<AutoMistingConfiguration, Error>>,
+  options?: Partial<UseQueryOptions<AutoMistingConfiguration | null, Error>>,
 ) {
-  return useQuery<AutoMistingConfiguration, Error>({
+  return useQuery<AutoMistingConfiguration | null, Error>({
     queryKey: iotKeys.autoControl(floorId ?? -1),
     queryFn: async () => {
       const result = await autoMistingApi.getConfig(floorId as number)
-      if (result) return result
-      // Fallback matching actual AutoMistingConfiguration fields from iot.ts
-      return {
-        mushroom_type_id: 0,
-        humidity_min: 70,
-        humidity_max: 95,
-        humidity_start_threshold: 75,
-        humidity_stop_threshold: 90,
-        misting_pulse_ms: 100,
-        cooldown_ms: 30000,
-        evaluation_interval_ms: 300000,
-        max_sensor_spread_percent: 10,
-        max_activations_per_hour: 12,
-        max_cumulative_on_ms_per_hour: 600000,
-      }
+      return result?.config ?? null
+    },
+    enabled: floorId !== null && floorId > 0,
+    staleTime: 60_000,
+    ...options,
+  })
+}
+
+/**
+ * Ngưỡng đề xuất do BE tính — nguồn duy nhất, FE không tự suy luận.
+ *
+ * Swagger: *"Uses ACTIVE tray sessions linked to ACTIVE rentals on the same
+ * tray; returns sourceProfiles, common, issues, warnings, config. Config is
+ * null for missing, conflicting or too narrow conditions. No database writes
+ * or device commands."*
+ */
+export function useFloorAutoControlSuggestions(
+  floorId: number | null,
+  options?: Partial<UseQueryOptions<AutoControlSuggestions, Error>>,
+) {
+  return useQuery<AutoControlSuggestions, Error>({
+    queryKey: iotKeys.autoControlSuggestions(floorId ?? -1),
+    queryFn: async () => {
+      const result = await autoMistingApi.getSuggestions(floorId as number)
+      return (
+        result ?? {
+          sourceProfiles: [],
+          common: null,
+          issues: [],
+          warnings: [],
+          config: null,
+        }
+      )
     },
     enabled: floorId !== null && floorId > 0,
     staleTime: 60_000,
@@ -463,13 +526,14 @@ export function useFloorAutoControlStatus(
     queryKey: iotKeys.autoControlStatus(floorId ?? -1),
     queryFn: async () => {
       const result = await autoMistingApi.getStatus(floorId as number)
-      if (result) return result
-      return {
-        state: 'STOPPED',
-        startedAt: null,
-        stoppedAt: null,
-        lastEvaluationAt: null,
-        message: null,
+      // Endpoint trả cùng shape `AutoControlState`; thiếu `mode` thì coi
+      // như đang MANUAL để UI mặc định về trạng thái dừng.
+      return result ?? {
+        mode: 'MANUAL',
+        config: null,
+        run: null,
+        runtime: null,
+        ssr: null,
       }
     },
     enabled: floorId !== null && floorId > 0,
@@ -480,12 +544,12 @@ export function useFloorAutoControlStatus(
 
 export function useFloorAutoControlLogs(
   floorId: number | null,
-  limit = 50,
+  query: AutoControlLogsQuery = {},
   options?: Partial<UseQueryOptions<AutoControlLogEntry[], Error>>,
 ) {
   return useQuery<AutoControlLogEntry[], Error>({
-    queryKey: iotKeys.autoControlLogs(floorId ?? -1),
-    queryFn: () => autoMistingApi.getLogs(floorId as number, limit),
+    queryKey: [...iotKeys.autoControlLogs(floorId ?? -1), query],
+    queryFn: () => autoMistingApi.getLogs(floorId as number, query),
     enabled: floorId !== null && floorId > 0,
     staleTime: 30_000,
     ...options,
@@ -512,14 +576,14 @@ function invalidateFloor(
 
 export function useSaveAutoControlConfig(
   options?: UseMutationOptions<
-    AutoMistingConfiguration,
+    AutoControlState,
     Error,
     { floorId: number; payload: AutoMistingConfiguration }
   >,
 ) {
   const queryClient = useQueryClient()
   return useMutation<
-    AutoMistingConfiguration,
+    AutoControlState,
     Error,
     { floorId: number; payload: AutoMistingConfiguration }
   >({
@@ -536,14 +600,10 @@ export function useSaveAutoControlConfig(
 }
 
 export function useStartAutoMisting(
-  options?: UseMutationOptions<
-    AutoControlRuntimeStatus,
-    Error,
-    number
-  >,
+  options?: UseMutationOptions<AutoControlState, Error, number>,
 ) {
   const queryClient = useQueryClient()
-  return useMutation<AutoControlRuntimeStatus, Error, number>({
+  return useMutation<AutoControlState, Error, number>({
     mutationFn: async (floorId) => {
       const result = await autoMistingApi.start(floorId)
       if (!result) throw new Error('Không thể khởi động auto-misting')
@@ -557,14 +617,10 @@ export function useStartAutoMisting(
 }
 
 export function useStopAutoMisting(
-  options?: UseMutationOptions<
-    AutoControlRuntimeStatus,
-    Error,
-    number
-  >,
+  options?: UseMutationOptions<AutoControlState, Error, number>,
 ) {
   const queryClient = useQueryClient()
-  return useMutation<AutoControlRuntimeStatus, Error, number>({
+  return useMutation<AutoControlState, Error, number>({
     mutationFn: async (floorId) => {
       const result = await autoMistingApi.stop(floorId)
       if (!result) throw new Error('Không thể dừng auto-misting')

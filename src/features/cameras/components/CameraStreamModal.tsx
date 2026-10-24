@@ -1,7 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import { Alert, App, Modal, Spin, Typography } from 'antd'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Alert, App, Button, Modal, Space, Spin, Tooltip, Typography } from 'antd'
 import type Hls from 'hls.js'
+import { cameraApi } from '../api/camera.api'
 import { useCameraLiveStream, useStopLiveStream } from '../hooks/useCameras'
+import { CAMERA_MANAGE } from '../../auth/permissions'
+import { useHasPermission } from '../../auth/hooks/usePermission'
 import { getApiErrorMessage } from '../../../shared/api/error'
 import type { Camera } from '../../../types/camera.types'
 
@@ -74,15 +77,20 @@ export function CameraStreamModal({
   const streamUrl = manualStreamUrl ?? cloudStreamUrl
 
   const stopLiveStream = useStopLiveStream({
-    onSuccess: () => {
-      // Không báo success — người dùng chủ động đóng modal, không cần
-      // thông báo "đã dừng".
-    },
     onError: (err) => {
       // Đóng modal vẫn phải thành công; chỉ cảnh báo nhẹ.
       message.warning(`Không dừng được phiên live: ${getApiErrorMessage(err)}`)
     },
   })
+
+  /**
+   * Dừng phiên thủ công — chỉ Admin.
+   *
+   * ⚠ `POST /api/cameras/{id}/live-stream/stop` là `authorizeRoles(1)`,
+   * nên Farm Operator luôn nhận 403. Hiện nút cho vô nghĩa với role đó.
+   */
+  const canStopSession = useHasPermission(CAMERA_MANAGE)
+  const isStoppingSession = stopLiveStream.isPending
 
   // ── Gắn source vào <video> ──────────────────────────────────────────
   useEffect(() => {
@@ -156,14 +164,81 @@ export function CameraStreamModal({
   }, [open, streamUrl, videoReady])
 
   // ── Dừng phiên live khi đóng modal ──────────────────────────────────
+  /**
+   * Đánh dấu phiên của camera hiện tại đã được yêu cầu dừng.
+   *
+   * Cần vì phiên có **hai** đường giải phóng: đóng modal và unmount
+   * (điều hướng / hot-reload). `POST .../live-stream/stop` là thao tác
+   * không idempotent trên Imou cloud — gọi hai lần sẽ nhận 502 ở lần hai.
+   */
+  const stoppedCameraRef = useRef<number | null>(null)
+
+  const releaseCloudSession = useCallback(
+    (cameraId: number) => {
+      if (stoppedCameraRef.current === cameraId) return
+      stoppedCameraRef.current = cameraId
+
+      void cameraApi.stopLiveStream(cameraId).catch((error: unknown) => {
+        // Đóng modal vẫn phải thành công; chỉ cảnh báo nhẹ.
+        message.warning(
+          `Không dừng được phiên live: ${getApiErrorMessage(error)}`,
+        )
+      })
+    },
+    [message],
+  )
+
   const handleClose = () => {
     // Chỉ dừng phiên nếu ta thực sự lấy link từ Imou cloud (manual URL
     // không tạo phiên nào).
     if (needsCloudLookup && camera?.id) {
-      stopLiveStream.mutate(camera.id)
+      releaseCloudSession(camera.id)
     }
     onClose()
   }
+
+  /**
+   * Giải phóng phiên live khi component **unmount** mà chưa qua `handleClose`
+   * (vd: điều hướng sang trang khác, hot-reload).
+   *
+   * Phiên Imou là tài nguyên trên cloud: không dừng thì session treo và giữ
+   * tốn băng thông. Ref guard ở trên đảm bảo không gọi trùng.
+   */
+  useEffect(() => {
+    return () => {
+      if (needsCloudLookup && camera?.id) {
+        void cameraApi.stopLiveStream(camera.id).catch(() => {
+          stoppedCameraRef.current = camera.id
+        })
+      }
+    }
+  }, [camera?.id, needsCloudLookup])
+
+  /**
+   * Người dùng chuyển tab / ẩn cửa sổ → pause player để không decode video
+   * vô ích. KHÔNG gọi stop API ở đây: chuyển tab không có nghĩa hết ý định
+   * xem, và stop sẽ tạo vòng lặp (mở lại modal lại phải lấy token mới).
+   */
+  useEffect(() => {
+    if (!open) return
+
+    const onVisibilityChange = () => {
+      const video = videoRef.current
+      if (!video) return
+
+      if (document.hidden) {
+        video.pause()
+      } else {
+        void video.play().catch(() => {
+          // Autoplay bị chặn sau khi người dùng tương tác trước đó → bỏ qua.
+        })
+      }
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    return () =>
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+  }, [open])
 
   const isLoading =
     open && needsCloudLookup && (isLoadingStream || (!streamUrl && isStreamError))
@@ -180,9 +255,34 @@ export function CameraStreamModal({
       }
       open={open}
       onCancel={handleClose}
-      onOk={handleClose}
-      okText="Đóng"
-      cancelButtonProps={{ style: { display: 'none' } }}
+      footer={
+        canStopSession && needsCloudLookup && streamUrl ? (
+          <Space>
+            <Tooltip title="Kết thúc phiên live trên Imou cloud">
+              <Button
+                danger
+                loading={isStoppingSession}
+                onClick={() => {
+                  if (camera?.id) {
+                    stopLiveStream.mutate(camera.id, {
+                      onSuccess: () => onClose(),
+                    })
+                  }
+                }}
+              >
+                Dừng phiên live
+              </Button>
+            </Tooltip>
+            <Button type="primary" onClick={handleClose}>
+              Đóng
+            </Button>
+          </Space>
+        ) : (
+          <Button type="primary" onClick={handleClose}>
+            Đóng
+          </Button>
+        )
+      }
       width={880}
       destroyOnHidden
       styles={{ body: { paddingTop: 8 } }}

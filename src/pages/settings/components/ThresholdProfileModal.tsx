@@ -30,9 +30,10 @@ export function ThresholdProfileModal({
       tempMax: 28,
       humidityMin: 75,
       humidityMax: 95,
-      co2Max: 1000,
-      soilMoistureMin: 60,
-      soilMoistureMax: 85,
+      co2Min: null,
+      co2Max: null,
+      soilMoistureMin: null,
+      soilMoistureMax: null,
       ...initialValues,
     })
   }, [form, initialValues, open])
@@ -57,10 +58,26 @@ export function ThresholdProfileModal({
       })
     }
 
-    if (values.soilMoistureMin >= values.soilMoistureMax) {
+    // CO₂ và ẩm giá thể là optional → chỉ validate khi cả hai đều có giá trị.
+    if (
+      values.co2Min != null &&
+      values.co2Max != null &&
+      values.co2Min >= values.co2Max
+    ) {
+      rangeErrors.push({
+        name: 'co2Min',
+        errors: ['CO₂ Min phải nhỏ hơn Max.'],
+      })
+    }
+
+    if (
+      values.soilMoistureMin != null &&
+      values.soilMoistureMax != null &&
+      values.soilMoistureMin >= values.soilMoistureMax
+    ) {
       rangeErrors.push({
         name: 'soilMoistureMin',
-        errors: ['Độ ẩm giá thể Min phải nhỏ hơn Max.'],
+        errors: ['Ẩm giá thể Min phải nhỏ hơn Max.'],
       })
     }
 
@@ -81,11 +98,11 @@ export function ThresholdProfileModal({
 
   return (
     <Modal
-      title={initialValues ? 'Cập nhật ngưỡng vi khí hậu' : 'Thêm giống nấm'}
+      title={initialValues ? 'Cập nhật hồ sơ vi khí hậu' : 'Thêm giống nấm'}
       open={open}
       onCancel={onCancel}
       onOk={() => form.submit()}
-      okText="Lưu profile"
+      okText="Lưu hồ sơ"
       cancelText="Hủy"
       confirmLoading={isSubmitting}
       cancelButtonProps={{ disabled: isSubmitting }}
@@ -110,18 +127,18 @@ export function ThresholdProfileModal({
             { whitespace: true, message: 'Loại nấm không được để trống.' },
           ]}
         >
-          <Input placeholder="Nấm Bào Ngư Xám" maxLength={100} />
+          <Input placeholder="Nấm Bào Ngư" maxLength={100} />
         </Form.Item>
 
         <Form.Item
-          label="Tên profile"
+          label="Tên hồ sơ"
           name="name"
           rules={[
-            { required: true, message: 'Vui lòng nhập tên profile.' },
-            { whitespace: true, message: 'Tên profile không được để trống.' },
+            { required: true, message: 'Vui lòng nhập tên hồ sơ.' },
+            { whitespace: true, message: 'Tên hồ sơ không được để trống.' },
           ]}
         >
-          <Input placeholder="Profile tiêu chuẩn" maxLength={120} />
+          <Input placeholder="Bào Ngư vụ mùa khô" maxLength={120} />
         </Form.Item>
 
         <Form.Item
@@ -130,7 +147,12 @@ export function ThresholdProfileModal({
           tooltip="Số tuần của gói nuôi trồng — đồng bộ với Pricing Model"
           rules={[{ required: true, message: 'Vui lòng nhập chu kỳ.' }]}
         >
-          <InputNumber min={1} max={12} style={{ width: '100%' }} addonAfter="tuần" />
+          <InputNumber
+            min={1}
+            max={12}
+            style={{ width: '100%' }}
+            addonAfter="tuần"
+          />
         </Form.Item>
 
         <Space.Compact block>
@@ -154,7 +176,7 @@ export function ThresholdProfileModal({
 
         <Space.Compact block>
           <Form.Item
-            label="Độ ẩm Min (%RH)"
+            label="Độ ẩm Min (%)"
             name="humidityMin"
             rules={[{ required: true, message: 'Nhập độ ẩm Min.' }]}
             style={{ flex: 1 }}
@@ -162,7 +184,7 @@ export function ThresholdProfileModal({
             <InputNumber min={0} max={100} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
-            label="Độ ẩm Max (%RH)"
+            label="Độ ẩm Max (%)"
             name="humidityMax"
             rules={[{ required: true, message: 'Nhập độ ẩm Max.' }]}
             style={{ flex: 1 }}
@@ -171,27 +193,38 @@ export function ThresholdProfileModal({
           </Form.Item>
         </Space.Compact>
 
-        <Form.Item
-          label="CO₂ tối đa (ppm)"
-          name="co2Max"
-          rules={[{ required: true, message: 'Nhập ngưỡng CO₂.' }]}
-        >
-          <InputNumber min={1} style={{ width: '100%' }} />
-        </Form.Item>
+        <Space.Compact block>
+          <Form.Item
+            label="CO₂ Min (ppm)"
+            name="co2Min"
+            tooltip="Bỏ trống nếu không đặt ngưỡng CO₂"
+            style={{ flex: 1 }}
+          >
+            <InputNumber min={0} max={5000} style={{ width: '100%' }} />
+          </Form.Item>
+          <Form.Item
+            label="CO₂ Max (ppm)"
+            name="co2Max"
+            tooltip="Bỏ trống nếu không đặt ngưỡng CO₂"
+            style={{ flex: 1 }}
+          >
+            <InputNumber min={0} max={5000} style={{ width: '100%' }} />
+          </Form.Item>
+        </Space.Compact>
 
         <Space.Compact block>
           <Form.Item
-            label="Độ ẩm giá thể Min (%)"
+            label="Ẩm giá thể Min (%)"
             name="soilMoistureMin"
-            rules={[{ required: true, message: 'Nhập giá trị Min.' }]}
+            tooltip="Bỏ trống nếu không đặt ngưỡng ẩm giá thể"
             style={{ flex: 1 }}
           >
             <InputNumber min={0} max={100} style={{ width: '100%' }} />
           </Form.Item>
           <Form.Item
-            label="Độ ẩm giá thể Max (%)"
+            label="Ẩm giá thể Max (%)"
             name="soilMoistureMax"
-            rules={[{ required: true, message: 'Nhập giá trị Max.' }]}
+            tooltip="Bỏ trống nếu không đặt ngưỡng ẩm giá thể"
             style={{ flex: 1 }}
           >
             <InputNumber min={0} max={100} style={{ width: '100%' }} />

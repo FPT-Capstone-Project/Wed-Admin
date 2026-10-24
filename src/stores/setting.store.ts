@@ -8,7 +8,10 @@ const SETTINGS_STORAGE_KEY = 'mcms-threshold-profiles'
 
 /** Chu kỳ gói (tuần) cho từng giống nấm — đồng bộ với Pricing Model. */
 const CYCLE_WEEKS_BY_TYPE: Record<string, number> = {
+  'Nấm Sư Trưng': 1,
   'Nấm Bào Ngư Xám': 1,
+  'Nấm Bào Ngư': 1,
+  'Nấm Đầu Khỉ': 1,
   'Nấm Bào Ngư Trắng': 1,
   'Nấm Hoàng Kim': 1,
   'Nấm Linh Chi': 3,
@@ -16,79 +19,94 @@ const CYCLE_WEEKS_BY_TYPE: Record<string, number> = {
   'Đông Trùng Hạ Thảo': 4,
 }
 
+/**
+ * Hồ sơ vi khí hậu mặc định theo giống nấm.
+ *
+ * Nguồn: dữ liệu thông số canh tác thực tế đang dùng ở tab "Thông số canh tác"
+ * (mục Gói cước thuê). Mỗi hồ sơ là một dải:
+ *   - Nhiệt độ (°C), Độ ẩm (%), CO₂ (ppm), Ẩm giá thể (%).
+ *
+ * ⚠ `co2Min` / `co2Max` / `soilMoisture*` = `null` khi giống nấm đó **không**
+ *   đặt ngưỡng cho chỉ số đó (không phải thiếu dữ liệu).
+ */
 export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
   {
     id: 'THRESHOLD-001',
-    mushroomType: 'Nấm Bào Ngư Xám',
-    name: 'Bào Ngư Xám tiêu chuẩn',
+    mushroomType: 'Nấm Sư Trưng',
+    name: 'Sư Trưng tiêu chuẩn',
     cycleWeeks: 1,
     tempMin: 20,
-    tempMax: 28,
-    humidityMin: 75,
-    humidityMax: 95,
-    co2Max: 1000,
-    soilMoistureMin: 60,
-    soilMoistureMax: 85,
+    tempMax: 32,
+    humidityMin: 80,
+    humidityMax: 87,
+    co2Min: null,
+    co2Max: null,
+    soilMoistureMin: null,
+    soilMoistureMax: null,
     isDefault: true,
     updatedAt: '2026-08-20T08:00:00+07:00',
   },
   {
     id: 'THRESHOLD-002',
-    mushroomType: 'Nấm Linh Chi',
-    name: 'Linh Chi sinh trưởng dài ngày',
-    cycleWeeks: 3,
-    tempMin: 22,
-    tempMax: 30,
-    humidityMin: 70,
+    mushroomType: 'Nấm Bào Ngư Xám',
+    name: 'Bào Ngư Xám tiêu chuẩn',
+    cycleWeeks: 1,
+    tempMin: 25,
+    tempMax: 32,
+    humidityMin: 82,
     humidityMax: 90,
-    co2Max: 900,
-    soilMoistureMin: 55,
-    soilMoistureMax: 80,
+    co2Min: null,
+    co2Max: null,
+    soilMoistureMin: null,
+    soilMoistureMax: null,
     isDefault: false,
     updatedAt: '2026-08-20T08:00:00+07:00',
   },
   {
     id: 'THRESHOLD-003',
-    mushroomType: 'Nấm Hoàng Kim',
-    name: 'Hoàng Kim ra quả nhanh',
+    mushroomType: 'Nấm Bào Ngư',
+    name: 'Bào Ngư vụ mùa khô',
     cycleWeeks: 1,
     tempMin: 18,
-    tempMax: 26,
+    tempMax: 24,
     humidityMin: 80,
-    humidityMax: 95,
-    co2Max: 850,
-    soilMoistureMin: 65,
-    soilMoistureMax: 90,
+    humidityMax: 90,
+    co2Min: 350,
+    co2Max: 500,
+    soilMoistureMin: null,
+    soilMoistureMax: null,
     isDefault: false,
     updatedAt: '2026-08-21T08:00:00+07:00',
   },
   {
     id: 'THRESHOLD-004',
-    mushroomType: 'Nấm Mối Đen',
-    name: 'Mối Đen vi khí hậu ổn định',
-    cycleWeeks: 2,
-    tempMin: 21,
-    tempMax: 27,
-    humidityMin: 78,
-    humidityMax: 92,
-    co2Max: 950,
-    soilMoistureMin: 60,
-    soilMoistureMax: 82,
+    mushroomType: 'Nấm Bào Ngư',
+    name: 'Bào Ngư vụ mùa mưa',
+    cycleWeeks: 1,
+    tempMin: 18,
+    tempMax: 24,
+    humidityMin: 80,
+    humidityMax: 95,
+    co2Min: 400,
+    co2Max: 1200,
+    soilMoistureMin: null,
+    soilMoistureMax: null,
     isDefault: false,
     updatedAt: '2026-08-21T08:00:00+07:00',
   },
   {
     id: 'THRESHOLD-005',
-    mushroomType: 'Đông Trùng Hạ Thảo',
-    name: 'Đông Trùng phòng nuôi chuyên dụng',
-    cycleWeeks: 4,
-    tempMin: 18,
-    tempMax: 24,
+    mushroomType: 'Nấm Đầu Khỉ',
+    name: 'Đầu Khỉ sinh trưởng',
+    cycleWeeks: 1,
+    tempMin: 16,
+    tempMax: 22,
     humidityMin: 85,
     humidityMax: 95,
-    co2Max: 700,
-    soilMoistureMin: 50,
-    soilMoistureMax: 75,
+    co2Min: 400,
+    co2Max: 1000,
+    soilMoistureMin: null,
+    soilMoistureMax: null,
     isDefault: false,
     updatedAt: '2026-08-22T08:00:00+07:00',
   },
@@ -121,6 +139,23 @@ function isNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
 
+/** Ngưỡng optional: `null` hợp lệ, `undefined` (thiếu) → `null`. */
+function isNullableNumber(value: unknown): value is number | null {
+  return value === null || value === undefined || isNumber(value)
+}
+
+/**
+ * Chuẩn hoá ngưỡng optional về `null`.
+ *
+ * ⚠ AntD `InputNumber` trả `undefined` khi người dùng xoá ô, và
+ * `JSON.stringify` sẽ **loại bỏ** key có giá trị `undefined` → profile bị
+ * reject khi đọc lại từ localStorage. Vì vậy phải ép `undefined` → `null`
+ * *trước* khi lưu.
+ */
+function toNullableNumber(value: number | null | undefined): number | null {
+  return value ?? null
+}
+
 function isString(value: unknown): value is string {
   return typeof value === 'string'
 }
@@ -142,6 +177,7 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     tempMax,
     humidityMin,
     humidityMax,
+    co2Min,
     co2Max,
     soilMoistureMin,
     soilMoistureMax,
@@ -158,9 +194,10 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     !isNumber(tempMax) ||
     !isNumber(humidityMin) ||
     !isNumber(humidityMax) ||
-    !isNumber(co2Max) ||
-    !isNumber(soilMoistureMin) ||
-    !isNumber(soilMoistureMax) ||
+    !isNullableNumber(co2Min) ||
+    !isNullableNumber(co2Max) ||
+    !isNullableNumber(soilMoistureMin) ||
+    !isNullableNumber(soilMoistureMax) ||
     !isBoolean(isDefault) ||
     !isString(updatedAt)
   ) {
@@ -176,9 +213,10 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     tempMax,
     humidityMin,
     humidityMax,
-    co2Max,
-    soilMoistureMin,
-    soilMoistureMax,
+    co2Min: toNullableNumber(co2Min),
+    co2Max: toNullableNumber(co2Max),
+    soilMoistureMin: toNullableNumber(soilMoistureMin),
+    soilMoistureMax: toNullableNumber(soilMoistureMax),
     isDefault,
     updatedAt,
   }
@@ -222,6 +260,23 @@ function getNow() {
   return new Date().toISOString()
 }
 
+/**
+ * Chuẩn hoá input từ form thành profile đầy đủ.
+ *
+ * Bổ sung `cycleWeeks` mặc định và ép các ngưỡng optional (`undefined` từ
+ * `InputNumber` bị xoá) về `null` để `JSON.stringify` không loại bỏ key.
+ */
+function toProfileValues(values: ThresholdProfileInput) {
+  return {
+    ...values,
+    cycleWeeks: values.cycleWeeks ?? getCycleWeeksFor(values.mushroomType),
+    co2Min: toNullableNumber(values.co2Min),
+    co2Max: toNullableNumber(values.co2Max),
+    soilMoistureMin: toNullableNumber(values.soilMoistureMin),
+    soilMoistureMax: toNullableNumber(values.soilMoistureMax),
+  }
+}
+
 const initialProfiles = readPersistedProfiles()
 
 export const useSettingStore = create<SettingState>((set) => ({
@@ -231,10 +286,8 @@ export const useSettingStore = create<SettingState>((set) => ({
     set((state) => ({
       thresholdProfiles: [
         {
-          ...values,
+          ...toProfileValues(values),
           id: getNextProfileId(state.thresholdProfiles),
-          cycleWeeks:
-            values.cycleWeeks ?? getCycleWeeksFor(values.mushroomType),
           isDefault: false,
           updatedAt: getNow(),
         },
@@ -248,9 +301,7 @@ export const useSettingStore = create<SettingState>((set) => ({
         profile.id === id
           ? {
               ...profile,
-              ...values,
-              cycleWeeks:
-                values.cycleWeeks ?? getCycleWeeksFor(values.mushroomType),
+              ...toProfileValues(values),
               updatedAt: getNow(),
             }
           : profile,

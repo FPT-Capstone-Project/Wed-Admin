@@ -3,6 +3,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ExperimentOutlined,
+  MessageOutlined,
   PlayCircleOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
@@ -17,7 +18,8 @@ import {
   Typography,
 } from 'antd'
 import { useState } from 'react'
-import { useAuthStore } from '../../auth/store/auth.store'
+import { RENTAL_CANCEL, RENTAL_MANAGE } from '../../auth/permissions'
+import { useHasPermission } from '../../auth/hooks/usePermission'
 import { useRental } from '../hooks/useRentals'
 import type { Rental } from '../types/rental.types'
 import { ApproveRentalModal } from './ApproveRentalModal'
@@ -27,6 +29,7 @@ import { RecordHarvestModal } from './RecordHarvestModal'
 import { RecordProgressModal } from './RecordProgressModal'
 import { RentalStatusTag } from './RentalStatusTag'
 import { PAYMENT_STATUS_CONFIG } from './rental-status.config'
+import { SendNotificationModal } from './SendNotificationModal'
 import { StartSessionModal } from './StartSessionModal'
 
 interface RentalDetailDrawerProps {
@@ -41,14 +44,15 @@ type ModalKind =
   | 'harvest'
   | 'complete'
   | 'cancel'
+  | 'notify'
   | null
 
 /**
  * Drawer chi tiết vụ thuê + các hành động vận hành.
  *
  * Phân quyền — đối chiếu với BE (`/api/rentals/admin/*`):
- *   - Admin (role_id 1): đủ 8 hành động, gồm cả Huỷ.
- *   - Farm Operator (role_id 2): trừ Huỷ (BE trả 403).
+ *   - `rental.manage` (Admin + Farm Operator): các hành động vận hành.
+ *   - `rental.cancel` (chỉ Admin): huỷ vụ thuê — Farm Operator nhận 403.
  *   → `canCancel` chặn ở UI để không gọi vào chỗ chắc chắn bị 403.
  *
  * Lưu ý về trạng thái: BE chỉ cho gọi những hành động nhất định ở từng
@@ -64,8 +68,9 @@ export function RentalDetailDrawer({
   rentalId,
   onClose,
 }: RentalDetailDrawerProps) {
-  const role = useAuthStore((state) => state.user?.role)
-  const canCancel = role === 'ADMIN'
+  const hasCancelPermission = useHasPermission(RENTAL_CANCEL)
+  const canManage = useHasPermission(RENTAL_MANAGE)
+  const canCancel = hasCancelPermission
 
   const [activeModal, setActiveModal] = useState<ModalKind>(null)
   const { data: rental, isLoading, isError } = useRental(rentalId)
@@ -81,6 +86,11 @@ export function RentalDetailDrawer({
   const isActive = status === 'ACTIVE'
   const isClosed = status === 'COMPLETED' || status === 'CANCELLED'
   const canCancelNow = canCancel && rental !== undefined && !isClosed
+  /**
+   * BE trả 409 `Rental cannot receive notifications` cho rental đã đóng,
+   * hoặc khi tài khoản khách không ACTIVE. Chỉ mở nút ở 3 trạng thái này.
+   */
+  const canNotify = canManage && !isClosed && status !== undefined
 
   return (
     <>
@@ -168,6 +178,14 @@ export function RentalDetailDrawer({
                     Hoàn thành
                   </Button>
                 )}
+                {canNotify && (
+                  <Button
+                    icon={<MessageOutlined />}
+                    onClick={() => setActiveModal('notify')}
+                  >
+                    Gửi thông báo
+                  </Button>
+                )}
                 {canCancelNow && (
                   <Button
                     danger
@@ -235,6 +253,14 @@ export function RentalDetailDrawer({
       {rentalId !== null && activeModal === 'cancel' && canCancel && (
         <CancelRentalModal
           rentalId={rentalId}
+          open
+          onClose={() => setActiveModal(null)}
+        />
+      )}
+      {rentalId !== null && rental && activeModal === 'notify' && (
+        <SendNotificationModal
+          rentalId={rentalId}
+          customerName={rental.customer_name}
           open
           onClose={() => setActiveModal(null)}
         />

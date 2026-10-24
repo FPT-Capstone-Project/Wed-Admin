@@ -5,6 +5,13 @@ import type { MushroomThresholdProfile } from '../../../types/setting.types'
 
 const ECOLOGICAL_TEMPERATURE_DEVIATION_CELSIUS = 6
 
+/**
+ * Ngưỡng CO₂ dùng cho cấu hình tầng khi hồ sơ **không** đặt ngưỡng CO₂
+ * (`co2Max === null`). Cấu hình thiết bị cần một con số cụ thể nên không thể
+ * để trống — giống hành vi cũ khi `co2Max` luôn là số.
+ */
+const FALLBACK_CO2_MAX = 1000
+
 const SYSTEM_FALLBACK_PROFILE: MushroomThresholdProfile = {
   id: 'SYSTEM-FALLBACK',
   mushroomType: 'Profile mặc định hệ thống',
@@ -14,7 +21,8 @@ const SYSTEM_FALLBACK_PROFILE: MushroomThresholdProfile = {
   tempMax: 28,
   humidityMin: 75,
   humidityMax: 95,
-  co2Max: 1000,
+  co2Min: null,
+  co2Max: FALLBACK_CO2_MAX,
   soilMoistureMin: 60,
   soilMoistureMax: 85,
   isDefault: true,
@@ -97,6 +105,11 @@ export function calculateMushroomProfileAverages(
     return null
   }
 
+  // Hồ sơ không đặt ngưỡng CO₂ (`null`) → bỏ qua, dùng fallback chung.
+  const co2Values = profiles
+    .map((profile) => profile.co2Max)
+    .filter((value): value is number => value != null)
+
   return {
     tempMin: average(profiles.map((profile) => profile.tempMin)),
     tempMax: average(profiles.map((profile) => profile.tempMax)),
@@ -106,7 +119,8 @@ export function calculateMushroomProfileAverages(
     humidityMax: average(
       profiles.map((profile) => profile.humidityMax),
     ),
-    co2Max: average(profiles.map((profile) => profile.co2Max)),
+    co2Max:
+      co2Values.length > 0 ? average(co2Values) : FALLBACK_CO2_MAX,
   }
 }
 
@@ -123,7 +137,7 @@ export function calculateFloorTargetThresholds(
       tempMax: defaultProfile.tempMax,
       humidityMin: defaultProfile.humidityMin,
       humidityMax: defaultProfile.humidityMax,
-      co2Max: defaultProfile.co2Max,
+      co2Max: defaultProfile.co2Max ?? FALLBACK_CO2_MAX,
       activeTrayCount: 0,
       mushroomTypes: [defaultProfile.mushroomType],
       source: 'SYSTEM_DEFAULT',

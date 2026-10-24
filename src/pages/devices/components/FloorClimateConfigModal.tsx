@@ -35,10 +35,13 @@ import {
 import {
   useEvaluateAutoMisting,
   useFloorAutoControlStatus,
+  useFloorConfig,
   useStartAutoMisting,
   useStopAutoMisting,
 } from '../../../features/devices/hooks/useIoT'
 import { AutoMistingControlPanel } from './AutoMistingControlPanel'
+import { AutoControlLogsTable } from './AutoControlLogsTable'
+import { FloorProfileApproval } from './FloorProfileApproval'
 import type { AutoControlEvaluateResult } from '../../../types/iot'
 
 interface TraySourceSelection {
@@ -103,6 +106,11 @@ export function FloorClimateConfigModal({
   })
 
   const [evaluateResult, setEvaluateResult] = useState<AutoControlEvaluateResult | null>(null)
+
+  /** Config đang lưu của sàn — nguồn cho panel Duyệt Profile. */
+  const { data: floorConfig } = useFloorConfig(numericFloorId, {
+    enabled: open,
+  })
 
   const startMutation = useStartAutoMisting({
     onSuccess: () => {
@@ -242,9 +250,10 @@ export function FloorClimateConfigModal({
       {/* ── Auto-misting control panel ───────────────────────────────── */}
       <AutoMistingControlPanel
         floorName={floorName}
-        runState={runtimeStatus?.state ?? null}
-        startedAt={runtimeStatus?.startedAt ?? null}
-        lastEvaluationAt={runtimeStatus?.lastEvaluationAt ?? null}
+        // `AutoControlState`: chạy = mode AUTO + run.status RUNNING.
+        runState={runtimeStatus?.run?.status === 'RUNNING' ? 'ACTIVE' : 'STOPPED'}
+        startedAt={runtimeStatus?.run?.started_at ?? null}
+        lastEvaluationAt={runtimeStatus?.runtime?.pulse_deadline_at ?? null}
         isLoadingStatus={statusLoading}
         evaluateResult={evaluateResult}
         isEvaluating={evaluateMutation.isPending}
@@ -254,6 +263,19 @@ export function FloorClimateConfigModal({
         onStop={() => stopMutation.mutate(numericFloorId)}
         onEvaluate={() => evaluateMutation.mutate(numericFloorId)}
       />
+
+      <Divider className="floor-climate-sync-divider" />
+
+      {/* ── Floor profile approval (config_source = 'FLOOR') ──────────── */}
+      <FloorProfileApproval
+        floorId={numericFloorId}
+        config={floorConfig ?? null}
+      />
+
+      <Divider className="floor-climate-sync-divider" />
+
+      {/* ── Auto-control logs ─────────────────────────────────────────── */}
+      <AutoControlLogsTable floorId={numericFloorId} />
 
       <Divider className="floor-climate-sync-divider" />
 
@@ -372,8 +394,9 @@ export function FloorClimateConfigModal({
                         <span className="floor-source-preview-range">
                           {selectedProfile.tempMin}–{selectedProfile.tempMax}°C
                           · {selectedProfile.humidityMin}–
-                          {selectedProfile.humidityMax}%RH · CO₂ &lt;{' '}
-                          {selectedProfile.co2Max} ppm
+                          {selectedProfile.humidityMax}%RH
+                          {selectedProfile.co2Max != null &&
+                            ` · CO₂ < ${selectedProfile.co2Max} ppm`}
                         </span>
                       </>
                     ) : (

@@ -31,6 +31,34 @@ interface ThresholdProfileTabProps {
   onEdit: (profile: MushroomThresholdProfile) => void
 }
 
+/**
+ * Ô hiển thị một dải min–max.
+ *
+ * `null` ở cả hai đầu → giống nấm **không đặt ngưỡng** cho chỉ số này
+ * (không phải thiếu dữ liệu) → hiện "—".
+ */
+function RangeCell({
+  min,
+  max,
+  unit,
+  color,
+}: {
+  min: number | null
+  max: number | null
+  unit: string
+  color: string
+}) {
+  if (min == null && max == null) {
+    return <Typography.Text type="secondary">—</Typography.Text>
+  }
+
+  return (
+    <Tag color={color} style={{ fontWeight: 500 }}>
+      {min ?? '—'} – {max ?? '—'} {unit}
+    </Tag>
+  )
+}
+
 export function ThresholdProfileTab({
   canEdit,
   visibleMushroomTypes,
@@ -57,18 +85,16 @@ export function ThresholdProfileTab({
 
   const columns: TableColumnsType<MushroomThresholdProfile> = [
     {
-      title: 'Giống nấm',
+      title: 'Tên giống nấm',
       dataIndex: 'mushroomType',
       key: 'mushroomType',
-      width: 240,
+      width: 220,
       render: (value: string, profile) => (
         <Flex vertical gap={4}>
           <Typography.Text strong>{value}</Typography.Text>
           <Flex gap={4} wrap>
             {profile.isDefault && <Tag color="gold">Mặc định</Tag>}
-            <Tag color="cyan">
-              Gói {profile.cycleWeeks ?? 1} tuần
-            </Tag>
+            <Tag color="cyan">Gói {profile.cycleWeeks ?? 1} tuần</Tag>
           </Flex>
           <Typography.Text type="secondary" style={{ fontSize: 11 }}>
             {profile.name}
@@ -77,77 +103,67 @@ export function ThresholdProfileTab({
       ),
     },
     {
-      title: (
-        <HeaderWithHint
-          text="Dải Nhiệt độ (°C)"
-          hint="Dưới min → kích sưởi · Trên max → bật quạt làm mát"
-        />
-      ),
+      title: 'Nhiệt độ (°C)',
       key: 'temperature',
-      width: 170,
+      width: 150,
       render: (_, profile) => (
-        <ThresholdRangeCell
+        <RangeCell
           min={profile.tempMin}
           max={profile.tempMax}
           unit="°C"
-          minHint="Dưới min → kích sưởi"
-          maxHint="Trên max → bật quạt làm mát"
+          color="red"
         />
       ),
     },
     {
-      title: (
-        <HeaderWithHint
-          text="Dải Độ ẩm KK (%RH)"
-          hint="Dưới min → kích bơm phun sương tự động"
-        />
-      ),
+      title: 'Độ ẩm (%)',
       key: 'humidity',
-      width: 180,
-      render: (_, profile) => (
-        <ThresholdRangeCell
-          min={profile.humidityMin}
-          max={profile.humidityMax}
-          unit="%RH"
-          minHint="Dưới min → kích bơm phun sương"
-          maxHint="Trên max → giảm phun sương"
-        />
-      ),
-    },
-    {
-      title: (
-        <HeaderWithHint
-          text="Ngưỡng CO₂ an toàn"
-          hint="Vượt ngưỡng → kích hoạt quạt hút thông gió"
-        />
-      ),
-      key: 'co2',
       width: 140,
       render: (_, profile) => (
-        <Flex vertical gap={2}>
-          <Typography.Text strong style={{ color: '#7c3aed' }}>
-            &lt; {profile.co2Max} ppm
-          </Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-            Vượt → bật quạt hút
-          </Typography.Text>
-        </Flex>
+        <RangeCell
+          min={profile.humidityMin}
+          max={profile.humidityMax}
+          unit="%"
+          color="blue"
+        />
       ),
     },
     {
-      title: (
-        <HeaderWithHint
-          text="Độ ẩm cơ chất / giá thể (%)"
-          hint="Duy trì độ ẩm giá thể trong dải này để phôi không khô / úng"
+      title: 'CO₂ (ppm)',
+      key: 'co2',
+      width: 160,
+      render: (_, profile) => (
+        <RangeCell
+          min={profile.co2Min}
+          max={profile.co2Max}
+          unit="ppm"
+          color="gold"
         />
       ),
+    },
+    {
+      title: 'Ẩm giá thể (%)',
       key: 'soilMoisture',
-      width: 170,
+      width: 160,
       render: (_, profile) => (
-        <Typography.Text>
-          {profile.soilMoistureMin} - {profile.soilMoistureMax}{' '}
-          <Typography.Text type="secondary">%</Typography.Text>
-        </Typography.Text>
+        <RangeCell
+          min={profile.soilMoistureMin}
+          max={profile.soilMoistureMax}
+          unit="%"
+          color="green"
+        />
+      ),
+    },
+    {
+      title: 'Cập nhật',
+      key: 'updatedAt',
+      width: 120,
+      render: (_, profile) => (
+        <Tooltip title={profile.updatedAt}>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {new Date(profile.updatedAt).toLocaleDateString('vi-VN')}
+          </Typography.Text>
+        </Tooltip>
       ),
     },
     ...(canEdit
@@ -155,7 +171,7 @@ export function ThresholdProfileTab({
           {
             title: 'Hành động',
             key: 'actions',
-            width: 200,
+            width: 190,
             align: 'right' as const,
             render: (_: unknown, profile: MushroomThresholdProfile) => (
               <Space size={4}>
@@ -166,12 +182,12 @@ export function ThresholdProfileTab({
                   icon={<EditOutlined />}
                   onClick={() => onEdit(profile)}
                 >
-                  Tinh chỉnh thông số
+                  Sửa
                 </Button>
                 <Tooltip
                   title={
                     profile.isDefault
-                      ? 'Đang là profile mặc định'
+                      ? 'Đang là hồ sơ mặc định'
                       : 'Đặt làm mặc định'
                   }
                 >
@@ -188,15 +204,15 @@ export function ThresholdProfileTab({
                     disabled={profile.isDefault}
                     onClick={() => {
                       setDefaultProfile(profile.id)
-                      message.success('Đã đặt profile làm mặc định.')
+                      message.success('Đã đặt hồ sơ làm mặc định.')
                     }}
                   />
                 </Tooltip>
                 <Popconfirm
-                  title="Xóa profile giống nấm?"
+                  title="Xóa hồ sơ vi khí hậu?"
                   description={
                     profile.isDefault
-                      ? 'Profile mặc định không thể xóa.'
+                      ? 'Hồ sơ mặc định không thể xóa.'
                       : 'Thao tác này không thể hoàn tác.'
                   }
                   okText="Xóa"
@@ -204,7 +220,7 @@ export function ThresholdProfileTab({
                   okButtonProps={{ danger: true, disabled: profile.isDefault }}
                   onConfirm={() => {
                     deleteProfile(profile.id)
-                    message.success('Đã xóa profile.')
+                    message.success('Đã xóa hồ sơ.')
                   }}
                 >
                   <Button
@@ -213,6 +229,7 @@ export function ThresholdProfileTab({
                     danger
                     icon={<DeleteOutlined />}
                     disabled={profile.isDefault}
+                    aria-label="Xóa hồ sơ vi khí hậu"
                   />
                 </Popconfirm>
               </Space>
@@ -249,10 +266,11 @@ export function ThresholdProfileTab({
       >
         <div>
           <Typography.Title level={4} style={{ margin: 0 }}>
-            Profile ngưỡng vi khí hậu
+            Thông số canh tác theo giống nấm
           </Typography.Title>
           <Typography.Text type="secondary">
-            Dải an toàn được áp dụng cho relay AUTO và cảnh báo cảm biến
+            Dải nhiệt độ, độ ẩm, CO₂ và ẩm giá thể áp dụng cho relay AUTO và
+            cảnh báo cảm biến
           </Typography.Text>
         </div>
 
@@ -268,55 +286,11 @@ export function ThresholdProfileTab({
         columns={columns}
         dataSource={visibleProfiles}
         pagination={false}
-        scroll={{ x: 1100 }}
+        scroll={{ x: 1140 }}
         locale={{
-          emptyText: <Empty description="Không có profile phù hợp" />,
+          emptyText: <Empty description="Không có hồ sơ phù hợp" />,
         }}
       />
     </div>
-  )
-}
-
-function HeaderWithHint({ text, hint }: { text: string; hint: string }) {
-  return (
-    <Tooltip title={hint} placement="topLeft">
-      <span style={{ cursor: 'help', borderBottom: '1px dashed #94a3b8' }}>
-        {text}
-      </span>
-    </Tooltip>
-  )
-}
-
-interface ThresholdRangeCellProps {
-  min: number
-  max: number
-  unit: string
-  minHint: string
-  maxHint: string
-}
-
-function ThresholdRangeCell({
-  min,
-  max,
-  unit,
-  minHint,
-  maxHint,
-}: ThresholdRangeCellProps) {
-  return (
-    <Flex vertical gap={2}>
-      <Typography.Text strong style={{ color: '#059669' }}>
-        {min} - {max} {unit}
-      </Typography.Text>
-      <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-        <Tooltip title={minHint}>
-          <span style={{ cursor: 'help' }}>&lt; {min}</span>
-        </Tooltip>{' '}
-        → sưởi ·{' '}
-        <Tooltip title={maxHint}>
-          <span style={{ cursor: 'help' }}>&gt; {max}</span>
-        </Tooltip>{' '}
-        → làm mát
-      </Typography.Text>
-    </Flex>
   )
 }

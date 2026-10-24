@@ -71,6 +71,10 @@ window.onload = function() {
         "description": "PayOS checkout payments for customer orders"
       },
       {
+        "name": "Notifications",
+        "description": "Notifications for rental customers"
+      },
+      {
         "name": "IoT",
         "description": "SmartMush telemetry and manual SSR commands"
       },
@@ -189,6 +193,245 @@ window.onload = function() {
             "updated_at": {
               "type": "string",
               "format": "date-time"
+            }
+          }
+        },
+        "Notification": {
+          "type": "object",
+          "properties": {
+            "notification_id": {
+              "type": "integer",
+              "example": 10
+            },
+            "notification_type": {
+              "type": "string",
+              "example": "RENTAL_MESSAGE"
+            },
+            "title": {
+              "type": "string",
+              "example": "Rental update"
+            },
+            "message": {
+              "type": "string",
+              "example": "Your rental is ready for the next step."
+            },
+            "is_read": {
+              "type": "boolean",
+              "example": false
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "read_at": {
+              "type": "string",
+              "format": "date-time",
+              "nullable": true
+            },
+            "rental_id": {
+              "type": "integer",
+              "nullable": true,
+              "example": 12
+            }
+          }
+        },
+        "SentRentalNotification": {
+          "type": "object",
+          "properties": {
+            "notification_id": {
+              "type": "integer",
+              "example": 10
+            },
+            "user_id": {
+              "type": "integer",
+              "example": 3
+            },
+            "rental_id": {
+              "type": "integer",
+              "example": 12
+            },
+            "notification_type": {
+              "type": "string",
+              "enum": [
+                "OPERATOR_MESSAGE",
+                "MUSHROOM_DISEASE",
+                "DEVICE_ISSUE"
+              ]
+            },
+            "title": {
+              "type": "string",
+              "example": "Rental update"
+            },
+            "message": {
+              "type": "string",
+              "example": "Your rental is ready for the next step."
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "CreateRentalNotificationRequest": {
+          "type": "object",
+          "required": [
+            "message"
+          ],
+          "properties": {
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 1000,
+              "example": "Your rental is ready for the next step."
+            },
+            "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "default": "Thông báo từ SmartMush Farm"
+            },
+            "type": {
+              "type": "string",
+              "enum": [
+                "OPERATOR_MESSAGE",
+                "MUSHROOM_DISEASE",
+                "DEVICE_ISSUE"
+              ],
+              "default": "OPERATOR_MESSAGE"
+            }
+          }
+        },
+        "UserWithRole": {
+          "type": "object",
+          "properties": {
+            "user_id": {
+              "type": "integer",
+              "example": 1
+            },
+            "role_id": {
+              "type": "integer",
+              "example": 3
+            },
+            "role_name": {
+              "type": "string",
+              "example": "Customer"
+            },
+            "role_description": {
+              "type": "string",
+              "nullable": true
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "example": "user@example.com"
+            },
+            "full_name": {
+              "type": "string",
+              "example": "Nguyen Van A"
+            },
+            "phone": {
+              "type": "string",
+              "nullable": true,
+              "example": "0900000000"
+            },
+            "address": {
+              "type": "string",
+              "nullable": true,
+              "example": "Ho Chi Minh City"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "BLOCKED"
+              ],
+              "example": "ACTIVE"
+            },
+            "created_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "updated_at": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        },
+        "UserAccountDetail": {
+          "allOf": [
+            {
+              "$ref": "#/components/schemas/UserWithRole"
+            },
+            {
+              "type": "object",
+              "properties": {
+                "order_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 12
+                },
+                "rental_count": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "example": 4
+                }
+              }
+            }
+          ]
+        },
+        "CreateManagedUserRequest": {
+          "type": "object",
+          "required": [
+            "email",
+            "password",
+            "fullName",
+            "roleId"
+          ],
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email",
+              "example": "staff@example.com"
+            },
+            "password": {
+              "type": "string",
+              "minLength": 8,
+              "example": "password123"
+            },
+            "fullName": {
+              "type": "string",
+              "example": "Nguyen Van A"
+            },
+            "roleId": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 2
+            },
+            "phone": {
+              "type": "string",
+              "example": "0900000000"
+            },
+            "address": {
+              "type": "string",
+              "example": "Ho Chi Minh City"
+            }
+          }
+        },
+        "UpdateUserStatusRequest": {
+          "type": "object",
+          "required": [
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "BLOCKED"
+              ],
+              "example": "BLOCKED"
             }
           }
         },
@@ -1490,6 +1733,225 @@ window.onload = function() {
           }
         }
       },
+      "/api/users": {
+        "get": {
+          "tags": [
+            "Users"
+          ],
+          "summary": "List users with their roles",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "roleId",
+              "description": "Filter users by role ID",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User list with role information",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/UserWithRole"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid role ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin role is required"
+            }
+          }
+        },
+        "post": {
+          "tags": [
+            "Users"
+          ],
+          "summary": "Create a user account and assign a role",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateManagedUserRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "User created successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/UserAccountDetail"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid input or role does not exist"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin role is required"
+            },
+            "409": {
+              "description": "Email is already registered"
+            }
+          }
+        }
+      },
+      "/api/users/{userId}": {
+        "get": {
+          "tags": [
+            "Users"
+          ],
+          "summary": "Get an account with role, order count, and rental count",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "userId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "User account detail",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/UserAccountDetail"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid user ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin role is required"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        }
+      },
+      "/api/users/{userId}/status": {
+        "patch": {
+          "tags": [
+            "Users"
+          ],
+          "summary": "Update a user account status",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "userId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserStatusRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "User status updated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid user ID or status"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin role is required"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
+        }
+      },
       "/api/rental-packages": {
         "get": {
           "tags": [
@@ -1807,6 +2269,79 @@ window.onload = function() {
             },
             "409": {
               "description": "Order has not been paid or has been cancelled"
+            }
+          }
+        }
+      },
+      "/api/rentals/admin/{rentalId}/notifications": {
+        "post": {
+          "tags": [
+            "Notifications"
+          ],
+          "summary": "Send a notification to a rental customer",
+          "description": "Resolves the rental customer automatically and creates an unread notification. Role IDs 1 and 2 are allowed.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "rentalId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "example": 12
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateRentalNotificationRequest"
+                },
+                "example": {
+                  "message": "Your rental is ready for the next step.",
+                  "title": "Rental update",
+                  "type": "OPERATOR_MESSAGE"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Notification sent",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "$ref": "#/components/schemas/SentRentalNotification"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid rental ID or message"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Only Admin and Farm Operator roles are allowed"
+            },
+            "404": {
+              "description": "Rental not found"
+            },
+            "409": {
+              "description": "Rental cannot receive notifications or recipient account is inactive"
             }
           }
         }
@@ -2584,6 +3119,176 @@ window.onload = function() {
             },
             "404": {
               "description": "Rental package or mushroom type not found"
+            }
+          }
+        }
+      },
+      "/api/notifications": {
+        "get": {
+          "tags": [
+            "Notifications"
+          ],
+          "summary": "List the current user's notifications",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "isRead",
+              "schema": {
+                "type": "boolean"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Notifications and unread count",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/Notification"
+                        }
+                      },
+                      "pagination": {
+                        "type": "object",
+                        "properties": {
+                          "page": {
+                            "type": "integer"
+                          },
+                          "pageSize": {
+                            "type": "integer"
+                          },
+                          "total": {
+                            "type": "integer"
+                          },
+                          "totalPages": {
+                            "type": "integer"
+                          }
+                        }
+                      },
+                      "meta": {
+                        "type": "object",
+                        "properties": {
+                          "unread_count": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid isRead, page, or pageSize"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            }
+          }
+        }
+      },
+      "/api/notifications/read-all": {
+        "patch": {
+          "tags": [
+            "Notifications"
+          ],
+          "summary": "Mark all current-user notifications as read",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Notifications marked as read",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "updated": {
+                            "type": "integer",
+                            "minimum": 0
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            }
+          }
+        }
+      },
+      "/api/notifications/{notificationId}/read": {
+        "patch": {
+          "tags": [
+            "Notifications"
+          ],
+          "summary": "Mark one current-user notification as read",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "notificationId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Notification marked as read"
+            },
+            "400": {
+              "description": "Invalid notification ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "404": {
+              "description": "Notification not found"
             }
           }
         }

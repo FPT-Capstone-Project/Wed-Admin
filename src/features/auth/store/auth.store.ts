@@ -1,6 +1,9 @@
 import { create } from 'zustand'
+import { useNotificationStore } from '../../notifications/store/notification.store'
 import { authApi } from '../api/auth.api'
 import { tokenStorage } from '../../../shared/api/token-storage'
+import { resetErrorToastCache } from '../../../shared/api/error-toast'
+import { rolePermissionsFor } from '../permissions'
 import {
   backendUserToUiUser,
   type LoginRequest,
@@ -11,13 +14,36 @@ import {
 const REMEMBERED_EMAIL_KEY = 'mcms-remembered-email'
 const USER_CACHE_KEY = 'mcms-user-cache'
 
+/**
+ * Đọc user từ cache localStorage.
+ *
+ * ⚠ Cache có thể được ghi bởi phiên bản code CŨ (trước khi `permissions`
+ * được thêm vào `User`) → JSON trong cache **không có** key `permissions`.
+ * Nếu trả nguyên cache, `useHasPermission()` đọc `undefined` → mọi nút
+ * gated theo quyền sẽ biến mất (vd "Gửi thông báo", "Huỷ vụ thuê") dù
+ * user đăng nhập đúng role.
+ *
+ * → Luôn suy ra lại `permissions` từ `roleId` (nguồn sự thật duy nhất) khi
+ *   cache thiếu field. `roleId` đã có mặt trong cache từ trước nên việc này
+ *   hoạt động với cả cache cũ lẫn cache mới.
+ */
 function readUserCache(): User | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = window.localStorage.getItem(USER_CACHE_KEY)
     if (!raw) return null
-    const parsed = JSON.parse(raw) as User | null
-    return parsed && typeof parsed === 'object' ? parsed : null
+    const parsed = JSON.parse(raw) as Partial<User> | null
+    if (!parsed || typeof parsed !== 'object') return null
+
+    // Cache cũ: thiếu `permissions` → suy ra từ `roleId`.
+    if (!Array.isArray(parsed.permissions)) {
+      return {
+        ...(parsed as User),
+        permissions: [...rolePermissionsFor(parsed.roleId)],
+      }
+    }
+
+    return parsed as User
   } catch {
     return null
   }
@@ -126,18 +152,23 @@ export const useAuthStore = create<AuthState>((set) => {
         rememberedEmail: rememberMe ? email.trim().toLowerCase() : '',
       })
     } catch (cause) {
-      const message =
+      const text =
         cause instanceof Error
           ? cause.message
           : 'Đăng nhập thất bại. Vui lòng thử lại.'
-      set({ lastError: message })
-      throw new Error(message)
+      set({ lastError: text })
+      // Giữ `cause` để giữ nguyên stack gốc khi debug ở Error Boundary.
+      throw new Error(text, { cause })
     }
   },
 
   logout: () => {
     tokenStorage.clear()
     writeUserCache(null)
+    // Badge thông báo thuộc về user trước → phải xoá, nếu không user sau
+    // sẽ thấy số chưa đọc của người khác.
+    useNotificationStore.getState().reset()
+    resetErrorToastCache()
     set({
       user: null,
       accessToken: null,

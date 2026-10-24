@@ -14,6 +14,8 @@ import type {
   RecordRentalProgressRequest,
   Rental,
   RentalListQuery,
+  SendRentalNotificationRequest,
+  SentRentalNotification,
   StartCultivationSessionRequest,
   UpdateRentalRequest,
 } from '../types/rental.types'
@@ -190,4 +192,37 @@ export function useUpdateRental(
     'Không thể cập nhật vụ thuê',
     options,
   )
+}
+
+/**
+ * Gửi thông báo cho khách thuê.
+ *
+ * Không invalidate `rentalKeys` vì rental không đổi — BE chỉ tạo notification.
+ * Trả về `SentRentalNotification` riêng nên dùng mutation riêng, không đi qua
+ * `useRentalMutation` (vốn bắt buộc kết quả phải là `Rental`).
+ *
+ * ⚠ Lỗi KHÔNG bị nuốt: `mutationFn` để nguyên lỗi axios (kèm `response.status`)
+ * để component bắt trong `try...catch` quanh `mutateAsync` — nhờ vậy modal
+ * hiển thị được lỗi 400/409 ngay trong UI thay vì unhandled rejection.
+ * Đừng thêm `onError` ở đây nếu component cần tự xử lý lỗi.
+ */
+export function useSendRentalNotification(
+  options?: UseMutationOptions<
+    SentRentalNotification,
+    Error,
+    { rentalId: number; payload: SendRentalNotificationRequest }
+  >,
+) {
+  return useMutation<
+    SentRentalNotification,
+    Error,
+    { rentalId: number; payload: SendRentalNotificationRequest }
+  >({
+    mutationFn: async ({ rentalId, payload }) => {
+      const result = await rentalApi.sendNotification(rentalId, payload)
+      if (!result) throw new Error('Không thể gửi thông báo tới khách thuê')
+      return result
+    },
+    ...options,
+  })
 }
