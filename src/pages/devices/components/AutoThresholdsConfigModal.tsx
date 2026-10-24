@@ -1,8 +1,10 @@
 import { SaveOutlined } from '@ant-design/icons'
-import { Alert, App, Form, InputNumber, Modal, Row, Col } from 'antd'
+import { Alert, App, Form, InputNumber, Modal, Row, Col, Select } from 'antd'
 import { useEffect } from 'react'
 import type { AutoMistingConfiguration } from '../../../types/iot'
 import { useFloorConfig, useSaveAutoControlConfig } from '../../../features/devices/hooks/useIoT'
+import { useMushroomTypes } from '../../../features/packages/hooks/useMushroomTypes'
+import { sanitizeAutoMistingConfig } from '../../../features/devices/utils/auto-misting-config'
 
 interface AutoThresholdsConfigModalProps {
   floorId: number | null
@@ -15,6 +17,7 @@ interface AutoThresholdsConfigModalProps {
 
 /** Form lưu ngưỡng, đơn vị hiển thị theo nghiệp vụ admin. */
 interface AutoThresholdFormValues {
+  mushroomTypeId?: number
   humidityMin: number
   humidityMax: number
   humidityStartThreshold: number
@@ -27,6 +30,19 @@ const PULSE_MIN_SEC = 1
 const PULSE_MAX_SEC = 600
 const COOLDOWN_MIN_MIN = 1
 const COOLDOWN_MAX_MIN = 120
+
+/**
+ * Giá trị mặc định khi tầng chưa có config — khớp preset commissioning
+ * của BE (`autoMisting.profile.js`): xung 3s, nghỉ 60s, độ ẩm 80–90%.
+ */
+const DEFAULT_THRESHOLD_FORM_VALUES: AutoThresholdFormValues = {
+  humidityMin: 80,
+  humidityMax: 90,
+  humidityStartThreshold: 80,
+  humidityStopThreshold: 85,
+  mistingPulseSeconds: 3,
+  cooldownMinutes: 1,
+}
 
 /**
  * Cấu hình ngưỡng Auto-misting — `PUT /api/iot/floors/{floorId}/auto-control`.
@@ -50,6 +66,14 @@ export function AutoThresholdsConfigModal({
   const [form] = Form.useForm<AutoThresholdFormValues>()
 
   const { data: config, isLoading } = useFloorConfig(floorId, { enabled: open })
+
+  // Loại nấm — BE **bắt buộc** `mushroom_type_id` ở nhánh LEGACY
+  // (`validateConfig`: `Invalid mushroom_type_id: expected 1..2147483647`).
+  const { data: mushroomTypes = [] } = useMushroomTypes(
+    { status: 'ACTIVE' },
+    { enabled: open },
+  )
+
   const saveConfig = useSaveAutoControlConfig({
     onSuccess: () => {
       message.success(`Đã lưu cấu hình ngưỡng AUTO cho ${floorName}.`)
@@ -61,9 +85,19 @@ export function AutoThresholdsConfigModal({
   })
 
   // Prefill từ config BE trả về (đổi ms ↔ giây/phút cho khớp đơn vị nhập).
+  //
+  // ⚠ Tầng chưa có config (`GET /auto-control` → `config: null`) thì form
+  // trống hoàn toàn → bấm "Lưu" sẽ fail validate và người dùng không biết
+  // cần điền gì. → Đặt giá trị mặc định hợp lệ (preset commissioning của
+  // BE, xem `autoMisting.profile.js`).
   useEffect(() => {
-    if (!open || !config) return
+    if (!open) return
+    if (!config) {
+      form.setFieldsValue(DEFAULT_THRESHOLD_FORM_VALUES)
+      return
+    }
     form.setFieldsValue({
+      mushroomTypeId: config.mushroom_type_id ?? undefined,
       humidityMin: config.humidity_min,
       humidityMax: config.humidity_max,
       humidityStartThreshold: config.humidity_start_threshold,
@@ -74,28 +108,52 @@ export function AutoThresholdsConfigModal({
   }, [open, config, form])
 
   const handleOk = async () => {
-    const values = await form.validateFields()
+    // ⚠ `validateFields()` **reject** khi form chưa hợp lệ. Không bắt lỗi
+    // → unhandled promise rejection và modal không báo lỗi cho người dùng.
+    let values: AutoThresholdFormValues
+    try {
+      values = await form.validateFields()
+    } catch {
+      // Ant Design đã hiển thị lỗi ngay dưới từng field → không cần
+      // message thêm. Chỉ cần dừng lại.
+      return
+    }
 
-    const payload: AutoMistingConfiguration = {
-      ...(config ?? ({} as AutoMistingConfiguration)),
-      mushroom_type_id: config?.mushroom_type_id ?? 0,
+    // ⚠ BE **allow-list** field (`validateConfig`): config lấy từ
+    // `GET /auto-control` là nguyên row DB (có `id`, `floor_id`,
+    // `configured_by`, `configured_at`, …) → gửi thẳng sẽ luôn 400
+    // `Unknown configuration field`. Phải lọc trước.
+    const base = sanitizeAutoMistingConfig(config)
+
+    const payload = {
+      ...base,
+      // ⚠ BE bắt buộc `mushroom_type_id` ở nhánh LEGACY. Nhánh 'FLOOR'
+      // thì BE tự suy ra từ phiên trồng → không gửi field này.
+      ...(base.config_source === 'FLOOR'
+        ? {}
+        : { mushroom_type_id: values.mushroomTypeId ?? base.mushroom_type_id }),
       humidity_min: values.humidityMin,
       humidity_max: values.humidityMax,
       humidity_start_threshold: values.humidityStartThreshold,
       humidity_stop_threshold: values.humidityStopThreshold,
       misting_pulse_ms: values.mistingPulseSeconds * 1000,
       cooldown_ms: values.cooldownMinutes * 60_000,
-      // Giữ nguyên các tham số an toàn (giới hạn tần suất) của BE.
-      evaluation_interval_ms: config?.evaluation_interval_ms ?? 300_000,
-      max_sensor_spread_percent: config?.max_sensor_spread_percent ?? 10,
-      max_activations_per_hour: config?.max_activations_per_hour ?? 12,
+      // Giữ các tham số an toàn (giới hạn tần suất) của BE.
+      // Range BE: evaluation_interval_ms 1000..60000,
+      // max_activations_per_hour 1..3600, max_cumulative_on_ms_per_hour 1000..3600000.
+      evaluation_interval_ms: base.evaluation_interval_ms ?? 5_000,
+      max_sensor_spread_percent: base.max_sensor_spread_percent ?? 10,
+      max_activations_per_hour: base.max_activations_per_hour ?? 20,
       max_cumulative_on_ms_per_hour:
-        config?.max_cumulative_on_ms_per_hour ?? 600_000,
-      profile_name: config?.profile_name ?? null,
-      profile_approved: config?.profile_approved,
-    }
+        base.max_cumulative_on_ms_per_hour ?? 200_000,
+    } as AutoMistingConfiguration
 
-    await saveConfig.mutateAsync({ floorId: floorId as number, payload })
+    try {
+      await saveConfig.mutateAsync({ floorId: floorId as number, payload })
+    } catch {
+      // `onError` của mutation đã hiển thị message → không cần bắt ở đây,
+      // nhưng phải catch để không sinh unhandled rejection.
+    }
   }
 
   return (
@@ -136,6 +194,30 @@ export function AutoThresholdsConfigModal({
           style={{ marginBottom: 16 }}
           message="Độ ẩm dưới ngưỡng bật sẽ kích hoạt phun sương; đạt ngưỡng dừng sẽ tắt."
         />
+
+        {/* ⚠ BE bắt buộc `mushroom_type_id` ở nhánh LEGACY — không có
+            loại nấm thì không lưu được cấu hình. */}
+        <Form.Item
+          label="Loại nấm"
+          name="mushroomTypeId"
+          rules={[
+            {
+              required: true,
+              message: 'Chọn loại nấm cho tầng.',
+            },
+          ]}
+          extra="Nhánh LEGACY của BE yêu cầu loại nấm. Tầng dùng profile sàn (FLOOR) sẽ tự suy ra từ các mẻ đang trồng."
+        >
+          <Select
+            placeholder="— Chọn loại nấm —"
+            showSearch
+            optionFilterProp="label"
+            options={mushroomTypes.map((m) => ({
+              value: m.mushroom_type_id,
+              label: m.name,
+            }))}
+          />
+        </Form.Item>
 
         <Row gutter={12}>
           <Col span={12}>

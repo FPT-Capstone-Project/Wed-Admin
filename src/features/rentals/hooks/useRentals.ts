@@ -226,3 +226,31 @@ export function useSendRentalNotification(
     ...options,
   })
 }
+
+/**
+ * Tìm rental đang hoạt động (ACTIVE / PREPARING) cho một tray cụ thể.
+ * Dùng trong TrayDetailDrawer để hiển thị thông tin session canh tác thật từ BE.
+ *
+ * - `trayNumericId`: tray_id số nguyên (BE field) — string tray_code KHÔNG dùng được ở đây.
+ * - Tự disable khi `trayNumericId` là null hoặc ≤ 0.
+ */
+export function useRentalByTray(
+  trayNumericId: number | null,
+  options?: Partial<UseQueryOptions<Rental | null, Error>>,
+) {
+  return useQuery<Rental | null, Error>({
+    queryKey: [...rentalKeys.all, 'by-tray', trayNumericId] as const,
+    queryFn: async () => {
+      if (!trayNumericId || trayNumericId <= 0) return null
+      // Gọi list với filter trayId, lấy rental ACTIVE hoặc PREPARING đầu tiên
+      const result = await rentalApi.list({ trayId: trayNumericId, pageSize: 5 })
+      const active = result.items.find(
+        (r) => r.status === 'ACTIVE' || r.status === 'PREPARING',
+      )
+      return active ?? null
+    },
+    enabled: trayNumericId !== null && trayNumericId > 0,
+    staleTime: 30_000,
+    ...options,
+  })
+}

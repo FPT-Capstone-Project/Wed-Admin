@@ -30,15 +30,21 @@ export interface TierWithEnvironment {
 export function useTiersWithEnvironment() {
   const tiersQuery = useCultivationTiers({ staleTime: 60_000 })
 
-  /** Room ID → floor ID (CultivationFloorMapping.floor_number) */
+  /** Room ID → floor ID (`cultivation_floors.floor_id` của BE). */
   const floorsQuery = useFloorList({ staleTime: 60_000 })
 
   const rooms = tiersQuery.data ?? []
   const mappings: CultivationFloorMapping[] = floorsQuery.data ?? []
   const roomIdToFloorId = new Map<number, number>()
   for (const m of mappings) {
-    if (typeof m.room_id === 'number') {
-      roomIdToFloorId.set(m.room_id, m.floor_number)
+    // ⚠ Key theo `floor_id` của BE — `floor_number` chỉ là thứ tự tầng
+    // trong phòng (1..4) và KHÔNG phải định danh tầng ở API.
+    if (typeof m.floor_id === 'number') {
+      // Nhiều tầng có thể cùng `room_id` → giữ tầng đầu tiên để tránh
+      // map trùng (BE định danh tầng bằng `floor_id`).
+      if (!roomIdToFloorId.has(m.room_id)) {
+        roomIdToFloorId.set(m.room_id, m.floor_id)
+      }
     }
   }
 

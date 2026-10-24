@@ -29,6 +29,11 @@ const DATE_TIME = new Intl.DateTimeFormat('vi-VN', {
  *
  * Giá trị lấy từ các lệnh ghi log trong `autoMisting.service.js`:
  * DECISION, PULSE_RESERVED, OFF_CONFIRMED, RETRY_WAIT, FAULT, …
+ *
+ * Danh sách dưới đây khớp với `event_type` thực tế BE trả về (đã đối chiếu
+ * `GET /api/iot/floors/{floorId}/auto-control/logs`):
+ * DECISION, START, STOP, ON_REQUESTED, OFF_REQUESTED, PULSE_RESERVED,
+ * OFF_CONFIRMED, RETRY_WAIT, CONFIG_SAVED, FAULT.
  */
 const EVENT_CONFIG: Record<
   string,
@@ -41,6 +46,9 @@ const EVENT_CONFIG: Record<
   FAULT: { color: 'error', label: 'Lỗi / Cổng an toàn' },
   START: { color: 'green', label: 'Khởi động' },
   STOP: { color: 'default', label: 'Dừng' },
+  ON_REQUESTED: { color: 'processing', label: 'Yêu cầu bật' },
+  OFF_REQUESTED: { color: 'default', label: 'Yêu cầu tắt' },
+  CONFIG_SAVED: { color: 'cyan', label: 'Đã lưu cấu hình' },
 }
 
 function eventConfig(type: string) {
@@ -58,8 +66,10 @@ function pulseState(entry: AutoControlLogEntry): {
   label: string
 } {
   switch (entry.event_type) {
+    case 'ON_REQUESTED':
     case 'PULSE_RESERVED':
       return { color: 'processing', label: 'Đang tưới' }
+    case 'OFF_REQUESTED':
     case 'OFF_CONFIRMED':
       return { color: 'default', label: 'Đã tắt' }
     case 'FAULT':

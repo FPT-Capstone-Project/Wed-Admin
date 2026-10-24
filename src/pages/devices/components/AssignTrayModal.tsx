@@ -4,7 +4,11 @@ import { useCultivationTrays } from '../../../features/rooms/hooks/useCultivatio
 import type { BeTrayStatus } from '../../../types/cultivation-status'
 
 interface AssignTrayModalProps {
-  /** Key của tầng = `room_id` (BE dùng room_id làm định danh tầng). */
+  /**
+   * Định danh tầng của BE = `cultivation_floors.floor_id`.
+   *
+   * ⚠ Không phải `room_id` — nhiều tầng có thể cùng room.
+   */
   floorId: number | null
   floorName: string
   /** Số tầng (1..4) — dùng để lọc khay theo mã `T{n}-K{x}`. */
@@ -35,9 +39,8 @@ const TRAY_STATUS_CONFIG: Record<BeTrayStatus, { color: string; label: string }>
  * mã + trạng thái, và **chỉ liệt kê khay đúng thuộc phòng/tầng** đang chọn.
  *
  * ⚠ Về ý nghĩa `floorId`:
- * - BE định danh tầng bằng `room_id` (xem `CultivationFloorMapping.room_id`
- *   và comment ở `handleSubmitFloor`), nên `floorId` truyền vào chính là
- *   `room_id` — dùng để gọi API.
+ * - BE định danh tầng bằng `floor_id` (`cultivation_floors.floor_id`) →
+ *   `floorId` truyền vào chính là `floor_id` — dùng để gọi API.
  * - Phần *hiển thị* lọc theo `roomId` + `floorNumber` vì mã khay có
  *   dạng `T{tầng}-K{vị trí}` (vd: tầng 1 → `T1-K1`, `T1-K2`, `T1-K3`).
  */

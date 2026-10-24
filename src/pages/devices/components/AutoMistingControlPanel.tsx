@@ -121,13 +121,7 @@ export function AutoMistingControlPanel({
           </Tooltip>
 
           {isActive ? (
-            <Tooltip
-              title={
-                canManage
-                  ? 'Dừng vận hành tự động'
-                  : 'Cần quyền iot.automation.manage'
-              }
-            >
+            <Tooltip title="Dừng vận hành tự động">
               <Button
                 size="small"
                 danger
@@ -140,13 +134,7 @@ export function AutoMistingControlPanel({
               </Button>
             </Tooltip>
           ) : (
-            <Tooltip
-              title={
-                canManage
-                  ? 'Bắt đầu vận hành tự động'
-                  : 'Cần quyền iot.automation.manage'
-              }
-            >
+            <Tooltip title="Bắt đầu vận hành tự động">
               <Button
                 size="small"
                 type="primary"
@@ -161,16 +149,6 @@ export function AutoMistingControlPanel({
           )}
         </Space>
       </Flex>
-
-      {!canManage && (
-        <Typography.Text
-          type="secondary"
-          style={{ display: 'block', marginTop: 8, fontSize: 12 }}
-        >
-          Tài khoản của bạn không có quyền iot.automation.manage nên không thể
-          điều khiển hệ thống tưới tự động.
-        </Typography.Text>
-      )}
 
       {/* Kết quả đánh giá: quyết định + lý do + số đo thật từ BE */}
       {evaluateResult && (

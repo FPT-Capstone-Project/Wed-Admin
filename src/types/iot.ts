@@ -122,6 +122,34 @@ export interface CreateIotCommandRequest {
 export type FloorStatus = 'ACTIVE' | 'INACTIVE'
 
 export interface CultivationFloorMapping {
+  /**
+   * Định danh tầng theo BE (`cultivation_floors.floor_id`).
+   *
+   * ⚠ **Không dùng `room_id` làm floorId.** BE định danh tầng bằng
+   * `floor_id` (SERIAL, unique) — `room_id` chỉ là phòng chứa tầng, nên
+   * nhiều tầng có thể cùng `room_id`. Gọi `/api/iot/floors/{room_id}` sẽ
+   * trỏ nhầm tầng (vd tầng `floor_id=3` cùng `room_id=1` → mọi action của
+   * tầng 2 đều đánh vào tầng 1).
+   */
+  floor_id: number
+  room_id: number
+  floor_number: number
+  floor_name: string
+  master_id: number
+  node_address: number
+  misting_ssr_channel: number
+  status?: FloorStatus
+}
+
+/**
+ * Body gửi lên `POST /api/iot/floors` và `PUT /api/iot/floors/{floorId}`.
+ *
+ * ⚠ BE **allow-list** field (`service.map` trong `autoMisting.service.js`):
+ * chỉ nhận `room_id, floor_number, floor_name, master_id, node_address,
+ * misting_ssr_channel, status`. Gửi thêm `floor_id` → 400 `Unknown mapping
+ * field`.
+ */
+export interface CultivationFloorMappingInput {
   room_id: number
   floor_number: number
   floor_name: string
@@ -277,13 +305,23 @@ export interface AutoControlLogEntry {
   id?: number
   floor_id?: number
   run_id?: number | null
-  /** VD: DECISION / PULSE_RESERVED / OFF_CONFIRMED / FAULT / RETRY_WAIT … */
+  /**
+   * Loại sự kiện. Giá trị thực tế BE trả về:
+   * DECISION, START, STOP, ON_REQUESTED, OFF_REQUESTED, PULSE_RESERVED,
+   * OFF_CONFIRMED, RETRY_WAIT, CONFIG_SAVED, FAULT.
+   */
   event_type: string
   reason: string | null
   average_humidity?: number | null
   created_at?: string
   /** Lý do bị chặn bởi cổng an toàn — BE ghi vào `reason` khi FAULT. */
   safety_blocked_reason?: string | null
+  /** Snapshot cảm biến tại thời điểm quyết định (BE lưu dạng JSON string). */
+  sensor_values_json?: unknown
+  /** Snapshot ngưỡng đang áp dụng tại thời điểm quyết định. */
+  thresholds_snapshot_json?: unknown
+  /** Id lệnh SSR được phát sinh, nếu có. */
+  command_id?: string | null
 }
 
 /**

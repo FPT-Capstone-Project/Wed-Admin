@@ -18,6 +18,7 @@ import {
 import { IOT_AUTOMATION_MANAGE } from '../../../features/auth/permissions'
 import { useHasPermission } from '../../../features/auth/hooks/usePermission'
 import { getApiErrorMessage } from '../../../shared/api/error'
+import { sanitizeAutoMistingConfig } from '../../../features/devices/utils/auto-misting-config'
 import type {
   AutoMistingConfiguration,
   AutoControlSuggestionProfile,
@@ -49,6 +50,24 @@ const METRICS = [
 ] as const
 
 type MetricKey = (typeof METRICS)[number]['key']
+
+/**
+ * BE trả kèm `warnings` dạng tiếng Anh mang tính ghi chú kỹ thuật
+ * (thiếu điều kiện CO2, nhắc nhở xung/cooldown theo thiết bị thực tế).
+ * Hai nội dung này không liên quan tới thao tác duyệt profile và gây
+ * nhiễu trên UI → ẩn đi.
+ *
+ * Dùng regex thay vì so sánh chuỗi chính xác để không phụ thuộc vào cách
+ * BE viết hoa/thêm dấu câu.
+ */
+const HIDDEN_WARNING_PATTERNS = [
+  /missing or invalid co2/i,
+  /review pulse duration/i,
+]
+
+function isHiddenWarning(text: string): boolean {
+  return HIDDEN_WARNING_PATTERNS.some((pattern) => pattern.test(text))
+}
 
 function metricValue(
   profile: AutoControlSuggestionProfile,
@@ -198,11 +217,14 @@ export function FloorProfileApproval({
     const suggested = suggestions?.config
     if (!suggested) return
 
+    // ⚠ BE allow-list field → lọc config hiện tại trước khi ghi đè.
+    const base = sanitizeAutoMistingConfig(config)
+
     saveMutation.mutate({
       floorId: floorId as number,
       payload: {
-        ...config,
-        ...suggested,
+        ...base,
+        ...sanitizeAutoMistingConfig(suggested),
         // Giữ các tham số an toàn người dùng đã chỉnh, chỉ duyệt profile.
         profile_approved: true,
       },
@@ -216,7 +238,9 @@ export function FloorProfileApproval({
   }
 
   const issues = suggestions?.issues ?? []
-  const warnings = suggestions?.warnings ?? []
+  const warnings = (suggestions?.warnings ?? []).filter(
+    (warning) => !isHiddenWarning(warning),
+  )
   const profiles = suggestions?.sourceProfiles ?? []
   const suggestedConfig = suggestions?.config
   const isApproved = config?.config_source === 'FLOOR' && config?.profile_approved === true

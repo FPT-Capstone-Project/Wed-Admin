@@ -27,6 +27,7 @@ import type {
   AutoMistingConfiguration,
   CreateIotCommandRequest,
   CultivationFloorMapping,
+  CultivationFloorMappingInput,
   FloorEnvironmentResponse,
   IotCommand,
   IotHistoryQuery,
@@ -224,11 +225,15 @@ export function useCreateFloor(
   options?: UseMutationOptions<
     CultivationFloorMapping,
     Error,
-    CultivationFloorMapping
+    CultivationFloorMappingInput
   >,
 ) {
   const queryClient = useQueryClient()
-  return useMutation<CultivationFloorMapping, Error, CultivationFloorMapping>({
+  return useMutation<
+    CultivationFloorMapping,
+    Error,
+    CultivationFloorMappingInput
+  >({
     mutationFn: async (payload) => {
       const result = await autoMistingApi.createFloor(payload)
       if (!result) throw new Error('Không thể tạo cấu hình tầng')
@@ -245,14 +250,14 @@ export function useUpdateFloor(
   options?: UseMutationOptions<
     CultivationFloorMapping,
     Error,
-    { floorId: number; payload: CultivationFloorMapping }
+    { floorId: number; payload: CultivationFloorMappingInput }
   >,
 ) {
   const queryClient = useQueryClient()
   return useMutation<
     CultivationFloorMapping,
     Error,
-    { floorId: number; payload: CultivationFloorMapping }
+    { floorId: number; payload: CultivationFloorMappingInput }
   >({
     mutationFn: async ({ floorId, payload }) => {
       const result = await autoMistingApi.updateFloor(floorId, payload)

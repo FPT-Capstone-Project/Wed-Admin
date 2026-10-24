@@ -44,8 +44,10 @@ import {
 import { ACTIVE_NODE_IDS } from '../../../features/devices/utils/iot-node-scope'
 import { AssignTrayModal } from './AssignTrayModal'
 import { AutoThresholdsConfigModal } from './AutoThresholdsConfigModal'
+import { FloorAutomationDrawer } from './FloorAutomationDrawer'
 import type {
   CultivationFloorMapping,
+  CultivationFloorMappingInput,
   FloorStatus,
   IotCommand,
   IotSensor,
@@ -139,6 +141,8 @@ export function DeviceControlPanel() {
     useState<CultivationFloorMapping | null>(null)
   const [thresholdFloor, setThresholdFloor] =
     useState<CultivationFloorMapping | null>(null)
+  const [automationFloor, setAutomationFloor] =
+    useState<CultivationFloorMapping | null>(null)
 
   // ── Detail drawers ──────────────────────────────────────────────────
   const [selectedFloor, setSelectedFloor] =
@@ -154,8 +158,11 @@ export function DeviceControlPanel() {
 
   // Môi trường tầng — tự fallback sang telemetry Master khi API environment
   // rỗng (BE chưa map tray → node_id/sensor_id).
+  //
+  // ⚠ `floorId` = `floor_id` của BE, **không** phải `room_id` (nhiều tầng
+  // có thể cùng room). Xem `CultivationFloorMapping.floor_id`.
   const floorEnv = useResolvedFloorEnvironment(
-    selectedFloor?.room_id ?? null,
+    selectedFloor?.floor_id ?? null,
     selectedFloorMasterId,
     selectedFloor?.node_address ?? null,
   )
@@ -163,7 +170,7 @@ export function DeviceControlPanel() {
   // Env riêng cho modal ngưỡng — modal có thể mở từ nút trong bảng mà
   // drawer môi trường đang đóng, nên không dùng chung `floorEnv`.
   const { data: thresholdEnv } = useFloorEnvironment(
-    thresholdFloor?.room_id ?? null,
+    thresholdFloor?.floor_id ?? null,
   )
 
   // Sync form values khi mở modal floor
@@ -196,11 +203,11 @@ export function DeviceControlPanel() {
   }
 
   const handleSubmitFloor = (values: FloorFormValues) => {
-    const payload: CultivationFloorMapping = { ...values }
+    const payload: CultivationFloorMappingInput = { ...values }
     if (editingFloor) {
-      // BE PUT /api/iot/floors/{floorId} — dùng room_id làm key
+      // BE PUT /api/iot/floors/{floorId} — floorId = `floor_id`, không phải room_id
       updateFloor.mutate({
-        floorId: editingFloor.room_id,
+        floorId: editingFloor.floor_id,
         payload,
       })
       return
@@ -376,7 +383,7 @@ export function DeviceControlPanel() {
     {
       title: 'Hành động',
       key: 'actions',
-      width: 220,
+      width: 260,
       align: 'right',
       render: (_, record) => (
         <Space size={4} wrap>
@@ -392,6 +399,13 @@ export function DeviceControlPanel() {
               size="small"
               icon={<PoweroffOutlined />}
               onClick={() => handleOpenThresholds(record)}
+            />
+          </Tooltip>
+          <Tooltip title="Điều khiển tưới tự động">
+            <Button
+              size="small"
+              icon={<ThunderboltOutlined />}
+              onClick={() => setAutomationFloor(record)}
             />
           </Tooltip>
           <Tooltip title="Sửa cấu hình tầng">
@@ -476,7 +490,7 @@ export function DeviceControlPanel() {
         styles={{ body: { padding: 12 } }}
       >
         <Table<CultivationFloorMapping>
-          rowKey="room_id"
+          rowKey="floor_id"
           columns={floorColumns}
           dataSource={floors}
           loading={floorsLoading}
@@ -673,10 +687,20 @@ export function DeviceControlPanel() {
         )}
       </Drawer>
 
+      {/* ── Floor Automation Drawer (AUTO control + profile + logs) ───── */}
+      {automationFloor && (
+        <FloorAutomationDrawer
+          floorId={automationFloor.floor_id}
+          floorName={automationFloor.floor_name}
+          open
+          onClose={() => setAutomationFloor(null)}
+        />
+      )}
+
       {/* ── Assign Tray Modal (thay window.prompt) ─────────────────────── */}
       {assignTrayFloor && (
         <AssignTrayModal
-          floorId={assignTrayFloor.room_id}
+          floorId={assignTrayFloor.floor_id}
           floorName={assignTrayFloor.floor_name}
           floorNumber={assignTrayFloor.floor_number}
           roomId={assignTrayFloor.room_id}
@@ -688,7 +712,7 @@ export function DeviceControlPanel() {
       {/* ── Auto Thresholds Config Modal ────────────────────────────────── */}
       {thresholdFloor && (
         <AutoThresholdsConfigModal
-          floorId={thresholdFloor.room_id}
+          floorId={thresholdFloor.floor_id}
           floorName={thresholdFloor.floor_name}
           open
           validSensorCount={thresholdEnv?.sensors.length ?? 0}

@@ -9,6 +9,7 @@ import type {
   AutoMistingConfiguration,
   CreateIotCommandRequest,
   CultivationFloorMapping,
+  CultivationFloorMappingInput,
   FloorEnvironmentResponse,
   IotCommand,
   IotHistoryQuery,
@@ -99,7 +100,7 @@ export const autoMistingApi = {
   },
 
   async createFloor(
-    payload: CultivationFloorMapping,
+    payload: CultivationFloorMappingInput,
   ): Promise<CultivationFloorMapping | null> {
     const response = await apiClient.post<unknown>(
       '/api/iot/floors',
@@ -110,7 +111,7 @@ export const autoMistingApi = {
 
   async updateFloor(
     floorId: number,
-    payload: CultivationFloorMapping,
+    payload: CultivationFloorMappingInput,
   ): Promise<CultivationFloorMapping | null> {
     const response = await apiClient.put<unknown>(
       `/api/iot/floors/${floorId}`,
