@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import {
+  CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  PauseCircleOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
@@ -15,7 +17,6 @@ import {
   Segmented,
   Space,
   Table,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
@@ -30,6 +31,7 @@ import {
   useUpdateRentalPackage,
 } from '../../../features/packages/hooks/useRentalPackages'
 import { translatePackageName } from '../../../shared/i18n/translate'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
 import { RentalPackageFormModal } from './RentalPackageFormModal'
 
 const VND = new Intl.NumberFormat('vi-VN', {
@@ -42,6 +44,17 @@ type FilterStatus = 'ALL' | RentalPackageStatus
 
 interface RentalPackageCatalogProps {
   canManage: boolean
+}
+
+/** Trạng thái gói → tone ngữ nghĩa chuẩn (dùng StatusBadge, không dùng Tag). */
+const STATUS_TONE: Record<RentalPackageStatus, 'ok' | 'muted'> = {
+  ACTIVE: 'ok',
+  INACTIVE: 'muted',
+}
+
+const STATUS_LABEL: Record<RentalPackageStatus, string> = {
+  ACTIVE: 'Đang nhận đơn',
+  INACTIVE: 'Tạm ngưng',
 }
 
 export function RentalPackageCatalog({
@@ -61,8 +74,8 @@ export function RentalPackageCatalog({
     onSuccess: (updated) => {
       messageApi.success(
         updated.status === 'ACTIVE'
-          ? `Đã mở gói "${updated.package_name}".`
-          : `Đã tạm ẩn gói "${updated.package_name}".`,
+          ? `Đã mở nhận đơn cho gói "${updated.package_name}".`
+          : `Đã tạm ngưng nhận đơn cho gói "${updated.package_name}".`,
       )
     },
     onError: (err) => messageApi.error(err.message),
@@ -124,29 +137,36 @@ export function RentalPackageCatalog({
       title: 'Tên gói thuê',
       key: 'name',
       width: 320,
-      render: (_, record) => (
-        <Flex vertical gap={2}>
-          <Typography.Text strong>{translatePackageName(record.package_name)}</Typography.Text>
-          {record.description && (
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 12, maxWidth: 260 }}
-              ellipsis={{ tooltip: record.description }}
-            >
-              {record.description}
+      render: (_, record) => {
+        const name = translatePackageName(record.package_name)
+        return (
+          <Flex vertical gap={2} style={{ minWidth: 0 }}>
+            <Typography.Text strong ellipsis={{ tooltip: name }}>
+              {name}
             </Typography.Text>
-          )}
-        </Flex>
-      ),
+            {record.description && (
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 12, maxWidth: 260 }}
+                ellipsis={{ tooltip: record.description }}
+              >
+                {record.description}
+              </Typography.Text>
+            )}
+          </Flex>
+        )
+      },
     },
     {
       title: 'Thời lượng',
       key: 'duration_days',
-      width: 130,
+      width: 140,
       render: (_, record) => (
-        <Tag color="geekblue" style={{ fontWeight: 500, fontSize: 13 }}>
-          {record.duration_days} ngày
-        </Tag>
+        <StatusBadge
+          tone="info"
+          label={`${record.duration_days} ngày`}
+          title="Thời lượng gói thuê tính bằng ngày."
+        />
       ),
     },
     {
@@ -165,29 +185,42 @@ export function RentalPackageCatalog({
     {
       title: 'Trạng thái',
       key: 'status',
-      width: 160,
+      width: 170,
       render: (_, record) => {
         const isActive = record.status === 'ACTIVE'
-        return canManage ? (
-          <Button
-            type="link"
-            size="small"
-            loading={isToggling(record.package_id)}
+        const badge = (
+          <StatusBadge
+            tone={STATUS_TONE[record.status]}
+            label={STATUS_LABEL[record.status]}
+            icon={
+              isActive ? (
+                <CheckCircleOutlined aria-hidden="true" />
+              ) : (
+                <PauseCircleOutlined aria-hidden="true" />
+              )
+            }
+          />
+        )
+
+        if (!canManage) return badge
+
+        // Có quyền quản lý → badge đóng vai nút bật/tắt trạng thái.
+        return (
+          <button
+            type="button"
             onClick={() => handleToggleStatus(record)}
+            disabled={isToggling(record.package_id)}
+            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} gói ${translatePackageName(record.package_name)}`}
             style={{
               padding: 0,
-              color: isActive ? '#16a34a' : '#9ca3af',
-              fontWeight: 500,
+              border: 0,
+              background: 'transparent',
+              cursor: isToggling(record.package_id) ? 'wait' : 'pointer',
+              lineHeight: 1,
             }}
           >
-            {isActive ? '● Đang mở bán' : '○ Tạm ẩn'}
-          </Button>
-        ) : isActive ? (
-          <Typography.Text style={{ color: '#16a34a', fontWeight: 500 }}>
-            ● Đang mở bán
-          </Typography.Text>
-        ) : (
-          <Typography.Text type="secondary">○ Tạm ẩn</Typography.Text>
+            {badge}
+          </button>
         )
       },
     },
@@ -200,15 +233,12 @@ export function RentalPackageCatalog({
             fixed: 'right' as const,
             render: (_: unknown, record: RentalPackage) => (
               <Space size={6}>
-                <Button
-                  size="small"
-                  type="primary"
-                  ghost
+                <ActionButton
                   icon={<EditOutlined />}
+                  label="Sửa"
+                  description={`Sửa gói ${translatePackageName(record.package_name)}`}
                   onClick={() => handleOpenEdit(record)}
-                >
-                  Sửa
-                </Button>
+                />
 
                 <Popconfirm
                   title="Xóa gói thuê?"
@@ -218,12 +248,11 @@ export function RentalPackageCatalog({
                   okButtonProps={{ danger: true }}
                   onConfirm={() => handleDelete(record)}
                 >
-                  <Button
-                    size="small"
-                    type="text"
-                    danger
+                  <ActionButton
                     icon={<DeleteOutlined />}
-                    aria-label="Xóa gói thuê"
+                    label="Xóa"
+                    description={`Xóa gói ${translatePackageName(record.package_name)}`}
+                    variant="danger"
                   />
                 </Popconfirm>
               </Space>
@@ -271,8 +300,8 @@ export function RentalPackageCatalog({
           onChange={setStatusFilter}
           options={[
             { label: 'Tất cả', value: 'ALL' },
-            { label: 'Đang mở bán', value: 'ACTIVE' },
-            { label: 'Tạm ẩn', value: 'INACTIVE' },
+            { label: 'Đang nhận đơn', value: 'ACTIVE' },
+            { label: 'Tạm ngưng', value: 'INACTIVE' },
           ]}
         />
         <Button

@@ -3,14 +3,18 @@ import {
   ApiOutlined,
   BulbOutlined,
   CheckCircleOutlined,
+  ControlOutlined,
+  EditOutlined,
   ExperimentOutlined,
+  NodeIndexOutlined,
   PoweroffOutlined,
+  SettingOutlined,
   ThunderboltOutlined,
+  WifiOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
   App,
-  Badge,
   Button,
   Card,
   Descriptions,
@@ -24,13 +28,14 @@ import {
   Segmented,
   Select,
   Space,
-  Statistic,
   Table,
   Tag,
   Tooltip,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { ActionButton, StatCard } from '../../../shared/ui'
+import { formatSensorLabel } from '../../../shared/i18n/terms'
 import {
   useCommandStatus,
   useCreateFloor,
@@ -229,41 +234,78 @@ export function DeviceControlPanel() {
   // ── Tables ──────────────────────────────────────────────────────────
   const sensorColumns: ColumnsType<IotSensor> = [
     {
-      title: 'Node',
-      dataIndex: 'nodeId',
+      title: 'Cụm cảm biến',
       key: 'nodeId',
-      width: 80,
-      align: 'center',
+      width: 150,
+      render: (_, row) => (
+        <Flex align="center" gap={6}>
+          <NodeIndexOutlined style={{ color: 'var(--ant-color-primary)' }} />
+          <Typography.Text strong>
+            Cụm cảm biến Tầng {row.nodeId}
+          </Typography.Text>
+        </Flex>
+      ),
     },
     {
-      title: 'Sensor',
-      dataIndex: 'sensorId',
+      title: 'Cảm biến',
       key: 'sensorId',
-      width: 90,
-      align: 'center',
+      width: 110,
+      render: (_, row) => (
+        <Tag color="blue">Cảm biến #{row.sensorId}</Tag>
+      ),
     },
     {
-      title: 'Nhiệt độ',
+      title: 'Nhiệt độ (°C)',
       key: 'temp',
-      width: 110,
+      width: 130,
       align: 'right',
       render: (_, row) =>
         row.temperature == null ? (
           <Typography.Text type="secondary">—</Typography.Text>
         ) : (
-          <Typography.Text strong>{row.temperature.toFixed(1)}°C</Typography.Text>
+          <Flex align="baseline" gap={4} justify="flex-end">
+            <Typography.Text
+              strong
+              style={{
+                fontSize: 18,
+                color:
+                  row.temperature > 30
+                    ? 'var(--ant-color-error)'
+                    : row.temperature < 18
+                      ? 'var(--ant-color-info)'
+                      : 'var(--ant-color-success)',
+              }}
+            >
+              {row.temperature.toFixed(1)}
+            </Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>°C</Typography.Text>
+          </Flex>
         ),
     },
     {
-      title: 'Độ ẩm',
+      title: 'Độ ẩm (%)',
       key: 'hum',
-      width: 100,
+      width: 120,
       align: 'right',
       render: (_, row) =>
         row.humidity == null ? (
           <Typography.Text type="secondary">—</Typography.Text>
         ) : (
-          <Typography.Text strong>{row.humidity.toFixed(0)}%</Typography.Text>
+          <Flex align="baseline" gap={4} justify="flex-end">
+            <Typography.Text
+              strong
+              style={{
+                fontSize: 18,
+                color:
+                  row.humidity < 70
+                    ? 'var(--ant-color-warning)'
+                    : 'var(--ant-color-success)',
+              }}
+            >
+              {row.humidity.toFixed(0)}
+            </Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>%</Typography.Text>
+          </Flex>
         ),
     },
     {
@@ -294,19 +336,18 @@ export function DeviceControlPanel() {
       ),
     },
     {
-      title: 'Hành động',
+      title: 'Chi tiết',
       key: 'actions',
       width: 100,
-      align: 'right',
+      align: 'center',
       render: (_, record) => (
-        <Tooltip title="Xem chi tiết">
-          <Button
-            size="small"
-            type="text"
-            icon={<BulbOutlined />}
-            onClick={() => setSelectedSensor(record)}
-          />
-        </Tooltip>
+        <ActionButton
+          icon={<BulbOutlined />}
+          label="Xem chi tiết cảm biến"
+          description="Mở bảng thông số đầy đủ của cảm biến này"
+          hideLabel
+          onClick={() => setSelectedSensor(record)}
+        />
       ),
     },
   ]
@@ -324,25 +365,28 @@ export function DeviceControlPanel() {
       ),
     },
     {
-      title: 'Tên',
+      title: 'Tên tầng',
       dataIndex: 'floor_name',
       key: 'floor_name',
       width: 180,
     },
     {
-      title: 'Master',
+      title: 'Bộ điều khiển',
       key: 'master',
-      width: 140,
+      width: 160,
       render: (_, record) => {
         const master = masters.find((m) => m.id === record.master_id)
         if (!master) return <Typography.Text type="secondary">—</Typography.Text>
         const status = master.reportedStatus ?? 'offline'
         return (
           <Flex vertical gap={2}>
-            <Typography.Text code style={{ fontSize: 12 }}>
-              {master.masterId}
-            </Typography.Text>
-            <Tag color={MASTER_STATUS_CONFIG[status].color} style={{ fontSize: 11 }}>
+            <Flex align="center" gap={4}>
+              <ControlOutlined style={{ fontSize: 12, color: 'var(--ant-color-text-secondary)' }} />
+              <Typography.Text code style={{ fontSize: 12 }}>
+                {master.masterId}
+              </Typography.Text>
+            </Flex>
+            <Tag color={MASTER_STATUS_CONFIG[status].color} style={{ fontSize: 11, width: 'fit-content' }}>
               {MASTER_STATUS_CONFIG[status].label}
             </Tag>
           </Flex>
@@ -350,21 +394,24 @@ export function DeviceControlPanel() {
       },
     },
     {
-      title: 'Node',
+      title: 'Cụm cảm biến',
       dataIndex: 'node_address',
       key: 'node_address',
-      width: 80,
+      width: 120,
       align: 'center',
+      render: (addr: number) => (
+        <Tag color="geekblue">Cụm {addr}</Tag>
+      ),
     },
     {
-      title: 'Kênh SSR tưới',
+      title: 'Kênh rơ-le máy bơm',
       dataIndex: 'misting_ssr_channel',
       key: 'misting_ssr_channel',
-      width: 110,
+      width: 140,
       align: 'center',
       render: (ch: number) => (
         <Tag color="volcano" style={{ fontSize: 12 }}>
-          <ThunderboltOutlined /> K{ch}
+          <ThunderboltOutlined /> Kênh {ch}
         </Tag>
       ),
     },
@@ -383,47 +430,49 @@ export function DeviceControlPanel() {
     {
       title: 'Hành động',
       key: 'actions',
-      width: 260,
+      width: 300,
       align: 'right',
       render: (_, record) => (
         <Space size={4} wrap>
-          <Tooltip title="Môi trường thực tế">
-            <Button
-              size="small"
-              icon={<ExperimentOutlined />}
-              onClick={() => setSelectedFloor(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Cấu hình ngưỡng Auto">
-            <Button
-              size="small"
-              icon={<PoweroffOutlined />}
-              onClick={() => handleOpenThresholds(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Điều khiển tưới tự động">
-            <Button
-              size="small"
-              icon={<ThunderboltOutlined />}
-              onClick={() => setAutomationFloor(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Sửa cấu hình tầng">
-            <Button
-              size="small"
-              type="text"
-              icon={<ApiOutlined />}
-              onClick={() => handleOpenEdit(record)}
-            />
-          </Tooltip>
-          <Tooltip title="Gán khay cho tầng">
-            <Button
-              size="small"
-              type="text"
-              icon={<ApiOutlined />}
-              onClick={() => handleOpenAssignTray(record)}
-            />
-          </Tooltip>
+          {/* Nút chính: hiện label rõ ràng */}
+          <ActionButton
+            icon={<ThunderboltOutlined />}
+            label="Điều khiển tưới"
+            description="Bật/tắt tưới tự động và xem nhật ký điều khiển"
+            variant="primary"
+            onClick={() => setAutomationFloor(record)}
+          />
+          {/* Nút phụ: icon + tooltip tiếng Việt */}
+          <ActionButton
+            icon={<ExperimentOutlined />}
+            label="Xem môi trường"
+            description="Xem nhiệt độ và độ ẩm thực tế của tầng"
+            hideLabel
+            onClick={() => setSelectedFloor(record)}
+          />
+          <ActionButton
+            icon={<SettingOutlined />}
+            label="Cấu hình ngưỡng tự động"
+            description="Đặt ngưỡng độ ẩm để hệ thống tự tưới"
+            hideLabel
+            onClick={() => handleOpenThresholds(record)}
+          />
+          <ActionButton
+            icon={<EditOutlined />}
+            label="Sửa cấu hình tầng"
+            description="Chỉnh sửa thông số của tầng: tên, bộ điều khiển, kênh rơ-le"
+            hideLabel
+            variant="text"
+            onClick={() => handleOpenEdit(record)}
+          />
+          <ActionButton
+            icon={<NodeIndexOutlined />}
+            label="Gán khay cho tầng"
+            description="Liên kết khay nấm với tầng này để theo dõi môi trường"
+            hideLabel
+            variant="text"
+            onClick={() => handleOpenAssignTray(record)}
+          />
         </Space>
       ),
     },
@@ -432,49 +481,45 @@ export function DeviceControlPanel() {
   return (
     <>
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
-        <Card size="small" style={{ flex: '1 1 200px' }}>
-          <Statistic
-            title="Master"
-            value={masters.length}
-            prefix={<ApiOutlined />}
-            valueStyle={{ fontSize: 22 }}
-          />
-        </Card>
-        <Card size="small" style={{ flex: '1 1 200px' }}>
-          <Statistic
-            title="Tầng (Floors)"
-            value={floors.length}
-            prefix={<ExperimentOutlined />}
-            valueStyle={{ fontSize: 22 }}
-          />
-        </Card>
-        <Card size="small" style={{ flex: '1 1 200px' }}>
-          <Statistic
-            title="Sensors"
-            value={sensors.length}
-            prefix={<ExperimentOutlined />}
-            valueStyle={{ fontSize: 22 }}
-          />
-        </Card>
-        <Card size="small" style={{ flex: '1 1 200px' }}>
-          <Badge
-            count={masters.filter((m) => m.reportedStatus === 'online').length}
-            showZero
-            color="success"
-          >
-            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
-              Master trực tuyến
-            </Typography.Text>
-          </Badge>
-        </Card>
+        <StatCard
+          title="Bộ điều khiển trung tâm"
+          value={masters.length}
+          icon={<ControlOutlined />}
+          description="Master đã đăng ký"
+          style={{ flex: '1 1 200px' }}
+        />
+        <StatCard
+          title="Số tầng đã cấu hình"
+          value={floors.length}
+          icon={<ExperimentOutlined />}
+          description="Tầng trong nhà trồng"
+          style={{ flex: '1 1 200px' }}
+        />
+        <StatCard
+          title="Cảm biến môi trường"
+          value={sensors.length}
+          icon={<WifiOutlined />}
+          description="Cảm biến nhiệt độ & độ ẩm"
+          style={{ flex: '1 1 200px' }}
+        />
+        <StatCard
+          title="Bộ điều khiển trực tuyến"
+          value={masters.filter((m) => m.reportedStatus === 'online').length}
+          suffix={`/ ${masters.length}`}
+          icon={<WifiOutlined />}
+          tone="success"
+          highlightValue
+          description="Đang kết nối bình thường"
+          style={{ flex: '1 1 200px' }}
+        />
       </Flex>
 
       {/* ── Floor Configuration ─────────────────────────────────────────── */}
       <Card
         title={
           <Flex align="center" gap={8}>
-            <ExperimentOutlined aria-hidden="true" />
-            <span>Cấu hình Auto-misting theo tầng</span>
+            <ThunderboltOutlined aria-hidden="true" />
+            <span>Cấu hình tưới phun sương tự động</span>
           </Flex>
         }
         extra={
@@ -483,7 +528,7 @@ export function DeviceControlPanel() {
             icon={<PoweroffOutlined />}
             onClick={handleOpenCreate}
           >
-            Tạo cấu hình tầng
+            Thêm cấu hình tầng
           </Button>
         }
         style={{ marginBottom: 16 }}
@@ -496,10 +541,10 @@ export function DeviceControlPanel() {
           loading={floorsLoading}
           size="small"
           pagination={{ pageSize: 10, showSizeChanger: false }}
-          scroll={{ x: 800 }}
+          scroll={{ x: 900 }}
           locale={{
             emptyText: (
-              <Empty description="Chưa cấu hình tầng nào — bấm 'Tạo cấu hình tầng'." />
+              <Empty description="Chưa cấu hình tầng nào — bấm 'Thêm cấu hình tầng'." />
             ),
           }}
         />
@@ -509,9 +554,9 @@ export function DeviceControlPanel() {
       <Card
         title={
           <Flex align="center" gap={8}>
-            <ApiOutlined aria-hidden="true" />
+            <WifiOutlined aria-hidden="true" />
             <span>
-              Cảm biến — Master {masters[0]?.masterId ?? '—'}
+              Cảm biến môi trường — Bộ điều khiển {masters[0]?.masterId ?? '—'}
             </span>
           </Flex>
         }
@@ -519,12 +564,12 @@ export function DeviceControlPanel() {
           <Segmented
             value="realtime"
             options={[
-              { label: 'Realtime', value: 'realtime' },
+              { label: 'Thời gian thực', value: 'realtime' },
               { label: 'Lịch sử', value: 'history' },
             ]}
             onChange={(value) => {
               if (value === 'history') {
-                message.info('Lịch sử sensor mở tại tab Lịch sử Telemetry.')
+                message.info('Lịch sử cảm biến mở tại tab Lịch sử Telemetry.')
               }
             }}
           />
@@ -538,18 +583,12 @@ export function DeviceControlPanel() {
           loading={masters.length === 0}
           size="small"
           pagination={{ pageSize: 10, showSizeChanger: false }}
-          scroll={{ x: 700 }}
+          scroll={{ x: 800 }}
           locale={{
             emptyText: (
-              <Empty description="Chưa nhận dữ liệu sensor nào." />
+              <Empty description="Chưa nhận dữ liệu từ cảm biến nào." />
             ),
           }}
-        />
-        <Alert
-          style={{ marginTop: 12 }}
-          type="info"
-          showIcon
-          message="Gắn API: GET /api/iot/masters, GET /api/iot/masters/{masterId}/sensors"
         />
       </Card>
 
@@ -632,23 +671,43 @@ export function DeviceControlPanel() {
                     <Flex justify="space-between" align="center">
                       <Flex vertical gap={2}>
                         <Typography.Text strong>
-                          Node {sensor.nodeId} · Sensor {sensor.sensorId}
+                          {formatSensorLabel(sensor.nodeId, sensor.sensorId)}
                         </Typography.Text>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                           Cập nhật: {formatTimestamp(sensor.lastReceivedAt)}
                         </Typography.Text>
                       </Flex>
-                      <Flex gap={8}>
-                        <Tag color="volcano">
-                          {sensor.temperature != null
-                            ? `${sensor.temperature.toFixed(1)}°C`
-                            : '—'}
-                        </Tag>
-                        <Tag color="cyan">
-                          {sensor.humidity != null
-                            ? `${sensor.humidity.toFixed(0)}%`
-                            : '—'}
-                        </Tag>
+                      <Flex gap={12} align="baseline">
+                        <Flex align="baseline" gap={2}>
+                          <Typography.Text
+                            strong
+                            style={{
+                              fontSize: 20,
+                              color:
+                                sensor.temperature != null && sensor.temperature > 30
+                                  ? 'var(--ant-color-error)'
+                                  : 'var(--ant-color-text)',
+                            }}
+                          >
+                            {sensor.temperature != null ? sensor.temperature.toFixed(1) : '—'}
+                          </Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>°C</Typography.Text>
+                        </Flex>
+                        <Flex align="baseline" gap={2}>
+                          <Typography.Text
+                            strong
+                            style={{
+                              fontSize: 20,
+                              color:
+                                sensor.humidity != null && sensor.humidity < 70
+                                  ? 'var(--ant-color-warning)'
+                                  : 'var(--ant-color-success)',
+                            }}
+                          >
+                            {sensor.humidity != null ? sensor.humidity.toFixed(0) : '—'}
+                          </Typography.Text>
+                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>%</Typography.Text>
+                        </Flex>
                       </Flex>
                     </Flex>
                   </Card>
@@ -736,18 +795,18 @@ export function DeviceControlPanel() {
             items={[
               {
                 key: 'master',
-                label: 'Master',
+                label: 'Bộ điều khiển',
                 children: selectedSensor.masterId,
               },
               {
                 key: 'node',
-                label: 'Node',
-                children: selectedSensor.nodeId,
+                label: 'Cụm cảm biến',
+                children: `Cụm cảm biến Tầng ${selectedSensor.nodeId}`,
               },
               {
                 key: 'sensor',
-                label: 'Sensor',
-                children: selectedSensor.sensorId,
+                label: 'Cảm biến',
+                children: `Cảm biến #${selectedSensor.sensorId}`,
               },
               {
                 key: 'temperature',
@@ -858,37 +917,37 @@ export function DeviceControlPanel() {
           </Form.Item>
 
           <Form.Item
-            label="Master"
+            label="Bộ điều khiển trung tâm"
             name="master_id"
-            rules={[{ required: true, message: 'Chọn master.' }]}
+            rules={[{ required: true, message: 'Vui lòng chọn bộ điều khiển.' }]}
           >
             <Select
-              placeholder="— Chọn master —"
+              placeholder="— Chọn bộ điều khiển —"
               options={masters.map((m) => ({
                 value: m.id,
-                label: `${m.masterId} (room ${m.cultivationRoomId ?? '—'})`,
+                label: `Bộ điều khiển ${m.masterId} (khu ${m.cultivationRoomId ?? '—'})`,
               }))}
             />
           </Form.Item>
 
           <Form.Item
-            label="Địa chỉ Node"
+            label="Cụm cảm biến (địa chỉ node)"
             name="node_address"
-            rules={[{ required: true, message: 'Chọn địa chỉ node.' }]}
+            rules={[{ required: true, message: 'Vui lòng chọn cụm cảm biến.' }]}
           >
             <Select
-              placeholder="— Chọn node —"
+              placeholder="— Chọn cụm cảm biến —"
               options={ACTIVE_NODE_IDS.map((id) => ({
                 value: id,
-                label: `Node ${id}`,
+                label: `Cụm cảm biến Tầng ${id}`,
               }))}
             />
           </Form.Item>
 
           <Form.Item
-            label="Kênh SSR tưới (1..8)"
+            label="Kênh rơ-le máy bơm (1..8)"
             name="misting_ssr_channel"
-            rules={[{ required: true, message: 'Nhập kênh SSR.' }]}
+            rules={[{ required: true, message: 'Vui lòng nhập kênh rơ-le.' }]}
           >
             <InputNumber min={1} max={8} style={{ width: '100%' }} />
           </Form.Item>

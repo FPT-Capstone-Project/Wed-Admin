@@ -1,0 +1,441 @@
+/**
+ * Giao diện các trang xác thực (đăng nhập, quên mật khẩu, đổi mật khẩu).
+ *
+ * Nguồn màu duy nhất: `var(--mcms-*)` sinh từ `src/app/theme/tokens.ts`.
+ * ⚠ KHÔNG hardcode hex trong file này.
+ *
+ * Ghi đè App.css bằng selector 2 lớp (vd. `.login-card.mcms-login-card`)
+ * để thắng specificity của rule cũ (`.login-card`) bất kể thứ tự import.
+ */
+
+/* ─────────────────────────── Trang Đăng nhập ─────────────────────────── */
+
+.login-page.mcms-login {
+  display: grid;
+  grid-template-columns: minmax(460px, 1.15fr) minmax(440px, 1fr);
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--mcms-background);
+  margin: 0;
+  padding: 0;
+}
+
+/* ─────────────────────────── Branding panel ─────────────────────────── */
+
+.mcms-login-brand {
+  position: relative;
+  display: flex;
+  min-height: 100dvh;
+  overflow: hidden;
+  color: var(--mcms-text-inverse);
+  background:
+    radial-gradient(
+      115% 85% at 12% 8%,
+      color-mix(in srgb, var(--mcms-teal) 60%, transparent) 0%,
+      transparent 58%
+    ),
+    radial-gradient(
+      105% 75% at 92% 96%,
+      color-mix(in srgb, var(--mcms-primary) 72%, transparent) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      155deg,
+      var(--mcms-primary-dark) 0%,
+      var(--mcms-primary) 52%,
+      var(--mcms-teal) 100%
+    );
+}
+
+/* Hoạ tiết trang trại nấm & mạng cảm biến IoT */
+.mcms-login-brand-pattern {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--mcms-primary-soft);
+  opacity: 0.22;
+  pointer-events: none;
+}
+
+/* Vệt sáng mềm ở góc trên — tạo chiều sâu sang trọng */
+.mcms-login-brand::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      70% 45% at 78% 12%,
+      color-mix(in srgb, var(--mcms-surface) 16%, transparent) 0%,
+      transparent 65%
+    ),
+    linear-gradient(
+      180deg,
+      transparent 45%,
+      color-mix(in srgb, var(--mcms-primary-dark) 55%, transparent) 100%
+    );
+}
+
+.mcms-login-brand-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  max-width: 580px;
+  margin: auto;
+  padding: clamp(32px, 4.5vw, 64px);
+  flex-direction: column;
+  gap: var(--mcms-space-6);
+}
+
+.mcms-login-brand-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--mcms-space-3);
+}
+
+.mcms-login-brand-mark {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 16px 6px 8px;
+  border: 1px solid color-mix(in srgb, var(--mcms-surface) 24%, transparent);
+  border-radius: var(--mcms-radius-pill);
+  background: color-mix(in srgb, var(--mcms-surface) 14%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.mcms-login-brand-mark img {
+  padding: 3px;
+  border-radius: var(--mcms-radius-md);
+  background: var(--mcms-surface);
+}
+
+.mcms-login-brand-mark strong {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.mcms-login-telemetry-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: var(--mcms-radius-pill);
+  background: color-mix(in srgb, var(--mcms-surface) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--mcms-surface) 20%, transparent);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  font-size: 12px;
+  color: var(--mcms-text-inverse);
+}
+
+.mcms-telemetry-pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--mcms-primary-soft);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mcms-surface) 40%, transparent);
+}
+
+.mcms-login-brand-copy {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mcms-space-3);
+}
+
+.mcms-login-brand-eyebrow {
+  margin: 0;
+  color: color-mix(in srgb, var(--mcms-primary-soft) 85%, transparent);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.mcms-login-brand-title {
+  margin: 0;
+  color: var(--mcms-text-inverse);
+  font-size: clamp(30px, 3.5vw, 42px);
+  font-weight: 700;
+  line-height: 1.18;
+  letter-spacing: -0.5px;
+  text-wrap: balance;
+}
+
+.mcms-login-brand-title em {
+  font-style: normal;
+  font-weight: 600;
+  color: color-mix(in srgb, var(--mcms-primary-soft) 92%, transparent);
+}
+
+.mcms-login-brand-desc {
+  margin: 0;
+  max-width: 46ch;
+  color: color-mix(in srgb, var(--mcms-surface) 80%, transparent);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.mcms-login-brand-features {
+  display: grid;
+  gap: var(--mcms-space-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mcms-login-brand-feature {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--mcms-space-3);
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--mcms-surface) 18%, transparent);
+  border-radius: var(--mcms-radius-lg);
+  background: color-mix(in srgb, var(--mcms-surface) 9%, transparent);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.mcms-login-brand-feature > .anticon {
+  flex: 0 0 auto;
+  margin-top: 2px;
+  color: var(--mcms-primary-soft);
+  font-size: 18px;
+}
+
+.mcms-login-brand-feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mcms-login-brand-feature-text strong {
+  color: var(--mcms-text-inverse);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.mcms-login-brand-feature-text span {
+  color: color-mix(in srgb, var(--mcms-surface) 75%, transparent);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ─────────────────────────── Form column ─────────────────────────── */
+
+.login-form-panel.mcms-login-form-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  padding: clamp(24px, 3.5vw, 56px);
+  background:
+    radial-gradient(
+      85% 55% at 100% 0%,
+      var(--mcms-primary-faint) 0%,
+      transparent 60%
+    ),
+    var(--mcms-background);
+}
+
+.login-card.mcms-login-card {
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-xl);
+  background: var(--mcms-surface);
+  box-shadow: var(--mcms-shadow-md);
+}
+
+.login-card.mcms-login-card > .ant-card-body {
+  padding: clamp(28px, 3.4vw, 42px);
+}
+
+.login-card-header {
+  margin-bottom: var(--mcms-space-5);
+}
+
+.login-card.mcms-login-card .login-card-title {
+  margin: 0 0 var(--mcms-space-2) 0 !important;
+  color: var(--mcms-text) !important;
+  font-size: 26px !important;
+  font-weight: 700 !important;
+  letter-spacing: -0.3px;
+}
+
+.login-card.mcms-login-card .login-card-desc {
+  margin: 0 !important;
+  color: var(--mcms-text-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.login-form.mcms-login-form .ant-form-item {
+  margin-bottom: var(--mcms-space-4);
+}
+
+.login-form.mcms-login-form .ant-form-item-label > label {
+  color: var(--mcms-text);
+  font-weight: 650;
+  font-size: 14px;
+}
+
+.login-form.mcms-login-form .ant-input-prefix {
+  color: var(--mcms-text-muted);
+  margin-right: 8px;
+}
+
+.login-form.mcms-login-form .ant-input-affix-wrapper-lg,
+.login-form.mcms-login-form .ant-input-lg {
+  min-height: 48px;
+  border-radius: var(--mcms-radius-md);
+  border-color: var(--mcms-border);
+  background: var(--mcms-surface);
+}
+
+.login-form.mcms-login-form .ant-input-affix-wrapper-lg:focus,
+.login-form.mcms-login-form .ant-input-affix-wrapper-lg-focused,
+.login-form.mcms-login-form .ant-input-lg:focus {
+  border-color: var(--mcms-primary);
+  box-shadow: var(--mcms-shadow-focus);
+}
+
+.login-remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--mcms-space-5);
+  font-size: 14px;
+}
+
+.login-forgot {
+  color: var(--mcms-primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color var(--mcms-motion-fast);
+}
+
+.login-forgot:hover {
+  color: var(--mcms-primary-dark);
+  text-decoration: underline;
+}
+
+/* Nút chính — chiều cao tối thiểu 44px (WCAG 2.5.5 / khuyến nghị 44px). */
+.login-form.mcms-login-form .mcms-login-submit-btn,
+.login-form.mcms-login-form .ant-btn-lg {
+  min-height: 46px;
+  height: 46px;
+  font-size: 15px;
+  font-weight: 650;
+  border-radius: var(--mcms-radius-md);
+  background: var(--mcms-primary);
+  border-color: var(--mcms-primary);
+  box-shadow: var(--mcms-shadow-xs);
+}
+
+.login-form.mcms-login-form .mcms-login-submit-btn:hover,
+.login-form.mcms-login-form .ant-btn-lg:hover {
+  background: var(--mcms-primary-dark) !important;
+  border-color: var(--mcms-primary-dark) !important;
+}
+
+.login-card.mcms-login-card .login-alt {
+  margin-top: var(--mcms-space-5);
+  padding-top: var(--mcms-space-4);
+  border-top: 1px solid var(--mcms-border-soft);
+  color: var(--mcms-text-muted);
+  font-size: 12.5px;
+  text-align: center;
+}
+
+/* ─────────────────────── Auth shell (quên/đổi mật khẩu) ─────────────────────── */
+
+.auth-v2-bg.mcms-auth-bg {
+  background:
+    radial-gradient(
+      70% 55% at 84% 10%,
+      color-mix(in srgb, var(--mcms-primary-soft) 80%, transparent) 0%,
+      transparent 62%
+    ),
+    radial-gradient(
+      62% 48% at 8% 94%,
+      color-mix(in srgb, var(--mcms-teal-soft) 75%, transparent) 0%,
+      transparent 60%
+    ),
+    linear-gradient(
+      165deg,
+      var(--mcms-surface) 0%,
+      var(--mcms-primary-faint) 62%,
+      var(--mcms-background) 100%
+    );
+}
+
+.auth-v2-bg.mcms-auth-bg > .auth-v2-bg-overlay {
+  background: none;
+}
+
+/* ───────────────────────────── Responsive ───────────────────────────── */
+
+@media (max-width: 1100px) {
+  .login-page.mcms-login {
+    grid-template-columns: minmax(380px, 0.95fr) minmax(420px, 1.05fr);
+  }
+
+  .mcms-login-brand-inner {
+    padding: clamp(28px, 3.5vw, 44px);
+    gap: var(--mcms-space-5);
+  }
+}
+
+@media (max-width: 991px) {
+  .login-page.mcms-login {
+    grid-template-columns: 1fr;
+  }
+
+  .mcms-login-brand {
+    min-height: auto;
+  }
+
+  .mcms-login-brand-inner {
+    max-width: 100%;
+    padding: 30px 24px 34px;
+    gap: var(--mcms-space-4);
+  }
+
+  .mcms-login-brand-features {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .login-form-panel.mcms-login-form-panel {
+    min-height: auto;
+    padding: 20px 16px 32px;
+  }
+
+  .login-card.mcms-login-card {
+    max-width: 100%;
+    border-radius: var(--mcms-radius-lg);
+  }
+
+  .login-card.mcms-login-card > .ant-card-body {
+    padding: 26px 20px;
+  }
+}
+
+@media (max-width: 575px) {
+  .mcms-login-brand-features {
+    display: none;
+  }
+
+  .mcms-login-brand-title {
+    font-size: 26px;
+  }
+}

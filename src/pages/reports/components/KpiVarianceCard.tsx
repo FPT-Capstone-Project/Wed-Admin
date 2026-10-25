@@ -4,10 +4,14 @@ import {
 } from '@ant-design/icons'
 import { Card, Flex, Tooltip, Typography } from 'antd'
 import type { ReactNode } from 'react'
+import { StatusBadge } from '../../../shared/ui'
+import { tones, type SemanticTone } from '../../../app/theme/tokens'
 
 interface KpiVarianceCardProps {
   icon: ReactNode
+  /** Màu nền icon — lấy từ token, không hardcode hex. */
   iconBg: string
+  /** Màu chữ icon — lấy từ token, không hardcode hex. */
   iconColor: string
   title: string
   currentLabel: string
@@ -22,12 +26,18 @@ interface KpiVarianceCardProps {
   subtitle?: string
 }
 
+/**
+ * Thẻ KPI có chênh lệch so với kỳ trước.
+ *
+ * Mọi màu đều lấy từ `tokens.ts` (`tones`) nên bảo đảm tương phản WCAG AA
+ * và đồng bộ theme, không hardcode hex.
+ */
 export function KpiVarianceCard({
   icon,
   iconBg,
   iconColor,
   title,
-  currentLabel: _currentLabel,
+  currentLabel,
   currentValue,
   previousLabel,
   previousValue,
@@ -39,8 +49,8 @@ export function KpiVarianceCard({
     ? deltaPercent >= 0
     : deltaPercent <= 0
 
-  const deltaColor = isImprovement ? '#16a34a' : '#dc2626'
-  const deltaBg = isImprovement ? '#dcfce7' : '#fee2e2'
+  const tone: SemanticTone = isImprovement ? 'ok' : 'danger'
+  const palette = tones[tone]
   const ArrowIcon = deltaPercent >= 0 ? ArrowUpOutlined : ArrowDownOutlined
   const formattedDelta = `${Math.abs(deltaPercent).toFixed(1)}%`
   const directionArrow = deltaPercent >= 0 ? '↑' : '↓'
@@ -49,8 +59,8 @@ export function KpiVarianceCard({
     <Card
       hoverable
       style={{
-        borderRadius: 12,
-        borderColor: '#e5e7eb',
+        borderRadius: 'var(--mcms-radius-xl)',
+        borderColor: 'var(--mcms-border)',
         height: '100%',
       }}
       styles={{ body: { padding: 20 } }}
@@ -60,7 +70,7 @@ export function KpiVarianceCard({
           style={{
             width: 40,
             height: 40,
-            borderRadius: 10,
+            borderRadius: 'var(--mcms-radius-lg)',
             background: iconBg,
             color: iconColor,
             display: 'flex',
@@ -87,9 +97,21 @@ export function KpiVarianceCard({
         </div>
       </Flex>
 
+      <Typography.Text
+        type="secondary"
+        style={{ fontSize: 12, display: 'block', marginBottom: 2 }}
+      >
+        {currentLabel}
+      </Typography.Text>
+
       <Typography.Title
         level={2}
-        style={{ margin: '0 0 6px', color: '#0f172a', fontWeight: 600 }}
+        style={{
+          margin: '0 0 6px',
+          color: 'var(--mcms-text)',
+          fontWeight: 600,
+          fontVariantNumeric: 'tabular-nums',
+        }}
       >
         {currentValue}
       </Typography.Title>
@@ -101,23 +123,30 @@ export function KpiVarianceCard({
           </Typography.Text>
         </Tooltip>
 
-        <span
-          style={{
-            background: deltaBg,
-            color: deltaColor,
-            padding: '2px 8px',
-            borderRadius: 999,
-            fontSize: 12,
-            fontWeight: 600,
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-          }}
-        >
-          <ArrowIcon style={{ fontSize: 10 }} />
-          {directionArrow} {formattedDelta}
-        </span>
+        <StatusBadge
+          tone={tone}
+          label={`${directionArrow} ${formattedDelta}`}
+          icon={<ArrowIcon style={{ fontSize: 10 }} />}
+        />
       </Flex>
+
+      <Typography.Text
+        type="secondary"
+        style={{ fontSize: 11, display: 'block', marginTop: 4 }}
+      >
+        {isImprovement ? 'Đang cải thiện so với kỳ trước' : 'Cần chú ý so với kỳ trước'}
+      </Typography.Text>
+
+      <span
+        aria-hidden="true"
+        style={{
+          display: 'block',
+          height: 3,
+          marginTop: 8,
+          borderRadius: 'var(--mcms-radius-pill)',
+          background: palette.solid,
+        }}
+      />
     </Card>
   )
 }

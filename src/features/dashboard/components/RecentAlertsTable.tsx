@@ -1,8 +1,21 @@
+/**
+ * RecentAlertsTable — widget cảnh báo gần đây trên Dashboard.
+ *
+ * Cải thiện:
+ *   - Chuyển đổi các mã phần cứng kỹ thuật (vd: "node-stm32-01", "node-stm32-04")
+ *     thành nhãn vị trí thân thiện với chủ trang trại ("Cụm cảm biến Tầng 1", "Cụm cảm biến Tầng 4").
+ *   - Các nút "Xác nhận" và "Xem" tuân thủ chiều cao dễ bấm (comfort height >= 32px),
+ *     đồng bộ với ActionButton và token màu sắc từ tokens.ts.
+ *   - Sử dụng StatusBadge cho mức độ cảnh báo.
+ */
 import {
-  AlertOutlined,
   ArrowRightOutlined,
   CheckOutlined,
+  ClockCircleOutlined,
+  ClusterOutlined,
+  EnvironmentOutlined,
   ExclamationCircleFilled,
+  InfoCircleFilled,
   WarningFilled,
 } from '@ant-design/icons'
 import { Badge, Button, Card, Empty, List, Tooltip, Typography } from 'antd'
@@ -11,35 +24,43 @@ import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAlertStore } from '../../../stores/alert.store'
 import type { AlertSeverity, SystemAlert } from '../../../types/alert.types'
+import { tones, type SemanticTone } from '../../../app/theme/tokens'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { formatFriendlyDeviceLocation } from '../../../shared/i18n/terms'
 
-interface SeverityVisuals {
+interface SeverityConfig {
   Icon: typeof ExclamationCircleFilled
-  /** Tên hiển thị Tiếng Việt */
   label: string
-  /** Màu badge/icon */
-  tone: string
-  /** CSS class cho icon-box */
-  iconClass: string
+  tone: SemanticTone
+  bg: string
+  color: string
 }
 
-const SEVERITY_CONFIG: Record<AlertSeverity, SeverityVisuals> = {
+/**
+ * Cấu hình mức độ cảnh báo dùng tokens thay vì hardcode hex.
+ * danger → coral, WARNING → amber, INFO → teal.
+ */
+const SEVERITY_CONFIG: Record<AlertSeverity, SeverityConfig> = {
   CRITICAL: {
     Icon: ExclamationCircleFilled,
     label: 'Nghiêm trọng',
-    tone: '#dc2626',
-    iconClass: 'severity-icon--critical',
+    tone: 'danger',
+    bg: tones.danger.bg,
+    color: tones.danger.solid,
   },
   WARNING: {
     Icon: WarningFilled,
     label: 'Cảnh báo',
-    tone: '#d97706',
-    iconClass: 'severity-icon--warning',
+    tone: 'warning',
+    bg: tones.warning.bg,
+    color: tones.warning.solid,
   },
   INFO: {
-    Icon: ExclamationCircleFilled,
+    Icon: InfoCircleFilled,
     label: 'Thông tin',
-    tone: '#0284c7',
-    iconClass: 'severity-icon--info',
+    tone: 'info',
+    bg: tones.info.bg,
+    color: tones.info.solid,
   },
 }
 
@@ -76,7 +97,7 @@ export function RecentAlertsTable() {
       <div className="recent-alerts-header">
         <div className="recent-alerts-title">
           <span className="recent-alerts-icon" aria-hidden="true">
-            <AlertOutlined />
+            <ExclamationCircleFilled />
           </span>
           <div>
             <Typography.Title level={4}>Cảnh báo gần đây</Typography.Title>
@@ -143,20 +164,18 @@ function formatRelativeTime(timestamp: string): string {
 }
 
 function RecentAlertItem({ alert, onView }: RecentAlertItemProps) {
-  const visuals = SEVERITY_CONFIG[alert.severity]
-  const { Icon } = visuals
+  const config = SEVERITY_CONFIG[alert.severity]
+  const friendlyDevice = formatFriendlyDeviceLocation(alert.deviceId)
 
   return (
     <List.Item className="recent-alerts-list-item">
       <div className="recent-alert-row">
-        {/* Icon mức độ (Critical đỏ / Warning vàng / Info xanh) */}
-        <span
-          className={`severity-icon ${visuals.iconClass}`}
-          aria-label={`Mức độ: ${visuals.label}`}
-          role="img"
-        >
-          <Icon />
-        </span>
+        {/* StatusBadge cho mức độ cảnh báo */}
+        <StatusBadge
+          tone={config.tone}
+          label={config.label}
+          icon={<config.Icon aria-hidden="true" />}
+        />
 
         {/* Khối nội dung chính */}
         <div className="recent-alert-content">
@@ -164,42 +183,46 @@ function RecentAlertItem({ alert, onView }: RecentAlertItemProps) {
             {alert.message}
           </Typography.Text>
           <div className="recent-alert-meta">
+            {/* Vị trí */}
             <span className="recent-alert-meta-chip" title="Vị trí">
-              📍 {alert.trayName}
+              <EnvironmentOutlined aria-hidden="true" />
+              {alert.trayName}
             </span>
-            <span
-              className="recent-alert-meta-chip"
-              title="Thiết bị"
-            >
-              🖧 {alert.deviceId}
-            </span>
+            {/* Vị trí phần cứng thân thiện (kèm tooltip mã thiết bị) */}
+            <Tooltip title={`Mã kỹ thuật: ${alert.deviceId}`}>
+              <span className="recent-alert-meta-chip" title="Cụm thiết bị">
+                <ClusterOutlined aria-hidden="true" />
+                <strong>{friendlyDevice}</strong>
+              </span>
+            </Tooltip>
+            {/* Thời gian */}
             <Tooltip title={dayjs(alert.timestamp).format('DD/MM/YYYY HH:mm:ss')}>
-              <span className="recent-alert-meta-time">
-                ⏱ {formatRelativeTime(alert.timestamp)}
+              <span className="recent-alert-meta-chip recent-alert-meta-time">
+                <ClockCircleOutlined aria-hidden="true" />
+                {formatRelativeTime(alert.timestamp)}
               </span>
             </Tooltip>
           </div>
         </div>
 
-        {/* Nút thao tác */}
-        <div className="recent-alert-actions">
-          <Button
-            type="primary"
-            size="small"
+        {/* Nút thao tác chuẩn ActionButton với chiều cao dễ bấm */}
+        <div className="recent-alert-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <ActionButton
+            variant="primary"
+            size="middle"
             icon={<CheckOutlined />}
+            label="Xác nhận"
+            description={`Xác nhận cảnh báo: ${alert.message}`}
             onClick={onView}
-            aria-label="Xác nhận cảnh báo"
-          >
-            Xác nhận
-          </Button>
-          <Button
-            type="link"
-            size="small"
+          />
+          <ActionButton
+            variant="default"
+            size="middle"
+            icon={<ArrowRightOutlined />}
+            label="Xem"
+            description="Xem chi tiết tại trang Quản lý cảnh báo"
             onClick={onView}
-            aria-label="Xem chi tiết"
-          >
-            Xem
-          </Button>
+          />
         </div>
       </div>
     </List.Item>

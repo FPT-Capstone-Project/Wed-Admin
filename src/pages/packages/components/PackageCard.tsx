@@ -14,10 +14,11 @@ import {
   Flex,
   Popconfirm,
   Space,
-  Tag,
   Typography,
 } from 'antd'
 import type { BillingCycle, PackageStatus, RentalPackage } from '../../../types/package.types'
+import type { SemanticTone } from '../../../app/theme/tokens'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
 
 interface PackageCardProps {
   rentalPackage: RentalPackage
@@ -40,11 +41,11 @@ const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
 
 const STATUS_CONFIG: Record<
   PackageStatus,
-  { color: string; label: string }
+  { tone: SemanticTone; label: string }
 > = {
-  ACTIVE: { color: 'success', label: 'Đang kinh doanh' },
-  INACTIVE: { color: 'default', label: 'Tạm ngưng' },
-  PROMOTION: { color: 'processing', label: 'Gói ưu đãi' },
+  ACTIVE: { tone: 'ok', label: 'Đang nhận đơn' },
+  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
+  PROMOTION: { tone: 'info', label: 'Gói ưu đãi' },
 }
 
 const VND_FORMATTER = new Intl.NumberFormat('vi-VN', {
@@ -67,7 +68,7 @@ export function PackageCard({
   return (
     <Badge.Ribbon
       text={rentalPackage.isPopular ? 'Phổ biến nhất' : rentalPackage.status === 'PROMOTION' ? 'Ưu đãi' : undefined}
-      color={rentalPackage.isPopular ? '#d97706' : '#2563eb'}
+      color={rentalPackage.isPopular ? 'var(--mcms-amber)' : 'var(--mcms-blue)'}
       style={{ display: rentalPackage.isPopular || rentalPackage.status === 'PROMOTION' ? undefined : 'none' }}
     >
       <Card
@@ -82,7 +83,10 @@ export function PackageCard({
               </Typography.Title>
               <Typography.Text type="secondary">{rentalPackage.code}</Typography.Text>
             </div>
-            <Tag color={statusConfig.color}>{statusConfig.label}</Tag>
+            <StatusBadge
+              tone={statusConfig.tone}
+              label={statusConfig.label}
+            />
           </Flex>
 
           <Typography.Title level={2} style={{ margin: '20px 0 4px' }}>
@@ -108,7 +112,7 @@ export function PackageCard({
           </Typography.Text>
           <Flex gap={6} wrap style={{ marginTop: 8 }}>
             {rentalPackage.supportedMushrooms.map((mushroom) => (
-              <Tag key={mushroom}>{mushroom}</Tag>
+              <StatusBadge key={mushroom} tone="neutral" label={mushroom} />
             ))}
           </Flex>
 
@@ -119,13 +123,17 @@ export function PackageCard({
             {rentalPackage.features.length > 0 ? (
               rentalPackage.features.map((feature) => (
                 <Flex key={feature} align="flex-start" gap={8}>
-                  <CheckOutlined style={{ color: '#16a34a', marginTop: 4 }} />
+                  <CheckOutlined
+                  style={{ color: 'var(--mcms-primary)', marginTop: 4 }}
+                />
                   <Typography.Text>{feature}</Typography.Text>
                 </Flex>
               ))
             ) : (
               <Flex align="flex-start" gap={8}>
-                <StopOutlined style={{ color: '#9ca3af', marginTop: 4 }} />
+                <StopOutlined
+                  style={{ color: 'var(--mcms-text-muted)', marginTop: 4 }}
+                />
                 <Typography.Text type="secondary">Không có tiện ích bổ sung</Typography.Text>
               </Flex>
             )}
@@ -145,9 +153,13 @@ export function PackageCard({
           <Flex gap={8} wrap style={{ marginTop: 'auto', paddingTop: 20 }}>
             {canManage ? (
               <>
-                <Button icon={<EditOutlined />} onClick={() => onEdit(rentalPackage)}>
-                  Sửa
-                </Button>
+                <ActionButton
+                  icon={<EditOutlined />}
+                  label="Sửa"
+                  description={`Sửa gói ${rentalPackage.name}`}
+                  size="middle"
+                  onClick={() => onEdit(rentalPackage)}
+                />
                 <Popconfirm
                   title={
                     rentalPackage.status === 'INACTIVE'
@@ -159,14 +171,27 @@ export function PackageCard({
                   cancelText="Hủy"
                   onConfirm={() => onToggleStatus(rentalPackage)}
                 >
-                  <Button icon={<StopOutlined />}>
-                    {rentalPackage.status === 'INACTIVE' ? 'Kích hoạt' : 'Tạm ngưng'}
-                  </Button>
+                  <ActionButton
+                    icon={<StopOutlined />}
+                    label={
+                      rentalPackage.status === 'INACTIVE'
+                        ? 'Kích hoạt'
+                        : 'Tạm ngưng'
+                    }
+                    description="Thay đổi trạng thái gói cước"
+                    size="middle"
+                  />
                 </Popconfirm>
-                <Button
-                  icon={rentalPackage.isPopular ? <StarFilled /> : <StarOutlined />}
+                <ActionButton
+                  icon={
+                    rentalPackage.isPopular ? <StarFilled /> : <StarOutlined />
+                  }
+                  label={
+                    rentalPackage.isPopular ? 'Gỡ nổi bật' : 'Đánh dấu nổi bật'
+                  }
+                  size="middle"
+                  hideLabel
                   onClick={() => onTogglePopular(rentalPackage)}
-                  aria-label={`${rentalPackage.isPopular ? 'Gỡ' : 'Đánh dấu'} gói nổi bật`}
                 />
                 <Popconfirm
                   title="Xóa gói cước?"
@@ -176,7 +201,13 @@ export function PackageCard({
                   okButtonProps={{ danger: true }}
                   onConfirm={() => onDelete(rentalPackage)}
                 >
-                  <Button danger icon={<DeleteOutlined />} aria-label="Xóa gói cước" />
+                  <ActionButton
+                    icon={<DeleteOutlined />}
+                    label="Xóa gói cước"
+                    variant="danger"
+                    size="middle"
+                    hideLabel
+                  />
                 </Popconfirm>
               </>
             ) : (

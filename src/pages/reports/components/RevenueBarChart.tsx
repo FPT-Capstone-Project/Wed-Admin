@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { tones } from '../../../app/theme/tokens'
 import type { RevenueSummary } from '../../../types/alert.types'
 
 interface RevenueBarChartProps {
@@ -31,17 +32,20 @@ export function RevenueBarChart({ data }: RevenueBarChartProps) {
           data={data}
           margin={{ top: 8, right: 12, left: 8, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="month" tick={{ fill: '#6b7280', fontSize: 12 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border-soft)" />
+          <XAxis
+            dataKey="month"
+            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+          />
           <YAxis
             yAxisId="revenue"
             tickFormatter={(value: number) => `${value / 1000000}M`}
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
           />
           <YAxis
             yAxisId="rentals"
             orientation="right"
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
           />
           <Tooltip
             formatter={(value, name) => {
@@ -59,14 +63,14 @@ export function RevenueBarChart({ data }: RevenueBarChartProps) {
             yAxisId="revenue"
             dataKey="totalRevenue"
             name="Doanh thu"
-            fill="#2563eb"
+            fill={tones.info.solid}
             radius={[4, 4, 0, 0]}
           />
           <Bar
             yAxisId="rentals"
             dataKey="rentalCount"
             name="Lượt thuê"
-            fill="#14b8a6"
+            fill={tones.ok.solid}
             radius={[4, 4, 0, 0]}
           />
         </BarChart>

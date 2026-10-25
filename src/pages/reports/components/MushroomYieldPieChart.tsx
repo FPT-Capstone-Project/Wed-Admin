@@ -1,4 +1,4 @@
-import { Card, Empty, Typography } from 'antd'
+import { Card, Typography } from 'antd'
 import {
   Cell,
   Legend,
@@ -7,13 +7,15 @@ import {
   ResponsiveContainer,
   Tooltip,
 } from 'recharts'
+import { EmptyState } from '../../../shared/ui'
+import { tones } from '../../../app/theme/tokens'
 import type { YieldSummary } from '../../../types/alert.types'
 
 interface MushroomYieldPieChartProps {
   data: YieldSummary[]
 }
 
-const COLORS = ['#16a34a', '#ca8a04', '#dc2626']
+const COLORS = [tones.ok.solid, tones.warning.solid, tones.danger.solid]
 
 export function MushroomYieldPieChart({
   data,
@@ -39,7 +41,10 @@ export function MushroomYieldPieChart({
       extra={<Typography.Text type="secondary">Tổng hợp kg</Typography.Text>}
     >
       {chartData.length === 0 ? (
-        <Empty description="Chưa có dữ liệu sản lượng" />
+        <EmptyState
+          title="Chưa có dữ liệu sản lượng"
+          description="Chưa có vụ thu hoạch nào được ghi nhận trong kỳ."
+        />
       ) : (
         <ResponsiveContainer width="100%" height={320}>
           <PieChart>

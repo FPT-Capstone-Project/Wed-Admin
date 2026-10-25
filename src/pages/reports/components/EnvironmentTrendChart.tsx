@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { tones } from '../../../app/theme/tokens'
 import type { EnvironmentHistoryPoint } from '../../../types/alert.types'
 
 interface EnvironmentTrendChartProps {
@@ -28,14 +29,17 @@ export function EnvironmentTrendChart({
           data={data}
           margin={{ top: 8, right: 54, left: 0, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-          <XAxis dataKey="time" tick={{ fill: '#6b7280', fontSize: 12 }} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border-soft)" />
+          <XAxis
+            dataKey="time"
+            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+          />
           <YAxis
             yAxisId="temperature"
             domain={[15, 35]}
             unit="°C"
             width={50}
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
           />
           <YAxis
             yAxisId="humidity"
@@ -43,7 +47,7 @@ export function EnvironmentTrendChart({
             domain={[40, 100]}
             unit="%"
             width={42}
-            tick={{ fill: '#6b7280', fontSize: 12 }}
+            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
           />
           <YAxis
             yAxisId="co2"
@@ -53,7 +57,7 @@ export function EnvironmentTrendChart({
             width={58}
             axisLine={false}
             tickLine={false}
-            tick={{ fill: '#6b7280', fontSize: 11 }}
+            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 11 }}
             tickCount={5}
           />
           <Tooltip
@@ -79,7 +83,7 @@ export function EnvironmentTrendChart({
             type="monotone"
             dataKey="temperature"
             name="Nhiệt độ"
-            stroke="#dc2626"
+            stroke={tones.danger.solid}
             strokeWidth={2}
             dot={false}
           />
@@ -88,7 +92,7 @@ export function EnvironmentTrendChart({
             type="monotone"
             dataKey="humidity"
             name="Độ ẩm"
-            stroke="#0f766e"
+            stroke={tones.info.solid}
             strokeWidth={2}
             dot={false}
           />
@@ -97,7 +101,7 @@ export function EnvironmentTrendChart({
             type="monotone"
             dataKey="co2"
             name="CO₂"
-            stroke="#7c3aed"
+            stroke={tones.neutral.solid}
             strokeWidth={2}
             strokeDasharray="6 4"
             dot={false}

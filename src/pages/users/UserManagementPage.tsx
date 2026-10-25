@@ -1,25 +1,27 @@
 import { useCallback, useMemo, useState } from 'react'
 import {
+  CheckCircleOutlined,
   EyeOutlined,
   LockOutlined,
   PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
   UnlockOutlined,
+  UserOutlined,
 } from '@ant-design/icons'
 import {
   App,
+  Avatar,
   Button,
+  Col,
   Empty,
   Flex,
   Input,
   Popconfirm,
+  Row,
   Select,
   Space,
-  Statistic,
   Table,
-  Tag,
-  Tooltip,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -41,10 +43,24 @@ import type {
   UserStatus,
   UserWithRole,
 } from '../../types/user.types'
+import type { SemanticTone } from '../../app/theme/tokens'
+import { ActionButton, StatCard, StatusBadge } from '../../shared/ui'
 import { UserDetailDrawer } from './components/UserDetailDrawer'
 import { UserFormModal } from './components/UserFormModal'
 
 const PAGE_SIZE = 20
+
+const ROLE_BADGE_CONFIG: Record<number, { tone: SemanticTone; label: string }> = {
+  1: { tone: 'info', label: 'Quản trị viên' },
+  2: { tone: 'ok', label: 'Vận hành trang trại' },
+  3: { tone: 'neutral', label: 'Khách thuê khay' },
+}
+
+const USER_STATUS_BADGE_CONFIG: Record<UserStatus, { tone: SemanticTone; label: string }> = {
+  ACTIVE: { tone: 'ok', label: 'Hoạt động' },
+  BLOCKED: { tone: 'danger', label: 'Đã khoá' },
+  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
+}
 
 export function UserManagementPage() {
   const { message: messageApi } = App.useApp()
@@ -58,8 +74,6 @@ export function UserManagementPage() {
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
 
   // ── Query params ───────────────────────────────────────────────────────
-  // useMemo giữ object identity ổn định, nếu không queryKey đổi mỗi render
-  // → refetch vô hạn (xem `useRentals`).
   const listQuery = useMemo<UserListQuery>(
     () => ({ roleId: roleFilter }),
     [roleFilter],
@@ -142,21 +156,42 @@ export function UserManagementPage() {
         title: 'Họ và tên',
         dataIndex: 'full_name',
         key: 'full_name',
-        width: 200,
-        render: (value: string, user) => (
-          <Flex vertical gap={0}>
-            <Typography.Text strong>{value}</Typography.Text>
-            {user.address && (
-              <Typography.Text
-                type="secondary"
-                style={{ fontSize: 12 }}
-                ellipsis={{ tooltip: user.address }}
+        width: 240,
+        render: (value: string, user) => {
+          const trimmed = value?.trim() ?? ''
+          const initial = trimmed ? trimmed.charAt(0).toUpperCase() : 'U'
+          return (
+            <Flex align="center" gap={12}>
+              <Avatar
+                size={38}
+                style={{
+                  backgroundColor: 'var(--mcms-primary-soft)',
+                  color: 'var(--mcms-primary)',
+                  border: '1px solid var(--mcms-border-strong)',
+                  fontWeight: 650,
+                  fontSize: 15,
+                  flexShrink: 0,
+                }}
               >
-                {user.address}
-              </Typography.Text>
-            )}
-          </Flex>
-        ),
+                {initial}
+              </Avatar>
+              <Flex vertical gap={1} style={{ minWidth: 0 }}>
+                <Typography.Text strong ellipsis={{ tooltip: value }}>
+                  {value}
+                </Typography.Text>
+                {user.address && (
+                  <Typography.Text
+                    type="secondary"
+                    style={{ fontSize: 12 }}
+                    ellipsis={{ tooltip: user.address }}
+                  >
+                    {user.address}
+                  </Typography.Text>
+                )}
+              </Flex>
+            </Flex>
+          )
+        },
       },
       {
         title: 'Email',
@@ -177,34 +212,38 @@ export function UserManagementPage() {
         dataIndex: 'role_id',
         key: 'role_id',
         width: 200,
-        render: (roleId: number, user) => (
-          <Space direction="vertical" size={2}>
-            <Tag color="geekblue">{getRoleLabel(roleId, user.role_name)}</Tag>
-            {user.role_description && (
-              <Typography.Text
-                type="secondary"
-                style={{ fontSize: 12 }}
-                ellipsis={{ tooltip: user.role_description }}
-              >
-                {user.role_description}
-              </Typography.Text>
-            )}
-          </Space>
-        ),
+        render: (roleId: number, user) => {
+          const config = ROLE_BADGE_CONFIG[roleId] ?? {
+            tone: 'neutral',
+            label: getRoleLabel(roleId, user.role_name),
+          }
+          return (
+            <Space direction="vertical" size={2}>
+              <StatusBadge tone={config.tone} label={config.label} />
+              {user.role_description && (
+                <Typography.Text
+                  type="secondary"
+                  style={{ fontSize: 12 }}
+                  ellipsis={{ tooltip: user.role_description }}
+                >
+                  {user.role_description}
+                </Typography.Text>
+              )}
+            </Space>
+          )
+        },
       },
       {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',
-        width: 130,
+        width: 140,
         render: (status: UserStatus) => {
-          const config = USER_STATUS_CONFIG[status]
-
-          return (
-            <Tag color={config?.color ?? 'default'}>
-              {config?.label ?? status}
-            </Tag>
-          )
+          const config = USER_STATUS_BADGE_CONFIG[status] ?? {
+            tone: 'neutral',
+            label: status,
+          }
+          return <StatusBadge tone={config.tone} label={config.label} />
         },
       },
       {
@@ -227,7 +266,7 @@ export function UserManagementPage() {
       {
         title: 'Hành động',
         key: 'actions',
-        width: 120,
+        width: 110,
         align: 'right',
         fixed: 'right',
         render: (_, user) => {
@@ -241,25 +280,25 @@ export function UserManagementPage() {
             statusMutation.variables?.userId === user.user_id
 
           return (
-            <Space size={2}>
-              <Tooltip title="Xem chi tiết">
-                <Button
-                  type="text"
-                  icon={<EyeOutlined />}
-                  onClick={() => setSelectedUserId(user.user_id)}
-                  aria-label={`Xem chi tiết ${user.full_name}`}
-                />
-              </Tooltip>
+            <Space size={4}>
+              <ActionButton
+                icon={<EyeOutlined />}
+                label="Xem"
+                description={`Xem chi tiết ${user.full_name}`}
+                variant="text"
+                hideLabel
+                onClick={() => setSelectedUserId(user.user_id)}
+              />
 
               {isSelf ? (
-                <Tooltip title="Không thể tự khoá tài khoản đang đăng nhập">
-                  <Button
-                    type="text"
-                    icon={<LockOutlined />}
-                    disabled
-                    aria-label="Không thể tự khoá"
-                  />
-                </Tooltip>
+                <ActionButton
+                  icon={<LockOutlined />}
+                  label="Khoá"
+                  description="Không thể tự khoá tài khoản đang đăng nhập"
+                  variant="text"
+                  disabled
+                  hideLabel
+                />
               ) : (
                 <Popconfirm
                   title={`${actionLabel}?`}
@@ -273,15 +312,14 @@ export function UserManagementPage() {
                   okButtonProps={{ danger: isActive }}
                   onConfirm={() => handleToggleStatus(user)}
                 >
-                  <Tooltip title={actionLabel}>
-                    <Button
-                      type="text"
-                      danger={isActive}
-                      loading={isToggling}
-                      icon={isActive ? <LockOutlined /> : <UnlockOutlined />}
-                      aria-label={`${actionLabel} ${user.full_name}`}
-                    />
-                  </Tooltip>
+                  <ActionButton
+                    icon={isActive ? <LockOutlined /> : <UnlockOutlined />}
+                    label={isActive ? 'Khoá' : 'Mở khoá'}
+                    description={`${actionLabel} ${user.full_name}`}
+                    variant={isActive ? 'dangerText' : 'text'}
+                    loading={isToggling}
+                    hideLabel
+                  />
                 </Popconfirm>
               )}
             </Space>
@@ -314,19 +352,37 @@ export function UserManagementPage() {
         </Button>
       </Flex>
 
-      <Flex gap={24} wrap style={{ marginBottom: 20 }}>
-        <Statistic title="Tổng tài khoản" value={stats.total} />
-        <Statistic
-          title="Đang hoạt động"
-          value={stats.active}
-          valueStyle={{ color: '#16a34a' }}
-        />
-        <Statistic
-          title="Đã khoá"
-          value={stats.blocked}
-          valueStyle={{ color: '#dc2626' }}
-        />
-      </Flex>
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+        <Col xs={24} sm={8}>
+          <StatCard
+            title="Tổng tài khoản"
+            value={stats.total}
+            tone="info"
+            icon={<UserOutlined />}
+            description="Tất cả tài khoản trong hệ thống"
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <StatCard
+            title="Đang hoạt động"
+            value={stats.active}
+            tone="ok"
+            highlightValue
+            icon={<CheckCircleOutlined />}
+            description="Tài khoản đang được phép đăng nhập"
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <StatCard
+            title="Đã khoá"
+            value={stats.blocked}
+            tone="danger"
+            highlightValue
+            icon={<LockOutlined />}
+            description="Tài khoản bị tạm khoá hoặc đình chỉ"
+          />
+        </Col>
+      </Row>
 
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
         <Input

@@ -1,53 +1,120 @@
 import {
-  ApiOutlined,
   CheckCircleOutlined,
   InboxOutlined,
   SettingOutlined,
+  ToolOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { Button, Card, Col, Empty, Flex, Row, Statistic, Tag, Typography } from 'antd'
+import { Button, Card, Col, Empty, Flex, Row, Skeleton, Typography } from 'antd'
 import { useMemo, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { TrayStatus } from '../../../types/room.types'
+import { tokens } from '../../../app/theme/tokens'
+import { StatusBadge } from '../../../shared/ui/StatusBadge'
 import { RackView } from '../components/RackView'
 import { TrayDetailDrawer } from '../components/TrayDetailDrawer'
-import { TRAY_STATUS_CONFIG } from '../components/tray-status.config'
 import { RoomsTraysAdminPanel } from '../components/RoomsTraysAdminPanel'
 import { useTiersWithEnvironment } from '../hooks/useTiersWithEnvironment'
 
-const STATUS_ORDER = [
-  'empty',
-  'rented',
-  'harvesting',
-  'maintenance',
-] as const satisfies TrayStatus[]
+// ── Cấu hình legend 4 trạng thái (dùng tokens) ──────────────────────────────
+interface LegendItem {
+  status: TrayStatus
+  label: string
+  tone: 'ok' | 'warning' | 'danger' | 'muted'
+}
+const LEGEND_ITEMS: LegendItem[] = [
+  { status: 'rented',      label: 'Đang thuê',           tone: 'ok' },
+  { status: 'harvesting',  label: 'Chờ thu hoạch',        tone: 'warning' },
+  { status: 'maintenance', label: 'Nhiễm bệnh / Cách ly', tone: 'danger' },
+  { status: 'empty',       label: 'Khay trống',           tone: 'muted' },
+]
 
+// ── StatCard nhỏ gọn ─────────────────────────────────────────────────────────
+interface MiniStatProps {
+  icon: React.ReactNode
+  label: string
+  value: number | string
+  loading: boolean
+  accentColor?: string
+  accentBg?: string
+}
+function MiniStat({ icon, label, value, loading, accentColor, accentBg }: MiniStatProps) {
+  return (
+    <div
+      style={{
+        backgroundColor: tokens.color.surface,
+        border: `1px solid ${tokens.color.border}`,
+        borderRadius: tokens.radius.lg,
+        padding: `${tokens.space['3']} ${tokens.space['4']}`,
+        boxShadow: tokens.shadow.xs,
+        display: 'flex',
+        alignItems: 'center',
+        gap: tokens.space['3'],
+      }}
+    >
+      <span
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 36,
+          height: 36,
+          borderRadius: tokens.radius.md,
+          backgroundColor: accentBg ?? tokens.color.surfaceMuted,
+          color: accentColor ?? tokens.color.textMuted,
+          fontSize: 16,
+          flexShrink: 0,
+        }}
+      >
+        {icon}
+      </span>
+      <div>
+        <div
+          style={{
+            fontSize: 11,
+            color: tokens.color.textMuted,
+            marginBottom: 1,
+            lineHeight: 1.2,
+          }}
+        >
+          {label}
+        </div>
+        {loading ? (
+          <Skeleton.Input active size="small" style={{ width: 40, height: 20 }} />
+        ) : (
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: tokens.typography.weightBold,
+              color: accentColor ?? tokens.color.text,
+              lineHeight: 1,
+              fontFamily: tokens.typography.fontNumeric,
+            }}
+          >
+            {value}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ── Page ─────────────────────────────────────────────────────────────────────
 export function RoomListPage() {
   const navigate = useNavigate()
   const { id = null } = useParams<{ id: string }>()
   const [showAdminPanel, setShowAdminPanel] = useState(false)
 
-  // ── Data from API (rooms + trays + IoT floors/environment) ───────────
-  const {
-    tiersWithEnv,
-    isLoading,
-    refetch,
-  } = useTiersWithEnvironment()
+  const { tiersWithEnv, isLoading, refetch } = useTiersWithEnvironment()
 
-  // Sau khi wire telemetry, `tiersWithEnv` luôn có data, fallback `[]` chỉ
-  // trong trường hợp vẫn đang loading.
   const tiers = useMemo(
     () => tiersWithEnv.map((t) => t.tier),
     [tiersWithEnv],
   )
-  const liveCount = useMemo(
-    () => tiersWithEnv.filter((t) => t.source === 'real').length,
-    [tiersWithEnv],
-  )
+
   const tiersError = false
   const tiersErrorMessage: string | null = null
 
-  // ── Local stats ────────────────────────────────────────────────────────
   const summary = useMemo(() => {
     const trays = tiers.flatMap((t) => t.trays)
     return {
@@ -61,96 +128,86 @@ export function RoomListPage() {
   }, [tiers])
 
   return (
-    <div>
-      <Flex
-        align="flex-start"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
+    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['5'] }}>
+
+      {/* ── Page header ──────────────────────────────────────────────── */}
+      <Flex align="flex-start" justify="space-between" gap={16} wrap>
         <div>
-          <Flex align="center" gap={8} wrap>
-            <Typography.Title level={3} style={{ margin: 0 }}>
-              Khu nuôi nấm · {tiers.length} tầng
-            </Typography.Title>
-            {tiersWithEnv.length > 0 && (
-              <Tag
-                color={liveCount === tiersWithEnv.length ? 'success' : 'warning'}
-                style={{ marginInlineStart: 0 }}
-              >
-                {liveCount === tiersWithEnv.length
-                  ? `Telemetry real-time · ${liveCount}/${liveCount}`
-                  : `Telemetry thật ${liveCount}/${tiersWithEnv.length} tầng · còn lại mock`}
-              </Tag>
-            )}
-          </Flex>
-          <Typography.Text type="secondary">
-            Tổng {summary.total} khay · {summary.empty} trống ·{' '}
-            {summary.occupied} đang vận hành · {summary.attention} cần chú ý
+          <Typography.Title
+            level={3}
+            style={{ margin: 0, color: tokens.color.text }}
+          >
+            Quản lý khay nấm
+          </Typography.Title>
+          <Typography.Text style={{ color: tokens.color.textMuted, fontSize: 13 }}>
+            {tiers.length} tầng nuôi &middot; {summary.total} khay
           </Typography.Text>
         </div>
 
-        <Flex gap={6} wrap>
-          {STATUS_ORDER.map((status) => (
-            <Tag key={status} color={TRAY_STATUS_CONFIG[status].color}>
-              {TRAY_STATUS_CONFIG[status].label}
-            </Tag>
+        <Flex gap={8} wrap align="center">
+          {/* Legend 4 trạng thái */}
+          {LEGEND_ITEMS.map((item) => (
+            <StatusBadge
+              key={item.status}
+              tone={item.tone}
+              label={item.label}
+            />
           ))}
+
           <Button
-            size="small"
             icon={<SettingOutlined />}
             type={showAdminPanel ? 'primary' : 'default'}
             onClick={() => setShowAdminPanel((prev) => !prev)}
+            style={{ minHeight: tokens.targetSize.control }}
           >
-            {showAdminPanel ? 'Ẩn quản trị' : 'Quản trị phòng & khay'}
+            {showAdminPanel ? 'Ẩn quản trị' : 'Quản trị'}
           </Button>
         </Flex>
       </Flex>
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
-        <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Tổng khay"
-              value={summary.total}
-              prefix={<ApiOutlined />}
-              loading={isLoading}
-            />
-          </Card>
+      {/* ── Stat cards ───────────────────────────────────────────────── */}
+      <Row gutter={[12, 12]}>
+        <Col xs={12} sm={6}>
+          <MiniStat
+            icon={<ToolOutlined />}
+            label="Tổng khay"
+            value={summary.total}
+            loading={isLoading}
+            accentColor={tokens.color.primary}
+            accentBg={tokens.color.primarySoft}
+          />
         </Col>
-        <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Còn trống"
-              value={summary.empty}
-              prefix={<InboxOutlined />}
-              loading={isLoading}
-            />
-          </Card>
+        <Col xs={12} sm={6}>
+          <MiniStat
+            icon={<InboxOutlined />}
+            label="Còn trống"
+            value={summary.empty}
+            loading={isLoading}
+          />
         </Col>
-        <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Đang vận hành"
-              value={summary.occupied}
-              prefix={<CheckCircleOutlined />}
-              loading={isLoading}
-            />
-          </Card>
+        <Col xs={12} sm={6}>
+          <MiniStat
+            icon={<CheckCircleOutlined />}
+            label="Đang vận hành"
+            value={summary.occupied}
+            loading={isLoading}
+            accentColor={tokens.tone.ok.text}
+            accentBg={tokens.tone.ok.bg}
+          />
         </Col>
-        <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Cần chú ý"
-              value={summary.attention}
-              prefix={<WarningOutlined />}
-              loading={isLoading}
-            />
-          </Card>
+        <Col xs={12} sm={6}>
+          <MiniStat
+            icon={<WarningOutlined />}
+            label="Cần chú ý"
+            value={summary.attention}
+            loading={isLoading}
+            accentColor={summary.attention > 0 ? tokens.tone.danger.text : tokens.color.textMuted}
+            accentBg={summary.attention > 0 ? tokens.tone.danger.bg : tokens.color.surfaceMuted}
+          />
         </Col>
       </Row>
 
+      {/* ── Rack / Error ──────────────────────────────────────────────── */}
       {tiersError ? (
         <Empty
           description={
@@ -179,16 +236,17 @@ export function RoomListPage() {
         />
       )}
 
+      {/* ── Admin panel (collapsible) ─────────────────────────────────── */}
       {showAdminPanel && (
-        <Card style={{ marginTop: 20 }} styles={{ body: { padding: 20 } }}>
-          <RoomsTraysAdminPanel
-            onChanged={() => {
-              void refetch()
-            }}
-          />
+        <Card
+          style={{ borderColor: tokens.color.border }}
+          styles={{ body: { padding: tokens.space['5'] } }}
+        >
+          <RoomsTraysAdminPanel onChanged={() => { void refetch() }} />
         </Card>
       )}
 
+      {/* ── Drawer ───────────────────────────────────────────────────── */}
       <TrayDetailDrawer
         trayId={id}
         onClose={() => navigate('/rooms', { replace: true })}

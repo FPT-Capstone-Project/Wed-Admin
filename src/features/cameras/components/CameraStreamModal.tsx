@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Alert, App, Button, Modal, Space, Spin, Tooltip, Typography } from 'antd'
+import { Alert, App, Button, Modal, Space, Spin, Typography } from 'antd'
+import { DisconnectOutlined } from '@ant-design/icons'
 import type Hls from 'hls.js'
 import { cameraApi } from '../api/camera.api'
 import { useCameraLiveStream, useStopLiveStream } from '../hooks/useCameras'
 import { CAMERA_MANAGE } from '../../auth/permissions'
 import { useHasPermission } from '../../auth/hooks/usePermission'
 import { getApiErrorMessage } from '../../../shared/api/error'
+import { ActionButton, EmptyState } from '../../../shared/ui'
 import type { Camera } from '../../../types/camera.types'
 
 interface CameraStreamModalProps {
@@ -258,21 +260,21 @@ export function CameraStreamModal({
       footer={
         canStopSession && needsCloudLookup && streamUrl ? (
           <Space>
-            <Tooltip title="Kết thúc phiên live trên Imou cloud">
-              <Button
-                danger
-                loading={isStoppingSession}
-                onClick={() => {
-                  if (camera?.id) {
-                    stopLiveStream.mutate(camera.id, {
-                      onSuccess: () => onClose(),
-                    })
-                  }
-                }}
-              >
-                Dừng phiên live
-              </Button>
-            </Tooltip>
+            <ActionButton
+              icon={<DisconnectOutlined />}
+              label="Dừng phiên live"
+              description="Kết thúc phiên live trên Imou cloud."
+              variant="danger"
+              size="middle"
+              loading={isStoppingSession}
+              onClick={() => {
+                if (camera?.id) {
+                  stopLiveStream.mutate(camera.id, {
+                    onSuccess: () => onClose(),
+                  })
+                }
+              }}
+            />
             <Button type="primary" onClick={handleClose}>
               Đóng
             </Button>
@@ -334,9 +336,10 @@ export function CameraStreamModal({
 
           {!streamUrl && !isLoading ? (
             <div className="camera-stream-modal-empty">
-              <Typography.Text type="secondary">
-                Không có link stream cho camera này.
-              </Typography.Text>
+              <EmptyState
+                title="Không có link stream cho camera này"
+                description="Camera chưa được cấu hình đường dẫn stream, hoặc Imou cloud chưa cấp quyền xem trực tiếp."
+              />
             </div>
           ) : null}
         </div>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Alert, Card } from 'antd'
 import { ArrowLeftOutlined, CheckOutlined, InfoCircleOutlined } from '@ant-design/icons'
 import { Link, useNavigate } from 'react-router-dom'
+import '../styles/auth.css'
 
 export interface AuthStep {
   /** Nhãn ngắn hiển thị trong pill. */
@@ -58,16 +59,11 @@ export function AuthShell({
 
   return (
     <main className="auth-v2">
-      {/* Background atmosphere: cùng 1 ảnh hero, blur nhẹ ở góc */}
-      <div className="auth-v2-bg" aria-hidden="true">
-        <img
-          src="/auth/hero-mushroom-rows.jpg"
-          alt=""
-          width="1400"
-          height="933"
-          loading="lazy"
-          decoding="async"
-        />
+      {/*
+        Background atmosphere: gradient theo token + hoạ tiết nhẹ.
+        KHÔNG dùng ảnh nền (ảnh cũ là sân bóng đá — không liên quan nông nghiệp).
+      */}
+      <div className="auth-v2-bg mcms-auth-bg" aria-hidden="true">
         <div className="auth-v2-bg-overlay" />
       </div>
 
@@ -124,7 +120,7 @@ export function AuthShell({
             type="error"
             showIcon
             role="alert"
-            message={errorMessage}
+            title={errorMessage}
             closable={Boolean(onDismissError)}
             onClose={onDismissError}
           />

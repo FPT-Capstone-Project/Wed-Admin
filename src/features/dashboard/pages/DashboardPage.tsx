@@ -1,3 +1,14 @@
+/**
+ * DashboardPage — Trang tổng quan trang trại MCMS.
+ *
+ * Bố cục (theo thứ tự ưu tiên):
+ *   1. PageHeader   — tiêu đề + ngày hôm nay (shared/ui)
+ *   2. KPI Row      — 4 thẻ thống kê nhanh (QuickSummaryStats)
+ *   3. Môi trường   — 3 thẻ chỉ số + biểu đồ 24h
+ *   4. Cảnh báo     — danh sách 3 cảnh báo gần nhất
+ *
+ * Logic lấy dữ liệu giữ nguyên — chỉ thay đổi phần render/bố cục.
+ */
 import {
   CalendarOutlined,
   CheckCircleFilled,
@@ -9,6 +20,7 @@ import { Col, Row, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useAlertStore } from '../../../stores/alert.store'
 import { getAllTrays, useRoomStore } from '../../../stores/room.store'
+import { PageHeader } from '../../../shared/ui'
 import { EnvironmentChart } from '../components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../components/EnvironmentMetricCard'
 import { QuickSummaryStats } from '../components/QuickSummaryStats'
@@ -23,6 +35,23 @@ function getFormattedToday() {
   }).format(new Date())
 
   return formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1)
+}
+
+/** Chip ngày — hiển thị ở góc phải PageHeader. */
+function TodayChip() {
+  const today = getFormattedToday()
+  return (
+    <div
+      className="dashboard-date"
+      aria-label={`Hôm nay, ${today}`}
+    >
+      <CalendarOutlined aria-hidden="true" />
+      <span>
+        <small>Hôm nay</small>
+        <strong>{today}</strong>
+      </span>
+    </div>
+  )
 }
 
 export function DashboardPage() {
@@ -43,8 +72,6 @@ export function DashboardPage() {
       totalTrays: trays.length,
       activeInUseTrays,
       availableTrays: trays.filter((tray) => tray.status === 'empty').length,
-      // Khay đang cách ly / nhiễm bệnh — hiển thị dưới dạng badge nhỏ trên
-      // thẻ "Sẵn sàng cho thuê" để giữ tổng số khay luôn bảo toàn đúng 12.
       maintenanceTrays: trays.filter(
         (tray) => tray.status === 'maintenance',
       ).length,
@@ -85,24 +112,14 @@ export function DashboardPage() {
 
   return (
     <div className="dashboard-page">
-      <header className="dashboard-page-header">
-        <div className="dashboard-heading-copy">
-          <span className="page-kicker">TRUNG TÂM VẬN HÀNH</span>
-          <Typography.Title level={2}>Tổng quan trang trại</Typography.Title>
-          <Typography.Paragraph>
-            Theo dõi công suất khay và điều kiện vi khí hậu trong một màn hình.
-          </Typography.Paragraph>
-        </div>
+      {/* ── Header ─────────────────────────────────────────────────────── */}
+      <PageHeader
+        title="Tổng quan trang trại"
+        description="Theo dõi công suất khay và điều kiện vi khí hậu trong một màn hình."
+        actions={<TodayChip />}
+      />
 
-        <div className="dashboard-date" aria-label={`Hôm nay, ${getFormattedToday()}`}>
-          <CalendarOutlined aria-hidden="true" />
-          <span>
-            <small>Hôm nay</small>
-            <strong>{getFormattedToday()}</strong>
-          </span>
-        </div>
-      </header>
-
+      {/* ── KPI Row ─────────────────────────────────────────────────────── */}
       <QuickSummaryStats
         totalTrays={summary.totalTrays}
         activeInUseTrays={summary.activeInUseTrays}
@@ -111,6 +128,7 @@ export function DashboardPage() {
         activeAlerts={summary.activeAlerts}
       />
 
+      {/* ── Điều kiện môi trường ──────────────────────────────────────── */}
       <section className="dashboard-section" aria-labelledby="environment-heading">
         <div className="section-heading-row">
           <div>
@@ -118,7 +136,7 @@ export function DashboardPage() {
               Điều kiện môi trường
             </Typography.Title>
             <Typography.Text type="secondary">
-              Giá trị trung bình từ 4 tầng nuôi nấm
+              Giá trị trung bình từ {tiers.length} tầng nuôi nấm
             </Typography.Text>
           </div>
           <span className="healthy-indicator">
@@ -152,6 +170,7 @@ export function DashboardPage() {
               target="Mục tiêu 80–92%"
             />
           </Col>
+
           <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
               title="CO₂ trung bình"
@@ -170,6 +189,7 @@ export function DashboardPage() {
         </div>
       </section>
 
+      {/* ── Cảnh báo gần đây ─────────────────────────────────────────── */}
       <RecentAlertsTable />
     </div>
   )

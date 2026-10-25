@@ -1,16 +1,27 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { PlusOutlined } from '@ant-design/icons'
-import { Button, Flex, Typography, message } from 'antd'
+import { Col, Flex, Row, message } from 'antd'
 import { TenantForm } from '../components/TenantForm'
 import { TenantTable } from '../components/TenantTable'
 import { useTenantStore } from '../store/tenant.store'
+import { ActionButton, PageHeader, StatCard } from '../../../shared/ui'
 import type { Tenant, TenantFormValues } from '../types/tenant.types'
 
 export function TenantListPage() {
   const [isModalVisible, setIsModalVisible] = useState(false)
   const [editingTenant, setEditingTenant] = useState<Tenant | null>(null)
+  const tenants = useTenantStore((state) => state.tenants)
   const addTenant = useTenantStore((state) => state.addTenant)
   const updateTenant = useTenantStore((state) => state.updateTenant)
+
+  const summary = useMemo(
+    () => ({
+      total: tenants.length,
+      active: tenants.filter((tenant) => tenant.status === 'active').length,
+      expired: tenants.filter((tenant) => tenant.status === 'expired').length,
+    }),
+    [tenants],
+  )
 
   const handleAddTenant = () => {
     setEditingTenant(null)
@@ -39,27 +50,52 @@ export function TenantListPage() {
 
   return (
     <div>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Khách thuê khay
-        </Typography.Title>
+      <PageHeader
+        title="Khách thuê khay"
+        description="Quản lý khách thuê và khay nấm đang được giao canh tác"
+        actions={
+          <ActionButton
+            icon={<PlusOutlined />}
+            label="Thêm khách thuê mới"
+            description="Thêm một khách thuê và gán khay trống."
+            variant="primary"
+            size="middle"
+            onClick={handleAddTenant}
+          />
+        }
+      />
 
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={handleAddTenant}
-        >
-          Thêm khách thuê mới
-        </Button>
+      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
+        <Col xs={12} lg={8}>
+          <StatCard
+            title="Tổng khách thuê"
+            value={summary.total}
+            tone="neutral"
+            description="Tất cả khách thuê trong hệ thống"
+          />
+        </Col>
+        <Col xs={12} lg={8}>
+          <StatCard
+            title="Đang thuê"
+            value={summary.active}
+            tone="ok"
+            highlightValue
+            description="Khách thuê đang canh tác"
+          />
+        </Col>
+        <Col xs={12} lg={8}>
+          <StatCard
+            title="Hết hạn"
+            value={summary.expired}
+            tone="muted"
+            description="Hợp đồng đã kết thúc"
+          />
+        </Col>
+      </Row>
+
+      <Flex vertical>
+        <TenantTable onEdit={handleEditTenant} />
       </Flex>
-
-      <TenantTable onEdit={handleEditTenant} />
 
       <TenantForm
         visible={isModalVisible}

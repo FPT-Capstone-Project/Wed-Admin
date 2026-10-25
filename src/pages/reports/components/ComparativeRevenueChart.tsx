@@ -9,6 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { tones } from '../../../app/theme/tokens'
 
 interface ComparativeChartPoint {
   month: string
@@ -35,6 +36,9 @@ const VND_FULL = new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 0,
 })
 
+const CURRENT_COLOR = tones.ok.solid
+const PREVIOUS_COLOR = tones.muted.border
+
 function CustomTooltip({
   active,
   payload,
@@ -55,22 +59,22 @@ function CustomTooltip({
   return (
     <div
       style={{
-        background: '#ffffff',
-        border: '1px solid #e5e7eb',
-        borderRadius: 8,
+        background: 'var(--mcms-surface)',
+        border: '1px solid var(--mcms-border)',
+        borderRadius: 'var(--mcms-radius-lg)',
         padding: 12,
-        boxShadow: '0 4px 12px rgba(15, 23, 42, 0.08)',
+        boxShadow: 'var(--mcms-shadow-sm)',
         minWidth: 220,
       }}
     >
       <TypographyMonth label={label} />
       <TooltipRow
-        color="#059669"
+        color={CURRENT_COLOR}
         label="Doanh thu kỳ này"
         value={VND_FULL.format(current)}
       />
       <TooltipRow
-        color="#94a3b8"
+        color={PREVIOUS_COLOR}
         label="Doanh thu kỳ trước"
         value={VND_FULL.format(previous)}
       />
@@ -78,16 +82,16 @@ function CustomTooltip({
         style={{
           marginTop: 6,
           paddingTop: 6,
-          borderTop: '1px solid #f1f5f9',
+          borderTop: '1px solid var(--mcms-border-soft)',
           display: 'flex',
           justifyContent: 'space-between',
           fontSize: 12,
         }}
       >
-        <span style={{ color: '#64748b' }}>Chênh lệch tuyệt đối:</span>
+        <span style={{ color: 'var(--mcms-text-muted)' }}>Chênh lệch tuyệt đối:</span>
         <span
           style={{
-            color: isImprovement ? '#16a34a' : '#dc2626',
+            color: isImprovement ? tones.ok.text : tones.danger.text,
             fontWeight: 600,
           }}
         >
@@ -103,10 +107,10 @@ function CustomTooltip({
           marginTop: 2,
         }}
       >
-        <span style={{ color: '#64748b' }}>Chênh lệch tỷ lệ:</span>
+        <span style={{ color: 'var(--mcms-text-muted)' }}>Chênh lệch tỷ lệ:</span>
         <span
           style={{
-            color: isImprovement ? '#16a34a' : '#dc2626',
+            color: isImprovement ? tones.ok.text : tones.danger.text,
             fontWeight: 600,
           }}
         >
@@ -124,7 +128,7 @@ function TypographyMonth({ label }: { label?: string }) {
       style={{
         fontWeight: 600,
         fontSize: 13,
-        color: '#0f172a',
+        color: 'var(--mcms-text)',
         marginBottom: 8,
       }}
     >
@@ -151,7 +155,7 @@ function TooltipRow({
         marginBottom: 4,
       }}
     >
-      <span style={{ color: '#64748b', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ color: 'var(--mcms-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
         <span
           style={{
             display: 'inline-block',
@@ -163,7 +167,7 @@ function TooltipRow({
         />
         {label}
       </span>
-      <span style={{ fontWeight: 600, color: '#0f172a' }}>{value}</span>
+      <span style={{ fontWeight: 600, color: 'var(--mcms-text)' }}>{value}</span>
     </div>
   )
 }
@@ -203,18 +207,25 @@ function ComparativeRevenueChartInner({
         }}
       >
         <div>
-          <div style={{ fontSize: 12, color: '#64748b' }}>Tổng doanh thu kỳ này</div>
-          <div style={{ fontSize: 22, fontWeight: 700, color: '#0f172a' }}>
+          <div style={{ fontSize: 12, color: 'var(--mcms-text-muted)' }}>Tổng doanh thu kỳ này</div>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: 'var(--mcms-text)',
+              fontVariantNumeric: 'tabular-nums',
+            }}
+          >
             {VND_FULL.format(totals.current)}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: 12, color: '#64748b' }}>So với kỳ trước</div>
+          <div style={{ fontSize: 12, color: 'var(--mcms-text-muted)' }}>So với kỳ trước</div>
           <div
             style={{
               fontSize: 16,
               fontWeight: 600,
-              color: totalDelta >= 0 ? '#16a34a' : '#dc2626',
+              color: totalDelta >= 0 ? tones.ok.text : tones.danger.text,
             }}
           >
             {totalDelta >= 0 ? '+' : ''}
@@ -235,22 +246,22 @@ function ComparativeRevenueChartInner({
             margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
             barCategoryGap="20%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border-soft)" vertical={false} />
             <XAxis
               dataKey="month"
-              tick={{ fill: '#64748b', fontSize: 12 }}
-              axisLine={{ stroke: '#e2e8f0' }}
+              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}
             />
             <YAxis
               tickFormatter={(v: number) => `${VND_COMPACT.format(v)}`}
-              tick={{ fill: '#64748b', fontSize: 12 }}
-              axisLine={{ stroke: '#e2e8f0' }}
+              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}
             />
             <Tooltip
               content={<CustomTooltip />}
-              cursor={{ fill: 'rgba(148, 163, 184, 0.08)' }}
+              cursor={{ fill: 'var(--mcms-surface-hover)' }}
             />
             <Legend
               wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
@@ -263,14 +274,14 @@ function ComparativeRevenueChartInner({
             <Bar
               dataKey="previous"
               name="previous"
-              fill="#cbd5e1"
+              fill={PREVIOUS_COLOR}
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
             />
             <Bar
               dataKey="current"
               name="current"
-              fill="#059669"
+              fill={CURRENT_COLOR}
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
             />

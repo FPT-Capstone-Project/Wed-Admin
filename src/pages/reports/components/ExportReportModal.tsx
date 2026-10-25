@@ -12,6 +12,7 @@ import {
   message,
 } from 'antd'
 import dayjs from 'dayjs'
+import { tones } from '../../../app/theme/tokens'
 
 interface ExportReportModalProps {
   open: boolean
@@ -80,13 +81,13 @@ export function ExportReportModal({
           <Space direction="vertical" size={8} style={{ width: '100%' }}>
             <Radio value="CSV">
               <Space>
-                <FileExcelOutlined style={{ color: '#16a34a' }} />
+                <FileExcelOutlined style={{ color: tones.ok.solid }} />
                 <strong>CSV</strong> — phù hợp import vào Excel/Google Sheets.
               </Space>
             </Radio>
             <Radio value="PDF">
               <Space>
-                <FilePdfOutlined style={{ color: '#dc2626' }} />
+                <FilePdfOutlined style={{ color: tones.danger.solid }} />
                 <strong>PDF</strong> — bản trình bày hội đồng quản trị.
               </Space>
             </Radio>

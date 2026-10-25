@@ -1,17 +1,42 @@
-import { Tag } from 'antd'
 import type { RentalStatus } from '../types/rental.types'
-import { RENTAL_STATUS_CONFIG } from './rental-status.config'
+import { StatusBadge } from '../../../shared/ui'
+import type { SemanticTone } from '../../../app/theme/tokens'
 
 interface RentalStatusTagProps {
   status: RentalStatus
 }
 
+const RENTAL_STATUS_TONE: Record<
+  RentalStatus,
+  { tone: SemanticTone; label: string }
+> = {
+  CONFIRMED: {
+    tone: 'warning',
+    label: 'Chờ duyệt',
+  },
+  PREPARING: {
+    tone: 'info',
+    label: 'Đang chuẩn bị',
+  },
+  ACTIVE: {
+    tone: 'ok',
+    label: 'Đang canh tác',
+  },
+  COMPLETED: {
+    tone: 'neutral',
+    label: 'Hoàn thành',
+  },
+  CANCELLED: {
+    tone: 'danger',
+    label: 'Đã hủy',
+  },
+}
+
 export function RentalStatusTag({ status }: RentalStatusTagProps) {
-  const config = RENTAL_STATUS_CONFIG[status] ?? {
-    color: 'default',
+  const config = RENTAL_STATUS_TONE[status] ?? {
+    tone: 'neutral',
     label: status,
-    badge: 'default',
   }
 
-  return <Tag color={config.color}>{config.label}</Tag>
+  return <StatusBadge tone={config.tone} label={config.label} />
 }

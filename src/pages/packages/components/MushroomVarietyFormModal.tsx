@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   App,
   Button,
@@ -7,7 +7,6 @@ import {
   InputNumber,
   Modal,
   Space,
-  Tag,
 } from 'antd'
 import { DeleteOutlined, InboxOutlined, PlusOutlined } from '@ant-design/icons'
 import type {
@@ -19,6 +18,7 @@ import {
   useCreateMushroomType,
   useUpdateMushroomType,
 } from '../../../features/packages/hooks/useMushroomTypes'
+import { StatusBadge } from '../../../shared/ui'
 
 interface MushroomVarietyFormModalProps {
   open: boolean
@@ -56,7 +56,10 @@ function toFormShape(item: MushroomType): FormShape {
   }
 }
 
-function formShapeToCreatePayload(values: FormShape, image: File | null): CreateMushroomTypeFormPayload {
+function formShapeToCreatePayload(
+  values: FormShape,
+  image: File | null,
+): CreateMushroomTypeFormPayload {
   return {
     values: {
       name: values.name.trim(),
@@ -88,6 +91,179 @@ function formShapeToUpdatePayload(
   }
 }
 
+interface MushroomImageFieldProps {
+  /** URL ảnh đang lưu trên server (để preview khi sửa). */
+  initialImageUrl: string | null
+  /** Báo lên parent file ảnh mới (null = xoá ảnh / giữ ảnh cũ). */
+  onFileChange: (file: File | null) => void
+}
+
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
+/**
+ * Ô chọn ảnh giống nấm.
+ *
+ * Tách riêng khỏi form chính để state ảnh (preview + cờ "ảnh mới") được
+ * khởi tạo lại bằng `key` remount mỗi lần mở modal — không cần `useEffect`
+ * gọi setState (tránh cascading render theo khuyến nghị React).
+ */
+function MushroomImageField({
+  initialImageUrl,
+  onFileChange,
+}: MushroomImageFieldProps) {
+  const { message: messageApi } = App.useApp()
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
+
+  // null = chưa có preview (hiện dropzone)
+  // string = dataURL của ảnh mới user vừa chọn
+  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(
+    initialImageUrl,
+  )
+  // true = ảnh đang xem là ảnh MỚI (chưa lưu), false = ảnh cũ từ server
+  const [isUserPick, setIsUserPick] = useState(false)
+
+  const handlePickFile = (file: File | null) => {
+    if (!file) return
+    if (file.size > MAX_IMAGE_BYTES) {
+      messageApi.error('Kích thước ảnh tối đa 5MB.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = (ev) => {
+      setImagePreviewUrl(ev.target?.result as string)
+      setIsUserPick(true)
+    }
+    reader.readAsDataURL(file)
+    onFileChange(file)
+  }
+
+  const handleClearImage = () => {
+    setImagePreviewUrl(null)
+    setIsUserPick(false)
+    onFileChange(null)
+  }
+
+  return (
+    <>
+      {/* Input file ẩn — dùng ref để mở picker khi bấm nút */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        style={{ display: 'none' }}
+        onChange={(e) => {
+          const file = e.target.files?.[0]
+          if (!file) return
+          handlePickFile(file)
+          // Reset value để chọn lại cùng file vẫn fire onChange.
+          e.target.value = ''
+        }}
+      />
+
+      {imagePreviewUrl ? (
+        <div
+          style={{
+            position: 'relative',
+            border: '1px solid var(--mcms-border)',
+            borderRadius: 'var(--mcms-radius-lg)',
+            overflow: 'hidden',
+            background: 'var(--mcms-background)',
+          }}
+        >
+          <img
+            src={imagePreviewUrl}
+            alt="preview"
+            style={{
+              display: 'block',
+              width: '100%',
+              maxHeight: 280,
+              objectFit: 'contain',
+              background: 'var(--mcms-surface)',
+            }}
+          />
+          <Space
+            style={{
+              position: 'absolute',
+              top: 8,
+              right: 8,
+              background: 'color-mix(in srgb, var(--mcms-surface) 92%, transparent)',
+              borderRadius: 'var(--mcms-radius-md)',
+              padding: 4,
+            }}
+          >
+            <Button
+              size="small"
+              type="primary"
+              ghost
+              icon={<PlusOutlined />}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Đổi ảnh
+            </Button>
+            <Button
+              size="small"
+              danger
+              ghost
+              icon={<DeleteOutlined />}
+              onClick={handleClearImage}
+            >
+              Xoá ảnh
+            </Button>
+          </Space>
+          {isUserPick && (
+            <StatusBadge
+              tone="info"
+              label="Ảnh mới — sẽ lưu khi bấm 'Lưu giống nấm'"
+              className="mcms-image-pending-badge"
+            />
+          )}
+        </div>
+      ) : (
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              fileInputRef.current?.click()
+            }
+          }}
+          style={{
+            border: '1px dashed var(--mcms-border-strong)',
+            borderRadius: 'var(--mcms-radius-lg)',
+            padding: '32px 16px',
+            textAlign: 'center',
+            background: 'var(--mcms-background)',
+            cursor: 'pointer',
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 32,
+              color: 'var(--mcms-text-muted)',
+            }}
+          >
+            <InboxOutlined />
+          </p>
+          <p style={{ margin: '8px 0 0', fontWeight: 500 }}>
+            Kéo thả hoặc click để chọn ảnh
+          </p>
+          <p
+            style={{
+              margin: '4px 0 0',
+              color: 'var(--mcms-text-muted)',
+              fontSize: 12,
+            }}
+          >
+            Hỗ trợ JPG, PNG, WebP — tối đa 5MB
+          </p>
+        </div>
+      )}
+    </>
+  )
+}
+
 export function MushroomVarietyFormModal({
   open,
   initialValues,
@@ -98,25 +274,26 @@ export function MushroomVarietyFormModal({
   const createMutation = useCreateMushroomType()
   const updateMutation = useUpdateMushroomType()
 
-  // File upload state — truyền riêng qua FormData (multipart)
-  const [imageFile, setImageFile] = useState<File | null>(null)
-  // URL ảnh HIỆN ĐANG xem trong modal:
-  //   = null            → chưa có ảnh (hiện dropzone)
-  //   = string (URL)    → ảnh cũ từ server
-  //   = string (dataURL) → ảnh mới user vừa chọn
-  // Phân biệt nguồn bằng cờ `isUserPick`: false = từ initialValues, true = user vừa upload.
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null)
-  const [isUserPick, setIsUserPick] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement | null>(null)
+  /**
+   * File ảnh mới để gửi lên BE.
+   * Dùng `ref` (không phải state) vì chỉ cần đọc lúc submit — tránh
+   * render lại không cần thiết và tránh setState trong effect.
+   */
+  const imageFileRef = useRef<File | null>(null)
+
   const editingKey = initialValues?.mushroom_type_id
-  const initialFormValues: FormShape = initialValues
-    ? toFormShape(initialValues)
-    : {
-        name: '',
-        description: '',
-        growingDays: 30,
-        price: 50_000,
-      }
+  const initialFormValues: FormShape = useMemo(
+    () =>
+      initialValues
+        ? toFormShape(initialValues)
+        : {
+            name: '',
+            description: '',
+            growingDays: 30,
+            price: 50_000,
+          },
+    [initialValues],
+  )
 
   // Nạp dữ liệu vào Form mỗi khi mở modal / đổi giống nấm.
   // KHÔNG dựa vào prop `initialValues` của <Form> vì nó chỉ áp dụng ở lần mount
@@ -124,22 +301,20 @@ export function MushroomVarietyFormModal({
   useEffect(() => {
     if (!open) return
     form.setFieldsValue(initialFormValues)
-    setImageFile(null)
-    setIsUserPick(false)
-    setImagePreviewUrl(initialValues?.image_url ?? null)
-  }, [editingKey, open])
+  }, [form, initialFormValues, open])
 
   const handleFinish = async (values: FormShape) => {
+    const image = imageFileRef.current
     try {
       if (initialValues) {
         await updateMutation.mutateAsync({
           id: initialValues.mushroom_type_id,
-          payload: formShapeToUpdatePayload(values, imageFile),
+          payload: formShapeToUpdatePayload(values, image),
         })
         messageApi.success(`Đã cập nhật giống nấm "${values.name}".`)
       } else {
         await createMutation.mutateAsync(
-          formShapeToCreatePayload(values, imageFile),
+          formShapeToCreatePayload(values, image),
         )
         messageApi.success(`Đã thêm giống nấm "${values.name}".`)
       }
@@ -152,6 +327,12 @@ export function MushroomVarietyFormModal({
   }
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending
+
+  /**
+   * Key remount cho ô chọn ảnh: đổi khi mở/đóng modal hoặc đổi giống nấm
+   * → state ảnh (preview + cờ "ảnh mới") luôn sạch mỗi lần mở.
+   */
+  const imageFieldKey = `${editingKey ?? 'new'}-${open ? 'open' : 'closed'}`
 
   return (
     <Modal
@@ -173,9 +354,7 @@ export function MushroomVarietyFormModal({
       width={680}
       afterClose={() => {
         form.resetFields()
-        setImageFile(null)
-        setImagePreviewUrl(null)
-        setIsUserPick(false)
+        imageFileRef.current = null
       }}
     >
       <Form<FormShape>
@@ -253,7 +432,9 @@ export function MushroomVarietyFormModal({
               placeholder="VD: 120000"
               addonAfter="VND"
               formatter={(value) =>
-                value != null ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''
+                value != null
+                  ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+                  : ''
               }
               parser={(value) => {
                 const raw = (value ?? '').replace(/[^\d]/g, '')
@@ -269,129 +450,13 @@ export function MushroomVarietyFormModal({
           tooltip="Chọn file ảnh từ máy tính (JPG, PNG, WebP, tối đa 5MB). Để trống sẽ dùng ảnh mặc định."
           style={{ marginTop: 16 }}
         >
-          {/* Input file ẩn — dùng ref để mở picker khi bấm nút */}
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            style={{ display: 'none' }}
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              const MAX = 5 * 1024 * 1024
-              if (file.size > MAX) {
-                messageApi.error('Kích thước ảnh tối đa 5MB.')
-                return
-              }
-              setImageFile(file)
-              setIsUserPick(true)
-              const reader = new FileReader()
-              reader.onload = (ev) => {
-                setImagePreviewUrl(ev.target?.result as string)
-              }
-              reader.readAsDataURL(file)
-              // Reset value để chọn lại cùng file vẫn fire onChange.
-              e.target.value = ''
+          <MushroomImageField
+            key={imageFieldKey}
+            initialImageUrl={initialValues?.image_url ?? null}
+            onFileChange={(file) => {
+              imageFileRef.current = file
             }}
           />
-
-          {imagePreviewUrl ? (
-            <div
-              style={{
-                position: 'relative',
-                border: '1px solid #e5e7eb',
-                borderRadius: 8,
-                overflow: 'hidden',
-                background: '#f8fafc',
-              }}
-            >
-              <img
-                src={imagePreviewUrl}
-                alt="preview"
-                style={{
-                  display: 'block',
-                  width: '100%',
-                  maxHeight: 280,
-                  objectFit: 'contain',
-                  background: '#fff',
-                }}
-              />
-              <Space
-                style={{
-                  position: 'absolute',
-                  top: 8,
-                  right: 8,
-                  background: 'rgba(255,255,255,0.92)',
-                  borderRadius: 6,
-                  padding: 4,
-                }}
-              >
-                <Button
-                  size="small"
-                  type="primary"
-                  ghost
-                  icon={<PlusOutlined />}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  Đổi ảnh
-                </Button>
-                <Button
-                  size="small"
-                  danger
-                  ghost
-                  icon={<DeleteOutlined />}
-                  onClick={() => {
-                    setImageFile(null)
-                    setImagePreviewUrl(null)
-                    setIsUserPick(false)
-                  }}
-                >
-                  Xoá ảnh
-                </Button>
-              </Space>
-              {isUserPick && (
-                <Tag
-                  color="processing"
-                  style={{
-                    position: 'absolute',
-                    bottom: 8,
-                    left: 8,
-                  }}
-                >
-                  Ảnh mới — sẽ lưu khi bấm "Lưu giống nấm"
-                </Tag>
-              )}
-            </div>
-          ) : (
-            <div
-              role="button"
-              tabIndex={0}
-              onClick={() => fileInputRef.current?.click()}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  fileInputRef.current?.click()
-                }
-              }}
-              style={{
-                border: '1px dashed #cbd5e1',
-                borderRadius: 8,
-                padding: '32px 16px',
-                textAlign: 'center',
-                background: '#f8fafc',
-                cursor: 'pointer',
-              }}
-            >
-              <p style={{ margin: 0, fontSize: 32, color: '#94a3b8' }}>
-                <InboxOutlined />
-              </p>
-              <p style={{ margin: '8px 0 0', fontWeight: 500 }}>
-                Kéo thả hoặc click để chọn ảnh
-              </p>
-              <p style={{ margin: '4px 0 0', color: '#94a3b8', fontSize: 12 }}>
-                Hỗ trợ JPG, PNG, WebP — tối đa 5MB
-              </p>
-            </div>
-          )}
         </Form.Item>
       </Form>
     </Modal>

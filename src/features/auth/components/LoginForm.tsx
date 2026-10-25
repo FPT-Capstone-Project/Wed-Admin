@@ -41,18 +41,20 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   }
 
   return (
-    <Card className="login-card" variant="outlined">
-      <Typography.Title level={2} className="login-card-title">
-        Đăng nhập
-      </Typography.Title>
-      <Typography.Paragraph type="secondary" className="login-card-desc">
-        Sử dụng tài khoản được cấp để tiếp tục vào hệ thống.
-      </Typography.Paragraph>
+    <Card className="login-card mcms-login-card" variant="outlined">
+      <div className="login-card-header">
+        <Typography.Title level={2} className="login-card-title">
+          Đăng nhập
+        </Typography.Title>
+        <Typography.Paragraph type="secondary" className="login-card-desc">
+          Sử dụng tài khoản được cấp để tiếp tục vào hệ thống MCMS.
+        </Typography.Paragraph>
+      </div>
 
       {(errorMessage ?? lastError) && (
         <Alert
           type="error"
-          message={errorMessage ?? lastError}
+          title={errorMessage ?? lastError}
           showIcon
           closable
           onClose={() => {
@@ -60,11 +62,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
             clearError()
           }}
           className="login-card-error"
+          style={{ marginBottom: 'var(--mcms-space-4)' }}
         />
       )}
 
       <Form<LoginCredentials>
-        className="login-form"
+        className="login-form mcms-login-form"
         layout="vertical"
         requiredMark={false}
         initialValues={{
@@ -123,13 +126,15 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           size="large"
           block
           loading={isSubmitting}
+          className="mcms-login-submit-btn"
+          style={{ minHeight: 46 }}
         >
           Đăng nhập
         </Button>
       </Form>
 
       <div className="login-alt">
-        Tài khoản được cấp bởi quản trị viên hệ thống.
+        Tài khoản được cấp bởi ban quản trị hệ thống trang trại MCMS.
       </div>
     </Card>
   )

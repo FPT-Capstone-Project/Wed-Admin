@@ -140,8 +140,11 @@ function buildSeedVarietyPerformance(): VarietyPerformance[] {
  * - Mọi giá trị được làm sạch qua toSafeNumber để UI không bao giờ in `NaN đ`.
  */
 export function buildVarietyPerformance(
-  _yields: YieldSummary[] = [],
+  yields: YieldSummary[] = [],
 ): VarietyPerformance[] {
+  // `yields` hiện chưa dùng để tính toán (dữ liệu giống nấm là seed cố định
+  // theo yêu cầu nghiệp vụ) — giữ tham số để không đổi API cho callers.
+  void yields
   return buildSeedVarietyPerformance()
 }
 

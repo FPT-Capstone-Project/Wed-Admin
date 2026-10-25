@@ -15,7 +15,6 @@ import {
   Popconfirm,
   Space,
   Table,
-  Tag,
   Tooltip,
   Typography,
   message,
@@ -23,6 +22,8 @@ import {
 import type { TableColumnsType } from 'antd'
 import { useSettingStore } from '../../../stores/setting.store'
 import type { MushroomThresholdProfile } from '../../../types/setting.types'
+import type { SemanticTone } from '../../../app/theme/tokens'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
 
 interface ThresholdProfileTabProps {
   canEdit: boolean
@@ -32,7 +33,7 @@ interface ThresholdProfileTabProps {
 }
 
 /**
- * Ô hiển thị một dải min–max.
+ * Ô hiển thị một dải min–max chuẩn hoá bằng StatusBadge.
  *
  * `null` ở cả hai đầu → giống nấm **không đặt ngưỡng** cho chỉ số này
  * (không phải thiếu dữ liệu) → hiện "—".
@@ -41,21 +42,22 @@ function RangeCell({
   min,
   max,
   unit,
-  color,
+  tone,
 }: {
   min: number | null
   max: number | null
   unit: string
-  color: string
+  tone: SemanticTone
 }) {
   if (min == null && max == null) {
     return <Typography.Text type="secondary">—</Typography.Text>
   }
 
   return (
-    <Tag color={color} style={{ fontWeight: 500 }}>
-      {min ?? '—'} – {max ?? '—'} {unit}
-    </Tag>
+    <StatusBadge
+      tone={tone}
+      label={`${min ?? '—'} – ${max ?? '—'} ${unit}`}
+    />
   )
 }
 
@@ -93,8 +95,8 @@ export function ThresholdProfileTab({
         <Flex vertical gap={4}>
           <Typography.Text strong>{value}</Typography.Text>
           <Flex gap={4} wrap>
-            {profile.isDefault && <Tag color="gold">Mặc định</Tag>}
-            <Tag color="cyan">Gói {profile.cycleWeeks ?? 1} tuần</Tag>
+            {profile.isDefault && <StatusBadge tone="warning" label="Mặc định" />}
+            <StatusBadge tone="info" label={`Gói ${profile.cycleWeeks ?? 1} tuần`} />
           </Flex>
           <Typography.Text type="secondary" style={{ fontSize: 11 }}>
             {profile.name}
@@ -105,39 +107,39 @@ export function ThresholdProfileTab({
     {
       title: 'Nhiệt độ (°C)',
       key: 'temperature',
-      width: 150,
+      width: 160,
       render: (_, profile) => (
         <RangeCell
           min={profile.tempMin}
           max={profile.tempMax}
           unit="°C"
-          color="red"
+          tone="warning"
         />
       ),
     },
     {
       title: 'Độ ẩm (%)',
       key: 'humidity',
-      width: 140,
+      width: 150,
       render: (_, profile) => (
         <RangeCell
           min={profile.humidityMin}
           max={profile.humidityMax}
           unit="%"
-          color="blue"
+          tone="info"
         />
       ),
     },
     {
       title: 'CO₂ (ppm)',
       key: 'co2',
-      width: 160,
+      width: 170,
       render: (_, profile) => (
         <RangeCell
           min={profile.co2Min}
           max={profile.co2Max}
           unit="ppm"
-          color="gold"
+          tone="neutral"
         />
       ),
     },
@@ -150,7 +152,7 @@ export function ThresholdProfileTab({
           min={profile.soilMoistureMin}
           max={profile.soilMoistureMax}
           unit="%"
-          color="green"
+          tone="ok"
         />
       ),
     },
@@ -171,43 +173,34 @@ export function ThresholdProfileTab({
           {
             title: 'Hành động',
             key: 'actions',
-            width: 190,
+            width: 220,
             align: 'right' as const,
+            fixed: 'right' as const,
             render: (_: unknown, profile: MushroomThresholdProfile) => (
-              <Space size={4}>
-                <Button
-                  size="small"
-                  type="primary"
-                  ghost
+              <Space size={6}>
+                <ActionButton
                   icon={<EditOutlined />}
+                  label="Sửa"
+                  description={`Sửa hồ sơ ${profile.name}`}
                   onClick={() => onEdit(profile)}
-                >
-                  Sửa
-                </Button>
-                <Tooltip
-                  title={
+                />
+
+                <ActionButton
+                  icon={profile.isDefault ? <StarFilled /> : <StarOutlined />}
+                  label={profile.isDefault ? 'Mặc định' : 'Đặt mặc định'}
+                  description={
                     profile.isDefault
                       ? 'Đang là hồ sơ mặc định'
-                      : 'Đặt làm mặc định'
+                      : 'Đặt làm hồ sơ mặc định'
                   }
-                >
-                  <Button
-                    size="small"
-                    type="text"
-                    icon={
-                      profile.isDefault ? (
-                        <StarFilled style={{ color: '#d97706' }} />
-                      ) : (
-                        <StarOutlined />
-                      )
-                    }
-                    disabled={profile.isDefault}
-                    onClick={() => {
-                      setDefaultProfile(profile.id)
-                      message.success('Đã đặt hồ sơ làm mặc định.')
-                    }}
-                  />
-                </Tooltip>
+                  variant={profile.isDefault ? 'primary' : 'default'}
+                  disabled={profile.isDefault}
+                  onClick={() => {
+                    setDefaultProfile(profile.id)
+                    message.success('Đã đặt hồ sơ làm mặc định.')
+                  }}
+                />
+
                 <Popconfirm
                   title="Xóa hồ sơ vi khí hậu?"
                   description={
@@ -223,13 +216,12 @@ export function ThresholdProfileTab({
                     message.success('Đã xóa hồ sơ.')
                   }}
                 >
-                  <Button
-                    size="small"
-                    type="text"
-                    danger
+                  <ActionButton
                     icon={<DeleteOutlined />}
+                    label="Xóa"
+                    description={`Xóa hồ sơ ${profile.name}`}
+                    variant="danger"
                     disabled={profile.isDefault}
-                    aria-label="Xóa hồ sơ vi khí hậu"
                   />
                 </Popconfirm>
               </Space>
@@ -248,9 +240,7 @@ export function ThresholdProfileTab({
         message={
           <Typography.Text style={{ fontSize: 13 }}>
             <strong>Mẹo vận hành:</strong> Các tầng đang bật chế độ{' '}
-            <Tag color="success" style={{ margin: '0 4px' }}>
-              AUTO
-            </Tag>
+            <StatusBadge tone="ok" label="AUTO" style={{ margin: '0 4px' }} />
             sẽ tự động đồng bộ theo ngưỡng của giống nấm được gán trên khay.
           </Typography.Text>
         }

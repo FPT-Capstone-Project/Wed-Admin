@@ -1,3 +1,9 @@
+/**
+ * EnvironmentChart — Biểu đồ nhiệt độ và độ ẩm trong 24 giờ.
+ *
+ * Cải thiện: màu đường biểu đồ dùng CSS variable từ tokens thay vì hardcode hex.
+ * Dữ liệu mẫu giữ nguyên (chờ API thực).
+ */
 import { CheckCircleFilled } from '@ant-design/icons'
 import { Card, Typography } from 'antd'
 import {
@@ -10,6 +16,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { palette, border } from '../../../app/theme/tokens'
 
 export interface EnvironmentDataPoint {
   time: string
@@ -32,6 +39,9 @@ const ENVIRONMENT_DATA: EnvironmentDataPoint[] = [
   { time: '22:00', temperature: 24.2, humidity: 89 },
   { time: 'Hiện tại', temperature: 25.6, humidity: 87 },
 ]
+
+/** Màu axis/tick — dùng token muted text */
+const AXIS_TICK_COLOR = '#687a6d'
 
 interface EnvironmentChartProps {
   data?: EnvironmentDataPoint[]
@@ -68,14 +78,14 @@ export function EnvironmentChart({
             <CartesianGrid
               vertical={false}
               strokeDasharray="4 4"
-              stroke="#dfe9e2"
+              stroke={border.soft}
             />
             <XAxis
               dataKey="time"
               axisLine={false}
               tickLine={false}
               minTickGap={28}
-              tick={{ fill: '#687a6d', fontSize: 12 }}
+              tick={{ fill: AXIS_TICK_COLOR, fontSize: 12 }}
               dy={10}
             />
             <YAxis
@@ -85,7 +95,7 @@ export function EnvironmentChart({
               width={40}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#687a6d', fontSize: 12 }}
+              tick={{ fill: AXIS_TICK_COLOR, fontSize: 12 }}
             />
             <YAxis
               yAxisId="humidity"
@@ -95,33 +105,35 @@ export function EnvironmentChart({
               width={42}
               axisLine={false}
               tickLine={false}
-              tick={{ fill: '#687a6d', fontSize: 12 }}
+              tick={{ fill: AXIS_TICK_COLOR, fontSize: 12 }}
             />
             <Tooltip
               contentStyle={{
-                border: '1px solid #dce8df',
+                border: `1px solid ${border.base}`,
                 borderRadius: 6,
                 boxShadow: '0 10px 30px rgb(23 51 33 / 12%)',
               }}
             />
             <Legend wrapperStyle={{ paddingTop: 20 }} />
+            {/* Nhiệt độ — dùng palette.coral từ tokens */}
             <Line
               yAxisId="temperature"
               type="monotone"
               dataKey="temperature"
               name="Nhiệt độ (°C)"
-              stroke="#c2413b"
+              stroke={palette.coral}
               strokeWidth={2.5}
               dot={false}
               activeDot={{ r: 5, strokeWidth: 3, stroke: '#ffffff' }}
               isAnimationActive={false}
             />
+            {/* Độ ẩm — dùng palette.teal từ tokens */}
             <Line
               yAxisId="humidity"
               type="monotone"
               dataKey="humidity"
               name="Độ ẩm (%)"
-              stroke="#0f766e"
+              stroke={palette.teal}
               strokeWidth={2.5}
               strokeDasharray="7 5"
               dot={false}

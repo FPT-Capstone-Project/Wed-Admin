@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import {
+  CheckCircleOutlined,
   DeleteOutlined,
   EditOutlined,
+  PauseCircleOutlined,
   PlusOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
@@ -10,13 +12,11 @@ import {
   Button,
   Empty,
   Flex,
-  Image,
   Input,
   Popconfirm,
   Segmented,
   Space,
   Table,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
@@ -28,6 +28,8 @@ import {
   useUpdateMushroomType,
 } from '../../../features/packages/hooks/useMushroomTypes'
 import { translateMushroomName } from '../../../shared/i18n/translate'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { FallbackThumbnail } from './FallbackThumbnail'
 import { MushroomVarietyFormModal } from './MushroomVarietyFormModal'
 
 const VND = new Intl.NumberFormat('vi-VN', {
@@ -40,6 +42,17 @@ type FilterStatus = 'ALL' | MushroomTypeStatus
 
 interface MushroomVarietyCatalogProps {
   canManage: boolean
+}
+
+/** Trạng thái nhận đơn → tone ngữ nghĩa chuẩn (dùng StatusBadge, không dùng Tag). */
+const STATUS_TONE: Record<MushroomTypeStatus, 'ok' | 'muted'> = {
+  ACTIVE: 'ok',
+  INACTIVE: 'muted',
+}
+
+const STATUS_LABEL: Record<MushroomTypeStatus, string> = {
+  ACTIVE: 'Đang nhận đơn',
+  INACTIVE: 'Tạm ngưng',
 }
 
 export function MushroomVarietyCatalog({
@@ -122,46 +135,40 @@ export function MushroomVarietyCatalog({
       title: 'Giống nấm',
       key: 'name',
       width: 280,
-      render: (_, record) => (
-        <Flex gap={12} align="center">
-          <Image
-            src={record.image_url ?? ''}
-            width={56}
-            height={56}
-            style={{
-              borderRadius: 8,
-              objectFit: 'cover',
-              border: '1px solid #e5e7eb',
-              flexShrink: 0,
-              background: '#f8fafc',
-            }}
-            fallback="🍄"
-            preview={false}
-            alt={translateMushroomName(record.name)}
-          />
-          <Flex vertical gap={2} style={{ minWidth: 0 }}>
-            <Typography.Text strong>{translateMushroomName(record.name)}</Typography.Text>
-            {record.description && (
-              <Typography.Text
-                type="secondary"
-                style={{ fontSize: 12, maxWidth: 200 }}
-                ellipsis={{ tooltip: record.description }}
-              >
-                {record.description}
+      render: (_, record) => {
+        const name = translateMushroomName(record.name)
+        return (
+          <Flex gap={12} align="center">
+            {/* Fallback an toàn: URL rỗng/hỏng → khung đại diện, không tràn chữ. */}
+            <FallbackThumbnail src={record.image_url} alt={name} size={56} />
+            <Flex vertical gap={2} style={{ minWidth: 0 }}>
+              <Typography.Text strong ellipsis={{ tooltip: name }}>
+                {name}
               </Typography.Text>
-            )}
+              {record.description && (
+                <Typography.Text
+                  type="secondary"
+                  style={{ fontSize: 12, maxWidth: 200 }}
+                  ellipsis={{ tooltip: record.description }}
+                >
+                  {record.description}
+                </Typography.Text>
+              )}
+            </Flex>
           </Flex>
-        </Flex>
-      ),
+        )
+      },
     },
     {
       title: 'Thời gian sinh trưởng',
       key: 'growing_days',
-      width: 170,
+      width: 180,
       render: (_, record) => (
-        <Tag color="geekblue" style={{ fontWeight: 500, fontSize: 13 }}>
-          {record.growing_days} ngày
-        </Tag>
+        <StatusBadge
+          tone="info"
+          label={`${record.growing_days} ngày`}
+          title="Số ngày từ khi cấy phôi đến khi thu hoạch."
+        />
       ),
     },
     {
@@ -183,26 +190,41 @@ export function MushroomVarietyCatalog({
       width: 180,
       render: (_, record) => {
         const isActive = record.status === 'ACTIVE'
-        return canManage ? (
-          <Button
-            type="link"
-            size="small"
-            loading={isToggling(record.mushroom_type_id)}
+        const badge = (
+          <StatusBadge
+            tone={STATUS_TONE[record.status]}
+            label={STATUS_LABEL[record.status]}
+            icon={
+              isActive ? (
+                <CheckCircleOutlined aria-hidden="true" />
+              ) : (
+                <PauseCircleOutlined aria-hidden="true" />
+              )
+            }
+          />
+        )
+
+        if (!canManage) return badge
+
+        // Có quyền quản lý → badge đóng vai nút bật/tắt trạng thái.
+        return (
+          <button
+            type="button"
             onClick={() => handleToggleStatus(record)}
+            disabled={isToggling(record.mushroom_type_id)}
+            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} cho ${translateMushroomName(record.name)}`}
             style={{
               padding: 0,
-              color: isActive ? '#16a34a' : '#9ca3af',
-              fontWeight: 500,
+              border: 0,
+              background: 'transparent',
+              cursor: isToggling(record.mushroom_type_id)
+                ? 'wait'
+                : 'pointer',
+              lineHeight: 1,
             }}
           >
-            {isActive ? '● Đang nhận đơn' : '○ Tạm ngưng'}
-          </Button>
-        ) : isActive ? (
-          <Typography.Text style={{ color: '#16a34a', fontWeight: 500 }}>
-            ● Đang nhận đơn
-          </Typography.Text>
-        ) : (
-          <Typography.Text type="secondary">○ Tạm ngưng</Typography.Text>
+            {badge}
+          </button>
         )
       },
     },
@@ -215,15 +237,12 @@ export function MushroomVarietyCatalog({
             fixed: 'right' as const,
             render: (_: unknown, record: MushroomType) => (
               <Space size={6}>
-                <Button
-                  size="small"
-                  type="primary"
-                  ghost
+                <ActionButton
                   icon={<EditOutlined />}
+                  label="Sửa"
+                  description={`Sửa giống ${translateMushroomName(record.name)}`}
                   onClick={() => handleOpenEdit(record)}
-                >
-                  Sửa
-                </Button>
+                />
 
                 <Popconfirm
                   title="Xóa giống nấm?"
@@ -233,12 +252,11 @@ export function MushroomVarietyCatalog({
                   okButtonProps={{ danger: true }}
                   onConfirm={() => handleDelete(record)}
                 >
-                  <Button
-                    size="small"
-                    type="text"
-                    danger
+                  <ActionButton
                     icon={<DeleteOutlined />}
-                    aria-label="Xóa giống nấm"
+                    label="Xóa"
+                    description={`Xóa giống ${translateMushroomName(record.name)}`}
+                    variant="danger"
                   />
                 </Popconfirm>
               </Space>

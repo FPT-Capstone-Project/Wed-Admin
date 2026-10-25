@@ -14,8 +14,6 @@ import {
   Popconfirm,
   Space,
   Table,
-  Tag,
-  Tooltip,
   Typography,
 } from 'antd'
 import type { TableColumnsType } from 'antd'
@@ -24,6 +22,8 @@ import type {
   PackageStatus,
   RentalPackage,
 } from '../../../types/package.types'
+import type { SemanticTone } from '../../../app/theme/tokens'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
 
 interface PackageComparisonTableProps {
   packages: RentalPackage[]
@@ -46,11 +46,11 @@ const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
 
 const STATUS_CONFIG: Record<
   PackageStatus,
-  { color: string; label: string }
+  { tone: SemanticTone; label: string }
 > = {
-  ACTIVE: { color: 'success', label: 'Đang kinh doanh' },
-  INACTIVE: { color: 'default', label: 'Tạm ngưng' },
-  PROMOTION: { color: 'processing', label: 'Gói ưu đãi' },
+  ACTIVE: { tone: 'ok', label: 'Đang nhận đơn' },
+  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
+  PROMOTION: { tone: 'info', label: 'Gói ưu đãi' },
 }
 
 const VND_FORMATTER = new Intl.NumberFormat('vi-VN', {
@@ -77,7 +77,9 @@ export function PackageComparisonTable({
         <Flex vertical gap={2}>
           <Typography.Text strong>{rentalPackage.name}</Typography.Text>
           <Typography.Text type="secondary">{rentalPackage.code}</Typography.Text>
-          {rentalPackage.isPopular && <Tag color="gold">Phổ biến nhất</Tag>}
+          {rentalPackage.isPopular && (
+            <StatusBadge tone="warning" label="Phổ biến nhất" />
+          )}
         </Flex>
       ),
     },
@@ -101,8 +103,14 @@ export function PackageComparisonTable({
       title: 'Thời hạn',
       dataIndex: 'durationDays',
       key: 'durationDays',
-      width: 100,
-      render: (duration: number) => `${duration} ngày`,
+      width: 120,
+      render: (duration: number) => (
+        <StatusBadge
+          tone="info"
+          label={`${duration} ngày`}
+          title="Thời lượng gói thuê"
+        />
+      ),
     },
     {
       title: 'Số khay tối đa',
@@ -119,10 +127,12 @@ export function PackageComparisonTable({
       render: (mushrooms: string[]) => (
         <Flex gap={4} wrap>
           {mushrooms.length > 0 ? (
-            mushrooms.map((mushroom) => <Tag key={mushroom}>{mushroom}</Tag>)
+            mushrooms.map((mushroom) => (
+              <StatusBadge key={mushroom} tone="neutral" label={mushroom} />
+            ))
           ) : (
             <Flex align="center" gap={4}>
-              <CloseCircleOutlined style={{ color: '#9ca3af' }} />
+              <CloseCircleOutlined style={{ color: 'var(--mcms-text-muted)' }} />
               <Typography.Text type="secondary">Không hỗ trợ</Typography.Text>
             </Flex>
           )}
@@ -139,13 +149,17 @@ export function PackageComparisonTable({
           {features.length > 0 ? (
             features.map((feature) => (
               <Flex key={feature} align="flex-start" gap={6}>
-                <CheckCircleOutlined style={{ color: '#16a34a', marginTop: 3 }} />
+                <CheckCircleOutlined
+                  style={{ color: 'var(--mcms-primary)', marginTop: 3 }}
+                />
                 <Typography.Text>{feature}</Typography.Text>
               </Flex>
             ))
           ) : (
             <Flex align="center" gap={6}>
-              <CloseCircleOutlined style={{ color: '#9ca3af' }} />
+              <CloseCircleOutlined
+                style={{ color: 'var(--mcms-text-muted)' }}
+              />
               <Typography.Text type="secondary">Không có</Typography.Text>
             </Flex>
           )}
@@ -160,7 +174,7 @@ export function PackageComparisonTable({
       render: (status: PackageStatus) => {
         const config = STATUS_CONFIG[status]
 
-        return <Tag color={config.color}>{config.label}</Tag>
+        return <StatusBadge tone={config.tone} label={config.label} />
       },
     },
     {
@@ -179,14 +193,13 @@ export function PackageComparisonTable({
       render: (_, rentalPackage) =>
         canManage ? (
           <Space size={2}>
-            <Tooltip title="Sửa gói cước">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => onEdit(rentalPackage)}
-                aria-label={`Sửa ${rentalPackage.name}`}
-              />
-            </Tooltip>
+            <ActionButton
+              icon={<EditOutlined />}
+              label={`Sửa ${rentalPackage.name}`}
+              variant="text"
+              hideLabel
+              onClick={() => onEdit(rentalPackage)}
+            />
 
             <Popconfirm
               title={
@@ -199,37 +212,36 @@ export function PackageComparisonTable({
               cancelText="Hủy"
               onConfirm={() => onToggleStatus(rentalPackage)}
             >
-              <Tooltip
-                title={
+              <ActionButton
+                icon={
+                  rentalPackage.status === 'INACTIVE' ? (
+                    <PlayCircleOutlined />
+                  ) : (
+                    <PauseCircleOutlined />
+                  )
+                }
+                label={
                   rentalPackage.status === 'INACTIVE'
                     ? 'Kích hoạt'
                     : 'Tạm ngưng'
                 }
-              >
-                <Button
-                  type="text"
-                  icon={
-                    rentalPackage.status === 'INACTIVE' ? (
-                      <PlayCircleOutlined />
-                    ) : (
-                      <PauseCircleOutlined />
-                    )
-                  }
-                  aria-label="Thay đổi trạng thái gói cước"
-                />
-              </Tooltip>
+                description="Thay đổi trạng thái gói cước"
+                variant="text"
+                hideLabel
+              />
             </Popconfirm>
 
-            <Tooltip title={rentalPackage.isPopular ? 'Gỡ nổi bật' : 'Đánh dấu nổi bật'}>
-              <Button
-                type="text"
-                icon={
-                  rentalPackage.isPopular ? <StarFilled /> : <StarOutlined />
-                }
-                onClick={() => onTogglePopular(rentalPackage)}
-                aria-label="Thay đổi gói nổi bật"
-              />
-            </Tooltip>
+            <ActionButton
+              icon={
+                rentalPackage.isPopular ? <StarFilled /> : <StarOutlined />
+              }
+              label={
+                rentalPackage.isPopular ? 'Gỡ nổi bật' : 'Đánh dấu nổi bật'
+              }
+              variant="text"
+              hideLabel
+              onClick={() => onTogglePopular(rentalPackage)}
+            />
 
             <Popconfirm
               title="Xóa gói cước?"
@@ -239,14 +251,12 @@ export function PackageComparisonTable({
               okButtonProps={{ danger: true }}
               onConfirm={() => onDelete(rentalPackage)}
             >
-              <Tooltip title="Xóa gói cước">
-                <Button
-                  type="text"
-                  danger
-                  icon={<DeleteOutlined />}
-                  aria-label={`Xóa ${rentalPackage.name}`}
-                />
-              </Tooltip>
+              <ActionButton
+                icon={<DeleteOutlined />}
+                label={`Xóa ${rentalPackage.name}`}
+                variant="text"
+                hideLabel
+              />
             </Popconfirm>
           </Space>
         ) : (

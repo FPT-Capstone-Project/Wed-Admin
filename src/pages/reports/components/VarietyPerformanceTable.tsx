@@ -1,8 +1,10 @@
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons'
-import { Empty, Table, Tag, Tooltip, Typography } from 'antd'
+import { Table, Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { EmptyState, StatusBadge } from '../../../shared/ui'
 import { formatCurrency } from '../utils/executive-report.utils'
 import type { VarietyPerformance } from '../utils/executive-report.utils'
+import type { SemanticTone } from '../../../app/theme/tokens'
 
 interface VarietyPerformanceTableProps {
   data: VarietyPerformance[]
@@ -24,11 +26,23 @@ function safePercent(value: unknown): number {
   return num
 }
 
+/** Tỷ lệ thành công → tone ngữ nghĩa. */
+function successTone(rate: number): SemanticTone {
+  if (rate >= 90) return 'ok'
+  if (rate >= 80) return 'info'
+  return 'warning'
+}
+
 export function VarietyPerformanceTable({
   data,
 }: VarietyPerformanceTableProps) {
   if (!data || data.length === 0) {
-    return <Empty description="Chưa có dữ liệu giống nấm" />
+    return (
+      <EmptyState
+        title="Chưa có dữ liệu giống nấm"
+        description="Chưa có vụ thuê nào trong kỳ để phân tích hiệu suất theo giống."
+      />
+    )
   }
 
   const columns: ColumnsType<VarietyPerformance> = [
@@ -42,7 +56,7 @@ export function VarietyPerformanceTable({
         return (
           <div>
             <Typography.Text strong>{name}</Typography.Text>
-            <div style={{ fontSize: 11, color: '#94a3b8' }}>{id}</div>
+            <div style={{ fontSize: 11, color: 'var(--mcms-text-muted)' }}>{id}</div>
           </div>
         )
       },
@@ -67,9 +81,12 @@ export function VarietyPerformanceTable({
       sorter: (a, b) => safeNumber(a.successRate) - safeNumber(b.successRate),
       render: (rate: number) => {
         const safe = safeNumber(rate)
-        const color =
-          safe >= 90 ? 'success' : safe >= 80 ? 'processing' : 'warning'
-        return <Tag color={color}>{safe.toFixed(1)}%</Tag>
+        return (
+          <StatusBadge
+            tone={successTone(safe)}
+            label={`${safe.toFixed(1)}%`}
+          />
+        )
       },
     },
     {
@@ -81,7 +98,7 @@ export function VarietyPerformanceTable({
       sorter: (a, b) =>
         safeNumber(a.currentRevenue) - safeNumber(b.currentRevenue),
       render: (value: number) => (
-        <Typography.Text strong type="success">
+        <Typography.Text strong style={{ color: 'var(--mcms-tone-ok-text)' }}>
           {formatCurrency(value)}
         </Typography.Text>
       ),
@@ -108,8 +125,6 @@ export function VarietyPerformanceTable({
       render: (_, record) => {
         const growth = safePercent(record.growthPercent)
         const isPositive = growth >= 0
-        const color = isPositive ? '#16a34a' : '#dc2626'
-        const bg = isPositive ? '#dcfce7' : '#fee2e2'
         const Icon = isPositive ? ArrowUpOutlined : ArrowDownOutlined
         return (
           <Tooltip
@@ -117,22 +132,12 @@ export function VarietyPerformanceTable({
               record.previousRevenue,
             )}`}
           >
-            <span
-              style={{
-                background: bg,
-                color,
-                padding: '2px 10px',
-                borderRadius: 999,
-                fontSize: 12,
-                fontWeight: 600,
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: 4,
-              }}
-            >
-              <Icon style={{ fontSize: 10 }} />
-              {isPositive ? '+' : ''}
-              {growth.toFixed(1)}%
+            <span>
+              <StatusBadge
+                tone={isPositive ? 'ok' : 'danger'}
+                label={`${isPositive ? '+' : ''}${growth.toFixed(1)}%`}
+                icon={<Icon style={{ fontSize: 10 }} />}
+              />
             </span>
           </Tooltip>
         )

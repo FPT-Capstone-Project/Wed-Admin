@@ -9,7 +9,6 @@ import {
   PercentageOutlined,
 } from '@ant-design/icons'
 import {
-  Button,
   Card,
   Col,
   Flex,
@@ -17,7 +16,6 @@ import {
   Segmented,
   Select,
   Space,
-  Tag,
   Typography,
   message,
 } from 'antd'
@@ -41,6 +39,13 @@ import { KpiVarianceCard } from './components/KpiVarianceCard'
 import { ComparativeRevenueChart } from './components/ComparativeRevenueChart'
 import { VarietyPerformanceTable } from './components/VarietyPerformanceTable'
 import { ExportReportModal } from './components/ExportReportModal'
+import {
+  ActionButton,
+  PageHeader,
+  StatCard,
+  StatusBadge,
+} from '../../shared/ui'
+import { tones } from '../../app/theme/tokens'
 
 type ComparisonMode = 'YoY' | 'MoM' | 'QoQ'
 type ScopeFilter = 'ALL' | 'T1' | 'T2' | 'T3' | 'T4'
@@ -137,7 +142,7 @@ export function ReportsAnalyticsPage() {
    *
    * QUAN TRỌNG: Tính trực tiếp trong render sẽ tạo array literal mới mỗi lần
    * → Recharts nhận diện data thay đổi → re-mount BarChart → setState nội bộ
-   * → setState kích hoạt re-render parent → loop vô tập.
+   * → setState kích hoạt re-render parent → loop vô tận.
    *
    * useMemo đảm bảo tham chiếu array ổn định khi comparisonMode
    * chưa đổi → chart nhận cùng data → không re-mount.
@@ -224,47 +229,110 @@ export function ReportsAnalyticsPage() {
 
   return (
     <div>
-      {/* HEADER + CONTROL BAR */}
-      <Flex
-        align="flex-start"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            <BarChartOutlined /> Báo cáo & Phân tích Điều hành
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Dashboard Executive — so sánh chu kỳ, đo lường hiệu suất vận hành và tăng trưởng kinh doanh.
-          </Typography.Text>
-        </div>
+      <PageHeader
+        title={
+          <Flex align="center" gap={8}>
+            <BarChartOutlined />
+            Báo cáo & Phân tích Điều hành
+          </Flex>
+        }
+        description="Dashboard Executive — so sánh chu kỳ, đo lường hiệu suất vận hành và tăng trưởng kinh doanh."
+        actions={
+          <Space wrap>
+            <StatusBadge
+              tone={canManage ? 'ok' : 'muted'}
+              label={canManage ? 'Toàn hệ thống' : 'Khay đang thuê'}
+            />
+            <StatusBadge
+              tone="info"
+              label={`${MOCK_ENVIRONMENT_HISTORY.length} điểm dữ liệu IoT`}
+            />
+            <ActionButton
+              icon={<DownloadOutlined />}
+              label="Xuất báo cáo Executive"
+              description="Tải báo cáo Executive dưới dạng CSV hoặc PDF."
+              variant="primary"
+              size="middle"
+              onClick={handleQuickExport}
+            />
+          </Space>
+        }
+      />
 
-        <Space wrap>
-          <Tag color={canManage ? 'success' : 'default'} style={{ fontSize: 12 }}>
-            {canManage ? 'Toàn hệ thống' : 'Khay đang thuê'}
-          </Tag>
-          <Tag color="processing" style={{ fontSize: 12 }}>
-            {MOCK_ENVIRONMENT_HISTORY.length} điểm dữ liệu IoT
-          </Tag>
-          <Button
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={handleQuickExport}
-          >
-            Xuất báo cáo Executive
-          </Button>
-        </Space>
-      </Flex>
+      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Doanh thu cho thuê khay"
+            value={formatCompactVND(kpis.totalRevenue)}
+            tone="ok"
+            highlightValue
+            icon={<DollarOutlined />}
+            description="Tổng doanh thu các đơn hoàn tất"
+            extra={
+              <StatusBadge
+                tone={revenueDelta >= 0 ? 'ok' : 'danger'}
+                label={`${revenueDelta >= 0 ? '+' : ''}${revenueDelta.toFixed(1)}% so với kỳ trước`}
+              />
+            }
+          />
+        </Col>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Tỷ lệ lấp đầy khay"
+            value={`${kpis.occupancyRate.toFixed(1)}%`}
+            tone="info"
+            highlightValue
+            icon={<HomeOutlined />}
+            description={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
+            extra={
+              <StatusBadge
+                tone={occupancyDelta >= 0 ? 'ok' : 'danger'}
+                label={`${occupancyDelta >= 0 ? '+' : ''}${occupancyDelta.toFixed(1)} điểm % so với kỳ trước`}
+              />
+            }
+          />
+        </Col>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Tổng sản lượng thu hoạch"
+            value={`${kpis.harvestedGradeAKg.toFixed(0)} kg`}
+            tone="warning"
+            highlightValue
+            icon={<ExperimentOutlined />}
+            description="Grade A (đạt chuẩn xuất khẩu)"
+            extra={
+              <StatusBadge
+                tone={yieldDelta >= 0 ? 'ok' : 'danger'}
+                label={`${yieldDelta >= 0 ? '+' : ''}${yieldDelta.toFixed(1)}% so với kỳ trước`}
+              />
+            }
+          />
+        </Col>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Tỷ lệ hao hụt / Mẻ hỏng"
+            value={`${kpis.spoilageRate.toFixed(1)}%`}
+            tone="danger"
+            highlightValue
+            icon={<PercentageOutlined />}
+            description="Giảm = cải thiện tốt"
+            extra={
+              <StatusBadge
+                tone={spoilageDelta <= 0 ? 'ok' : 'danger'}
+                label={`${spoilageDelta >= 0 ? '+' : ''}${spoilageDelta.toFixed(1)} điểm % so với kỳ trước`}
+              />
+            }
+          />
+        </Col>
+      </Row>
 
       {/* COMPARATIVE FILTER BAR */}
       <Card
         style={{
-          borderRadius: 12,
-          marginBottom: 20,
-          borderColor: '#e5e7eb',
-          background: 'linear-gradient(135deg, #f8fafc 0%, #f0fdf4 100%)',
+          borderRadius: 'var(--mcms-radius-xl)',
+          marginBottom: 'var(--mcms-space-5)',
+          borderColor: 'var(--mcms-border)',
+          background: 'var(--mcms-surface-muted)',
         }}
         styles={{ body: { padding: 18 } }}
       >
@@ -345,12 +413,12 @@ export function ReportsAnalyticsPage() {
       </Card>
 
       {/* KPI VARIANCE CARDS */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
         <Col xs={24} md={12} xl={6}>
           <KpiVarianceCard
             icon={<DollarOutlined />}
-            iconBg="#dcfce7"
-            iconColor="#16a34a"
+            iconBg={tones.ok.bg}
+            iconColor={tones.ok.solid}
             title="Doanh thu cho thuê khay"
             currentLabel="Kỳ này"
             currentValue={formatCompactVND(kpis.totalRevenue)}
@@ -365,8 +433,8 @@ export function ReportsAnalyticsPage() {
         <Col xs={24} md={12} xl={6}>
           <KpiVarianceCard
             icon={<HomeOutlined />}
-            iconBg="#dbeafe"
-            iconColor="#2563eb"
+            iconBg={tones.info.bg}
+            iconColor={tones.info.solid}
             title="Tỷ lệ lấp đầy khay"
             currentLabel="Kỳ này"
             currentValue={`${kpis.occupancyRate.toFixed(1)}%`}
@@ -381,8 +449,8 @@ export function ReportsAnalyticsPage() {
         <Col xs={24} md={12} xl={6}>
           <KpiVarianceCard
             icon={<ExperimentOutlined />}
-            iconBg="#fef3c7"
-            iconColor="#d97706"
+            iconBg={tones.warning.bg}
+            iconColor={tones.warning.solid}
             title="Tổng sản lượng thu hoạch"
             currentLabel="Kỳ này"
             currentValue={`${kpis.harvestedGradeAKg.toFixed(0)} kg`}
@@ -397,13 +465,13 @@ export function ReportsAnalyticsPage() {
         <Col xs={24} md={12} xl={6}>
           <KpiVarianceCard
             icon={<PercentageOutlined />}
-            iconBg="#fee2e2"
-            iconColor="#dc2626"
+            iconBg={tones.danger.bg}
+            iconColor={tones.danger.solid}
             title="Tỷ lệ hao hụt / Mẻ hỏng"
             currentLabel="Kỳ này"
             currentValue={`${kpis.spoilageRate.toFixed(1)}%`}
             previousLabel="Kỳ trước"
-            previousValue={`${kpis.previousSpoilageRate.toFixed(1)}%`}
+            previousValue={`${kpis.previousSpoilageRate.toFixed(2)}%`}
             deltaPercent={spoilageDelta}
             higherIsBetter={false}
             subtitle="Giảm = cải thiện tốt"
@@ -413,7 +481,11 @@ export function ReportsAnalyticsPage() {
 
       {/* REVENUE COMPARATIVE CHART */}
       <Card
-        style={{ borderRadius: 12, marginBottom: 20, borderColor: '#e5e7eb' }}
+        style={{
+          borderRadius: 'var(--mcms-radius-xl)',
+          marginBottom: 'var(--mcms-space-5)',
+          borderColor: 'var(--mcms-border)',
+        }}
         styles={{ body: { padding: 20 } }}
       >
         <Flex align="center" justify="space-between" wrap gap={12} style={{ marginBottom: 8 }}>
@@ -430,8 +502,8 @@ export function ReportsAnalyticsPage() {
             </Typography.Text>
           </div>
           <Space size={8} wrap>
-            <LegendChip color="#059669" label={currentLabel} />
-            <LegendChip color="#cbd5e1" label={previousLabel} />
+            <LegendChip color={tones.ok.solid} label={currentLabel} />
+            <LegendChip color="var(--mcms-border-strong)" label={previousLabel} />
           </Space>
         </Flex>
 
@@ -445,7 +517,10 @@ export function ReportsAnalyticsPage() {
 
       {/* VARIETY PERFORMANCE TABLE */}
       <Card
-        style={{ borderRadius: 12, borderColor: '#e5e7eb' }}
+        style={{
+          borderRadius: 'var(--mcms-radius-xl)',
+          borderColor: 'var(--mcms-border)',
+        }}
         styles={{ body: { padding: 20 } }}
       >
         <Flex align="center" justify="space-between" wrap gap={12} style={{ marginBottom: 12 }}>
@@ -479,7 +554,7 @@ function LegendChip({ color, label }: { color: string; label: string }) {
         alignItems: 'center',
         gap: 6,
         fontSize: 12,
-        color: '#475569',
+        color: 'var(--mcms-text-muted)',
       }}
     >
       <span

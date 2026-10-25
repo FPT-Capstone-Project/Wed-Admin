@@ -1,3 +1,12 @@
+/**
+ * Design tokens MCMS.
+ *
+ * ⚠ Nguồn sự thật duy nhất: `src/app/theme/tokens.ts`.
+ *   Giá trị dưới đây được sinh từ đó — KHÔNG sửa trực tiếp trong file này,
+ *   hãy cập nhật `tokens.ts` rồi đồng bộ lại.
+ *
+ * Mọi cặp màu chữ/nền đã verify WCAG AA (≥ 4.5:1); viền ≥ 3:1 (1.4.11).
+ */
 :root {
   --mcms-primary: #15803d;
   --mcms-primary-dark: #0f642f;
@@ -21,6 +30,58 @@
   --mcms-shadow-xs: 0 1px 2px rgb(24 73 42 / 5%);
   --mcms-shadow-sm: 0 8px 24px rgb(24 73 42 / 7%);
   --mcms-shadow-md: 0 18px 50px rgb(11 64 31 / 12%);
+  --mcms-shadow-focus: 0 0 0 3px rgb(21 128 61 / 12%);
+
+  /* Bo góc */
+  --mcms-radius-sm: 4px;
+  --mcms-radius-md: 6px;
+  --mcms-radius-lg: 8px;
+  --mcms-radius-xl: 12px;
+  --mcms-radius-pill: 999px;
+
+  /* Khoảng cách — lưới 4pt */
+  --mcms-space-1: 4px;
+  --mcms-space-2: 8px;
+  --mcms-space-3: 12px;
+  --mcms-space-4: 16px;
+  --mcms-space-5: 20px;
+  --mcms-space-6: 24px;
+  --mcms-space-7: 32px;
+  --mcms-space-8: 40px;
+
+  /* Viền nhấn — 3:1 trên nền trắng (WCAG 1.4.11) */
+  --mcms-border-strong: #6d9579;
+  /* Nền bổ sung */
+  --mcms-surface-hover: #f5faf6;
+  --mcms-surface-disabled: #eef2ef;
+  --mcms-text-inverse: #ffffff;
+  --mcms-text-disabled: #7f8e85;
+
+  /* Trạng thái ngữ nghĩa — chữ/nền đều đạt WCAG AA */
+  --mcms-tone-ok-text: #15803d;
+  --mcms-tone-ok-bg: #eaf7ee;
+  --mcms-tone-ok-border: #15803d;
+  --mcms-tone-ok-solid: #15803d;
+  --mcms-tone-info-text: #0f766e;
+  --mcms-tone-info-bg: #e6f5f3;
+  --mcms-tone-info-border: #0f766e;
+  --mcms-tone-info-solid: #0f766e;
+  --mcms-tone-warning-text: #a16207;
+  --mcms-tone-warning-bg: #fff7e2;
+  --mcms-tone-warning-border: #a16207;
+  --mcms-tone-warning-solid: #a16207;
+  --mcms-tone-danger-text: #c2413b;
+  --mcms-tone-danger-bg: #fff0ee;
+  --mcms-tone-danger-border: #c2413b;
+  --mcms-tone-danger-solid: #c2413b;
+  --mcms-tone-muted-text: #5f7164;
+  --mcms-tone-muted-bg: #eef2ef;
+  --mcms-tone-muted-border: #5f7164;
+  --mcms-tone-muted-solid: #5f7164;
+  --mcms-tone-neutral-text: #3f4d45;
+  --mcms-tone-neutral-bg: #f0f3f1;
+  --mcms-tone-neutral-border: #3f4d45;
+  --mcms-tone-neutral-solid: #3f4d45;
 }
 
 html {
@@ -458,17 +519,8 @@ textarea {
 
 /* Dashboard */
 
-.dashboard-page-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 24px;
-}
-
-.dashboard-heading-copy {
-  min-width: 0;
-}
+/* .dashboard-page-header và .dashboard-heading-copy đã bỏ —
+   PageHeader từ shared/ui xử lý layout header. */
 
 .page-kicker,
 .login-eyebrow,
@@ -481,22 +533,6 @@ textarea {
   letter-spacing: 0;
 }
 
-.dashboard-heading-copy .ant-typography {
-  margin: 0;
-}
-
-.dashboard-heading-copy h2.ant-typography {
-  margin-top: 4px;
-  color: var(--mcms-text);
-  font-size: 28px;
-  line-height: 1.25;
-}
-
-.dashboard-heading-copy p.ant-typography {
-  max-width: 680px;
-  margin-top: 6px;
-  color: var(--mcms-text-muted);
-}
 
 .dashboard-date {
   display: flex;
@@ -532,115 +568,11 @@ textarea {
   font-weight: 650;
 }
 
-.summary-card {
-  position: relative;
-  height: 100%;
-  overflow: hidden;
-}
+/* .summary-card, .summary-card--* đã bỏ — dùng StatCard từ shared/ui.
+   StatCard tự xử lý border-left, icon bg, value color theo tone prop. */
 
-.summary-card::before {
-  position: absolute;
-  top: 0;
-  right: 0;
-  left: 0;
-  height: 3px;
-  background: var(--metric-color);
-  content: '';
-}
-
-.summary-card .ant-card-body {
-  padding: 20px;
-}
-
-.summary-card--forest {
-  --metric-color: var(--mcms-primary);
-  --metric-soft: var(--mcms-primary-soft);
-}
-
-.summary-card--teal {
-  --metric-color: var(--mcms-teal);
-  --metric-soft: var(--mcms-teal-soft);
-}
-
-.summary-card--amber {
-  --metric-color: var(--mcms-amber);
-  --metric-soft: var(--mcms-amber-soft);
-}
-
-.summary-card--red {
-  --metric-color: var(--mcms-coral);
-  --metric-soft: var(--mcms-coral-soft);
-}
-
-.summary-card-topline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.summary-card-title {
-  color: var(--mcms-text-muted);
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.summary-card-icon {
-  display: inline-flex;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  color: var(--metric-color);
-  background: var(--metric-soft);
-  font-size: 19px;
-}
-
-.summary-card-value {
-  display: flex;
-  min-height: 54px;
-  align-items: baseline;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.summary-card-value strong {
-  color: var(--mcms-text);
-  font-size: 34px;
-  font-weight: 720;
-  line-height: 1.25;
-}
-
-.summary-card-value span {
-  color: var(--mcms-text-muted);
-  font-size: 13px;
-}
-
-.summary-card-description {
-  padding-top: 12px;
-  border-top: 1px solid var(--mcms-border-soft);
-  color: var(--mcms-text-muted);
-  font-size: 12px;
-}
-
-.summary-card-description-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 6px 10px;
-  justify-content: space-between;
-}
-
-.summary-card-maintenance-badge {
-  font-size: 11px !important;
-  padding: 1px 8px !important;
-  border-radius: 999px !important;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
+/* .summary-card-* classes đã bỏ — StatCard từ shared/ui xử lý layout nội bộ.
+   .summary-card-maintenance-badge → dùng StatusBadge component. */
 
 .dashboard-section {
   margin-top: 28px;
@@ -842,20 +774,8 @@ textarea {
   flex-shrink: 0;
 }
 
-.severity-icon--critical {
-  background: #fee2e2;
-  color: #dc2626;
-}
-
-.severity-icon--warning {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.severity-icon--info {
-  background: #e0f2fe;
-  color: #0284c7;
-}
+/* .severity-icon--critical/warning/info đã bỏ — màu nay dùng
+   inline style lấy từ tones token trong RecentAlertsTable.tsx. */
 
 .recent-alert-content {
   flex: 1 1 auto;

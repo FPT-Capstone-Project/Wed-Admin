@@ -11,12 +11,12 @@ import {
   Card,
   Flex,
   Progress,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
 import type { CultivationBatch } from '../../../types/cultivation.types'
 import type { GallerySnapshot } from '../../../types/cultivation.types'
+import { StatusBadge } from '../../../shared/ui'
 import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
 
 interface CultivationBatchCardProps {
@@ -127,9 +127,10 @@ export function CultivationBatchCard({
             />
 
             <div className="cultivation-batch-card-media-tag">
-              <Tag color="processing" bordered={false}>
-                📷 Ảnh ngày {activeCell.dayIndex} · 08:00
-              </Tag>
+              <StatusBadge
+                tone="info"
+                label={`Ảnh ngày ${activeCell.dayIndex} · 08:00`}
+              />
             </div>
 
             <button
@@ -159,13 +160,12 @@ export function CultivationBatchCard({
                 >
                   {batch.batchCode}
                 </Typography.Title>
-                <Tag color="blue" bordered={false}>
-                  {batch.trayName}
-                </Tag>
+                <StatusBadge tone="neutral" label={batch.trayName} />
                 {isContaminated && (
-                  <Tag color="error" bordered={false}>
-                    Cần xử lý sâu bệnh/mốc
-                  </Tag>
+                  <StatusBadge
+                    tone="danger"
+                    label="Cần xử lý sâu bệnh/mốc"
+                  />
                 )}
               </Flex>
 

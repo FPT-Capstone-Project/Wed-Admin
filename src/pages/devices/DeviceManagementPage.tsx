@@ -31,11 +31,11 @@ export function DeviceManagementPage() {
       >
         <div>
           <Typography.Title level={3} style={{ margin: 0 }}>
-            Gateway &amp; mạng RS485
+            Quản lý thiết bị IoT
           </Typography.Title>
           <Typography.Text type="secondary">
             {masters.length > 0
-              ? `${masters.length} master(s) đã đăng ký`
+              ? `${masters.length} bộ điều khiển trung tâm đã đăng ký`
               : 'Đang tải dữ liệu thiết bị IoT...'}
           </Typography.Text>
         </div>

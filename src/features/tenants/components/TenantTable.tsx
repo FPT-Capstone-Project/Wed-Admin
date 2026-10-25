@@ -1,9 +1,11 @@
 import { useMemo } from 'react'
 import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
-import { Button, Modal, Space, Table, Tag, Tooltip, message } from 'antd'
+import { Flex, Modal, Space, Typography, message } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { useRoomStore } from '../../rooms/store/room.store'
 import { useTenantStore } from '../store/tenant.store'
+import { ActionButton, DataTable, StatusBadge, UserAvatar } from '../../../shared/ui'
+import type { SemanticTone } from '../../../app/theme/tokens'
 import type { Tenant } from '../types/tenant.types'
 
 interface TenantTableProps {
@@ -11,11 +13,11 @@ interface TenantTableProps {
 }
 
 const STATUS_CONFIG = {
-  active: { color: 'success', label: 'Đang thuê' },
-  expired: { color: 'default', label: 'Hết hạn' },
+  active: { tone: 'ok', label: 'Đang thuê' },
+  expired: { tone: 'muted', label: 'Hết hạn' },
 } as const satisfies Record<
   Tenant['status'],
-  { color: string; label: string }
+  { tone: SemanticTone; label: string }
 >
 
 export function TenantTable({ onEdit }: TenantTableProps) {
@@ -38,8 +40,18 @@ export function TenantTable({ onEdit }: TenantTableProps) {
       },
       {
         title: 'Họ tên',
-        dataIndex: 'name',
         key: 'name',
+        render: (_, tenant) => (
+          <Flex align="center" gap={8}>
+            <UserAvatar name={tenant.name} size={32} />
+            <Flex vertical gap={0}>
+              <Typography.Text strong>{tenant.name}</Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {tenant.id}
+              </Typography.Text>
+            </Flex>
+          </Flex>
+        ),
       },
       {
         title: 'SĐT',
@@ -72,7 +84,9 @@ export function TenantTable({ onEdit }: TenantTableProps) {
         render: (status: Tenant['status']) => {
           const config = STATUS_CONFIG[status]
 
-          return <Tag color={config.color}>{config.label}</Tag>
+          return (
+            <StatusBadge tone={config.tone} label={config.label} />
+          )
         },
       },
       {
@@ -82,36 +96,33 @@ export function TenantTable({ onEdit }: TenantTableProps) {
         align: 'right',
         render: (_, tenant) => (
           <Space size={4}>
-            <Tooltip title="Sửa khách thuê">
-              <Button
-                type="text"
-                icon={<EditOutlined />}
-                onClick={() => onEdit(tenant)}
-                aria-label={`Sửa ${tenant.name}`}
-              />
-            </Tooltip>
+            <ActionButton
+              icon={<EditOutlined />}
+              label="Sửa khách thuê"
+              description={`Sửa thông tin của ${tenant.name}`}
+              variant="text"
+              onClick={() => onEdit(tenant)}
+            />
 
-            <Tooltip title="Xóa khách thuê">
-              <Button
-                type="text"
-                danger
-                icon={<DeleteOutlined />}
-                onClick={() =>
-                  Modal.confirm({
-                    title: 'Xóa khách thuê?',
-                    content: `Khay của ${tenant.name} sẽ được giải phóng.`,
-                    okText: 'Xóa',
-                    cancelText: 'Hủy',
-                    okButtonProps: { danger: true },
-                    onOk: () => {
-                      deleteTenant(tenant.id)
-                      message.success('Đã xóa khách thuê và cập nhật khay.')
-                    },
-                  })
-                }
-                aria-label={`Xóa ${tenant.name}`}
-              />
-            </Tooltip>
+            <ActionButton
+              icon={<DeleteOutlined />}
+              label="Xóa khách thuê"
+              description={`Xóa ${tenant.name} và giải phóng khay`}
+              variant="dangerText"
+              onClick={() =>
+                Modal.confirm({
+                  title: 'Xóa khách thuê?',
+                  content: `Khay của ${tenant.name} sẽ được giải phóng.`,
+                  okText: 'Xóa',
+                  cancelText: 'Hủy',
+                  okButtonProps: { danger: true },
+                  onOk: () => {
+                    deleteTenant(tenant.id)
+                    message.success('Đã xóa khách thuê và cập nhật khay.')
+                  },
+                })
+              }
+            />
           </Space>
         ),
       },
@@ -120,12 +131,14 @@ export function TenantTable({ onEdit }: TenantTableProps) {
   )
 
   return (
-    <Table<Tenant>
+    <DataTable<Tenant>
       rowKey="id"
       columns={columns}
       dataSource={tenants}
       pagination={false}
-      scroll={{ x: 900 }}
+      scrollX={900}
+      emptyTitle="Chưa có khách thuê nào"
+      emptyDescription="Thêm khách thuê để bắt đầu gán khay nấm."
     />
   )
 }

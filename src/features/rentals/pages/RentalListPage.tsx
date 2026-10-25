@@ -1,31 +1,33 @@
 import {
   CheckCircleOutlined,
+  ClockCircleOutlined,
   CloseCircleOutlined,
   EyeOutlined,
+  FileTextOutlined,
   SearchOutlined,
-  ToolOutlined,
 } from '@ant-design/icons'
 import {
-  Button,
   Card,
   Col,
   Empty,
   Flex,
   Input,
+  Progress,
   Row,
   Select,
   Space,
-  Statistic,
   Table,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import dayjs from 'dayjs'
 import { useMemo, useState } from 'react'
 import { RentalDetailDrawer } from '../components/RentalDetailDrawer'
 import { RentalStatusTag } from '../components/RentalStatusTag'
 import { RENTAL_STATUS_CONFIG } from '../components/rental-status.config'
 import { useRentals } from '../hooks/useRentals'
 import type { Rental, RentalListQuery, RentalStatus } from '../types/rental.types'
+import { ActionButton, StatCard } from '../../../shared/ui'
 
 const STATUS_OPTIONS = (
   Object.keys(RENTAL_STATUS_CONFIG) as RentalStatus[]
@@ -42,8 +44,6 @@ export function RentalListPage() {
   const [selectedRentalId, setSelectedRentalId] = useState<number | null>(null)
 
   // ── Query params ───────────────────────────────────────────────────────
-  // Bọc useMemo để giữ object identity ổn định — nếu không, mỗi render sẽ
-  // tạo object mới → queryKey đổi → refetch vô hạn.
   const listQuery = useMemo<RentalListQuery>(
     () => ({
       status: statusFilter,
@@ -65,8 +65,6 @@ export function RentalListPage() {
   const items = useMemo(() => data?.items ?? [], [data])
   const pagination = data?.pagination
 
-  // Lọc theo tên khách / mã đơn / mã khay phía client (BE chưa hỗ trợ
-  // keyword search, nên để ở client để không phải đổi API BE).
   const filteredItems = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
     if (!keyword) return items
@@ -130,13 +128,85 @@ export function RentalListPage() {
       {
         title: 'Khay',
         key: 'tray',
-        width: 140,
+        width: 130,
         render: (_, rental) =>
           rental.tray_code ? (
-            <Typography.Text>{rental.tray_code}</Typography.Text>
+            <Typography.Text strong>{rental.tray_code}</Typography.Text>
           ) : (
             <Typography.Text type="secondary">Chưa gán</Typography.Text>
           ),
+      },
+      {
+        title: 'Tiến độ canh tác',
+        key: 'progress',
+        width: 170,
+        render: (_, rental) => {
+          if (rental.status === 'COMPLETED') {
+            return (
+              <Flex vertical gap={2}>
+                <Progress
+                  percent={100}
+                  size="small"
+                  strokeColor="var(--mcms-primary)"
+                  showInfo={false}
+                />
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Đã hoàn thành vụ
+                </Typography.Text>
+              </Flex>
+            )
+          }
+          if (rental.status === 'CANCELLED') {
+            return <Typography.Text type="secondary">Đã hủy</Typography.Text>
+          }
+          if (rental.status === 'CONFIRMED' || rental.status === 'PREPARING') {
+            return (
+              <Flex vertical gap={2}>
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  {rental.status === 'PREPARING' ? 'Đang chuẩn bị phôi' : 'Chờ cấp khay'}
+                </Typography.Text>
+                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                  Chu kỳ {rental.duration_days} ngày
+                </Typography.Text>
+              </Flex>
+            )
+          }
+
+          // ACTIVE: tính số ngày còn lại & % hoàn thành
+          if (rental.end_date) {
+            const end = dayjs(rental.end_date)
+            const now = dayjs()
+            const total = rental.duration_days || Math.max(1, end.diff(dayjs(rental.start_date), 'day'))
+            const remaining = Math.max(0, end.diff(now, 'day'))
+            const elapsed = Math.max(0, total - remaining)
+            const percent = Math.min(100, Math.round((elapsed / total) * 100))
+
+            return (
+              <Flex vertical gap={2} style={{ width: '100%', maxWidth: 150 }}>
+                <Flex justify="space-between" align="center">
+                  <Typography.Text style={{ fontSize: 12, fontWeight: 600 }}>
+                    Còn {remaining} ngày
+                  </Typography.Text>
+                  <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                    {percent}%
+                  </Typography.Text>
+                </Flex>
+                <Progress
+                  percent={percent}
+                  size="small"
+                  strokeColor="var(--mcms-primary)"
+                  showInfo={false}
+                />
+              </Flex>
+            )
+          }
+
+          return (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Chu kỳ {rental.duration_days} ngày
+            </Typography.Text>
+          )
+        },
       },
       {
         title: 'Trạng thái',
@@ -146,17 +216,19 @@ export function RentalListPage() {
         render: (status: RentalStatus) => <RentalStatusTag status={status} />,
       },
       {
-        title: '',
+        title: 'Thao tác',
         key: 'actions',
-        width: 60,
-        align: 'right',
+        width: 100,
+        fixed: 'right',
+        align: 'center',
         render: (_, rental) => (
-          <Button
-            type="link"
-            size="small"
+          <ActionButton
             icon={<EyeOutlined />}
+            label="Chi tiết"
+            description={`Xem chi tiết vụ thuê #${rental.rental_id}`}
+            variant="default"
+            size="small"
             onClick={() => setSelectedRentalId(rental.rental_id)}
-            aria-label={`Xem chi tiết vụ thuê ${rental.rental_id}`}
           />
         ),
       },
@@ -207,48 +279,45 @@ export function RentalListPage() {
         </Space>
       </Flex>
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 20 }}>
+      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Tổng vụ thuê"
-              value={summary.total}
-              loading={isLoading}
-            />
-          </Card>
+          <StatCard
+            title="Tổng vụ thuê"
+            value={summary.total}
+            tone="neutral"
+            icon={<FileTextOutlined />}
+            description="Tất cả hợp đồng trong hệ thống"
+          />
         </Col>
         <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Đang canh tác"
-              value={summary.active}
-              prefix={<CheckCircleOutlined />}
-              valueStyle={{ color: '#52c41a' }}
-              loading={isLoading}
-            />
-          </Card>
+          <StatCard
+            title="Đang canh tác"
+            value={summary.active}
+            tone="ok"
+            highlightValue
+            icon={<CheckCircleOutlined />}
+            description="Khay nấm đang phát triển"
+          />
         </Col>
         <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Chờ duyệt"
-              value={summary.waiting}
-              prefix={<ToolOutlined />}
-              valueStyle={{ color: '#faad14' }}
-              loading={isLoading}
-            />
-          </Card>
+          <StatCard
+            title="Chờ duyệt"
+            value={summary.waiting}
+            tone="warning"
+            highlightValue
+            icon={<ClockCircleOutlined />}
+            description="Đơn chờ chuẩn bị / gán khay"
+          />
         </Col>
         <Col xs={12} lg={6}>
-          <Card size="small">
-            <Statistic
-              title="Đã hủy"
-              value={summary.cancelled}
-              prefix={<CloseCircleOutlined />}
-              valueStyle={{ color: '#ff4d4f' }}
-              loading={isLoading}
-            />
-          </Card>
+          <StatCard
+            title="Đã hủy"
+            value={summary.cancelled}
+            tone="danger"
+            highlightValue
+            icon={<CloseCircleOutlined />}
+            description="Hợp đồng thuê đã chấm dứt"
+          />
         </Col>
       </Row>
 
@@ -279,7 +348,7 @@ export function RentalListPage() {
             columns={columns}
             dataSource={filteredItems}
             loading={isLoading || isFetching}
-            scroll={{ x: 900 }}
+            scroll={{ x: 1050 }}
             pagination={{
               current: page,
               pageSize,

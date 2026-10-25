@@ -1,76 +1,110 @@
 import type { ThemeConfig } from 'antd'
+import {
+  border,
+  palette,
+  radius,
+  shadow,
+  surface,
+  text,
+  tones,
+  typography,
+} from './tokens'
 
+/**
+ * Theme antd — dùng chung token với `tokens.ts`.
+ *
+ * ⚠ Nguồn sự thật duy nhất: `src/app/theme/tokens.ts`.
+ *   File này chỉ map token sang cấu trúc antd, không hardcode giá trị mới.
+ *
+ * Lưu ý: badge/status preset của antd **FAIL WCAG AA**
+ * (success 3.37:1, warning 2.76:1, default 3.22:1) → dùng `StatusBadge`
+ * trong `src/shared/ui` thay vì `<Tag color="success">`.
+ */
 export const mcmsTheme: ThemeConfig = {
   token: {
-    colorPrimary: '#15803d',
-    colorSuccess: '#15803d',
-    colorInfo: '#0f766e',
-    colorWarning: '#a16207',
-    colorError: '#c2413b',
-    colorText: '#173321',
-    colorTextSecondary: '#5f7164',
-    colorBgBase: '#ffffff',
-    colorBgLayout: '#f4f8f5',
-    colorBgContainer: '#ffffff',
-    colorBorder: '#dce8df',
-    colorBorderSecondary: '#e8f0ea',
-    borderRadius: 6,
-    borderRadiusLG: 8,
+    colorPrimary: palette.primary,
+    colorSuccess: palette.primary,
+    colorInfo: palette.teal,
+    colorWarning: palette.amber,
+    colorError: palette.coral,
+    colorText: text.base,
+    colorTextSecondary: text.muted,
+    colorBgBase: surface.surface,
+    colorBgLayout: surface.background,
+    colorBgContainer: surface.surface,
+    colorBorder: border.base,
+    colorBorderSecondary: border.soft,
+    /**
+     * Focus outline — dùng viền nhấn để đạt 3:1 so với nền liên quan
+     * (WCAG 2.4.11 Focus Appearance).
+     */
+    controlOutline: border.strong,
+    controlOutlineWidth: 2,
+    borderRadius: Number.parseInt(radius.md, 10),
+    borderRadiusLG: Number.parseInt(radius.lg, 10),
     controlHeight: 40,
-    fontFamily:
-      'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-    boxShadowTertiary: '0 1px 2px rgb(24 73 42 / 5%)',
+    fontFamily: typography.fontFamily,
+    boxShadowTertiary: shadow.xs,
   },
   components: {
     Layout: {
-      bodyBg: '#f4f8f5',
-      headerBg: '#ffffff',
-      siderBg: '#ffffff',
+      bodyBg: surface.background,
+      headerBg: surface.surface,
+      siderBg: surface.surface,
     },
     Menu: {
       itemHeight: 44,
-      itemBorderRadius: 6,
+      itemBorderRadius: Number.parseInt(radius.md, 10),
       itemMarginInline: 12,
       itemMarginBlock: 3,
-      itemSelectedBg: '#eaf7ee',
-      itemSelectedColor: '#146c36',
-      itemHoverBg: '#f3f8f4',
-      itemHoverColor: '#146c36',
-      groupTitleColor: '#718078',
+      itemSelectedBg: palette.primarySoft,
+      itemSelectedColor: palette.primaryDark,
+      itemHoverBg: surface.surfaceHover,
+      itemHoverColor: palette.primaryDark,
+      groupTitleColor: text.muted,
     },
     Button: {
-      borderRadius: 6,
+      borderRadius: Number.parseInt(radius.md, 10),
       primaryShadow: 'none',
       defaultShadow: 'none',
-      fontWeight: 600,
+      dangerShadow: 'none',
+      fontWeight: typography.weightSemibold,
+      /** Khoảng cách icon ↔ chữ — dùng chung nhịp 8px của lưới spacing. */
+      iconGap: 8,
     },
     Card: {
-      borderRadiusLG: 8,
-      headerBg: '#ffffff',
+      borderRadiusLG: Number.parseInt(radius.lg, 10),
+      headerBg: surface.surface,
     },
     Table: {
-      headerBg: '#f7faf8',
-      headerColor: '#365440',
-      borderColor: '#e5eee7',
-      rowHoverBg: '#f5faf6',
+      headerBg: surface.surfaceMuted,
+      headerColor: text.base,
+      borderColor: border.soft,
+      rowHoverBg: surface.surfaceHover,
     },
     Input: {
-      activeBorderColor: '#15803d',
-      hoverBorderColor: '#26934c',
-      activeShadow: '0 0 0 3px rgb(21 128 61 / 12%)',
+      activeBorderColor: palette.primary,
+      hoverBorderColor: palette.primary,
+      activeShadow: shadow.focus,
     },
     Select: {
-      activeBorderColor: '#15803d',
-      hoverBorderColor: '#26934c',
+      activeBorderColor: palette.primary,
+      hoverBorderColor: palette.primary,
       activeOutlineColor: 'rgb(21 128 61 / 12%)',
     },
     Tabs: {
-      itemSelectedColor: '#15803d',
-      itemHoverColor: '#15803d',
-      inkBarColor: '#15803d',
+      itemSelectedColor: palette.primary,
+      itemHoverColor: palette.primary,
+      inkBarColor: palette.primary,
     },
     Tag: {
-      borderRadiusSM: 4,
+      borderRadiusSM: Number.parseInt(radius.sm, 10),
     },
   },
 }
+
+/**
+ * Bảng tra nhanh trạng thái ngữ nghĩa — dùng khi cần map trạng thái
+ * nghiệp vụ sang tone màu chuẩn (xem `src/shared/ui/StatusBadge.tsx`).
+ */
+export const semanticTones = tones

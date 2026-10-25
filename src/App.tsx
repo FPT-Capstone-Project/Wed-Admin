@@ -5,6 +5,7 @@ import { router } from './app/router'
 import { mcmsTheme } from './app/theme/theme'
 import { QueryProvider } from './app/providers/QueryProvider'
 import './App.css'
+import './styles/design-system.css'
 
 function App() {
   return (

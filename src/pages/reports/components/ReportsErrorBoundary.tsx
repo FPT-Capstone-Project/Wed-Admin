@@ -1,5 +1,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { Button, Result } from 'antd'
+import { Result } from 'antd'
+import { ReloadOutlined } from '@ant-design/icons'
+import { ActionButton } from '../../../shared/ui'
 
 interface ErrorBoundaryProps {
   children: ReactNode
@@ -62,9 +64,14 @@ export class ReportsErrorBoundary extends Component<
             'Đã xảy ra lỗi khi render trang báo cáo. Báo dev để kiểm tra console.'
           }
           extra={
-            <Button type="primary" onClick={this.handleReload}>
-              Thử lại
-            </Button>
+            <ActionButton
+              icon={<ReloadOutlined />}
+              label="Thử lại"
+              description="Tải lại lần nữa lần."
+              variant="primary"
+              size="middle"
+              onClick={this.handleReload}
+            />
           }
         />
       )

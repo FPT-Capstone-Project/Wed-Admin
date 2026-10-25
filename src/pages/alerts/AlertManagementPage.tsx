@@ -8,20 +8,18 @@ import {
 import {
   Badge,
   Button,
-  Empty,
   Flex,
   Input,
   Popconfirm,
   Select,
   Space,
-  Tag,
-  Typography,
   message,
 } from 'antd'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useTenantStore } from '../../features/tenants/store/tenant.store'
 import { useAlertStore } from '../../stores/alert.store'
 import { AlertItemRow } from './components/AlertItemRow'
+import { ActionButton, EmptyState, PageHeader, StatCard, StatusBadge } from '../../shared/ui'
 import type {
   AlertAcknowledgementFilter,
   AlertCategory,
@@ -147,6 +145,9 @@ export function AlertManagementPage() {
     (alert) => !alert.isAcknowledged,
   ).length
   const unreadCount = scopedAlerts.filter((alert) => !alert.isRead).length
+  const criticalCount = scopedAlerts.filter(
+    (alert) => alert.severity === 'CRITICAL',
+  ).length
   const acknowledgedBy = authUser?.fullName ?? 'Quản trị viên MCMS'
 
   const handleMarkRead = (alert: SystemAlert) => {
@@ -170,37 +171,30 @@ export function AlertManagementPage() {
 
   return (
     <div>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            Cảnh báo vi khí hậu
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Theo dõi sự cố môi trường và Node STM32 theo từng tầng, từng khay
-          </Typography.Text>
-        </div>
+      <PageHeader
+        title="Cảnh báo vi khí hậu"
+        description="Theo dõi sự cố môi trường và Node STM32 theo từng tầng, từng khay"
+        actions={
+          <Space wrap>
+            <Badge count={unacknowledgedCount} overflowCount={99}>
+              <StatusBadge
+                tone="danger"
+                label="Chưa xử lý"
+                icon={<ExclamationCircleOutlined />}
+              />
+            </Badge>
+            <Badge count={unreadCount} overflowCount={99}>
+              <StatusBadge
+                tone="warning"
+                label="Chưa đọc"
+                icon={<FilterOutlined />}
+              />
+            </Badge>
+          </Space>
+        }
+      />
 
-        <Space wrap>
-          <Badge count={unacknowledgedCount} overflowCount={99}>
-            <Tag icon={<ExclamationCircleOutlined />} color="error">
-              Chưa xử lý
-            </Tag>
-          </Badge>
-          <Badge count={unreadCount} overflowCount={99}>
-            <Tag icon={<FilterOutlined />} color="gold">
-              Chưa đọc
-            </Tag>
-          </Badge>
-        </Space>
-      </Flex>
-
-      <Flex gap={12} wrap style={{ marginBottom: 16 }}>
+      <Flex gap={12} wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
         <Input
           allowClear
           prefix={<SearchOutlined />}
@@ -248,15 +242,47 @@ export function AlertManagementPage() {
         />
       </Flex>
 
+      <Flex gap={12} wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
+        <StatCard
+          title="Tổng cảnh báo"
+          value={scopedAlerts.length}
+          tone="neutral"
+          description="Cảnh báo trong phạm vi bạn được xem"
+        />
+        <StatCard
+          title="Nghiêm trọng"
+          value={criticalCount}
+          tone="danger"
+          highlightValue
+          description="Cần can thiệp thiết bị ngay"
+        />
+        <StatCard
+          title="Chưa xử lý"
+          value={unacknowledgedCount}
+          tone="warning"
+          highlightValue
+          description="Chờ người vận hành xác nhận"
+        />
+        <StatCard
+          title="Chưa đọc"
+          value={unreadCount}
+          tone="info"
+          highlightValue
+          description="Chưa được mở xem"
+        />
+      </Flex>
+
       {canManage && (
-        <Flex gap={8} wrap style={{ marginBottom: 16 }}>
-          <Button
+        <Flex gap={8} wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
+          <ActionButton
             icon={<CheckOutlined />}
-            onClick={handleMarkAllRead}
+            label="Đánh dấu tất cả đã đọc"
+            description="Đánh dấu toàn bộ cảnh báo trong phạm vi là đã đọc."
+            variant="default"
+            size="middle"
             disabled={unreadCount === 0}
-          >
-            Đánh dấu tất cả đã đọc
-          </Button>
+            onClick={handleMarkAllRead}
+          />
           <Popconfirm
             title="Xác nhận xử lý toàn bộ cảnh báo?"
             description="Chỉ sử dụng sau khi đã kiểm tra các khay và thiết bị liên quan."
@@ -276,10 +302,10 @@ export function AlertManagementPage() {
 
       <div
         style={{
-          padding: '0 16px',
-          border: '1px solid #f0f0f0',
-          borderRadius: 8,
-          background: '#ffffff',
+          padding: '0 var(--mcms-space-4)',
+          border: '1px solid var(--mcms-border)',
+          borderRadius: 'var(--mcms-radius-lg)',
+          background: 'var(--mcms-surface)',
         }}
       >
         {filteredAlerts.length > 0 ? (
@@ -293,11 +319,13 @@ export function AlertManagementPage() {
             />
           ))
         ) : (
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="Không có cảnh báo phù hợp"
-            style={{ padding: '48px 0' }}
-          />
+          <div style={{ padding: 'var(--mcms-space-8) 0' }}>
+            <EmptyState
+              title="Không có cảnh báo phù hợp"
+              description="Thử đổi bộ lọc hoặc xem lại các cảnh báo đã xử lý."
+              icon={<ExclamationCircleOutlined />}
+            />
+          </div>
         )}
       </div>
     </div>

@@ -10,11 +10,11 @@ import {
   Input,
   Pagination,
   Select,
-  Tag,
   Typography,
 } from 'antd'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useCultivationStore } from '../../stores/cultivation.store'
+import { StatusBadge } from '../../shared/ui'
 import { CultivationBatchCard } from './components/CultivationBatchCard'
 import { BatchDailyPhotosModal } from './components/BatchDailyPhotosModal'
 import type {
@@ -149,12 +149,11 @@ export function CultivationManagementPage() {
           </Typography.Text>
         </div>
 
-        <Tag
+        <StatusBadge
+          tone={canManage ? 'ok' : 'neutral'}
           icon={<FilterOutlined />}
-          color={canManage ? 'processing' : 'default'}
-        >
-          {canManage ? 'Toàn quyền vận hành' : 'Chỉ xem mẻ của bạn'}
-        </Tag>
+          label={canManage ? 'Toàn quyền vận hành' : 'Chỉ xem mẻ của bạn'}
+        />
       </Flex>
 
       <Flex gap={12} wrap style={{ marginBottom: 20 }}>

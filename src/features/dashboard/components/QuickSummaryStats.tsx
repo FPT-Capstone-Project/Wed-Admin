@@ -1,3 +1,11 @@
+/**
+ * QuickSummaryStats — 4 thẻ KPI hàng đầu của Dashboard.
+ *
+ * Dùng `StatCard` từ shared/ui (phân cấp thị giác chuẩn) và `StatusBadge`
+ * cho badge phụ khay bảo trì — đảm bảo WCAG AA contrast.
+ *
+ * ⚠ KHÔNG dùng màu raw hay antd Tag color="red" (fail WCAG 4.5:1).
+ */
 import {
   AlertOutlined,
   AppstoreOutlined,
@@ -5,8 +13,8 @@ import {
   ExperimentOutlined,
   InboxOutlined,
 } from '@ant-design/icons'
-import { Card, Col, Row, Tag } from 'antd'
-import type { ReactNode } from 'react'
+import { Col, Flex, Row } from 'antd'
+import { StatCard, StatusBadge } from '../../../shared/ui'
 
 interface QuickSummaryStatsProps {
   totalTrays: number
@@ -15,17 +23,6 @@ interface QuickSummaryStatsProps {
   /** Khay đang cách ly / nhiễm bệnh / maintenance — hiển thị badge phụ */
   maintenanceTrays: number
   activeAlerts: number
-}
-
-type MetricTone = 'forest' | 'teal' | 'amber' | 'red'
-
-interface SummaryMetric {
-  title: string
-  value: number
-  suffix: string
-  icon: ReactNode
-  tone: MetricTone
-  description: ReactNode
 }
 
 function getPercentage(value: number, total: number) {
@@ -39,77 +36,72 @@ export function QuickSummaryStats({
   maintenanceTrays,
   activeAlerts,
 }: QuickSummaryStatsProps) {
-  const metrics: SummaryMetric[] = [
-    {
-      title: 'Tổng số khay nuôi',
-      value: totalTrays,
-      suffix: 'khay',
-      icon: <AppstoreOutlined />,
-      tone: 'forest',
-      description: 'Công suất toàn trang trại',
-    },
-    {
-      title: 'Đang vận hành',
-      value: activeInUseTrays,
-      suffix: 'khay',
-      icon: <CheckCircleOutlined />,
-      tone: 'teal',
-      description: `${getPercentage(activeInUseTrays, totalTrays)}% tổng công suất`,
-    },
-    {
-      title: 'Sẵn sàng cho thuê',
-      value: availableTrays,
-      suffix: 'khay',
-      icon: <InboxOutlined />,
-      tone: 'amber',
-      description: (
-        <span className="summary-card-description-row">
-          <span>
-            {availableTrays} khay trống ·{' '}
-            {getPercentage(availableTrays, totalTrays)}% còn trống
-          </span>
-          {maintenanceTrays > 0 && (
-            <Tag
-              color="red"
-              icon={<ExperimentOutlined />}
-              className="summary-card-maintenance-badge"
-            >
-              {maintenanceTrays} khay đang xử lý bệnh
-            </Tag>
-          )}
-        </span>
-      ),
-    },
-    {
-      title: 'Cảnh báo chờ xử lý',
-      value: activeAlerts,
-      suffix: 'cảnh báo',
-      icon: <AlertOutlined />,
-      tone: 'red',
-      description:
-        activeAlerts > 0 ? 'Cần kiểm tra trong hôm nay' : 'Không có sự cố mới',
-    },
-  ]
+  const occupancyPct = getPercentage(activeInUseTrays, totalTrays)
+  const availablePct = getPercentage(availableTrays, totalTrays)
 
   return (
-    <Row className="summary-grid" gutter={[16, 16]}>
-      {metrics.map((metric) => (
-        <Col key={metric.title} xs={24} sm={12} xl={6}>
-          <Card className={`summary-card summary-card--${metric.tone}`}>
-            <div className="summary-card-topline">
-              <span className="summary-card-title">{metric.title}</span>
-              <span className="summary-card-icon" aria-hidden="true">
-                {metric.icon}
-              </span>
-            </div>
-            <div className="summary-card-value">
-              <strong>{metric.value}</strong>
-              <span>{metric.suffix}</span>
-            </div>
-            <div className="summary-card-description">{metric.description}</div>
-          </Card>
-        </Col>
-      ))}
+    <Row gutter={[16, 16]} aria-label="Thống kê nhanh trang trại">
+      {/* KPI 1 — Tổng số khay */}
+      <Col xs={24} sm={12} xl={6}>
+        <StatCard
+          title="Tổng số khay nuôi"
+          value={totalTrays}
+          suffix="khay"
+          icon={<AppstoreOutlined />}
+          tone="ok"
+          description="Công suất toàn trang trại"
+        />
+      </Col>
+
+      {/* KPI 2 — Đang vận hành */}
+      <Col xs={24} sm={12} xl={6}>
+        <StatCard
+          title="Đang vận hành"
+          value={activeInUseTrays}
+          suffix="khay"
+          icon={<CheckCircleOutlined />}
+          tone="info"
+          description={`${occupancyPct}% tổng công suất`}
+        />
+      </Col>
+
+      {/* KPI 3 — Sẵn sàng cho thuê */}
+      <Col xs={24} sm={12} xl={6}>
+        <StatCard
+          title="Sẵn sàng cho thuê"
+          value={availableTrays}
+          suffix="khay"
+          icon={<InboxOutlined />}
+          tone="warning"
+          description={
+            <Flex align="center" gap={6} wrap>
+              <span>{availablePct}% còn trống</span>
+              {maintenanceTrays > 0 && (
+                <StatusBadge
+                  tone="danger"
+                  label={`${maintenanceTrays} khay đang xử lý bệnh`}
+                  icon={<ExperimentOutlined aria-hidden="true" />}
+                />
+              )}
+            </Flex>
+          }
+        />
+      </Col>
+
+      {/* KPI 4 — Cảnh báo chờ xử lý */}
+      <Col xs={24} sm={12} xl={6}>
+        <StatCard
+          title="Cảnh báo chờ xử lý"
+          value={activeAlerts}
+          suffix="cảnh báo"
+          icon={<AlertOutlined />}
+          tone={activeAlerts > 0 ? 'danger' : 'ok'}
+          highlightValue={activeAlerts > 0}
+          description={
+            activeAlerts > 0 ? 'Cần kiểm tra trong hôm nay' : 'Không có sự cố mới'
+          }
+        />
+      </Col>
     </Row>
   )
 }

@@ -1,0 +1,80 @@
+
+/* ==========================================================================
+   Design system components (src/shared/ui)
+   Dùng token từ :root — KHÔNG hardcode hex trong block này.
+   ========================================================================== */
+
+/* --- PageHeader ------------------------------------------------------- */
+
+.mcms-page-header .ant-typography {
+  color: var(--mcms-text);
+}
+
+/* --- StatCard --------------------------------------------------------- */
+
+.mcms-stat-card {
+  border-left-width: 3px;
+}
+
+/* --- StatusBadge ------------------------------------------------------ */
+
+/*
+ * Badge trạng thái: luôn có nhãn chữ + viền đủ tương phản.
+ * Bỏ style mặc định của antd vì preset color FAIL WCAG AA.
+ */
+.ant-tag.mcms-status-badge {
+  border-width: 1px;
+  font-weight: 600;
+  line-height: 20px;
+  border-radius: var(--mcms-radius-sm);
+}
+
+/* --- DataTable -------------------------------------------------------- */
+
+.mcms-data-table .ant-table-wrapper {
+  border-radius: var(--mcms-radius-lg);
+}
+
+.mcms-data-table .ant-table-thead > tr > th {
+  color: var(--mcms-text);
+  font-weight: 600;
+}
+
+/* Cột hành động: nút icon-only có nhãn ẩn → giữ khoảng cách chuẩn */
+.mcms-data-table .ant-table-cell-fix-right,
+.mcms-data-table .ant-table-cell-action {
+  white-space: nowrap;
+}
+
+.mcms-data-table .ant-table-cell-action .ant-btn {
+  min-width: 24px;
+}
+
+/* --- EmptyState -------------------------------------------------------- */
+
+.mcms-empty-state .ant-empty-description {
+  margin-bottom: var(--mcms-space-4);
+}
+
+/* --- ActionButton ------------------------------------------------------ */
+
+/*
+ * Nút hành động: khi ẩn chữ (icon-only trong cột hành động), vẫn giữ
+ * kích thước mục tiêu chạm tối thiểu 24px theo WCAG 2.5.8.
+ */
+.mcms-action-button .ant-btn {
+  min-height: 24px;
+}
+
+/* Tooltip bám được cả khi button disabled */
+.mcms-action-button-tooltip {
+  display: inline-flex;
+}
+
+/* --- Badge "ảnh mới" trong modal upload (ghi đè vị trí của antd Tag) --- */
+
+.mcms-image-pending-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+}

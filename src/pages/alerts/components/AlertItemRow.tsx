@@ -7,15 +7,9 @@ import {
   InfoCircleOutlined,
   SafetyOutlined,
 } from '@ant-design/icons'
-import {
-  Button,
-  Flex,
-  Popconfirm,
-  Space,
-  Tag,
-  Tooltip,
-  Typography,
-} from 'antd'
+import { Flex, Popconfirm, Space, Typography } from 'antd'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { formatFriendlyDeviceLocation } from '../../../shared/i18n/terms'
 import type {
   AlertCategory,
   AlertSeverity,
@@ -31,20 +25,20 @@ interface AlertItemRowProps {
 
 const SEVERITY_CONFIG: Record<
   AlertSeverity,
-  { color: string; label: string; icon: ReactNode }
+  { tone: 'info' | 'warning' | 'danger'; label: string; icon: ReactNode }
 > = {
   INFO: {
-    color: 'processing',
+    tone: 'info',
     label: 'Thông tin',
     icon: <InfoCircleOutlined />,
   },
   WARNING: {
-    color: 'warning',
+    tone: 'warning',
     label: 'Cảnh báo',
     icon: <ExclamationCircleOutlined />,
   },
   CRITICAL: {
-    color: 'error',
+    tone: 'danger',
     label: 'Nghiêm trọng',
     icon: <SafetyOutlined />,
   },
@@ -99,16 +93,23 @@ export function AlertItemRow({
     ? formatValue({ ...alert, currentValue: alert.thresholdValue })
     : null
 
+  // Mã thiết bị kỹ thuật (vd: "node-stm32-01") → tên vị trí dễ hiểu.
+  const friendlyDevice = formatFriendlyDeviceLocation(alert.deviceId)
+
   const acknowledgeButton = (
-    <Button
-      type={alert.isAcknowledged ? 'default' : 'primary'}
-      size="small"
+    <ActionButton
       icon={alert.isAcknowledged ? <CheckCircleOutlined /> : <CheckOutlined />}
+      label={alert.isAcknowledged ? 'Đã xử lý' : 'Xác nhận xử lý'}
+      description={
+        alert.isAcknowledged
+          ? 'Cảnh báo này đã được xác nhận xử lý.'
+          : 'Xác nhận đã xử lý cảnh báo này.'
+      }
+      variant={alert.isAcknowledged ? 'default' : 'primary'}
+      size="small"
       disabled={alert.isAcknowledged}
       onClick={() => onAcknowledge(alert)}
-    >
-      {alert.isAcknowledged ? 'Đã xử lý' : 'Xác nhận xử lý'}
-    </Button>
+    />
   )
 
   return (
@@ -118,29 +119,33 @@ export function AlertItemRow({
       gap={16}
       wrap
       style={{
-        padding: '16px 0',
-        borderBottom: '1px solid #f0f0f0',
+        padding: 'var(--mcms-space-4) 0',
+        borderBottom: '1px solid var(--mcms-border-soft)',
         opacity: alert.isAcknowledged ? 0.72 : 1,
-        background: alert.isRead ? undefined : '#fffaf0',
+        background: alert.isRead
+          ? undefined
+          : 'var(--mcms-tone-warning-bg)',
       }}
     >
       <Flex align="flex-start" gap={12} style={{ flex: '1 1 560px' }}>
-        <Tag
-          color={severityConfig.color}
-          icon={severityConfig.icon}
-          style={{ marginTop: 2, whiteSpace: 'nowrap' }}
-        >
-          {severityConfig.label}
-        </Tag>
+        <div style={{ marginTop: 2, whiteSpace: 'nowrap' }}>
+          <StatusBadge
+            tone={severityConfig.tone}
+            label={severityConfig.label}
+            icon={severityConfig.icon}
+          />
+        </div>
 
         <div>
           <Flex align="center" gap={8} wrap>
             <Typography.Text strong>{alert.message}</Typography.Text>
-            {!alert.isRead && <Tag color="gold">Chưa đọc</Tag>}
+            {!alert.isRead && (
+              <StatusBadge tone="warning" label="Chưa đọc" dot={false} />
+            )}
           </Flex>
 
           <Typography.Text type="secondary">
-            {alert.trayName} · {alert.trayId} · {alert.deviceId}
+            {alert.trayName} · {alert.trayId} · {friendlyDevice}
           </Typography.Text>
 
           <br />
@@ -170,17 +175,19 @@ export function AlertItemRow({
 
       {canManage && (
         <Space size={8} wrap>
-          <Tooltip title={alert.isRead ? 'Đã đọc' : 'Đánh dấu đã đọc'}>
-            <Button
-              type="text"
-              size="small"
-              disabled={alert.isRead}
-              onClick={() => onMarkRead(alert)}
-              aria-label={`${alert.isRead ? 'Đã đọc' : 'Đánh dấu đã đọc'} cảnh báo`}
-            >
-              {alert.isRead ? 'Đã đọc' : 'Đánh dấu đã đọc'}
-            </Button>
-          </Tooltip>
+          <ActionButton
+            icon={<CheckOutlined />}
+            label={alert.isRead ? 'Đã đọc' : 'Đánh dấu đã đọc'}
+            description={
+              alert.isRead
+                ? 'Cảnh báo này đã được đánh dấu đã đọc.'
+                : 'Đánh dấu cảnh báo này là đã đọc.'
+            }
+            variant="text"
+            size="small"
+            disabled={alert.isRead}
+            onClick={() => onMarkRead(alert)}
+          />
 
           {alert.severity === 'CRITICAL' && !alert.isAcknowledged ? (
             <Popconfirm

@@ -97,6 +97,11 @@ const SettingsPage = lazy(() =>
     default: m.SettingsPage,
   })),
 )
+const StyleGuidePage = lazy(() =>
+  import('../../pages/dev/StyleGuidePage').then((m) => ({
+    default: m.StyleGuidePage,
+  })),
+)
 
 /** Bọc một element với Suspense fallback (full-screen PageFallback). */
 function withSuspense(node: ReactElement) {
@@ -216,6 +221,18 @@ export const router = createBrowserRouter([
         path: 'change-password',
         element: withSuspense(<ChangePasswordPage />),
       },
+      // ──────────────────────────────────────────────────────────────────────
+      // Cẩm nang giao diện — CHỈ có ở môi trường dev.
+      // ⚠ `import.meta.env.DEV` là false ở build production → route bị Vite
+      // loại bỏ hoàn toàn khỏi bundle (dead-code elimination).
+      ...(import.meta.env.DEV
+        ? [
+            {
+              path: 'dev/style-guide',
+              element: withSuspense(<StyleGuidePage />),
+            },
+          ]
+        : []),
       // 404: redirect tất cả URL không khớp về dashboard
       {
         path: '*',

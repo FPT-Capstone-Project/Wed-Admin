@@ -251,9 +251,12 @@ export function AdminLayout() {
   }, [logout, navigate, location.pathname])
 
   const selectedMenuKey = getSelectedMenuKey(location.pathname)
-  const pageTitle = location.pathname.startsWith('/devices/history')
-    ? 'Lịch sử Telemetry IoT'
-    : PAGE_TITLES[selectedMenuKey]
+  const pageTitle =
+    location.pathname.startsWith('/devices/history')
+      ? 'Lịch sử Telemetry IoT'
+      : import.meta.env.DEV && location.pathname.startsWith('/dev/style-guide')
+        ? 'Cẩm nang giao diện (dev)'
+        : PAGE_TITLES[selectedMenuKey]
 
   // User.fullName là field mới (chuẩn hoá) — fallback an toàn nếu BE chưa trả
   const displayName = user?.fullName ?? 'Quản trị viên MCMS'
