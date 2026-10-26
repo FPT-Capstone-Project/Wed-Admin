@@ -61,7 +61,7 @@ console.log(`App.css co:     ${cssVars.size} bien\n`)
 if (failures.length > 0) {
   console.error(`X ${failures.length} khac biet:\n`)
   for (const failure of failures) console.error(`   - ${failure}`)
-  ;(globalThis as any).process.exit(1)
+  process.exit(1)
 }
 
 console.log(`OK — ${generated.size} bien da dong bo hoan toan.`)

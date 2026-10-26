@@ -242,7 +242,17 @@ export function TrayDetailDrawer({
   const { data: beRental, isLoading: rentalLoading, isError: rentalError } =
     useRentalByTray(trayNumericId, { enabled: trayNumericId !== null })
 
-  const effectiveCurrentDate = currentDate ?? new Date()
+  /**
+   * Ngày dùng để tính vòng đời rental.
+   *
+   * Bọc trong `useMemo` để identity ổn định giữa các render — nếu không,
+   * `useMemo` bên dưới sẽ tính lại mỗi lần render (cảnh báo
+   * `react-hooks/exhaustive-deps`).
+   */
+  const effectiveCurrentDate = useMemo(
+    () => currentDate ?? new Date(),
+    [currentDate],
+  )
 
   const trayRental = useMemo(() => (beRental ? rentalToTrayRental(beRental) : null), [beRental])
   const lifecycle = useMemo(

@@ -92,8 +92,7 @@ console.log('')
 if (failures.length > 0) {
   console.error(`X ${failures.length}/${checks.length} kiem tra KHONG dat:\n`)
   for (const failure of failures) console.error(`   - ${failure}`)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- script CLI ngoài app
-  ;(globalThis as any).process.exit(1)
+  process.exit(1)
 }
 
 console.log(`OK — Tat ca ${checks.length} kiem tra dat WCAG AA.`)

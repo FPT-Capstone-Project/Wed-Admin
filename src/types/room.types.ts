@@ -98,6 +98,8 @@ export interface TierTelemetry {
 export interface Tier {
   tierId: TierId
   name: string
+  /** Mã phòng từ BE (vd: "ROOM-A"). Dùng để hiển thị tên chuẩn hoá. */
+  roomCode?: string | null
   nodeId: NodeId
   trays: Tray[]
   telemetry: TierTelemetry

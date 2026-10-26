@@ -108,6 +108,7 @@ export function toUiTiers(
     return {
       tierId: room.room_id as TierId,
       name: room.room_name,
+      roomCode: room.room_code,
       nodeId: safeNodeId(room.room_id),
       trays: roomTrays,
       telemetry: defaultTelemetry,

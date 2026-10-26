@@ -138,6 +138,17 @@ export const IOT_TERMS = {
     description:
       'Cơ chế tự tắt thiết bị tưới nếu hệ thống mất kết nối, tránh tưới quá lâu.',
   },
+  /** Room — phòng nuôi trồng (mỗi phòng có nhiều tầng kệ khay). */
+  room: {
+    label: 'Phòng nuôi',
+    description:
+      'Khu vực nuôi trồng trong nhà trồng nấm, gồm nhiều tầng kệ đặt khay.',
+  },
+  /** Mã khay — mã định danh khay nấm. */
+  trayCode: {
+    label: 'Mã khay',
+    description: 'Mã định danh khay nấm, dạng KH-007.',
+  },
 } as const satisfies Record<string, TermEntry>
 
 export type IotTermKey = keyof typeof IOT_TERMS
@@ -218,4 +229,56 @@ export function formatFriendlyDeviceLocation(deviceId?: string | null): string {
   }
 
   return normalized
+}
+
+/**
+ * Chuẩn hoá tên phòng nuôi cho UI.
+ *
+ * - `roomName` = "Room A" (tiếng Anh từ DB) → "Phòng A".
+ * - `roomCode` = "ROOM-A" → dùng làm mã phụ khi không có tên.
+ * - `fallback` = "Phòng #12" khi thiếu cả tên và mã.
+ */
+export function formatRoomLabel(
+  roomName?: string | null,
+  roomCode?: string | null,
+  fallbackId?: number | null,
+): string {
+  const name = roomName?.trim()
+  if (name) {
+    // "Room A" / "room B" → "Phòng A" / "Phòng B".
+    const englishRoom = name.match(/^room[\s_-]*(.+)$/i)
+    if (englishRoom && englishRoom[1].trim()) {
+      return `${getTerm('room')} ${englishRoom[1].trim()}`
+    }
+    return name
+  }
+
+  const code = roomCode?.trim()
+  if (code) return code
+
+  if (fallbackId != null && fallbackId > 0) {
+    return `${getTerm('room')} #${fallbackId}`
+  }
+
+  return getTerm('room')
+}
+
+/**
+ * Chuẩn hoá mã khay cho UI.
+ *
+ * - `trayCode` = "Tray007" → "KH-007".
+ * - `trayCode` = "T1-K01" → giữ nguyên (đã đúng quy ước MCMS).
+ * - `trayCode` = "K01" → "KH-01".
+ */
+export function formatTrayCode(trayCode?: string | null): string {
+  const raw = trayCode?.trim()
+  if (!raw) return getTerm('trayCode')
+
+  const englishTray = raw.match(/^tray[\s_-]*0*(\d+)$/i)
+  if (englishTray) return `KH-${englishTray[1].padStart(3, '0')}`
+
+  const shortTray = raw.match(/^k[\s_-]*0*(\d+)$/i)
+  if (shortTray) return `KH-${shortTray[1].padStart(2, '0')}`
+
+  return raw
 }

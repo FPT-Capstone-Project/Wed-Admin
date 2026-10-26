@@ -10,6 +10,8 @@ import type {
   Camera,
   CameraListQuery,
   CreateCameraRequest,
+  ImouPlayerToken,
+  ImouPlayerTokenQuery,
   LiveSession,
   LiveSessionListQuery,
   LiveStreamQuery,
@@ -35,6 +37,22 @@ export const cameraKeys = {
   detail: (cameraId: number) => [...cameraKeys.details(), cameraId] as const,
   liveStream: (cameraId: number, query: LiveStreamQuery) =>
     [...cameraKeys.details(), cameraId, 'live-stream', query] as const,
+  /**
+   * KitToken ImouPlayer — key dùng primitive để không tạo query mới khi
+   * object `query` đổi identity giữa các lần render.
+   */
+  imouPlayerToken: (
+    cameraId: number,
+    channelId: string,
+    streamId: number,
+  ) =>
+    [
+      ...cameraKeys.details(),
+      cameraId,
+      'imou-player-token',
+      channelId,
+      streamId,
+    ] as const,
 }
 
 export const liveStreamKeys = {
@@ -109,6 +127,34 @@ export function useLiveStreams(
   return useQuery<LiveSession[], Error>({
     queryKey: liveStreamKeys.list(query),
     queryFn: () => cameraApi.listLiveSessions(query),
+    ...options,
+  })
+}
+
+/**
+ * GET /api/cameras/{cameraId}/imou-player-token
+ *
+ * KitToken hết hạn ~2 giờ theo Imou. Không cache trên client (`staleTime: 0`,
+ * `gcTime: 0`) → mỗi lần mở modal lấy token mới, tránh phát với token cũ.
+ */
+export function useImouPlayerToken(
+  cameraId: number | null,
+  query: ImouPlayerTokenQuery = {},
+  options?: Partial<UseQueryOptions<ImouPlayerToken | null, Error>>,
+) {
+  const channelId = query.channelId ?? '0'
+  const streamId = query.streamId ?? 0
+
+  return useQuery<ImouPlayerToken | null, Error>({
+    queryKey: cameraKeys.imouPlayerToken(cameraId ?? -1, channelId, streamId),
+    queryFn: async () => {
+      if (cameraId === null || cameraId <= 0) return null
+      return cameraApi.getImouPlayerToken(cameraId, { channelId, streamId })
+    },
+    enabled: cameraId !== null && cameraId > 0,
+    staleTime: 0,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
     ...options,
   })
 }

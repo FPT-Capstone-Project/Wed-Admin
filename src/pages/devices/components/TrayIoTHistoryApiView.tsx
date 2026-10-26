@@ -102,7 +102,14 @@ export function TrayIoTHistoryApiView() {
     { enabled: Boolean(primaryMaster?.masterId) },
   )
 
-  const readings = history?.readings ?? []
+  /**
+   * Danh sách readings đã được lọc bởi hook.
+   *
+   * Bọc trong `useMemo` để identity ổn định giữa các render — nếu không,
+   * `useMemo` tính summary bên dưới sẽ chạy lại mỗi lần render (cảnh báo
+   * `react-hooks/exhaustive-deps`).
+   */
+  const readings = useMemo(() => history?.readings ?? [], [history])
 
   const summary = useMemo(() => {
     if (readings.length === 0) {

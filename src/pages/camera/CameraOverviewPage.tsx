@@ -44,9 +44,8 @@ const STATUS_META: Record<
 /**
  * Camera toàn cảnh — dữ liệu thật từ `GET /api/cameras`.
  *
- * Luồng live stream Imou được điều khiển qua các hook riêng trong
- * `features/cameras/hooks/useCameras.ts`. Trang này chỉ hiển thị danh sách
- * và cho phép dừng phiên live đang chạy.
+ * Live dùng ImouPlayer + KitToken (`GET /api/cameras/{id}/imou-player-token`).
+ * Trang này hiển thị danh sách và cho phép dừng phiên live đang chạy.
  */
 export function CameraOverviewPage() {
   const { message } = App.useApp()
@@ -305,8 +304,8 @@ export function CameraOverviewPage() {
       </Flex>
 
       <DataTable<Camera>
-        rowKey={(record, index) =>
-          `cam-${record.id || record.cameraCode || `idx-${index}`}`
+        rowKey={(record) =>
+          `cam-${record.id || record.cameraCode || 'unknown'}`
         }
         columns={columns}
         dataSource={cameras}

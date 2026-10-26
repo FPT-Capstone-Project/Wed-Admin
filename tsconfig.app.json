@@ -22,5 +22,9 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": [
+    "src/app/theme/verify-css-sync.ts",
+    "src/app/theme/verify-tokens.ts"
+  ]
 }

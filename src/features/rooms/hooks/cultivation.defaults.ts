@@ -1,4 +1,4 @@
-/**
+  /**
  * Default telemetry dùng khi BE chưa trả real-time data.
  * Sau này sẽ được replace bằng WebSocket real-time telemetry.
  */

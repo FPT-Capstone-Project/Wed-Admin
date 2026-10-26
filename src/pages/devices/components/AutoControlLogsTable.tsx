@@ -237,7 +237,9 @@ export function AutoControlLogsTable({ floorId }: AutoControlLogsTableProps) {
         <Empty description="Chưa có nhật ký tự động hóa" />
       ) : (
         <Table<AutoControlLogEntry>
-          rowKey={(entry, index) => entry.id ?? `${entry.event_type}-${index}`}
+          rowKey={(entry) =>
+            entry.id ?? `${entry.event_type}-${entry.created_at ?? 'unknown'}`
+          }
           columns={columns}
           dataSource={logs}
           loading={isLoading}

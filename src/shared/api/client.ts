@@ -30,7 +30,6 @@ function resolveApiBaseUrl(): string {
   const cleaned = raw.trim().replace(/\/+$/, '').replace(/\/api$/i, '')
 
   if (!cleaned) {
-    // eslint-disable-next-line no-console
     console.warn(
       '[MCMS API] VITE_API_BASE_URL chưa được cấu hình trong production. ' +
         'Mọi request sẽ thất bại. Hãy set biến này qua CI/CD environment.',

@@ -11,11 +11,12 @@ import type {
   UpdateCultivationTrayRequest,
 } from '../../../types/cultivation'
 import type { BeTrayStatus } from '../../../types/cultivation-status'
+import { formatRoomLabel } from '../../../shared/i18n/terms'
 
 const TRAY_STATUS_OPTIONS: Array<{ value: BeTrayStatus; label: string }> = [
-  { value: 'AVAILABLE', label: 'Trống — sẵn sàng cho thuê' },
-  { value: 'OCCUPIED', label: 'Đang sử dụng' },
-  { value: 'MAINTENANCE', label: 'Bảo trì / cách ly' },
+  { value: 'AVAILABLE', label: 'Khay trống — sẵn sàng cho thuê' },
+  { value: 'OCCUPIED', label: 'Đang thuê' },
+  { value: 'MAINTENANCE', label: 'Nhiễm bệnh / Cách ly' },
 ]
 
 interface TrayFormValues {
@@ -130,7 +131,7 @@ export function TrayFormModal({
             placeholder="— Chọn phòng —"
             options={rooms.map((room) => ({
               value: room.room_id,
-              label: `${room.room_name} (${room.room_code})`,
+              label: `${formatRoomLabel(room.room_name, room.room_code, room.room_id)} (${room.room_code})`,
             }))}
           />
         </Form.Item>
@@ -143,7 +144,7 @@ export function TrayFormModal({
             { max: 50, message: 'Tối đa 50 ký tự.' },
           ]}
         >
-          <Input placeholder="VD: T1-K01" autoComplete="off" />
+          <Input placeholder="VD: KH-007 hoặc T1-K01" autoComplete="off" />
         </Form.Item>
 
         <Form.Item

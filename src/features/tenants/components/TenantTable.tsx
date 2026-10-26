@@ -5,6 +5,7 @@ import type { TableColumnsType } from 'antd'
 import { useRoomStore } from '../../rooms/store/room.store'
 import { useTenantStore } from '../store/tenant.store'
 import { ActionButton, DataTable, StatusBadge, UserAvatar } from '../../../shared/ui'
+import { formatTrayCode } from '../../../shared/i18n/terms'
 import type { SemanticTone } from '../../../app/theme/tokens'
 import type { Tenant } from '../types/tenant.types'
 
@@ -67,7 +68,9 @@ export function TenantTable({ onEdit }: TenantTableProps) {
         render: (trayId: string) => {
           const tray = trayById.get(trayId)
 
-          return tray ? `Tầng ${tray.tierId} · ${tray.code}` : trayId
+          return tray
+            ? `Tầng ${tray.tierId} · ${formatTrayCode(tray.code)}`
+            : trayId
         },
       },
       {

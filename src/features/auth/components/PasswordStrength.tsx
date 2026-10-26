@@ -1,34 +1,15 @@
 import { Typography } from 'antd'
+import {
+  scorePassword,
+  type PasswordStrengthLevel,
+} from './password-strength.utils'
 
-type Strength = 'empty' | 'weak' | 'fair' | 'good' | 'strong'
-
-const LABELS: Record<Strength, string> = {
+const LABELS: Record<PasswordStrengthLevel, string> = {
   empty: '',
   weak: 'Mật khẩu yếu',
   fair: 'Mật khẩu khá',
   good: 'Mật khẩu tốt',
   strong: 'Mật khẩu mạnh',
-}
-
-/**
- * Ước lượng độ mạnh mật khẩu theo 4 tiêu chí thực tế.
- * Không nhằm mã hoá an toàn — chỉ để NGƯỜI DÙNG biết mật khẩu của họ có
- * đủ đa dạng hay không trước khi gửi lên server.
- */
-export function scorePassword(value: string): Exclude<Strength, 'empty'> | 'empty' {
-  if (!value) return 'empty'
-
-  let score = 0
-  if (value.length >= 8) score += 1
-  if (value.length >= 12) score += 1
-  if (/[a-z]/.test(value) && /[A-Z]/.test(value)) score += 1
-  if (/\d/.test(value)) score += 1
-  if (/[^\w\s]/.test(value)) score += 1
-
-  if (score <= 1) return 'weak'
-  if (score === 2) return 'fair'
-  if (score === 3) return 'good'
-  return 'strong'
 }
 
 interface PasswordStrengthProps {

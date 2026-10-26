@@ -507,7 +507,7 @@ export function DeviceControlPanel() {
           value={masters.filter((m) => m.reportedStatus === 'online').length}
           suffix={`/ ${masters.length}`}
           icon={<WifiOutlined />}
-          tone="success"
+          tone="ok"
           highlightValue
           description="Đang kết nối bình thường"
           style={{ flex: '1 1 200px' }}
@@ -784,7 +784,7 @@ export function DeviceControlPanel() {
         title="Chi tiết cảm biến"
         open={Boolean(selectedSensor)}
         onClose={() => setSelectedSensor(null)}
-        width={460}
+        size={460}
         destroyOnHidden
       >
         {selectedSensor && (
@@ -853,7 +853,7 @@ export function DeviceControlPanel() {
         title="Trạng thái lệnh SSR"
         open={Boolean(selectedCommandId)}
         onClose={() => setSelectedCommandId(null)}
-        width={460}
+        size={460}
         destroyOnHidden
         extra={
           <Typography.Text code style={{ fontSize: 12 }}>

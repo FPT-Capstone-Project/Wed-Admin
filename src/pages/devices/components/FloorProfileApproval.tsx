@@ -218,16 +218,31 @@ export function FloorProfileApproval({
     if (!suggested) return
 
     // ⚠ BE allow-list field → lọc config hiện tại trước khi ghi đè.
+    // `sanitizeAutoMistingConfig` loại field lạ của row DB, loại `null`/
+    // `undefined`, và bỏ `mushroom_type_id` khi nhánh `FLOOR` (BE tự suy ra
+    // loại nấm từ các mẻ đang trồng → gửi field này sẽ bị 400).
     const base = sanitizeAutoMistingConfig(config)
+    const suggestedSafe = sanitizeAutoMistingConfig(suggested)
+
+    // Gợi ý của BE là config đầy đủ (có đủ field bắt buộc như `humidity_min`),
+    // nên làm nền; config hiện tại đè lên để giữ tham số an toàn người dùng
+    // đã chỉnh; gợi ý đã lọc đè cuối để áp dụng profile sàn.
+    const merged = {
+      ...base,
+      ...suggestedSafe,
+      // Giữ các tham số an toàn người dùng đã chỉnh, chỉ duyệt profile.
+      profile_approved: true,
+    } as AutoMistingConfiguration
+
+    // Nhánh `FLOOR` không chấp nhận `mushroom_type_id` → gỡ sau khi merge
+    // (config hiện tại có thể đang ở nhánh `LEGACY`).
+    if (merged.config_source === 'FLOOR') {
+      delete merged.mushroom_type_id
+    }
 
     saveMutation.mutate({
       floorId: floorId as number,
-      payload: {
-        ...base,
-        ...sanitizeAutoMistingConfig(suggested),
-        // Giữ các tham số an toàn người dùng đã chỉnh, chỉ duyệt profile.
-        profile_approved: true,
-      },
+      payload: merged,
     })
   }
 

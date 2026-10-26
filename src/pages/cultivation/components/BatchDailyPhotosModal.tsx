@@ -96,15 +96,41 @@ export function BatchDailyPhotosModal({
     [batch],
   )
 
-  const [activeDayIndex, setActiveDayIndex] = useState(1)
+  const batchId = batch?.id ?? null
 
-  // Reset về ngày đầu tiên đã chụp mỗi khi mở modal
-  useEffect(() => {
-    if (open && snapshots.length > 0) {
-      const firstTaken = snapshots.find((s) => s.status === 'taken')
-      setActiveDayIndex(firstTaken?.dayIndex ?? 1)
+  /** Ngày đầu tiên đã có ảnh — dùng khi mở modal hoặc đổi mẻ. */
+  const firstTakenDay = useMemo(
+    () => snapshots.find((s) => s.status === 'taken')?.dayIndex ?? 1,
+    [snapshots],
+  )
+
+  /**
+   * Ngày đang xem.
+   *
+   * Khởi tạo lazy để lần mount đầu đã đúng ngay (component được remount
+   * mỗi lần mở modal vì parent truyền `key` theo `batch.id`).
+   */
+  const [activeDayIndex, setActiveDayIndex] = useState(() =>
+    open ? firstTakenDay : 1,
+  )
+
+  /**
+   * Lưu trạng thái modal của lần render trước.
+   *
+   * Khi modal mở lại hoặc đổi mẻ, cần chọn lại ngày đầu tiên đã chụp.
+   * Theo hướng dẫn React "storing information from previous renders", ta
+   * so sánh trong lúc render và chỉ cập nhật state khi thực sự có thay đổi
+   * — tránh `setState` trong `useEffect` (gây cascading render) và tránh
+   * `setState` không điều kiện trong render (gây vòng lặp vô hạn).
+   */
+  const [prevModalState, setPrevModalState] = useState({ open, batchId })
+
+  if (prevModalState.open !== open || prevModalState.batchId !== batchId) {
+    setPrevModalState({ open, batchId })
+    if (open) {
+      setActiveDayIndex(firstTakenDay)
     }
-  }, [open, snapshots])
+  }
 
   // Keyboard navigation
   useEffect(() => {

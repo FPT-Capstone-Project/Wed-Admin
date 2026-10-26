@@ -27,22 +27,16 @@ export default defineConfig([
    * hàm helper) — vì Fast Refresh (HMR) chỉ hoạt động an toàn khi file chỉ
    * export component.
    *
-   * Với codebase này, các file dưới đây export **hợp lệ** nhiều thứ:
-   *  - `router/index.tsx`      → export `router` (createBrowserRouter) + lazy pages
-   *  - `providers/QueryProvider.tsx` → export `queryClient` + `QueryProvider` + helper
-   *  - `PasswordStrength.tsx`  → export `scorePassword` (logic thuần) + component
+   * Cách xử lý trong codebase này: tách phần export **không phải component**
+   * ra file riêng (vd `router/lazy-pages.ts`, `password-strength.utils.ts`)
+   * để giữ đúng nguyên tắc của Fast Refresh mà không phải tắt rule.
    *
-   * Tách mỗi export ra file riêng sẽ làm rối cấu trúc mà **không** cải
-   * thiện gì cho HMR (Vite vẫn refresh đúng module khi file con đổi).
-   * Vì vậy ta hạ rule xuống `warn` cho đúng các file này thay vì tắt toàn cục —
-   * file mới viết sai vẫn bị báo `error` như trước.
+   * `src/app/router/index.tsx` chỉ export `router` (đối tượng route, không
+   * phải component) — đây là ngoại lệ hợp lệ: router là cấu hình tĩnh,
+   * không có state/component nào để HMR cần giữ nguyên.
    */
   {
-    files: [
-      'src/app/router/index.tsx',
-      'src/app/providers/QueryProvider.tsx',
-      'src/features/auth/components/PasswordStrength.tsx',
-    ],
+    files: ['src/app/router/index.tsx'],
     rules: {
       'react-refresh/only-export-components': 'warn',
     },

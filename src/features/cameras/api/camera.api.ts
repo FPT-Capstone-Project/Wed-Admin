@@ -5,6 +5,8 @@ import type {
   CameraListQuery,
   CameraStatus,
   CreateCameraRequest,
+  ImouPlayerToken,
+  ImouPlayerTokenQuery,
   LiveSession,
   LiveSessionListQuery,
   LiveStreamQuery,
@@ -102,6 +104,43 @@ function isCameraStatus(value: string | null): value is CameraStatus {
 }
 
 /**
+ * Chuẩn hoá KitToken ImouPlayer — chấp nhận camelCase / snake_case.
+ *
+ * Backend trả (đã unwrap lớp `data`):
+ * ```json
+ * { "kitToken": "Kt_xxx", "expireTime": 7199,
+ *   "deviceId": "F8889CFPSF1CDCA", "channelId": "0", "streamId": 0 }
+ * ```
+ *
+ * - `kitToken` bắt buộc → thiếu thì trả `null` để UI báo lỗi rõ ràng
+ *   thay vì dựng player với token rỗng.
+ * - `deviceId` / `channelId` có thể **không** có trong response (BE chỉ
+ *   trả token) → fallback về `camera.cameraCode` / `'0'` ở tầng UI.
+ * - `channelId` có thể là số → ép về chuỗi (SDK kỳ vọng string).
+ */
+function normalizeImouPlayerToken(raw: unknown): ImouPlayerToken | null {
+  const obj = ensureObject<Record<string, unknown>>(raw)
+  if (!obj) return null
+
+  const kitToken = pickString(obj, 'kitToken', 'kit_token', 'token')
+  if (!kitToken) return null
+
+  // `channelId` có thể là number → `pickString` bỏ qua, cần đọc riêng.
+  const rawChannelId = pickNumber(obj, 'channelId', 'channel_id')
+  const channelId =
+    pickString(obj, 'channelId', 'channel_id') ??
+    (rawChannelId !== null ? String(rawChannelId) : null)
+
+  return {
+    kitToken,
+    deviceId: pickString(obj, 'deviceId', 'device_id', 'cameraCode', 'camera_code'),
+    channelId: channelId ?? '0',
+    streamId: pickNumber(obj, 'streamId', 'stream_id') ?? 0,
+    expireTime: pickNumber(obj, 'expireTime', 'expire_time'),
+  }
+}
+
+/**
  * Chuẩn hoá response live-stream về shape `LiveStreamResponse`.
  *
  * BE trả về (sau 1 lớp bọc `data`):
@@ -184,6 +223,31 @@ export const cameraApi = {
   /** DELETE /api/cameras/{cameraId} — 409 nếu camera đang được tham chiếu. */
   async remove(cameraId: number): Promise<void> {
     await apiClient.delete(`/api/cameras/${cameraId}`)
+  },
+
+  /**
+   * GET /api/cameras/{cameraId}/imou-player-token
+   *
+   * Trả KitToken để khởi tạo ImouPlayer (thay cho HLS `.m3u8`).
+   * Bearer token do `apiClient` gắn sẵn vào mọi request.
+   *
+   * Query mặc định: `channelId=0`, `streamId=0` (luồng HD).
+   * Trả `null` khi BE không trả `kitToken` — UI báo lỗi, không dựng player.
+   */
+  async getImouPlayerToken(
+    cameraId: number,
+    query: ImouPlayerTokenQuery = {},
+  ): Promise<ImouPlayerToken | null> {
+    const response = await apiClient.get<unknown>(
+      `/api/cameras/${cameraId}/imou-player-token`,
+      {
+        params: {
+          channelId: query.channelId ?? '0',
+          streamId: query.streamId ?? 0,
+        },
+      },
+    )
+    return normalizeImouPlayerToken(response.data)
   },
 
   // ─── Live stream (Imou cloud) ──────────────────────────────────────────

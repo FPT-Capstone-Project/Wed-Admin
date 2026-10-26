@@ -2,7 +2,11 @@ import { useEffect, useMemo, useState } from 'react'
 import { Cascader, Form, Input, Modal, Select, message } from 'antd'
 import { useRoomStore } from '../../rooms/store/room.store'
 import { TRAY_STATUS_CONFIG } from '../../rooms/components/tray-status.config'
-import { formatFriendlyDeviceLocation } from '../../../shared/i18n/terms'
+import {
+  formatFriendlyDeviceLocation,
+  formatRoomLabel,
+  formatTrayCode,
+} from '../../../shared/i18n/terms'
 import type { TierId } from '../../../types/room.types'
 import type { Tenant, TenantFormValues } from '../types/tenant.types'
 
@@ -42,7 +46,7 @@ export function TenantForm({
         .sort((left, right) => left.tierId - right.tierId)
         .map((tier) => ({
           value: tier.tierId,
-          label: `${tier.name} · ${formatFriendlyDeviceLocation(tier.nodeId)}`,
+          label: `${formatRoomLabel(tier.name, tier.roomCode, tier.tierId)} · ${formatFriendlyDeviceLocation(tier.nodeId)}`,
           children: tier.trays.map((tray) => {
             const isCurrentCustomer = tray.customerId === editingCustomerId
             const isUnavailable =
@@ -50,7 +54,7 @@ export function TenantForm({
 
             return {
               value: tray.id,
-              label: `${tray.code} · ${TRAY_STATUS_CONFIG[tray.status].label}`,
+              label: `${formatTrayCode(tray.code)} · ${TRAY_STATUS_CONFIG[tray.status].label}`,
               disabled: isUnavailable && !isCurrentCustomer,
             }
           }),

@@ -12,7 +12,6 @@ import {
   Popconfirm,
   Space,
   Table,
-  Tag,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -27,25 +26,28 @@ import type {
   CultivationTray,
 } from '../../../types/cultivation'
 import type { BeTrayStatus } from '../../../types/cultivation-status'
+import { StatusBadge } from '../../../shared/ui/StatusBadge'
+import { formatRoomLabel, formatTrayCode } from '../../../shared/i18n/terms'
+import type { SemanticTone } from '../../../app/theme/tokens'
 import { RoomFormModal } from './RoomFormModal'
 import { TrayFormModal } from './TrayFormModal'
 
 const ROOM_STATUS_CONFIG: Record<
   CultivationRoom['status'],
-  { color: string; label: string }
+  { tone: SemanticTone; label: string }
 > = {
-  ACTIVE: { color: 'success', label: 'Hoạt động' },
-  INACTIVE: { color: 'default', label: 'Ngừng hoạt động' },
-  MAINTENANCE: { color: 'warning', label: 'Bảo trì' },
+  ACTIVE: { tone: 'ok', label: 'Hoạt động' },
+  INACTIVE: { tone: 'muted', label: 'Ngừng hoạt động' },
+  MAINTENANCE: { tone: 'warning', label: 'Bảo trì' },
 }
 
 /** BE có thể trả status dạng số (vd. 5) hoặc string không khớp enum —
  *  fallback an toàn để UI không crash và hiển thị chuỗi gốc kèm nhãn rõ ràng. */
 function resolveRoomStatusBadge(
   raw: unknown,
-): { color: string; label: string } {
+): { tone: SemanticTone; label: string } {
   if (raw == null) {
-    return { color: 'default', label: '—' }
+    return { tone: 'muted', label: '—' }
   }
   const stringified = String(raw)
   const upper = stringified.toUpperCase() as CultivationRoom['status']
@@ -53,31 +55,31 @@ function resolveRoomStatusBadge(
   if (matched) return matched
   if (typeof raw === 'number') {
     return {
-      color: 'gold',
+      tone: 'warning',
       label: `Trạng thái #${stringified}`,
     }
   }
   return {
-    color: 'gold',
+    tone: 'warning',
     label: `Trạng thái lạ: ${stringified}`,
   }
 }
 
 const TRAY_STATUS_CONFIG: Record<
   BeTrayStatus,
-  { color: string; label: string }
+  { tone: SemanticTone; label: string }
 > = {
-  AVAILABLE: { color: 'success', label: 'Trống' },
-  OCCUPIED: { color: 'processing', label: 'Đang dùng' },
-  MAINTENANCE: { color: 'warning', label: 'Bảo trì' },
-  INACTIVE: { color: 'default', label: 'Ngừng' },
+  AVAILABLE: { tone: 'muted', label: 'Khay trống' },
+  OCCUPIED: { tone: 'ok', label: 'Đang thuê' },
+  MAINTENANCE: { tone: 'danger', label: 'Nhiễm bệnh / Cách ly' },
+  INACTIVE: { tone: 'muted', label: 'Ngừng hoạt động' },
 }
 
 function resolveTrayStatusBadge(
   raw: unknown,
-): { color: string; label: string } {
+): { tone: SemanticTone; label: string } {
   if (raw == null) {
-    return { color: 'default', label: '—' }
+    return { tone: 'muted', label: '—' }
   }
   const stringified = String(raw)
   const upper = stringified.toUpperCase() as BeTrayStatus
@@ -85,12 +87,12 @@ function resolveTrayStatusBadge(
   if (matched) return matched
   if (typeof raw === 'number') {
     return {
-      color: 'gold',
+      tone: 'warning',
       label: `Trạng thái #${stringified}`,
     }
   }
   return {
-    color: 'gold',
+    tone: 'warning',
     label: `Trạng thái lạ: ${stringified}`,
   }
 }
@@ -154,7 +156,12 @@ export function RoomsTraysAdminPanel({ onChanged }: RoomsTraysAdminPanelProps) {
 
   const roomNameById = useMemo(() => {
     const map = new Map<number, string>()
-    rooms.forEach((room) => map.set(room.room_id, room.room_name))
+    rooms.forEach((room) =>
+      map.set(
+        room.room_id,
+        formatRoomLabel(room.room_name, room.room_code, room.room_id),
+      ),
+    )
     return map
   }, [rooms])
 
@@ -175,6 +182,8 @@ export function RoomsTraysAdminPanel({ onChanged }: RoomsTraysAdminPanelProps) {
       dataIndex: 'room_name',
       key: 'room_name',
       width: 200,
+      render: (name: string, record) =>
+        formatRoomLabel(name, record.room_code, record.room_id),
     },
     {
       title: 'Sức chứa',
@@ -198,7 +207,7 @@ export function RoomsTraysAdminPanel({ onChanged }: RoomsTraysAdminPanelProps) {
       width: 160,
       render: (status: unknown) => {
         const config = resolveRoomStatusBadge(status)
-        return <Tag color={config.color}>{config.label}</Tag>
+        return <StatusBadge tone={config.tone} label={config.label} />
       },
     },
     {
@@ -259,7 +268,7 @@ export function RoomsTraysAdminPanel({ onChanged }: RoomsTraysAdminPanelProps) {
       width: 130,
       render: (code: string) => (
         <Typography.Text code style={{ fontSize: 12 }}>
-          {code}
+          {formatTrayCode(code)}
         </Typography.Text>
       ),
     },
@@ -290,10 +299,10 @@ export function RoomsTraysAdminPanel({ onChanged }: RoomsTraysAdminPanelProps) {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      width: 150,
+      width: 170,
       render: (status: unknown) => {
         const config = resolveTrayStatusBadge(status)
-        return <Tag color={config.color}>{config.label}</Tag>
+        return <StatusBadge tone={config.tone} label={config.label} />
       },
     },
     {

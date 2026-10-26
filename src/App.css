@@ -1663,6 +1663,18 @@ textarea {
   box-shadow: 0 0 0 3px rgb(21 128 61 / 14%);
 }
 
+/**
+ * Ô khay trong lưới kệ — nút `<button>` dùng `all: unset` nên mất focus
+ * ring mặc định của trình duyệt. Bổ sung lại để điều hướng bằng bàn phím
+ * vẫn thấy ô đang được chọn (WCAG 2.4.7 Focus Visible).
+ */
+.tray-card-btn:focus-visible,
+.rack-tray-btn:focus-visible {
+  outline: 3px solid rgb(21 128 61 / 24%);
+  outline-offset: 2px;
+  border-color: var(--mcms-primary);
+}
+
 .rack-tray--rented {
   border-left-color: var(--mcms-teal);
   background: #f0faf8;
@@ -2515,13 +2527,19 @@ textarea {
   background: #0d1512;
 }
 
-.camera-stream-modal-video {
+.camera-stream-modal-player {
   display: block;
   width: 100%;
+  min-height: 320px;
   max-height: 62vh;
   aspect-ratio: 16 / 9;
   background: #0d1512;
   object-fit: contain;
+}
+
+.camera-stream-modal-player-root {
+  width: 100%;
+  height: 100%;
 }
 
 .camera-stream-modal-loading {
@@ -2554,6 +2572,12 @@ textarea {
   white-space: nowrap;
 }
 
+.camera-stream-modal-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .camera-stream-modal-retry {
   padding: 4px 12px;
   color: var(--mcms-primary-dark);
@@ -2576,7 +2600,7 @@ textarea {
     min-height: 220px;
   }
 
-  .camera-stream-modal-video {
+  .camera-stream-modal-player {
     max-height: 46vh;
   }
 }

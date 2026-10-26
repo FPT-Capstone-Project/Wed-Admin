@@ -81,6 +81,33 @@ export interface LiveStreamQuery {
   channelId?: string
 }
 
+/** Query của `GET /api/cameras/{cameraId}/imou-player-token`. */
+export interface ImouPlayerTokenQuery {
+  /** Imou device channel; mặc định `"0"`. */
+  channelId?: string
+  /** `0` = HD, `1` = SD. Mặc định `0`. */
+  streamId?: number
+}
+
+/**
+ * Payload KitToken cho ImouPlayer (sau khi unwrap lớp `data`).
+ *
+ * `GET /api/cameras/{cameraId}/imou-player-token?channelId=0&streamId=0`
+ *
+ * KitToken hết hạn ~2 giờ theo Imou Open Platform → không cache lâu.
+ */
+export interface ImouPlayerToken {
+  /** KitToken Imou — bắt buộc để khởi tạo player. */
+  kitToken: string
+  /** Imou device SN. Nếu BE không trả, UI dùng `camera.cameraCode`. */
+  deviceId?: string | null
+  channelId?: string | null
+  /** `0` = HD, `1` = SD. */
+  streamId?: number | null
+  /** Thời hạn còn lại của token (giây), nếu BE có trả. */
+  expireTime?: number | null
+}
+
 /**
  * Response thực tế của `GET /api/cameras/{cameraId}/live-stream`.
  *
