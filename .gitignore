@@ -1,18 +1,48 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Production build outputs
+dist/
+dist-ssr/
+*.local
+.vite/
+
+# Environment Variables (Chống lộ key bảo mật)
+.env
+.env.*
+!.env.example
+
 # Server & Vite dev logs
 *.log
 .*.log
 *.err
 dev-server.*
 vite.*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
 
 # AI & preview folders
 .agents/
 .preview/
 
-# Temporary screenshots & audits
-*.png
+# Temporary files sinh bởi AI / Cursor (chỉ chặn ảnh tạm, không chặn ảnh dự án)
+_tmp_*
+*.login-shot.png
 api-audit.json
+cfg.json
 
-# Swagger dumps (nếu không cần commit lên repo)
+# Swagger dumps & reports tạm ở root (nếu có)
 sw_*
 swagger-ui-init.js
+*-REPORT*.md
+
+# Editor / OS files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
