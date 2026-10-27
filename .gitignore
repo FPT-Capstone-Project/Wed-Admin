@@ -27,3 +27,7 @@ dist-ssr
 .env
 .env.*
 
+# Tạm thời sinh bởi Cursor / AI script
+_tmp_*
+*.login-shot.png
+_tmp_ocr.ps1
