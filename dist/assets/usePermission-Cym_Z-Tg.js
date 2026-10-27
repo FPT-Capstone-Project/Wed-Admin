@@ -1,0 +1,1 @@
+import{r as e}from"./rolldown-runtime-hePW80VL.js";import{In as t}from"./vendor-antd-DJ1qXToB.js";import{u as n}from"./index-CkMuTYcJ.js";var r=e(t(),1);function i(e){let t=n(e=>e.user?.permissions);return(0,r.useMemo)(()=>t?.includes(e)??!1,[e,t])}export{i as t};
