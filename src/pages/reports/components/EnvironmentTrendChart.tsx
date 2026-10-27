@@ -49,17 +49,6 @@ export function EnvironmentTrendChart({
             width={42}
             tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
           />
-          <YAxis
-            yAxisId="co2"
-            orientation="right"
-            domain={[0, 1600]}
-            unit=" ppm"
-            width={58}
-            axisLine={false}
-            tickLine={false}
-            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 11 }}
-            tickCount={5}
-          />
           <Tooltip
             formatter={(value, name) => {
               const numericValue =
@@ -70,11 +59,7 @@ export function EnvironmentTrendChart({
                 return [`${numericValue.toFixed(1)} °C`, label]
               }
 
-              if (label === 'Độ ẩm') {
-                return [`${numericValue}%RH`, label]
-              }
-
-              return [`${numericValue} ppm`, label]
+              return [`${numericValue}%RH`, label]
             }}
           />
           <Legend />
@@ -94,16 +79,6 @@ export function EnvironmentTrendChart({
             name="Độ ẩm"
             stroke={tones.info.solid}
             strokeWidth={2}
-            dot={false}
-          />
-          <Line
-            yAxisId="co2"
-            type="monotone"
-            dataKey="co2"
-            name="CO₂"
-            stroke={tones.neutral.solid}
-            strokeWidth={2}
-            strokeDasharray="6 4"
             dot={false}
           />
         </LineChart>

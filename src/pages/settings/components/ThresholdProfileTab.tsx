@@ -1,35 +1,21 @@
 import { useMemo } from 'react'
-import {
-  BulbOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PlusOutlined,
-  StarFilled,
-  StarOutlined,
-} from '@ant-design/icons'
+import { EyeOutlined } from '@ant-design/icons'
 import {
   Alert,
-  Button,
   Empty,
   Flex,
-  Popconfirm,
-  Space,
   Table,
   Tooltip,
   Typography,
-  message,
 } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { useSettingStore } from '../../../stores/setting.store'
 import type { MushroomThresholdProfile } from '../../../types/setting.types'
 import type { SemanticTone } from '../../../app/theme/tokens'
-import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { StatusBadge } from '../../../shared/ui'
 
 interface ThresholdProfileTabProps {
-  canEdit: boolean
   visibleMushroomTypes?: string[]
-  onAdd: () => void
-  onEdit: (profile: MushroomThresholdProfile) => void
 }
 
 /**
@@ -61,19 +47,19 @@ function RangeCell({
   )
 }
 
+/**
+ * Bảng hồ sơ vi khí hậu — **CHỈ XEM**.
+ *
+ * ⚠ Admin web không được đặt / sửa / xoá ngưỡng. Việc này do nhân viên
+ * (staff) thực hiện trên mobile app (`iot.automation.manage`).
+ *
+ * Vì vậy bảng không có cột "Hành động" và không có nút "Thêm giống nấm" —
+ * chỉ hiển thị dải ngưỡng đang áp dụng để admin theo dõi.
+ */
 export function ThresholdProfileTab({
-  canEdit,
   visibleMushroomTypes,
-  onAdd,
-  onEdit,
 }: ThresholdProfileTabProps) {
   const profiles = useSettingStore((state) => state.thresholdProfiles)
-  const setDefaultProfile = useSettingStore(
-    (state) => state.setDefaultThresholdProfile,
-  )
-  const deleteProfile = useSettingStore(
-    (state) => state.deleteThresholdProfile,
-  )
 
   const visibleProfiles = useMemo(
     () =>
@@ -131,19 +117,6 @@ export function ThresholdProfileTab({
       ),
     },
     {
-      title: 'CO₂ (ppm)',
-      key: 'co2',
-      width: 170,
-      render: (_, profile) => (
-        <RangeCell
-          min={profile.co2Min}
-          max={profile.co2Max}
-          unit="ppm"
-          tone="neutral"
-        />
-      ),
-    },
-    {
       title: 'Ẩm giá thể (%)',
       key: 'soilMoisture',
       width: 160,
@@ -168,67 +141,6 @@ export function ThresholdProfileTab({
         </Tooltip>
       ),
     },
-    ...(canEdit
-      ? [
-          {
-            title: 'Hành động',
-            key: 'actions',
-            width: 220,
-            align: 'right' as const,
-            fixed: 'right' as const,
-            render: (_: unknown, profile: MushroomThresholdProfile) => (
-              <Space size={6}>
-                <ActionButton
-                  icon={<EditOutlined />}
-                  label="Sửa"
-                  description={`Sửa hồ sơ ${profile.name}`}
-                  onClick={() => onEdit(profile)}
-                />
-
-                <ActionButton
-                  icon={profile.isDefault ? <StarFilled /> : <StarOutlined />}
-                  label={profile.isDefault ? 'Mặc định' : 'Đặt mặc định'}
-                  description={
-                    profile.isDefault
-                      ? 'Đang là hồ sơ mặc định'
-                      : 'Đặt làm hồ sơ mặc định'
-                  }
-                  variant={profile.isDefault ? 'primary' : 'default'}
-                  disabled={profile.isDefault}
-                  onClick={() => {
-                    setDefaultProfile(profile.id)
-                    message.success('Đã đặt hồ sơ làm mặc định.')
-                  }}
-                />
-
-                <Popconfirm
-                  title="Xóa hồ sơ vi khí hậu?"
-                  description={
-                    profile.isDefault
-                      ? 'Hồ sơ mặc định không thể xóa.'
-                      : 'Thao tác này không thể hoàn tác.'
-                  }
-                  okText="Xóa"
-                  cancelText="Hủy"
-                  okButtonProps={{ danger: true, disabled: profile.isDefault }}
-                  onConfirm={() => {
-                    deleteProfile(profile.id)
-                    message.success('Đã xóa hồ sơ.')
-                  }}
-                >
-                  <ActionButton
-                    icon={<DeleteOutlined />}
-                    label="Xóa"
-                    description={`Xóa hồ sơ ${profile.name}`}
-                    variant="danger"
-                    disabled={profile.isDefault}
-                  />
-                </Popconfirm>
-              </Space>
-            ),
-          } as const,
-        ]
-      : []),
   ]
 
   return (
@@ -236,12 +148,13 @@ export function ThresholdProfileTab({
       <Alert
         type="info"
         showIcon
-        icon={<BulbOutlined />}
+        icon={<EyeOutlined />}
         message={
           <Typography.Text style={{ fontSize: 13 }}>
-            <strong>Mẹo vận hành:</strong> Các tầng đang bật chế độ{' '}
+            <strong>Chế độ chỉ xem:</strong> Các tầng đang bật chế độ{' '}
             <StatusBadge tone="ok" label="AUTO" style={{ margin: '0 4px' }} />
             sẽ tự động đồng bộ theo ngưỡng của giống nấm được gán trên khay.
+            Việc đặt / sửa ngưỡng do nhân viên thực hiện trên mobile app.
           </Typography.Text>
         }
         style={{ marginBottom: 16, borderRadius: 10 }}
@@ -259,16 +172,15 @@ export function ThresholdProfileTab({
             Thông số canh tác theo giống nấm
           </Typography.Title>
           <Typography.Text type="secondary">
-            Dải nhiệt độ, độ ẩm, CO₂ và ẩm giá thể áp dụng cho relay AUTO và
+            Dải nhiệt độ, độ ẩm và ẩm giá thể áp dụng cho relay AUTO và
             cảnh báo cảm biến
           </Typography.Text>
         </div>
 
-        {canEdit && (
-          <Button type="primary" icon={<PlusOutlined />} onClick={onAdd}>
-            Thêm giống nấm
-          </Button>
-        )}
+        <StatusBadge
+          tone="neutral"
+          label="Chỉ xem — nhân viên thiết lập trên mobile app"
+        />
       </Flex>
 
       <Table<MushroomThresholdProfile>

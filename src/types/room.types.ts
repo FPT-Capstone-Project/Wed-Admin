@@ -90,8 +90,6 @@ export interface Tray {
 export interface TierTelemetry {
   temperature: number
   humidity: number
-  /** null khi BE chưa expose CO₂ sensor. */
-  co2: number | null
   updatedAt: string
 }
 

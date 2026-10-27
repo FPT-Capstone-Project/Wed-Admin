@@ -1,24 +1,15 @@
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
 import type {
-  AutoControlEvaluateResult,
-  AutoControlLogEntry,
-  AutoControlLogsQuery,
-  AutoControlState,
   AutoControlSuggestions,
   AutoMistingConfiguration,
-  CreateIotCommandRequest,
   CultivationFloorMapping,
-  CultivationFloorMappingInput,
   FloorEnvironmentResponse,
-  IotCommand,
   IotHistoryQuery,
   IotHistoryResponse,
   IotMaster,
   IotSensor,
   IotSensorsResponse,
-  IotSsrChannelState,
-  IotSsrResponse,
 } from '../../../types/iot'
 
 // ─── IoT Masters / Sensors / History / SSR ────────────────────────────────
@@ -58,70 +49,18 @@ export const iotApi = {
     )
     return ensureObject<IotHistoryResponse>(response.data)
   },
-
-  async getSsr(masterId: string): Promise<IotSsrResponse | null> {
-    const response = await apiClient.get<unknown>(
-      `/api/iot/masters/${masterId}/ssr`,
-    )
-    return ensureObject<IotSsrResponse>(response.data)
-  },
-
-  async createManualCommand(
-    masterId: string,
-    channel: number,
-    payload: CreateIotCommandRequest,
-  ): Promise<IotCommand | null> {
-    const response = await apiClient.post<unknown>(
-      `/api/iot/masters/${masterId}/ssr/${channel}/commands`,
-      payload,
-    )
-    return ensureObject<IotCommand>(response.data)
-  },
-
-  async getCommandStatus(commandId: string): Promise<IotCommand | null> {
-    const response = await apiClient.get<unknown>(
-      `/api/iot/commands/${commandId}`,
-    )
-    return ensureObject<IotCommand>(response.data)
-  },
-
-  /** Flat channel list for UI convenience */
-  async listSsrChannels(masterId: string): Promise<IotSsrChannelState[]> {
-    const ssr = await this.getSsr(masterId)
-    return ssr?.channels ?? []
-  },
 }
 
-// ─── Automatic Misting ────────────────────────────────────────────────────
+// ─── Automatic Misting (READ-ONLY) ─────────────────────────────────────
+//
+// ⚠ Web admin chỉ GIÁM SÁT. Mọi endpoint ghi (tạo/sửa tầng, gán khay, lưu
+// cấu hình auto-control, start/stop/evaluate) do **nhân viên (staff)** thực
+// hiện trên mobile app — xem `features/auth/permissions.ts`
+// (`iot.automation.manage`). Vì vậy FE không còn bọc các endpoint đó.
 export const autoMistingApi = {
   async listFloors(): Promise<CultivationFloorMapping[]> {
     const response = await apiClient.get<unknown>('/api/iot/floors')
     return ensureArray<CultivationFloorMapping>(response.data)
-  },
-
-  async createFloor(
-    payload: CultivationFloorMappingInput,
-  ): Promise<CultivationFloorMapping | null> {
-    const response = await apiClient.post<unknown>(
-      '/api/iot/floors',
-      payload,
-    )
-    return ensureObject<CultivationFloorMapping>(response.data)
-  },
-
-  async updateFloor(
-    floorId: number,
-    payload: CultivationFloorMappingInput,
-  ): Promise<CultivationFloorMapping | null> {
-    const response = await apiClient.put<unknown>(
-      `/api/iot/floors/${floorId}`,
-      payload,
-    )
-    return ensureObject<CultivationFloorMapping>(response.data)
-  },
-
-  async assignFloorToTray(floorId: number, trayId: number): Promise<void> {
-    await apiClient.put(`/api/iot/floors/${floorId}/trays/${trayId}`)
   },
 
   /**
@@ -148,20 +87,6 @@ export const autoMistingApi = {
   },
 
   /**
-   * GET /api/iot/floors/{floorId}/auto-control — cấu hình + mode + runtime.
-   *
-   * Swagger: *"Read saved configuration, mode, cultivation conflicts and
-   * suggestions"*. Response gốc là `{ data: { mode, config, run, runtime,
-   * environment, ssr, cooldownRemainingMs, lastDecision } }`.
-   */
-  async getConfig(floorId: number): Promise<AutoControlState | null> {
-    const response = await apiClient.get<unknown>(
-      `/api/iot/floors/${floorId}/auto-control`,
-    )
-    return ensureObject<AutoControlState>(response.data)
-  },
-
-  /**
    * GET /api/iot/floors/{floorId}/auto-control/suggestions — ngưỡng đề xuất.
    *
    * Swagger: *"Uses ACTIVE tray sessions linked to ACTIVE rentals on the same
@@ -179,88 +104,6 @@ export const autoMistingApi = {
       `/api/iot/floors/${floorId}/auto-control/suggestions`,
     )
     return ensureObject<AutoControlSuggestions>(response.data)
-  },
-
-  /**
-   * PUT /api/iot/floors/{floorId}/auto-control — lưu cấu hình, KHÔNG bật AUTO.
-   *
-   * Swagger: *"Save configuration without starting AUTO. ... Stop before
-   * edits. Requires iot.automation.manage permission."*
-   *
-   * ⚠ Schema có `additionalProperties: false` → không gửi field lạ, nếu không
-   * BE trả 400. Nhánh `config_source: 'FLOOR'` yêu cầu `profile_name` +
-   * `profile_approved: true` (thiếu → 409 `unapproved profiles` khi start).
-   */
-  async saveConfig(
-    floorId: number,
-    payload: AutoMistingConfiguration,
-  ): Promise<AutoControlState | null> {
-    const response = await apiClient.put<unknown>(
-      `/api/iot/floors/${floorId}/auto-control`,
-      payload,
-    )
-    return ensureObject<AutoControlState>(response.data)
-  },
-
-  async start(floorId: number): Promise<AutoControlState | null> {
-    const response = await apiClient.post<unknown>(
-      `/api/iot/floors/${floorId}/auto-control/start`,
-    )
-    return ensureObject<AutoControlState>(response.data)
-  },
-
-  async stop(floorId: number): Promise<AutoControlState | null> {
-    const response = await apiClient.post<unknown>(
-      `/api/iot/floors/${floorId}/auto-control/stop`,
-    )
-    return ensureObject<AutoControlState>(response.data)
-  },
-
-  async getStatus(floorId: number): Promise<AutoControlState | null> {
-    const response = await apiClient.get<unknown>(
-      `/api/iot/floors/${floorId}/auto-control/status`,
-    )
-    return ensureObject<AutoControlState>(response.data)
-  },
-
-  /**
-   * GET /api/iot/floors/{floorId}/auto-control/logs — lịch sử quyết định.
-   *
-   * Response gốc là `{ data: { limit, offset, logs: [...] } }` — đây là object
-   * chứa mảng, không phải mảng trực tiếp, nên phải bóc `logs` thủ công.
-   */
-  async getLogs(floorId: number, query: AutoControlLogsQuery = {}): Promise<AutoControlLogEntry[]> {
-    const response = await apiClient.get<unknown>(
-      `/api/iot/floors/${floorId}/auto-control/logs`,
-      { params: { limit: query.limit ?? 50, offset: query.offset ?? 0 } },
-    )
-    const payload = ensureObject<{ logs?: unknown }>(response.data)
-    return ensureArray<AutoControlLogEntry>(payload?.logs ?? response.data)
-  },
-
-  async evaluate(
-    floorId: number,
-  ): Promise<AutoControlEvaluateResult | null> {
-    const response = await apiClient.post<unknown>(
-      `/api/iot/floors/${floorId}/auto-control/evaluate`,
-    )
-    const result = ensureObject<AutoControlEvaluateResult>(response.data)
-    if (!result) return null
-
-    // BE trả `{ dryRun, decision, environment }` — `environment` là nguồn số
-    // đo thật, nên suy ra `metrics` từ đó thay vì để UI tự tính lại.
-    const env = result.environment
-    return {
-      ...result,
-      metrics:
-        env != null
-          ? {
-              avgHumidity: env.avgHumidity,
-              spreadPercent: env.spread,
-              validSensors: env.sensors.filter((s) => s.valid).length,
-            }
-          : result.metrics,
-    }
   },
 }
 

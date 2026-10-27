@@ -3,7 +3,6 @@ export type AlertSeverity = 'INFO' | 'WARNING' | 'CRITICAL'
 export type AlertCategory =
   | 'TEMPERATURE'
   | 'HUMIDITY'
-  | 'CO2'
   | 'DEVICE_OFFLINE'
   | 'HARDWARE_FAULT'
   | 'ORDER_OVERDUE'
@@ -43,7 +42,6 @@ export interface EnvironmentHistoryPoint {
   date?: string
   temperature: number
   humidity: number
-  co2: number
   soilMoisture: number
   trayId?: string
 }

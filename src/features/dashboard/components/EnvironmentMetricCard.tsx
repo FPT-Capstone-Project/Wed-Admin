@@ -1,5 +1,5 @@
 /**
- * EnvironmentMetricCard — thẻ chỉ số môi trường (Nhiệt độ / Độ ẩm / CO₂).
+ * EnvironmentMetricCard — thẻ chỉ số môi trường (Nhiệt độ / Độ ẩm).
  *
  * Refactor dùng `StatCard` từ shared/ui để đảm bảo nhất quán phân cấp thị giác
  * và không hardcode màu.
@@ -7,19 +7,17 @@
  * Mapping tone:
  *   coral → danger (đỏ cam, nhiệt độ)
  *   teal  → info   (xanh teal, độ ẩm)
- *   amber → warning (vàng, CO₂)
  */
 import type { ReactNode } from 'react'
 import { Flex } from 'antd'
 import { StatCard, StatusBadge } from '../../../shared/ui'
 import type { SemanticTone } from '../../../app/theme/tokens'
 
-type EnvironmentTone = 'coral' | 'teal' | 'amber'
+type EnvironmentTone = 'coral' | 'teal'
 
 const TONE_MAP: Record<EnvironmentTone, SemanticTone> = {
   coral: 'danger',
   teal: 'info',
-  amber: 'warning',
 }
 
 interface EnvironmentMetricCardProps {

@@ -14,7 +14,6 @@ import {
   OrderedListOutlined,
   TagsOutlined,
   TeamOutlined,
-  UserOutlined,
   VideoCameraOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
@@ -91,11 +90,6 @@ const MENU_ITEMS: MenuProps['items'] = [
     label: 'QUẢN TRỊ',
     children: [
       {
-        key: '/customers',
-        icon: <UserOutlined />,
-        label: 'Khách thuê',
-      },
-      {
         key: '/orders',
         icon: <OrderedListOutlined />,
         label: 'Đơn đặt từ App',
@@ -132,7 +126,6 @@ const PAGE_TITLES: Record<string, string> = {
   '/cultivation': 'Sinh trưởng & thu hoạch',
   '/alerts': 'Cảnh báo vi khí hậu',
   '/reports': 'Báo cáo & phân tích',
-  '/customers': 'Quản lý khách thuê',
   '/orders': 'Quản lý đơn đặt',
   '/rentals': 'Quản lý vụ thuê',
   '/packages': 'Gói cước thuê',
@@ -144,10 +137,6 @@ const PAGE_TITLES: Record<string, string> = {
 function getSelectedMenuKey(pathname: string) {
   if (pathname.startsWith('/rooms') || pathname.startsWith('/trays')) {
     return '/rooms'
-  }
-
-  if (pathname.startsWith('/customers') || pathname.startsWith('/tenants')) {
-    return '/customers'
   }
 
   const matchingPath = Object.keys(PAGE_TITLES)

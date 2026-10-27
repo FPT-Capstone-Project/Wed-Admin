@@ -253,7 +253,7 @@ export const MOCK_CULTIVATION_BATCHES: CultivationBatch[] = [
         'FRUITING',
         'Tai nấm phát triển đồng đều, màu sắc ổn định.',
         'Phạm Hoàng Nam',
-        'Giữ CO₂ dưới 800 ppm.',
+        'Giữ độ ẩm ổn định 80–90%RH.',
         '2026-08-30T14:20:00+07:00',
         createSnapshot(
           'SNAP-002-FRUITING',

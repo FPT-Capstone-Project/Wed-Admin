@@ -53,13 +53,6 @@ const METRICS: Array<{
     unit: '%RH',
     dash: '7 4',
   },
-  {
-    key: 'co2',
-    label: 'CO₂',
-    color: 'var(--mcms-amber)',
-    unit: 'ppm',
-    dash: '2 5',
-  },
 ]
 
 /**
@@ -198,7 +191,7 @@ export function IoTTelemetryChart({
 }: IoTTelemetryChartProps) {
   const [visibleMetrics, setVisibleMetrics] = useState<
     Record<TelemetryMetric, boolean>
-  >({ temperature: true, humidity: true, co2: true })
+  >({ temperature: true, humidity: true })
   const [range, setRange] = useState({ startIndex: 0, endIndex: data.length - 1 })
 
   const toggleMetric = (metric: TelemetryMetric) => {
@@ -293,7 +286,6 @@ export function IoTTelemetryChart({
             />
             {metric.key === 'temperature' && <FireOutlined aria-hidden="true" />}
             {metric.key === 'humidity' && <CloudOutlined aria-hidden="true" />}
-            {metric.key === 'co2' && <ThunderboltOutlined aria-hidden="true" />}
             {metric.label}
           </button>
         ))}
@@ -320,7 +312,7 @@ export function IoTTelemetryChart({
       <div
         className="iot-session-chart"
         role="img"
-        aria-label={`Biểu đồ nhiệt độ, độ ẩm và CO2 của ${session.tenantName} trong mẻ ${session.id}.`}
+        aria-label={`Biểu đồ nhiệt độ và độ ẩm của ${session.tenantName} trong mẻ ${session.id}.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
@@ -371,7 +363,6 @@ export function IoTTelemetryChart({
               axisLine={false}
               tickLine={false}
             />
-            <YAxis yAxisId="co2" domain={[300, 1300]} hide />
             <Tooltip content={TelemetryTooltip} />
             <Line
               yAxisId="temperature"
@@ -394,18 +385,6 @@ export function IoTTelemetryChart({
               strokeDasharray="7 4"
               dot={false}
               hide={!visibleMetrics.humidity}
-              isAnimationActive={false}
-            />
-            <Line
-              yAxisId="co2"
-              dataKey="co2"
-              name="CO₂"
-              type="monotone"
-              stroke="var(--mcms-amber)"
-              strokeWidth={2.2}
-              strokeDasharray="2 5"
-              dot={false}
-              hide={!visibleMetrics.co2}
               isAnimationActive={false}
             />
             {chartEventPoints.map((event) => {

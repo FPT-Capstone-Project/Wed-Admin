@@ -33,7 +33,6 @@ import { TrayInvoiceModal } from './TrayInvoiceModal'
 import { TrayStaffActionWorkflow } from './TrayStaffActionWorkflow'
 import { TrayStatusTag } from './TrayStatusTag'
 import { useRoomStore } from '../../../stores/room.store'
-import { useTenantStore } from '../../tenants/store/tenant.store'
 
 interface TrayDetailDrawerProps {
   trayId: string | null
@@ -224,8 +223,6 @@ export function TrayDetailDrawer({
   const closeTraySession = useRoomStore((state) => state.closeTraySession)
   const confirmTrayCustomerContact = useRoomStore((state) => state.confirmTrayCustomerContact)
   const addTrayCareLog = useRoomStore((state) => state.addTrayCareLog)
-  const tenants = useTenantStore((state) => state.tenants)
-  void tenants
 
   // API lookup
   const { data: apiTrays = [], isLoading: traysLoading } = useAllUiTrays()

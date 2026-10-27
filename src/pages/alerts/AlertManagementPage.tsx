@@ -16,8 +16,9 @@ import {
   message,
 } from 'antd'
 import { useAuthStore } from '../../features/auth/store/auth.store'
-import { useTenantStore } from '../../features/tenants/store/tenant.store'
 import { useAlertStore } from '../../stores/alert.store'
+import { useRoomStore } from '../../stores/room.store'
+import { getCustomerTrayIds } from '../../features/rooms/utils/tray-customer.utils'
 import { AlertItemRow } from './components/AlertItemRow'
 import { ActionButton, EmptyState, PageHeader, StatCard, StatusBadge } from '../../shared/ui'
 import type {
@@ -37,7 +38,6 @@ const SEVERITY_OPTIONS = [
 const CATEGORY_OPTIONS = [
   { value: 'TEMPERATURE', label: 'Nhiệt độ' },
   { value: 'HUMIDITY', label: 'Độ ẩm' },
-  { value: 'CO2', label: 'CO₂' },
   { value: 'DEVICE_OFFLINE', label: 'Node STM32 mất kết nối' },
   { value: 'HARDWARE_FAULT', label: 'Lỗi phần cứng' },
 ] satisfies Array<{ value: AlertCategory; label: string }>
@@ -72,7 +72,7 @@ export function AlertManagementPage() {
   const acknowledgeAlert = useAlertStore((state) => state.acknowledgeAlert)
   const acknowledgeAll = useAlertStore((state) => state.acknowledgeAll)
   const authUser = useAuthStore((state) => state.user)
-  const tenants = useTenantStore((state) => state.tenants)
+  const tiers = useRoomStore((state) => state.tiers)
   const canManage = canManageAlerts(authUser?.role)
 
   const [searchText, setSearchText] = useState('')
@@ -82,15 +82,10 @@ export function AlertManagementPage() {
   const [acknowledgementFilter, setAcknowledgementFilter] =
     useState<AlertAcknowledgementFilter>('UNACKNOWLEDGED')
 
-  const customerTrayIds = useMemo(() => {
-    if (!authUser) {
-      return []
-    }
-
-    return tenants
-      .filter((tenant) => tenant.name === authUser.fullName)
-      .map((tenant) => tenant.assignedTrayId)
-  }, [authUser, tenants])
+  const customerTrayIds = useMemo(
+    () => getCustomerTrayIds(tiers, authUser?.fullName),
+    [authUser, tiers],
+  )
 
   const scopedAlerts = useMemo(
     () =>

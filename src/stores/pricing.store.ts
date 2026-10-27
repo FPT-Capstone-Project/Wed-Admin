@@ -65,7 +65,7 @@ export const MOCK_MUSHROOM_VARIETIES: MushroomVariety[] = [
     name: 'Nấm Mối Đen',
     imageUrl: MUSHROOM_VARIETY_PHOTOS['Nấm Mối Đen']!,
     description:
-      'Giống MD-03, chu kỳ dài hơn, cần ổn định CO₂ < 800ppm.',
+      'Giống MD-03, chu kỳ dài hơn, cần ổn định độ ẩm 80–90%RH.',
     cycleWeeks: 2,
     spawnPricePerTray: 70_000,
     availability: 'AVAILABLE',

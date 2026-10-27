@@ -52,7 +52,6 @@ export interface RentalSession {
   status: RentalSessionStatus
   avgTemp: number
   avgHumidity: number
-  avgCo2: number
   stagesTimeline: StageTimelineItem[]
   statusLogs: OrderStatusLog[]
 }
@@ -67,7 +66,6 @@ export interface TelemetryPoint {
   timestamp: string
   temperature: number
   humidity: number
-  co2: number
   irrigationActive?: boolean
   fanActive?: boolean
 }
@@ -76,7 +74,6 @@ export interface LongTermTelemetryPoint {
   timestamp: string
   temperature: number
   humidity: number
-  co2: number
 }
 
 export type HistoryViewMode = 'sessions' | 'long-term'
@@ -85,4 +82,4 @@ export type HistoryRangePreset =
   | 'COMPARE_2025_2026'
   | 'ALL'
 export type HistoryGranularity = 'MONTH' | 'WEEK'
-export type TelemetryMetric = 'temperature' | 'humidity' | 'co2'
+export type TelemetryMetric = 'temperature' | 'humidity'

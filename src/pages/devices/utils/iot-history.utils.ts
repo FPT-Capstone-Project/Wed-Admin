@@ -13,7 +13,6 @@ export interface AggregatedTelemetryPoint {
   period: number
   temperature: number
   humidity: number
-  co2: number
 }
 
 export interface ComparisonTelemetryPoint {
@@ -65,7 +64,6 @@ export function aggregateLongTermTelemetry(
       period: number
       temperature: number
       humidity: number
-      co2: number
       count: number
     }
   >()
@@ -81,13 +79,11 @@ export function aggregateLongTermTelemetry(
       period,
       temperature: 0,
       humidity: 0,
-      co2: 0,
       count: 0,
     }
 
     current.temperature += point.temperature
     current.humidity += point.humidity
-    current.co2 += point.co2
     current.count += 1
     groups.set(key, current)
   })
@@ -108,7 +104,6 @@ export function aggregateLongTermTelemetry(
           : `W${String(group.period).padStart(2, '0')}/${String(group.year).slice(-2)}`,
       temperature: roundToOneDecimal(group.temperature / group.count),
       humidity: roundToOneDecimal(group.humidity / group.count),
-      co2: Math.round(group.co2 / group.count),
     }))
 }
 

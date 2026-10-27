@@ -1,6 +1,15 @@
 /**
  * IoT — DTOs khớp Swagger.
- * Endpoints:
+ *
+ * ⚠ Web admin ở chế độ **CHỈ GIÁM SÁT**: mọi endpoint ghi (tạo/sửa tầng,
+ * gán khay, lưu cấu hình auto-control, start/stop/evaluate, lệnh SSR thủ
+ * công) do **nhân viên (staff)** thực hiện trên mobile app — xem
+ * `features/auth/permissions.ts` (`iot.automation.manage`).
+ *
+ * File này vẫn khai báo **đầy đủ DTO theo Swagger** (kể cả phần FE không
+ * dùng) để khớp contract với Backend — giống `types/mushroom-condition.ts`.
+ *
+ * Endpoints (Swagger):
  *   /api/iot/masters
  *   /api/iot/masters/{masterId}/sensors
  *   /api/iot/masters/{masterId}/nodes/{nodeId}/sensors/{sensorId}/history
@@ -395,8 +404,6 @@ export interface AutoControlSuggestionProfile {
   temperature_max?: number | null
   humidity_min?: number | null
   humidity_max?: number | null
-  co2_min?: number | null
-  co2_max?: number | null
 }
 
 export interface AutoControlSuggestionConflict {

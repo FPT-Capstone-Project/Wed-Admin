@@ -160,7 +160,7 @@ export function LoginPage() {
               <RadarChartOutlined aria-hidden="true" />
               <span className="mcms-login-brand-feature-text">
                 <strong>Giám sát vi khí hậu 24/7</strong>
-                <span>Nhiệt độ, độ ẩm khay, nồng độ CO₂ và ánh sáng theo thời gian thực.</span>
+                <span>Nhiệt độ, độ ẩm khay và ánh sáng theo thời gian thực.</span>
               </span>
             </li>
             <li className="mcms-login-brand-feature">

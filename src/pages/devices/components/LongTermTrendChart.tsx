@@ -38,7 +38,6 @@ interface LongTermChartDatum {
   period: number
   temperature?: number
   humidity?: number
-  co2?: number
   temperature2025?: number
   temperature2026?: number
   humidity2025?: number

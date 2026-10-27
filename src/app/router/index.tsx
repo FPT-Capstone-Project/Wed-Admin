@@ -22,7 +22,6 @@ import {
   RoomListPage,
   SettingsPage,
   StyleGuidePage,
-  TenantListPage,
   UserManagementPage,
 } from './lazy-pages'
 
@@ -113,14 +112,6 @@ export const router = createBrowserRouter([
             <ReportsAnalyticsPage />
           </ReportsErrorBoundary>,
         ),
-      },
-      {
-        path: 'customers',
-        element: withSuspense(<TenantListPage />),
-      },
-      {
-        path: 'tenants',
-        element: <Navigate to="/customers" replace />,
       },
       {
         path: 'camera',

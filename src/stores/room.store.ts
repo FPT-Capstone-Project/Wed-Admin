@@ -106,7 +106,7 @@ function createTier(
 export const MOCK_TIERS: Tier[] = [
   createTier(
     1,
-    { temperature: 25.2, humidity: 88, co2: 630 },
+    { temperature: 25.2, humidity: 88 },
     [
       {
         position: 1,
@@ -169,7 +169,7 @@ export const MOCK_TIERS: Tier[] = [
   ),
   createTier(
     2,
-    { temperature: 26.4, humidity: 82, co2: 780 },
+    { temperature: 26.4, humidity: 82 },
     [
       {
         position: 1,
@@ -196,7 +196,7 @@ export const MOCK_TIERS: Tier[] = [
   ),
   createTier(
     3,
-    { temperature: 24.8, humidity: 90, co2: 710 },
+    { temperature: 24.8, humidity: 90 },
     [
       {
         position: 1,
@@ -223,7 +223,7 @@ export const MOCK_TIERS: Tier[] = [
   ),
   createTier(
     4,
-    { temperature: 25.9, humidity: 85, co2: 860 },
+    { temperature: 25.9, humidity: 85 },
     [
       { position: 1 },
       { position: 2 },
@@ -235,8 +235,6 @@ export const MOCK_TIERS: Tier[] = [
 interface RoomState {
   tiers: Tier[]
   closureRecords: TrayClosureRecord[]
-  assignCustomerToTray: (trayId: string, customerId: string) => void
-  releaseCustomerTrays: (customerId: string) => void
   updateTrayHarvestStatus: (
     trayId: string,
     harvestStatus: HarvestStatus,
@@ -257,61 +255,6 @@ export function findTray(tiers: Tier[], trayId: string) {
 export const useRoomStore = create<RoomState>((set, get) => ({
   tiers: MOCK_TIERS,
   closureRecords: [],
-
-  assignCustomerToTray: (trayId, customerId) => {
-    const tray = findTray(get().tiers, trayId)
-
-    if (!tray) {
-      throw new Error('Không tìm thấy khay đã chọn.')
-    }
-
-    const isOwnedByAnotherCustomer =
-      tray.customerId !== null && tray.customerId !== customerId
-    const isUnavailableStatus =
-      (tray.status === 'maintenance' || tray.status === 'harvesting') &&
-      tray.customerId !== customerId
-
-    if (isOwnedByAnotherCustomer || isUnavailableStatus) {
-      throw new Error(`${tray.code} hiện không thể gán cho khách thuê.`)
-    }
-
-    set((state) => ({
-      tiers: state.tiers.map((tier) => ({
-        ...tier,
-        trays: tier.trays.map((item) => {
-          if (item.id === trayId) {
-            return { ...item, customerId, status: 'rented' }
-          }
-
-          if (item.customerId === customerId) {
-            return {
-              ...item,
-              customerId: null,
-              status: item.batchId ? 'harvesting' : 'empty',
-            }
-          }
-
-          return item
-        }),
-      })),
-    }))
-  },
-
-  releaseCustomerTrays: (customerId) =>
-    set((state) => ({
-      tiers: state.tiers.map((tier) => ({
-        ...tier,
-        trays: tier.trays.map((tray) =>
-          tray.customerId === customerId
-            ? {
-                ...tray,
-                customerId: null,
-                status: tray.batchId ? 'harvesting' : 'empty',
-              }
-            : tray,
-        ),
-      })),
-    })),
 
   updateTrayHarvestStatus: (trayId, harvestStatus) =>
     set((state) => ({

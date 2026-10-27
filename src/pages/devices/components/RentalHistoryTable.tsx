@@ -73,7 +73,6 @@ export function RentalHistoryTable({
         <div className="history-average-metrics">
           <span>{session.avgTemp.toLocaleString('vi-VN')}°C</span>
           <span>{session.avgHumidity.toLocaleString('vi-VN')}%RH</span>
-          <span>{session.avgCo2.toLocaleString('vi-VN')} ppm</span>
         </div>
       ),
     },

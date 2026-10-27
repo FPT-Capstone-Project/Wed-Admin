@@ -4,7 +4,7 @@
  * Bố cục (theo thứ tự ưu tiên):
  *   1. PageHeader   — tiêu đề + ngày hôm nay (shared/ui)
  *   2. KPI Row      — 4 thẻ thống kê nhanh (QuickSummaryStats)
- *   3. Môi trường   — 3 thẻ chỉ số + biểu đồ 24h
+ *   3. Môi trường   — 2 thẻ chỉ số + biểu đồ 24h
  *   4. Cảnh báo     — danh sách 3 cảnh báo gần nhất
  *
  * Logic lấy dữ liệu giữ nguyên — chỉ thay đổi phần render/bố cục.
@@ -13,7 +13,6 @@ import {
   CalendarOutlined,
   CheckCircleFilled,
   CloudOutlined,
-  CloudServerOutlined,
   FireOutlined,
 } from '@ant-design/icons'
 import { Col, Row, Typography } from 'antd'
@@ -92,21 +91,6 @@ export function DashboardPage() {
               ) / tierCount,
             )
           : 0,
-      averageCo2:
-        tierCount > 0
-          ? Math.round(
-              tiers
-                .map((tier) => tier.telemetry.co2)
-                .filter((value): value is number => value != null)
-                .reduce((total, value) => total + value, 0) /
-                Math.max(
-                  tiers.filter(
-                    (tier) => tier.telemetry.co2 != null,
-                  ).length,
-                  1,
-                ),
-            )
-          : 0,
     }
   }, [alerts, tiers])
 
@@ -146,7 +130,7 @@ export function DashboardPage() {
         </div>
 
         <Row gutter={[16, 16]}>
-          <Col xs={24} sm={12} xl={8}>
+          <Col xs={24} sm={12} xl={12}>
             <EnvironmentMetricCard
               title="Nhiệt độ trung bình"
               value={summary.averageTemperature}
@@ -159,7 +143,7 @@ export function DashboardPage() {
             />
           </Col>
 
-          <Col xs={24} sm={12} xl={8}>
+          <Col xs={24} sm={12} xl={12}>
             <EnvironmentMetricCard
               title="Độ ẩm trung bình"
               value={summary.averageHumidity}
@@ -168,18 +152,6 @@ export function DashboardPage() {
               tone="teal"
               status="Tối ưu"
               target="Mục tiêu 80–92%"
-            />
-          </Col>
-
-          <Col xs={24} sm={12} xl={8}>
-            <EnvironmentMetricCard
-              title="CO₂ trung bình"
-              value={summary.averageCo2}
-              unit=" ppm"
-              icon={<CloudServerOutlined />}
-              tone="amber"
-              status="An toàn"
-              target="Ngưỡng dưới 1.000 ppm"
             />
           </Col>
         </Row>

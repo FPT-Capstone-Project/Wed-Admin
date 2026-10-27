@@ -1,32 +1,23 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   ApiOutlined,
   BulbOutlined,
   CheckCircleOutlined,
   ControlOutlined,
-  EditOutlined,
   ExperimentOutlined,
   NodeIndexOutlined,
-  PoweroffOutlined,
-  SettingOutlined,
   ThunderboltOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
-  App,
   Button,
   Card,
   Descriptions,
   Drawer,
   Empty,
   Flex,
-  Form,
-  Input,
-  InputNumber,
-  Modal,
   Segmented,
-  Select,
   Space,
   Table,
   Tag,
@@ -34,29 +25,19 @@ import {
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { useNavigate } from 'react-router-dom'
 import { ActionButton, StatCard } from '../../../shared/ui'
 import { formatSensorLabel } from '../../../shared/i18n/terms'
 import {
-  useCommandStatus,
-  useCreateFloor,
-  useFloorEnvironment,
   useFloorList,
   useMasterList,
   useMasterSensors,
   useResolvedFloorEnvironment,
-  useUpdateFloor,
 } from '../../../features/devices/hooks/useIoT'
-import { ACTIVE_NODE_IDS } from '../../../features/devices/utils/iot-node-scope'
-import { AssignTrayModal } from './AssignTrayModal'
-import { AutoThresholdsConfigModal } from './AutoThresholdsConfigModal'
-import { FloorAutomationDrawer } from './FloorAutomationDrawer'
 import type {
   CultivationFloorMapping,
-  CultivationFloorMappingInput,
   FloorStatus,
-  IotCommand,
   IotSensor,
-  IotSsrChannelState,
   MasterStatus,
 } from '../../../types/iot'
 
@@ -68,11 +49,6 @@ const MASTER_STATUS_CONFIG: Record<
   offline: { color: 'default', label: 'Mất kết nối' },
 }
 
-const FLOOR_STATUS_OPTIONS: Array<{ value: FloorStatus; label: string }> = [
-  { value: 'ACTIVE', label: 'Hoạt động' },
-  { value: 'INACTIVE', label: 'Ngừng' },
-]
-
 function formatTimestamp(timestamp: string | number | null) {
   if (!timestamp) return '—'
   const date = new Date(timestamp)
@@ -80,34 +56,29 @@ function formatTimestamp(timestamp: string | number | null) {
   return date.toLocaleString('vi-VN')
 }
 
-interface FloorFormValues {
-  room_id: number
-  floor_number: number
-  floor_name: string
-  master_id: number
-  node_address: number
-  misting_ssr_channel: number
-  status: FloorStatus
-}
-
 /**
- * Panel điều khiển thiết bị IoT toàn diện.
+ * Panel giám sát thiết bị IoT — **CHỈ ĐỌC**.
  *
- * Gắn trực tiếp các API:
- *  - GET    /api/iot/masters
- *  - GET    /api/iot/masters/{id}/sensors
- *  - GET    /api/iot/commands/{commandId}
- *  - GET    /api/iot/floors
- *  - POST   /api/iot/floors
- *  - PUT    /api/iot/floors/{id}
- *  - PUT    /api/iot/floors/{id}/trays/{trayId}
- *  - GET    /api/iot/floors/{id}/environment
- *  - PUT    /api/iot/floors/{id}/auto-control
+ * ⚠ Admin web chỉ được XEM. Mọi thao tác cấu hình (đặt ngưỡng, bật/tắt
+ * tưới tự động, tạo/sửa tầng, gán khay, duyệt profile) do **nhân viên
+ * (staff)** thực hiện trên mobile app — xem `features/auth/permissions.ts`
+ * (`iot.automation.manage`).
+ *
+ * Vì vậy panel này cố tình **không** render:
+ *   - nút "Thêm cấu hình tầng"
+ *   - cột "Hành động" (điều khiển tưới / cấu hình ngưỡng / sửa / gán khay)
+ *   - các modal cấu hình (assign tray, auto-thresholds, floor form)
+ *
+ * API gắn trực tiếp (chỉ đọc):
+ *  - GET /api/iot/masters
+ *  - GET /api/iot/masters/{id}/sensors
+ *  - GET /api/iot/floors
+ *  - GET /api/iot/floors/{id}/environment
  */
 export function DeviceControlPanel() {
-  const { message } = App.useApp()
+  const navigate = useNavigate()
 
-  // ── Data from APIs ──────────────────────────────────────────────────
+  // ── Data from APIs (read-only) ───────────────────────────────────────
   const { data: masters = [] } = useMasterList({ staleTime: 30_000 })
   const { data: floors = [], isLoading: floorsLoading } = useFloorList()
   const { data: sensorsResponse } = useMasterSensors(
@@ -115,47 +86,10 @@ export function DeviceControlPanel() {
   )
   const sensors = sensorsResponse?.sensors ?? []
 
-  // ── Floor CRUD ──────────────────────────────────────────────────────
-  const [floorModalOpen, setFloorModalOpen] = useState(false)
-  const [editingFloor, setEditingFloor] = useState<CultivationFloorMapping | null>(
-    null,
-  )
-  const [floorForm] = Form.useForm<FloorFormValues>()
-
-  const createFloor = useCreateFloor({
-    onSuccess: () => {
-      message.success('Đã tạo cấu hình tầng.')
-      setFloorModalOpen(false)
-      floorForm.resetFields()
-    },
-    onError: (err) => message.error(err.message),
-  })
-
-  const updateFloor = useUpdateFloor({
-    onSuccess: () => {
-      message.success('Đã cập nhật cấu hình tầng.')
-      setFloorModalOpen(false)
-      floorForm.resetFields()
-      setEditingFloor(null)
-    },
-    onError: (err) => message.error(err.message),
-  })
-
-  // ── Modal hành động trên tầng ────────────────────────────────────────
-  const [assignTrayFloor, setAssignTrayFloor] =
-    useState<CultivationFloorMapping | null>(null)
-  const [thresholdFloor, setThresholdFloor] =
-    useState<CultivationFloorMapping | null>(null)
-  const [automationFloor, setAutomationFloor] =
-    useState<CultivationFloorMapping | null>(null)
-
-  // ── Detail drawers ──────────────────────────────────────────────────
+  // ── Detail drawers (chỉ xem) ─────────────────────────────────────────
   const [selectedFloor, setSelectedFloor] =
     useState<CultivationFloorMapping | null>(null)
-  const [selectedCommandId, setSelectedCommandId] = useState<string | null>(null)
   const [selectedSensor, setSelectedSensor] = useState<IotSensor | null>(null)
-
-  const { data: commandData } = useCommandStatus(selectedCommandId)
 
   // Master của tầng đang xem — `master_id` là số, API cần `masterId` string.
   const selectedFloorMasterId =
@@ -171,65 +105,6 @@ export function DeviceControlPanel() {
     selectedFloorMasterId,
     selectedFloor?.node_address ?? null,
   )
-
-  // Env riêng cho modal ngưỡng — modal có thể mở từ nút trong bảng mà
-  // drawer môi trường đang đóng, nên không dùng chung `floorEnv`.
-  const { data: thresholdEnv } = useFloorEnvironment(
-    thresholdFloor?.floor_id ?? null,
-  )
-
-  // Sync form values khi mở modal floor
-  useMemo(() => {
-    if (!floorModalOpen) return
-    floorForm.setFieldsValue({
-      room_id: editingFloor?.room_id ?? (masters[0]?.cultivationRoomId ?? 1),
-      floor_number: editingFloor?.floor_number ?? 1,
-      floor_name:
-        editingFloor?.floor_name ?? `Tầng ${editingFloor?.floor_number ?? 1}`,
-      master_id: editingFloor?.master_id ?? (masters[0]?.id ?? 1),
-      node_address: editingFloor?.node_address ?? 1,
-      misting_ssr_channel: editingFloor?.misting_ssr_channel ?? 1,
-      status: editingFloor?.status ?? 'ACTIVE',
-    })
-  }, [
-    editingFloor,
-    floorForm,
-    floorModalOpen,
-    masters,
-  ])
-
-  const handleOpenCreate = () => {
-    setEditingFloor(null)
-    setFloorModalOpen(true)
-  }
-  const handleOpenEdit = (floor: CultivationFloorMapping) => {
-    setEditingFloor(floor)
-    setFloorModalOpen(true)
-  }
-
-  const handleSubmitFloor = (values: FloorFormValues) => {
-    const payload: CultivationFloorMappingInput = { ...values }
-    if (editingFloor) {
-      // BE PUT /api/iot/floors/{floorId} — floorId = `floor_id`, không phải room_id
-      updateFloor.mutate({
-        floorId: editingFloor.floor_id,
-        payload,
-      })
-      return
-    }
-    createFloor.mutate(payload)
-  }
-
-  // Gán khay và lưu ngưỡng đã tách sang modal riêng — xem AssignTrayModal
-  // và AutoThresholdsConfigModal. Ở đây chỉ mở modal tương ứng.
-
-  const handleOpenAssignTray = (floor: CultivationFloorMapping) => {
-    setAssignTrayFloor(floor)
-  }
-
-  const handleOpenThresholds = (floor: CultivationFloorMapping) => {
-    setThresholdFloor(floor)
-  }
 
   // ── Tables ──────────────────────────────────────────────────────────
   const sensorColumns: ColumnsType<IotSensor> = [
@@ -356,12 +231,21 @@ export function DeviceControlPanel() {
     {
       title: 'Tầng',
       key: 'floor',
-      width: 90,
+      width: 110,
       align: 'center',
       render: (_, record) => (
-        <Tag color="cyan" style={{ fontSize: 13, padding: '2px 8px' }}>
-          Tầng {record.floor_number}
-        </Tag>
+        <Tooltip title="Xem môi trường thực tế của tầng">
+          <Button
+            type="link"
+            size="small"
+            style={{ padding: 0, height: 'auto' }}
+            onClick={() => setSelectedFloor(record)}
+          >
+            <Tag color="cyan" style={{ fontSize: 13, padding: '2px 8px' }}>
+              Tầng {record.floor_number}
+            </Tag>
+          </Button>
+        </Tooltip>
       ),
     },
     {
@@ -404,10 +288,10 @@ export function DeviceControlPanel() {
       ),
     },
     {
-      title: 'Kênh rơ-le máy bơm',
+      title: 'Kênh rơ-le',
       dataIndex: 'misting_ssr_channel',
       key: 'misting_ssr_channel',
-      width: 140,
+      width: 130,
       align: 'center',
       render: (ch: number) => (
         <Tag color="volcano" style={{ fontSize: 12 }}>
@@ -425,55 +309,6 @@ export function DeviceControlPanel() {
         <Tag color={status === 'ACTIVE' ? 'success' : 'default'}>
           {status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng'}
         </Tag>
-      ),
-    },
-    {
-      title: 'Hành động',
-      key: 'actions',
-      width: 300,
-      align: 'right',
-      render: (_, record) => (
-        <Space size={4} wrap>
-          {/* Nút chính: hiện label rõ ràng */}
-          <ActionButton
-            icon={<ThunderboltOutlined />}
-            label="Điều khiển tưới"
-            description="Bật/tắt tưới tự động và xem nhật ký điều khiển"
-            variant="primary"
-            onClick={() => setAutomationFloor(record)}
-          />
-          {/* Nút phụ: icon + tooltip tiếng Việt */}
-          <ActionButton
-            icon={<ExperimentOutlined />}
-            label="Xem môi trường"
-            description="Xem nhiệt độ và độ ẩm thực tế của tầng"
-            hideLabel
-            onClick={() => setSelectedFloor(record)}
-          />
-          <ActionButton
-            icon={<SettingOutlined />}
-            label="Cấu hình ngưỡng tự động"
-            description="Đặt ngưỡng độ ẩm để hệ thống tự tưới"
-            hideLabel
-            onClick={() => handleOpenThresholds(record)}
-          />
-          <ActionButton
-            icon={<EditOutlined />}
-            label="Sửa cấu hình tầng"
-            description="Chỉnh sửa thông số của tầng: tên, bộ điều khiển, kênh rơ-le"
-            hideLabel
-            variant="text"
-            onClick={() => handleOpenEdit(record)}
-          />
-          <ActionButton
-            icon={<NodeIndexOutlined />}
-            label="Gán khay cho tầng"
-            description="Liên kết khay nấm với tầng này để theo dõi môi trường"
-            hideLabel
-            variant="text"
-            onClick={() => handleOpenAssignTray(record)}
-          />
-        </Space>
       ),
     },
   ]
@@ -514,7 +349,7 @@ export function DeviceControlPanel() {
         />
       </Flex>
 
-      {/* ── Floor Configuration ─────────────────────────────────────────── */}
+      {/* ── Floor Configuration (read-only) ────────────────────────────── */}
       <Card
         title={
           <Flex align="center" gap={8}>
@@ -523,13 +358,9 @@ export function DeviceControlPanel() {
           </Flex>
         }
         extra={
-          <Button
-            type="primary"
-            icon={<PoweroffOutlined />}
-            onClick={handleOpenCreate}
-          >
-            Thêm cấu hình tầng
-          </Button>
+          <Tag icon={<ApiOutlined />} color="default">
+            Chỉ xem
+          </Tag>
         }
         style={{ marginBottom: 16 }}
         styles={{ body: { padding: 12 } }}
@@ -544,7 +375,7 @@ export function DeviceControlPanel() {
           scroll={{ x: 900 }}
           locale={{
             emptyText: (
-              <Empty description="Chưa cấu hình tầng nào — bấm 'Thêm cấu hình tầng'." />
+              <Empty description="Chưa cấu hình tầng nào. Nhân viên có thể thiết lập trên mobile app." />
             ),
           }}
         />
@@ -569,7 +400,7 @@ export function DeviceControlPanel() {
             ]}
             onChange={(value) => {
               if (value === 'history') {
-                message.info('Lịch sử cảm biến mở tại tab Lịch sử Telemetry.')
+                navigate('/devices/history')
               }
             }}
           />
@@ -592,7 +423,7 @@ export function DeviceControlPanel() {
         />
       </Card>
 
-      {/* ── Floor Environment Drawer ────────────────────────────────────── */}
+      {/* ── Floor Environment Drawer (read-only) ───────────────────────── */}
       <Drawer
         title={
           selectedFloor ? (
@@ -627,6 +458,14 @@ export function DeviceControlPanel() {
                   children: selectedFloor.floor_number,
                 },
                 {
+                  key: 'avgTemperature',
+                  label: 'Nhiệt độ trung bình',
+                  children:
+                    floorEnv.data.avgTemperature != null
+                      ? `${floorEnv.data.avgTemperature.toFixed(1)}°C`
+                      : '—',
+                },
+                {
                   key: 'avgHumidity',
                   label: 'Độ ẩm trung bình',
                   children:
@@ -654,7 +493,7 @@ export function DeviceControlPanel() {
                 type="warning"
                 showIcon
                 message="Đã kết nối dữ liệu từ Node RS485 của tầng. Khay chưa được cấu hình sensor_id trong DB."
-                description={`Độ ẩm/ nhiệt độ dưới đây là số đo thật từ Node ${
+                description={`Nhiệt độ / độ ẩm dưới đây là số đo thật từ Node ${
                   selectedFloor.node_address
                 }, không phải từ bản ghi khay.`}
               />
@@ -716,68 +555,9 @@ export function DeviceControlPanel() {
             ) : (
               <Empty description="Chưa có dữ liệu sensor cho tầng này." />
             )}
-
-            <Flex vertical gap={10}>
-              <Button
-                type="primary"
-                icon={<PoweroffOutlined />}
-                onClick={() => handleOpenThresholds(selectedFloor)}
-              >
-                Cấu hình ngưỡng Auto-misting
-              </Button>
-              <Button
-                icon={<ApiOutlined />}
-                onClick={() => handleOpenAssignTray(selectedFloor)}
-              >
-                Gán khay cho tầng này
-              </Button>
-            </Flex>
-
-            {/* Cho phép lưu ngưỡng kể cả khi tầng chưa có sensor — xem
-                AutoThresholdsConfigModal. Chỉ bật AUTO mới cần sensor. */}
-            {floorEnv.data.sensors.length === 0 && (
-              <Alert
-                type="info"
-                showIcon
-                message="Tầng chưa có sensor. Bạn vẫn có thể lưu ngưỡng trước; nút 'Bắt đầu AUTO' sẽ báo lỗi cho tới khi có sensor."
-              />
-            )}
           </Flex>
         )}
       </Drawer>
-
-      {/* ── Floor Automation Drawer (AUTO control + profile + logs) ───── */}
-      {automationFloor && (
-        <FloorAutomationDrawer
-          floorId={automationFloor.floor_id}
-          floorName={automationFloor.floor_name}
-          open
-          onClose={() => setAutomationFloor(null)}
-        />
-      )}
-
-      {/* ── Assign Tray Modal (thay window.prompt) ─────────────────────── */}
-      {assignTrayFloor && (
-        <AssignTrayModal
-          floorId={assignTrayFloor.floor_id}
-          floorName={assignTrayFloor.floor_name}
-          floorNumber={assignTrayFloor.floor_number}
-          roomId={assignTrayFloor.room_id}
-          open
-          onClose={() => setAssignTrayFloor(null)}
-        />
-      )}
-
-      {/* ── Auto Thresholds Config Modal ────────────────────────────────── */}
-      {thresholdFloor && (
-        <AutoThresholdsConfigModal
-          floorId={thresholdFloor.floor_id}
-          floorName={thresholdFloor.floor_name}
-          open
-          validSensorCount={thresholdEnv?.sensors.length ?? 0}
-          onClose={() => setThresholdFloor(null)}
-        />
-      )}
 
       {/* ── Sensor Detail Drawer ────────────────────────────────────────── */}
       <Drawer
@@ -847,237 +627,6 @@ export function DeviceControlPanel() {
           />
         )}
       </Drawer>
-
-      {/* ── Command Status Drawer ───────────────────────────────────────── */}
-      <Drawer
-        title="Trạng thái lệnh SSR"
-        open={Boolean(selectedCommandId)}
-        onClose={() => setSelectedCommandId(null)}
-        size={460}
-        destroyOnHidden
-        extra={
-          <Typography.Text code style={{ fontSize: 12 }}>
-            {selectedCommandId ?? ''}
-          </Typography.Text>
-        }
-      >
-        {commandData ? (
-          <CommandStatusPanel command={commandData} />
-        ) : (
-          <Empty description="Không tìm thấy trạng thái lệnh." />
-        )}
-      </Drawer>
-
-      {/* ── Floor Form Modal ────────────────────────────────────────────── */}
-      <Modal
-        title={editingFloor ? 'Sửa cấu hình tầng' : 'Tạo cấu hình tầng'}
-        open={floorModalOpen}
-        onCancel={() => {
-          setFloorModalOpen(false)
-          setEditingFloor(null)
-          floorForm.resetFields()
-        }}
-        onOk={() => floorForm.submit()}
-        confirmLoading={
-          createFloor.isPending || updateFloor.isPending
-        }
-        okText={editingFloor ? 'Lưu thay đổi' : 'Tạo'}
-        cancelText="Hủy"
-        destroyOnHidden
-        width={520}
-      >
-        <Form<FloorFormValues>
-          form={floorForm}
-          layout="vertical"
-          requiredMark={false}
-          onFinish={handleSubmitFloor}
-        >
-          <Form.Item
-            label="Room ID (Backend key)"
-            name="room_id"
-            rules={[{ required: true, message: 'Nhập room_id.' }]}
-          >
-            <InputNumber min={1} style={{ width: '100%' }} />
-          </Form.Item>
-
-          <Form.Item
-            label="Số tầng (1..4)"
-            name="floor_number"
-            rules={[{ required: true, message: 'Nhập số tầng.' }]}
-          >
-            <InputNumber min={1} max={4} style={{ width: '100%' }} />
-          </Form.Item>
-
-          <Form.Item
-            label="Tên tầng"
-            name="floor_name"
-            rules={[{ required: true, message: 'Nhập tên tầng.' }]}
-          >
-            <Input placeholder="VD: Tầng 1 — Pha ủ" />
-          </Form.Item>
-
-          <Form.Item
-            label="Bộ điều khiển trung tâm"
-            name="master_id"
-            rules={[{ required: true, message: 'Vui lòng chọn bộ điều khiển.' }]}
-          >
-            <Select
-              placeholder="— Chọn bộ điều khiển —"
-              options={masters.map((m) => ({
-                value: m.id,
-                label: `Bộ điều khiển ${m.masterId} (khu ${m.cultivationRoomId ?? '—'})`,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Cụm cảm biến (địa chỉ node)"
-            name="node_address"
-            rules={[{ required: true, message: 'Vui lòng chọn cụm cảm biến.' }]}
-          >
-            <Select
-              placeholder="— Chọn cụm cảm biến —"
-              options={ACTIVE_NODE_IDS.map((id) => ({
-                value: id,
-                label: `Cụm cảm biến Tầng ${id}`,
-              }))}
-            />
-          </Form.Item>
-
-          <Form.Item
-            label="Kênh rơ-le máy bơm (1..8)"
-            name="misting_ssr_channel"
-            rules={[{ required: true, message: 'Vui lòng nhập kênh rơ-le.' }]}
-          >
-            <InputNumber min={1} max={8} style={{ width: '100%' }} />
-          </Form.Item>
-
-          <Form.Item
-            label="Trạng thái"
-            name="status"
-            rules={[{ required: true, message: 'Chọn trạng thái.' }]}
-          >
-            <Select options={FLOOR_STATUS_OPTIONS} />
-          </Form.Item>
-        </Form>
-      </Modal>
     </>
-  )
-}
-
-function CommandStatusPanel({ command }: { command: IotCommand }) {
-  return (
-    <Descriptions
-      column={1}
-      bordered
-      size="small"
-      items={[
-        {
-          key: 'action',
-          label: 'Hành động',
-          children: (
-            <Tag color={command.action === 'ON' ? 'success' : 'default'}>
-              {command.action}
-            </Tag>
-          ),
-        },
-        {
-          key: 'channel',
-          label: 'Kênh',
-          children: command.channel,
-        },
-        {
-          key: 'status',
-          label: 'Trạng thái',
-          children: <Tag color="processing">{command.status}</Tag>,
-        },
-        {
-          key: 'requestedAt',
-          label: 'Yêu cầu lúc',
-          children: formatTimestamp(command.requestedAt),
-        },
-        {
-          key: 'expiresAt',
-          label: 'Hết hạn lúc',
-          children: formatTimestamp(command.expiresAt),
-        },
-        {
-          key: 'publishedAt',
-          label: 'Publish lúc',
-          children: formatTimestamp(command.publishedAt),
-        },
-        {
-          key: 'completedAt',
-          label: 'Hoàn tất lúc',
-          children: formatTimestamp(command.completedAt),
-        },
-        {
-          key: 'errorMessage',
-          label: 'Lỗi',
-          children: command.errorMessage ?? '—',
-        },
-      ]}
-    />
-  )
-}
-
-/**
- * SSR Channel Switchboard — tái sử dụng useSsrChannels để gắn
- * endpoint GET /api/iot/masters/{id}/ssr.
- */
-export function SsrChannelSwitchboard({
-  masterId,
-  channels,
-  onCommandId,
-}: {
-  masterId: string | null
-  channels: IotSsrChannelState[]
-  onCommandId: (id: string) => void
-}) {
-  return (
-    <Card
-      title={
-        <Flex align="center" gap={8}>
-          <PoweroffOutlined />
-          <span>SSR Channels — Master {masterId ?? '—'}</span>
-        </Flex>
-      }
-    >
-      <Flex gap={8} wrap>
-        {channels.length === 0 ? (
-          <Typography.Text type="secondary">
-            Chưa có channel nào.
-          </Typography.Text>
-        ) : (
-          channels.map((channel) => {
-            const label =
-              channel.channel <= 3
-                ? `Van K${channel.channel}`
-                : channel.channel === 4
-                  ? 'Quạt'
-                  : `K${channel.channel}`
-            return (
-              <Tooltip
-                key={channel.channel}
-                title={`Kênh ${channel.channel} · ${label} · mong đợi=${channel.desiredState ?? '—'} · thực tế=${channel.reportedState ?? '—'}`}
-              >
-                <Button
-                  size="small"
-                  type={channel.desiredState === 'ON' ? 'primary' : 'default'}
-                  onClick={() => {
-                    void fetch(`/api/iot/commands/watch-${channel.channel}`)
-                      .then(() => undefined)
-                      .catch(() => undefined)
-                    onCommandId(`watch-${channel.channel}`)
-                  }}
-                >
-                  {label} · {channel.desiredState ?? '?'}
-                </Button>
-              </Tooltip>
-            )
-          })
-        )}
-      </Flex>
-    </Card>
   )
 }

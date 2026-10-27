@@ -47,7 +47,6 @@ const SEVERITY_CONFIG: Record<
 const CATEGORY_LABELS: Record<AlertCategory, string> = {
   TEMPERATURE: 'Nhiệt độ',
   HUMIDITY: 'Độ ẩm không khí',
-  CO2: 'Nồng độ CO₂',
   DEVICE_OFFLINE: 'ESP32 mất kết nối',
   HARDWARE_FAULT: 'Lỗi phần cứng',
   ORDER_OVERDUE: 'Mẻ quá hạn thu hoạch',
@@ -72,11 +71,9 @@ function formatValue(alert: SystemAlert) {
       ? '°C'
       : alert.category === 'HUMIDITY'
         ? '%RH'
-        : alert.category === 'CO2'
-          ? ' ppm'
-          : alert.category === 'DEVICE_OFFLINE'
-            ? ' phút'
-            : ' giây'
+        : alert.category === 'DEVICE_OFFLINE'
+          ? ' phút'
+          : ' giây'
 
   return `${alert.currentValue}${unit}`
 }

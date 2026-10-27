@@ -1,8 +1,5 @@
 import { create } from 'zustand'
-import type {
-  MushroomThresholdProfile,
-  ThresholdProfileInput,
-} from '../types/setting.types'
+import type { MushroomThresholdProfile } from '../types/setting.types'
 
 const SETTINGS_STORAGE_KEY = 'mcms-threshold-profiles'
 
@@ -24,9 +21,9 @@ const CYCLE_WEEKS_BY_TYPE: Record<string, number> = {
  *
  * Nguồn: dữ liệu thông số canh tác thực tế đang dùng ở tab "Thông số canh tác"
  * (mục Gói cước thuê). Mỗi hồ sơ là một dải:
- *   - Nhiệt độ (°C), Độ ẩm (%), CO₂ (ppm), Ẩm giá thể (%).
+ *   - Nhiệt độ (°C), Độ ẩm (%), Ẩm giá thể (%).
  *
- * ⚠ `co2Min` / `co2Max` / `soilMoisture*` = `null` khi giống nấm đó **không**
+ * ⚠ `soilMoisture*` = `null` khi giống nấm đó **không**
  *   đặt ngưỡng cho chỉ số đó (không phải thiếu dữ liệu).
  */
 export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
@@ -39,8 +36,6 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     tempMax: 32,
     humidityMin: 80,
     humidityMax: 87,
-    co2Min: null,
-    co2Max: null,
     soilMoistureMin: null,
     soilMoistureMax: null,
     isDefault: true,
@@ -55,8 +50,6 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     tempMax: 32,
     humidityMin: 82,
     humidityMax: 90,
-    co2Min: null,
-    co2Max: null,
     soilMoistureMin: null,
     soilMoistureMax: null,
     isDefault: false,
@@ -71,8 +64,6 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     tempMax: 24,
     humidityMin: 80,
     humidityMax: 90,
-    co2Min: 350,
-    co2Max: 500,
     soilMoistureMin: null,
     soilMoistureMax: null,
     isDefault: false,
@@ -87,8 +78,6 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     tempMax: 24,
     humidityMin: 80,
     humidityMax: 95,
-    co2Min: 400,
-    co2Max: 1200,
     soilMoistureMin: null,
     soilMoistureMax: null,
     isDefault: false,
@@ -103,8 +92,6 @@ export const DEFAULT_THRESHOLD_PROFILES: MushroomThresholdProfile[] = [
     tempMax: 22,
     humidityMin: 85,
     humidityMax: 95,
-    co2Min: 400,
-    co2Max: 1000,
     soilMoistureMin: null,
     soilMoistureMax: null,
     isDefault: false,
@@ -121,15 +108,17 @@ interface PersistedSettings {
   thresholdProfiles: MushroomThresholdProfile[]
 }
 
-interface SettingState extends PersistedSettings {
-  addThresholdProfile: (values: ThresholdProfileInput) => void
-  updateThresholdProfile: (
-    id: string,
-    values: ThresholdProfileInput,
-  ) => void
-  setDefaultThresholdProfile: (id: string) => void
-  deleteThresholdProfile: (id: string) => void
-}
+/**
+ * Store hồ sơ vi khí hậu — **chỉ đọc** trên web admin.
+ *
+ * ⚠ Thêm / sửa / xoá hồ sơ là thao tác nhạy cảm, dành cho nhân viên (staff)
+ * thực hiện trên mobile app. Vì vậy store chỉ còn:
+ *   - `thresholdProfiles` — dữ liệu để hiển thị.
+ *
+ * Store vẫn tự hydrate từ `localStorage` để giữ tương thích với dữ liệu đã
+ * lưu từ phiên bản trước (khi admin còn được sửa ngưỡng).
+ */
+type SettingState = PersistedSettings
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
@@ -177,8 +166,6 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     tempMax,
     humidityMin,
     humidityMax,
-    co2Min,
-    co2Max,
     soilMoistureMin,
     soilMoistureMax,
     isDefault,
@@ -194,8 +181,6 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     !isNumber(tempMax) ||
     !isNumber(humidityMin) ||
     !isNumber(humidityMax) ||
-    !isNullableNumber(co2Min) ||
-    !isNullableNumber(co2Max) ||
     !isNullableNumber(soilMoistureMin) ||
     !isNullableNumber(soilMoistureMax) ||
     !isBoolean(isDefault) ||
@@ -213,8 +198,6 @@ function parseThresholdProfile(value: unknown): MushroomThresholdProfile | null 
     tempMax,
     humidityMin,
     humidityMax,
-    co2Min: toNullableNumber(co2Min),
-    co2Max: toNullableNumber(co2Max),
     soilMoistureMin: toNullableNumber(soilMoistureMin),
     soilMoistureMax: toNullableNumber(soilMoistureMax),
     isDefault,
@@ -245,84 +228,10 @@ function readPersistedProfiles(): MushroomThresholdProfile[] {
   }
 }
 
-function getNextProfileId(profiles: MushroomThresholdProfile[]) {
-  const highestId = profiles.reduce((highest, profile) => {
-    const match = /^THRESHOLD-(\d+)$/.exec(profile.id)
-    const numericId = match ? Number(match[1]) : 0
-
-    return Math.max(highest, numericId)
-  }, 0)
-
-  return `THRESHOLD-${String(highestId + 1).padStart(3, '0')}`
-}
-
-function getNow() {
-  return new Date().toISOString()
-}
-
-/**
- * Chuẩn hoá input từ form thành profile đầy đủ.
- *
- * Bổ sung `cycleWeeks` mặc định và ép các ngưỡng optional (`undefined` từ
- * `InputNumber` bị xoá) về `null` để `JSON.stringify` không loại bỏ key.
- */
-function toProfileValues(values: ThresholdProfileInput) {
-  return {
-    ...values,
-    cycleWeeks: values.cycleWeeks ?? getCycleWeeksFor(values.mushroomType),
-    co2Min: toNullableNumber(values.co2Min),
-    co2Max: toNullableNumber(values.co2Max),
-    soilMoistureMin: toNullableNumber(values.soilMoistureMin),
-    soilMoistureMax: toNullableNumber(values.soilMoistureMax),
-  }
-}
-
 const initialProfiles = readPersistedProfiles()
 
-export const useSettingStore = create<SettingState>((set) => ({
+export const useSettingStore = create<SettingState>(() => ({
   thresholdProfiles: initialProfiles,
-
-  addThresholdProfile: (values) =>
-    set((state) => ({
-      thresholdProfiles: [
-        {
-          ...toProfileValues(values),
-          id: getNextProfileId(state.thresholdProfiles),
-          isDefault: false,
-          updatedAt: getNow(),
-        },
-        ...state.thresholdProfiles,
-      ],
-    })),
-
-  updateThresholdProfile: (id, values) =>
-    set((state) => ({
-      thresholdProfiles: state.thresholdProfiles.map((profile) =>
-        profile.id === id
-          ? {
-              ...profile,
-              ...toProfileValues(values),
-              updatedAt: getNow(),
-            }
-          : profile,
-      ),
-    })),
-
-  setDefaultThresholdProfile: (id) =>
-    set((state) => ({
-      thresholdProfiles: state.thresholdProfiles.map((profile) => ({
-        ...profile,
-        isDefault: profile.id === id,
-        updatedAt: profile.id === id ? getNow() : profile.updatedAt,
-      })),
-    })),
-
-  deleteThresholdProfile: (id) =>
-    set((state) => ({
-      thresholdProfiles: state.thresholdProfiles.filter(
-        (profile) => profile.id !== id || profile.isDefault,
-      ),
-    })),
 }))
 
 useSettingStore.subscribe((state) => {

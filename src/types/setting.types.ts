@@ -4,8 +4,8 @@
  * Mỗi tầng nuôi trồng ở chế độ AUTO sẽ đồng bộ theo hồ sơ của giống nấm
  * đang được gán trên khay.
  *
- * ⚠ Các ngưỡng CO₂ và ẩm giá thể là **optional** (`null` = không đặt ngưỡng):
- *   không phải giống nấm nào cũng cần cả 4 nhóm chỉ số.
+ * ⚠ Ngưỡng ẩm giá thể là **optional** (`null` = không đặt ngưỡng):
+ *   không phải giống nấm nào cũng cần đủ nhóm chỉ số.
  */
 export interface MushroomThresholdProfile {
   id: string
@@ -21,20 +21,9 @@ export interface MushroomThresholdProfile {
   /** Dải độ ẩm không khí (%RH) */
   humidityMin: number
   humidityMax: number
-  /** Dải CO₂ (ppm) — `null` = không đặt ngưỡng CO₂ */
-  co2Min: number | null
-  co2Max: number | null
   /** Dải độ ẩm cơ chất / giá thể (%) — `null` = không đặt ngưỡng */
   soilMoistureMin: number | null
   soilMoistureMax: number | null
   isDefault: boolean
   updatedAt: string
-}
-
-export type ThresholdProfileInput = Omit<
-  MushroomThresholdProfile,
-  'id' | 'isDefault' | 'updatedAt' | 'cycleWeeks'
-> & {
-  /** Chu kỳ gói — optional, store tự suy ra khi bỏ trống */
-  cycleWeeks?: number
 }

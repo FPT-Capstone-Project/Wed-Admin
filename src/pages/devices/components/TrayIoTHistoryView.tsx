@@ -2,7 +2,6 @@ import {
   ApartmentOutlined,
   CalendarOutlined,
   CloudOutlined,
-  CloudServerOutlined,
   ExperimentOutlined,
   FireOutlined,
   HistoryOutlined,
@@ -147,16 +146,15 @@ export function TrayIoTHistoryView() {
   )
   const longTermSummary = useMemo(() => {
     if (aggregatedLongTermData.length === 0) {
-      return { temperature: 0, humidity: 0, co2: 0 }
+      return { temperature: 0, humidity: 0 }
     }
 
     const totals = aggregatedLongTermData.reduce(
       (current, point) => ({
         temperature: current.temperature + point.temperature,
         humidity: current.humidity + point.humidity,
-        co2: current.co2 + point.co2,
       }),
-      { temperature: 0, humidity: 0, co2: 0 },
+      { temperature: 0, humidity: 0 },
     )
 
     return {
@@ -166,7 +164,6 @@ export function TrayIoTHistoryView() {
       humidity: Number(
         (totals.humidity / aggregatedLongTermData.length).toFixed(1),
       ),
-      co2: Math.round(totals.co2 / aggregatedLongTermData.length),
     }
   }, [aggregatedLongTermData])
 
@@ -265,11 +262,6 @@ export function TrayIoTHistoryView() {
           <CloudOutlined aria-hidden="true" />
           <small>Độ ẩm TB</small>
           <strong>{longTermSummary.humidity.toLocaleString('vi-VN')}%RH</strong>
-        </span>
-        <span>
-          <CloudServerOutlined aria-hidden="true" />
-          <small>CO₂ TB</small>
-          <strong>{longTermSummary.co2.toLocaleString('vi-VN')} ppm</strong>
         </span>
         <span>
           <HistoryOutlined aria-hidden="true" />

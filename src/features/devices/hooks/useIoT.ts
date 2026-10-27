@@ -9,34 +9,19 @@
  */
 import { useMemo } from 'react'
 import {
-  useMutation,
   useQuery,
-  useQueryClient,
-  type UseMutationOptions,
   type UseQueryOptions,
 } from '@tanstack/react-query'
 import { autoMistingApi, iotApi } from '../api/iot.api'
 import { filterActiveSensors } from '../utils/iot-node-scope'
 import type {
-  AutoControlEvaluateResult,
-  AutoControlLogEntry,
-  AutoControlLogsQuery,
-  AutoControlRuntimeStatus,
-  AutoControlState,
-  AutoControlSuggestions,
-  AutoMistingConfiguration,
-  CreateIotCommandRequest,
   CultivationFloorMapping,
-  CultivationFloorMappingInput,
   FloorEnvironmentResponse,
-  IotCommand,
   IotHistoryQuery,
   IotHistoryResponse,
   IotMaster,
   IotSensor,
   IotSensorsResponse,
-  IotSsrChannelState,
-  IotSsrResponse,
 } from '../../../types/iot'
 
 // ─── Query Keys ─────────────────────────────────────────────────────────
@@ -50,18 +35,10 @@ export const iotKeys = {
     sensorId: number,
   ) => [...iotKeys.all, 'history', masterId, nodeId, sensorId] as const,
   ssr: (masterId: string) => [...iotKeys.all, 'ssr', masterId] as const,
-  command: (commandId: string) =>
-    [...iotKeys.all, 'commands', commandId] as const,
   floors: () => [...iotKeys.all, 'floors'] as const,
   floor: (floorId: number) => [...iotKeys.all, 'floors', floorId] as const,
-  autoControl: (floorId: number) =>
-    [...iotKeys.all, 'auto-control', floorId] as const,
   autoControlSuggestions: (floorId: number) =>
     [...iotKeys.all, 'auto-control-suggestions', floorId] as const,
-  autoControlStatus: (floorId: number) =>
-    [...iotKeys.all, 'auto-control-status', floorId] as const,
-  autoControlLogs: (floorId: number) =>
-    [...iotKeys.all, 'auto-control-logs', floorId] as const,
 }
 
 // ─── Masters / Sensors / History ────────────────────────────────────────
@@ -141,73 +118,6 @@ export function useSensorHistory(
   })
 }
 
-// ─── SSR (Manual Relay Control) ──────────────────────────────────────
-
-export function useSsrStatus(
-  masterId: string | null,
-  options?: Partial<UseQueryOptions<IotSsrResponse, Error>>,
-) {
-  return useQuery<IotSsrResponse, Error>({
-    queryKey: iotKeys.ssr(masterId ?? ''),
-    queryFn: async () => {
-      const result = await iotApi.getSsr(masterId as string)
-      return result ?? { masterId: masterId ?? '', channels: [] }
-    },
-    enabled: masterId !== null && masterId.length > 0,
-    staleTime: 10_000,
-    refetchInterval: 10_000,
-    ...options,
-  })
-}
-
-export function useSsrCommand(
-  options?: UseMutationOptions<
-    IotCommand,
-    Error,
-    {
-      masterId: string
-      channel: number
-      payload: CreateIotCommandRequest
-    }
-  >,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<
-    IotCommand,
-    Error,
-    { masterId: string; channel: number; payload: CreateIotCommandRequest }
-  >({
-    mutationFn: async ({ masterId, channel, payload }) => {
-      const result = await iotApi.createManualCommand(masterId, channel, payload)
-      if (!result) throw new Error('Không thể tạo lệnh SSR')
-      return result
-    },
-    onSuccess: (_data, variables) => {
-      void queryClient.invalidateQueries({
-        queryKey: iotKeys.ssr(variables.masterId),
-      })
-    },
-    ...options,
-  })
-}
-
-export function useCommandStatus(
-  commandId: string | null,
-  options?: Partial<UseQueryOptions<IotCommand, Error>>,
-) {
-  return useQuery<IotCommand, Error>({
-    queryKey: iotKeys.command(commandId ?? ''),
-    queryFn: async () => {
-      const result = await iotApi.getCommandStatus(commandId as string)
-      if (!result) throw new Error('Không tìm thấy trạng thái lệnh')
-      return result
-    },
-    enabled: commandId !== null && commandId.length > 0,
-    refetchInterval: 2_000,
-    ...options,
-  })
-}
-
 // ─── Cultivation Floors ───────────────────────────────────────────────
 
 export function useFloorList(
@@ -217,87 +127,6 @@ export function useFloorList(
     queryKey: iotKeys.floors(),
     queryFn: () => autoMistingApi.listFloors(),
     staleTime: 60_000,
-    ...options,
-  })
-}
-
-export function useCreateFloor(
-  options?: UseMutationOptions<
-    CultivationFloorMapping,
-    Error,
-    CultivationFloorMappingInput
-  >,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<
-    CultivationFloorMapping,
-    Error,
-    CultivationFloorMappingInput
-  >({
-    mutationFn: async (payload) => {
-      const result = await autoMistingApi.createFloor(payload)
-      if (!result) throw new Error('Không thể tạo cấu hình tầng')
-      return result
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: iotKeys.floors() })
-    },
-    ...options,
-  })
-}
-
-export function useUpdateFloor(
-  options?: UseMutationOptions<
-    CultivationFloorMapping,
-    Error,
-    { floorId: number; payload: CultivationFloorMappingInput }
-  >,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<
-    CultivationFloorMapping,
-    Error,
-    { floorId: number; payload: CultivationFloorMappingInput }
-  >({
-    mutationFn: async ({ floorId, payload }) => {
-      const result = await autoMistingApi.updateFloor(floorId, payload)
-      if (!result) throw new Error('Không thể cập nhật cấu hình tầng')
-      return result
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: iotKeys.floors() })
-    },
-    ...options,
-  })
-}
-
-export function useAssignFloorToTray(
-  options?: UseMutationOptions<
-    void,
-    Error,
-    { floorId: number; trayId: number }
-  >,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<void, Error, { floorId: number; trayId: number }>({
-    mutationFn: async ({ floorId, trayId }) => {
-      await autoMistingApi.assignFloorToTray(floorId, trayId)
-    },
-    onSuccess: (_data, variables) => {
-      // Gán khay xong thì 3 thứ đều đổi:
-      //  - danh sách tầng (đã có ở key `floors`)
-      //  - môi trường tầng: số sensor + độ ẩm trung bình
-      //  - cấu hình auto-control đã gán (GET .../auto-control)
-      // Phải gọi cả key của query **đang active** (có hậu tố 'environment'),
-      // vì `invalidateQueries` so khớp theo tiền tố.
-      void queryClient.invalidateQueries({ queryKey: iotKeys.floors() })
-      void queryClient.invalidateQueries({
-        queryKey: [...iotKeys.floor(variables.floorId), 'environment'],
-      })
-      void queryClient.invalidateQueries({
-        queryKey: iotKeys.autoControl(variables.floorId),
-      })
-    },
     ...options,
   })
 }
@@ -466,210 +295,4 @@ export function useResolvedFloorEnvironment(
     fallbackNodeAddress: nodeAddress,
     isLoadingMaster: masterSensors.isLoading,
   }
-}
-
-/**
- * Cấu hình auto-misting đang lưu của tầng.
- *
- * ⚠ Trả `null` khi BE chưa có config (tầng chưa được thiết lập lần đầu) —
- *   đây là trạng thái **bình thường**, không phải lỗi. Consumer phải xử lý
- *   cả `null` (thường là mở form với giá trị mặc định).
- */
-export function useFloorConfig(
-  floorId: number | null,
-  options?: Partial<UseQueryOptions<AutoMistingConfiguration | null, Error>>,
-) {
-  return useQuery<AutoMistingConfiguration | null, Error>({
-    queryKey: iotKeys.autoControl(floorId ?? -1),
-    queryFn: async () => {
-      const result = await autoMistingApi.getConfig(floorId as number)
-      return result?.config ?? null
-    },
-    enabled: floorId !== null && floorId > 0,
-    staleTime: 60_000,
-    ...options,
-  })
-}
-
-/**
- * Ngưỡng đề xuất do BE tính — nguồn duy nhất, FE không tự suy luận.
- *
- * Swagger: *"Uses ACTIVE tray sessions linked to ACTIVE rentals on the same
- * tray; returns sourceProfiles, common, issues, warnings, config. Config is
- * null for missing, conflicting or too narrow conditions. No database writes
- * or device commands."*
- */
-export function useFloorAutoControlSuggestions(
-  floorId: number | null,
-  options?: Partial<UseQueryOptions<AutoControlSuggestions, Error>>,
-) {
-  return useQuery<AutoControlSuggestions, Error>({
-    queryKey: iotKeys.autoControlSuggestions(floorId ?? -1),
-    queryFn: async () => {
-      const result = await autoMistingApi.getSuggestions(floorId as number)
-      return (
-        result ?? {
-          sourceProfiles: [],
-          common: null,
-          issues: [],
-          warnings: [],
-          config: null,
-        }
-      )
-    },
-    enabled: floorId !== null && floorId > 0,
-    staleTime: 60_000,
-    ...options,
-  })
-}
-
-export function useFloorAutoControlStatus(
-  floorId: number | null,
-  options?: Partial<UseQueryOptions<AutoControlRuntimeStatus, Error>>,
-) {
-  return useQuery<AutoControlRuntimeStatus, Error>({
-    queryKey: iotKeys.autoControlStatus(floorId ?? -1),
-    queryFn: async () => {
-      const result = await autoMistingApi.getStatus(floorId as number)
-      // Endpoint trả cùng shape `AutoControlState`; thiếu `mode` thì coi
-      // như đang MANUAL để UI mặc định về trạng thái dừng.
-      return result ?? {
-        mode: 'MANUAL',
-        config: null,
-        run: null,
-        runtime: null,
-        ssr: null,
-      }
-    },
-    enabled: floorId !== null && floorId > 0,
-    refetchInterval: 5_000,
-    ...options,
-  })
-}
-
-export function useFloorAutoControlLogs(
-  floorId: number | null,
-  query: AutoControlLogsQuery = {},
-  options?: Partial<UseQueryOptions<AutoControlLogEntry[], Error>>,
-) {
-  return useQuery<AutoControlLogEntry[], Error>({
-    queryKey: [...iotKeys.autoControlLogs(floorId ?? -1), query],
-    queryFn: () => autoMistingApi.getLogs(floorId as number, query),
-    enabled: floorId !== null && floorId > 0,
-    staleTime: 30_000,
-    ...options,
-  })
-}
-
-// ─── Auto-misting Mutations ────────────────────────────────────────────
-
-function invalidateFloor(
-  queryClient: ReturnType<typeof useQueryClient>,
-  floorId: number,
-) {
-  void queryClient.invalidateQueries({
-    queryKey: iotKeys.autoControl(floorId),
-  })
-  void queryClient.invalidateQueries({
-    queryKey: iotKeys.autoControlStatus(floorId),
-  })
-  void queryClient.invalidateQueries({
-    queryKey: iotKeys.autoControlLogs(floorId),
-  })
-  void queryClient.invalidateQueries({ queryKey: iotKeys.floors() })
-}
-
-export function useSaveAutoControlConfig(
-  options?: UseMutationOptions<
-    AutoControlState,
-    Error,
-    { floorId: number; payload: AutoMistingConfiguration }
-  >,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<
-    AutoControlState,
-    Error,
-    { floorId: number; payload: AutoMistingConfiguration }
-  >({
-    mutationFn: async ({ floorId, payload }) => {
-      const result = await autoMistingApi.saveConfig(floorId, payload)
-      if (!result) throw new Error('Không thể lưu cấu hình auto-misting')
-      return result
-    },
-    onSuccess: (_data, variables) => {
-      invalidateFloor(queryClient, variables.floorId)
-    },
-    ...options,
-  })
-}
-
-export function useStartAutoMisting(
-  options?: UseMutationOptions<AutoControlState, Error, number>,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<AutoControlState, Error, number>({
-    mutationFn: async (floorId) => {
-      const result = await autoMistingApi.start(floorId)
-      if (!result) throw new Error('Không thể khởi động auto-misting')
-      return result
-    },
-    onSuccess: (_data, floorId) => {
-      invalidateFloor(queryClient, floorId)
-    },
-    ...options,
-  })
-}
-
-export function useStopAutoMisting(
-  options?: UseMutationOptions<AutoControlState, Error, number>,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<AutoControlState, Error, number>({
-    mutationFn: async (floorId) => {
-      const result = await autoMistingApi.stop(floorId)
-      if (!result) throw new Error('Không thể dừng auto-misting')
-      return result
-    },
-    onSuccess: (_data, floorId) => {
-      invalidateFloor(queryClient, floorId)
-    },
-    ...options,
-  })
-}
-
-export function useEvaluateAutoMisting(
-  options?: UseMutationOptions<
-    AutoControlEvaluateResult,
-    Error,
-    number
-  >,
-) {
-  return useMutation<AutoControlEvaluateResult, Error, number>({
-    mutationFn: async (floorId) => {
-      const result = await autoMistingApi.evaluate(floorId)
-      if (!result)
-        throw new Error('Không thể đánh giá điều kiện auto-misting')
-      return result
-    },
-    ...options,
-  })
-}
-
-// ─── SSR Channels helper (flat channel list) ──────────────────────────
-export function useSsrChannels(
-  masterId: string | null,
-  options?: Partial<UseQueryOptions<IotSsrChannelState[], Error>>,
-) {
-  return useQuery<IotSsrChannelState[], Error>({
-    queryKey: iotKeys.ssr(masterId ?? ''),
-    queryFn: async () => {
-      const ssr = await iotApi.getSsr(masterId as string)
-      return ssr?.channels ?? []
-    },
-    enabled: masterId !== null && masterId.length > 0,
-    staleTime: 10_000,
-    refetchInterval: 10_000,
-    ...options,
-  })
 }

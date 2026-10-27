@@ -169,8 +169,8 @@ function createStatusLogs(
       ),
       type: 'VENTILATION',
       severity: 'SUCCESS',
-      title: 'Thông gió cân bằng CO₂',
-      description: 'Quạt tầng được kích hoạt để đưa CO₂ về dải mục tiêu.',
+      title: 'Thông gió điều hòa khí hậu',
+      description: 'Quạt tầng được kích hoạt để ổn định nhiệt độ và độ ẩm.',
       actor: 'Relay AUTO',
     },
   ]
@@ -280,7 +280,6 @@ function createRentalSessions() {
           avgHumidity: roundToOneDecimal(
             86.5 - seasonalTemperature * 3.4 - trayPosition * 0.35,
           ),
-          avgCo2: Math.round(610 + tierId * 42 + trayPosition * 18 + periodIndex * 11),
           stagesTimeline,
         }
 
@@ -422,10 +421,6 @@ function createSessionTelemetry(session: RentalSession): TelemetryPoint[] {
       session.avgHumidity -
       Math.sin(dailyPhase * Math.PI * 2 - Math.PI / 2) * 4.5 +
       Math.cos(slowPhase * Math.PI * 4) * 1.2
-    const co2 =
-      session.avgCo2 +
-      Math.sin(dailyPhase * Math.PI * 2) * 105 +
-      Math.cos(slowPhase * Math.PI * 5) * 38
     const irrigationCycle = index % 12
     const timestamp =
       startTimestamp + index * SAMPLE_INTERVAL_HOURS * HOUR_IN_MILLISECONDS
@@ -441,9 +436,8 @@ function createSessionTelemetry(session: RentalSession): TelemetryPoint[] {
       timestamp: toIsoTimestamp(timestamp),
       temperature: roundToOneDecimal(temperature),
       humidity: roundToOneDecimal(humidity),
-      co2: Math.round(co2),
       irrigationActive: irrigationCycle === 2 || irrigationCycle === 3,
-      fanActive: temperature > session.avgTemp + 0.8 || co2 > 850,
+      fanActive: temperature > session.avgTemp + 0.8,
     }
   })
 }
@@ -480,9 +474,6 @@ function createLongTermTelemetry(trayId: string): LongTermTelemetryPoint[] {
           trayPosition * 0.3 -
           annualAdjustment * 0.8 +
           Math.cos(index * 0.49) * 0.8,
-      ),
-      co2: Math.round(
-        650 + tierId * 35 + trayPosition * 14 + Math.sin(index * 0.38) * 70,
       ),
     }
   })

@@ -31,11 +31,6 @@ export const RoomListPage = lazy(() =>
     default: m.RoomListPage,
   })),
 )
-export const TenantListPage = lazy(() =>
-  import('../../features/tenants/pages/TenantListPage').then((m) => ({
-    default: m.TenantListPage,
-  })),
-)
 export const CameraOverviewPage = lazy(() =>
   import('../../pages/camera/CameraOverviewPage').then((m) => ({
     default: m.CameraOverviewPage,

@@ -600,22 +600,6 @@ export function RackView({
                   unit="%RH"
                   ariaLabel="Độ ẩm"
                 />
-
-                <span
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    fontSize: 12,
-                    color: tokens.color.textMuted,
-                    backgroundColor: tokens.color.surfaceDisabled,
-                    border: `1px solid ${tokens.color.border}`,
-                    borderRadius: tokens.radius.pill,
-                    padding: '2px 10px',
-                  }}
-                  aria-label="CO2 chưa được cảm biến đo"
-                >
-                  CO₂ —&nbsp;ppm
-                </span>
               </Flex>
             </Flex>
 

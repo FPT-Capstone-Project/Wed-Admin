@@ -5,7 +5,7 @@
  * thông qua `/api/iot/floors` (BE trả `{ room_id, floor_number, ... }`).
  *
  * Tier nào KHÔNG có floor mapping → giữ DEFAULT_TELEMETRY (mock), không lỗi.
- * Field nào BE không trả (vd. CO₂) → set `null` để UI hiển thị "—".
+ * Field nào BE không trả → set `null` để UI hiển thị "—".
  */
 import { useQueries } from '@tanstack/react-query'
 import { autoMistingApi } from '../../devices/api/iot.api'
@@ -25,8 +25,6 @@ export interface TierWithEnvironment {
   /** null khi field không có data */
   liveTemperature: number | null
   liveHumidity: number | null
-  /** API không trả CO₂, luôn null hiện tại */
-  liveCo2: number | null
   /**
    * Ngưỡng canh tác đang áp dụng cho tầng — lấy từ `thresholds` mà BE
    * trả kèm trong `GET /api/iot/floors/{id}/environment`.
@@ -148,8 +146,6 @@ export function useTiersWithEnvironment() {
     const telemetry: TierTelemetry = {
       temperature: liveTemperature ?? DEFAULT_TELEMETRY.temperature,
       humidity: liveHumidity ?? DEFAULT_TELEMETRY.humidity,
-      /** BE chưa expose CO₂ — đợi BA mở rộng `IotSensor` hoặc trả sensor riêng. */
-      co2: null,
       updatedAt: new Date().toISOString(),
     }
 
@@ -164,7 +160,6 @@ export function useTiersWithEnvironment() {
       source: envData ? 'real' : 'mock',
       liveTemperature,
       liveHumidity,
-      liveCo2: null,
       thresholds,
     }
   })
