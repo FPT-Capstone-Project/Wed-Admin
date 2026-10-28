@@ -37,12 +37,14 @@ import {
   formatEventType,
   formatHumidityRange,
   formatLogDateTime,
+  formatLogDuration,
   formatLogMeasurements,
   formatLogSensors,
   formatProfileName,
   formatStopCondition,
   formatTriggerCondition,
-  resolveLogStatus,
+  explainSkippedDecision,
+  resolveLogOutcome,
 } from '../utils/auto-control.utils'
 
 interface AutoControlDetailModalProps {
@@ -173,17 +175,25 @@ export function AutoControlDetailModal({
       ),
     },
     {
-      // ⚠ `reserved_on_ms` chỉ có giá trị > 0 cho sự kiện `PULSE_RESERVED`
-      // (BE ghi tổng thời gian phun đã giữ trong giờ). Với sự kiện khác,
-      // hiển thị thời lượng phun đã cấu hình của tầng cho dễ đọc.
+      /**
+       * Thời lượng thực thi của sự kiện.
+       *
+       * ⚠ Bảng `iot_auto_control_logs` **không có** cột `duration_ms` — chỉ
+       * có `reserved_on_ms` (thời lượng xung phun **đã giữ trong giờ**), và
+       * BE chỉ ghi giá trị > 0 cho sự kiện `PULSE_RESERVED`. Mọi sự kiện
+       * khác nhận `0` ⇒ hiển thị `reserved_on_ms` cho tất cả sẽ ra
+       * "0 mili giây" ⇒ vô nghĩa.
+       *
+       * → `formatLogDuration` đọc đúng cột có giá trị thật, ưu tiên cột
+       * thời lượng thực thi nếu BE bổ sung sau này, và trả `null` cho các
+       * sự kiện không có thời lượng riêng (hiển thị "—").
+       */
       title: 'Thời lượng chạy',
       key: 'duration',
-      width: 120,
+      width: 130,
       align: 'right',
       render: (_, row) => {
-        const duration =
-          formatDurationMs(row.reserved_on_ms) ??
-          formatDurationMs(config?.misting_pulse_ms)
+        const duration = formatLogDuration(row, config?.misting_pulse_ms)
         return (
           <Typography.Text strong={Boolean(duration)} style={{ fontSize: 12 }}>
             {duration ?? '—'}
@@ -192,43 +202,85 @@ export function AutoControlDetailModal({
       },
     },
     {
-      title: 'Trạng thái',
-      key: 'status',
-      width: 120,
+      /**
+       * Kết quả thực tế của sự kiện.
+       *
+       * ⚠ Quan trọng: nhãn "Sự kiện" chỉ nói *loại* sự kiện, còn cột này
+       * nói *điều hệ thống đã làm*. Sự kiện `DECISION` được ghi cho mọi lần
+       * đánh giá — kể cả khi kết luận KHÔNG tưới (độ ẩm đã ở vùng giữ
+       * hysteresis 82–85%, hoặc hết ngân sách phun trong giờ).
+       */
+      title: 'Kết quả',
+      key: 'outcome',
+      width: 130,
       align: 'center',
       render: (_, row) => {
-        const status = resolveLogStatus(row.event_type)
-        return status === 'success' ? (
-          <StatusBadge tone="ok" label="Thành công" />
-        ) : (
-          <StatusBadge tone="danger" label="Thất bại" />
-        )
+        const outcome = resolveLogOutcome(row)
+        switch (outcome) {
+          case 'misted':
+            return (
+              <StatusBadge
+                tone="ok"
+                label="Đã phun sương"
+                icon={<ThunderboltOutlined />}
+              />
+            )
+          case 'skipped':
+            return (
+              <StatusBadge
+                tone="muted"
+                label="Không tưới"
+                title="Hệ thống đã đánh giá nhưng không mở van tưới"
+              />
+            )
+          case 'started':
+            return <StatusBadge tone="info" label="Bắt đầu" />
+          case 'stopped':
+            return <StatusBadge tone="muted" label="Đã dừng" />
+          case 'waiting':
+            return <StatusBadge tone="warning" label="Tạm dừng" />
+          case 'failed':
+            return <StatusBadge tone="danger" label="Thất bại" />
+          default:
+            return <StatusBadge tone="neutral" label="Thông tin" />
+        }
       },
     },
     {
-      title: 'Lý do / Ghi chú',
-      dataIndex: 'reason',
+      /**
+       * Lý do / ghi chú — BE trả sẵn trong `reason`.
+       *
+       * ⚠ Với sự kiện `DECISION` (đánh giá nhưng không tưới), `reason` của
+       * BE là chuỗi tiếng Anh kỹ thuật ("Climate demand cleared", "Cooldown",
+       * "Hourly safety budget exhausted"…). Ta bổ sung phần giải thích
+       * tiếng Việt dựa trên `average_humidity` + `thresholds_snapshot_json`
+       * để Admin hiểu ngay vì sao không tưới (vd độ ẩm 83% nằm trong
+       * vùng giữ 82–85%).
+       */
       key: 'reason',
       // ⚠ Cột text dài → cần `width` cố định + `ellipsis` để KHÔNG bị ép
       // vỡ theo từng ký tự khi bảng bị bóp hẹp.
       // ⚠ Bắt buộc phải có `width` (không chỉ `minWidth`): khi có cột
       // `fixed` + cuộn ngang, rc-table ép `table-layout: fixed` và chỉ đọc
       // `width` trong `<colgroup>` — `minWidth` bị bỏ qua.
-      width: 200,
-      minWidth: 200,
+      width: 260,
+      minWidth: 260,
       ellipsis: true,
-      render: (reason: string | null) =>
-        reason ? (
-          <Tooltip title={reason} placement="topLeft">
+      render: (_, row) => {
+        const explanation = explainSkippedDecision(row)
+        const text = explanation ?? row.reason
+        return text ? (
+          <Tooltip title={text} placement="topLeft">
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {reason}
+              {text}
             </Typography.Text>
           </Tooltip>
         ) : (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             —
           </Typography.Text>
-        ),
+        )
+      },
     },
   ]
 

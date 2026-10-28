@@ -12,6 +12,7 @@ import { autoMistingApi } from '../../devices/api/iot.api'
 import { useFloorList, iotKeys } from '../../devices/hooks/useIoT'
 import { useCultivationTiers } from './useCultivation'
 import { DEFAULT_TELEMETRY } from './cultivation.defaults'
+import { retryApiErrors } from '../../../shared/api/retry-policy'
 import type { Tier, TierTelemetry } from '../../../types/room.types'
 import type { CultivationFloorMapping } from '../../../types/iot'
 import type { ClimateThresholds } from '../utils/tray-climate.utils'
@@ -122,7 +123,7 @@ export function useTiersWithEnvironment() {
         },
         enabled: floorId != null && floorId > 0,
         staleTime: 60_000,
-        retry: false,
+        retry: retryApiErrors,
       }
     }),
   })

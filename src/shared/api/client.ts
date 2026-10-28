@@ -1,7 +1,7 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
 import { tokenStorage } from './token-storage'
 import { extractApiError } from './error'
-import { installErrorToast } from './error-toast'
+import { installErrorToast, cancelPendingErrorToast } from './error-toast'
 import { normalizeResponse } from './response-adapter'
 
 /**
@@ -57,15 +57,30 @@ function notifyAuthExpired(error: AxiosError) {
 }
 
 /**
+ * Timeout cho mọi request (ms).
+ *
+ * ⚠ Backend deploy trên Render (free tier) **ngủ (sleep) khi không có
+ * traffic** → request đầu tiên sau khi ngủ phải chờ Render "đánh thức"
+ * instance, thường mất 30–50s. Timeout 30s khiến request đó bị abort
+ * dù server vẫn đang xử lý.
+ *
+ * → Nâng lên **60s** để chờ đủ cho lần khởi động lạnh. Kết hợp với
+ * `retry: 1` của TanStack Query (xem `QueryProvider`), request bị timeout sẽ
+ * được thử lại 1 lần — thường lần thứ 2 sẽ nhanh vì backend đã thức.
+ */
+const API_TIMEOUT_MS = 60_000
+
+/**
  * Axios instance dùng chung cho toàn bộ app.
  *
  * - Tự đính kèm Bearer token vào mọi request (đọc từ tokenStorage).
  * - Tự clear session + dispatch event khi backend trả 401.
- * - Không retry tự động — để React Query quản lý retry policy.
+ * - Không retry tự động ở tầng axios — để React Query quản lý retry policy
+ *   (`retryApiErrors` ở `QueryProvider`).
  */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30_000,
+  timeout: API_TIMEOUT_MS,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -91,7 +106,12 @@ const globalErrorToast = installErrorToast()
 apiClient.interceptors.response.use(
   // Bọc data + meta về shape chuẩn (không thay `data` → không phá
   // các `ensureArray()`/`ensureObject()` hiện hữu).
-  normalizeResponse,
+  (response) => {
+    // Request thành công → nếu trước đó có lỗi đang chờ toast (vd lần 1
+    // timeout rồi lần retry thành công) thì huỷ toast đó đi.
+    cancelPendingErrorToast(response.config)
+    return normalizeResponse(response)
+  },
   (error: AxiosError) => {
     // 401: token sai / hết hạn → clear + phát event
     if (error.response?.status === 401) {

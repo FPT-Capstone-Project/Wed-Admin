@@ -12,6 +12,9 @@ export interface NormalizedApiError {
   message: string
 }
 
+/** Mã lỗi của axios khi request hết thời gian chờ. */
+const AXIOS_TIMEOUT_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT'])
+
 function readString(obj: Record<string, unknown>, key: string): string | null {
   const value = obj[key]
   return typeof value === 'string' && value.length > 0 ? value : null
@@ -28,12 +31,23 @@ export function extractApiError(error: unknown): NormalizedApiError {
   }
 
   const axiosError = error as AxiosError<unknown>
+  const code = axiosError.code ?? null
+
+  // Timeout → thông báo riêng (message mặc định của axios rất kỹ thuật:
+  // "timeout of 60000ms exceeded").
+  if (code && AXIOS_TIMEOUT_CODES.has(code)) {
+    return {
+      status: null,
+      code,
+      message: 'Máy chủ phản hồi quá lâu. Vui lòng thử lại.',
+    }
+  }
 
   // Không có response (network down, CORS, ...) → fallback
   if (!axiosError.response) {
     return {
       status: null,
-      code: axiosError.code ?? null,
+      code,
       message:
         axiosError.message ||
         'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.',

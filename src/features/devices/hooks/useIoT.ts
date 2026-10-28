@@ -14,6 +14,7 @@ import {
   type UseQueryOptions,
 } from '@tanstack/react-query'
 import { autoMistingApi, iotApi } from '../api/iot.api'
+import { retryApiErrors } from '../../../shared/api/retry-policy'
 import { filterActiveSensors } from '../utils/iot-node-scope'
 import type {
   AutoControlConfigRecord,
@@ -62,6 +63,17 @@ export const iotKeys = {
 
 // ─── Masters / Sensors / History ────────────────────────────────────────
 
+/**
+ * Chu kỳ polling telemetry thời gian thực (ms).
+ *
+ * ⚠ Master gửi telemetry qua MQTT; BE cập nhật `iot_sensor_latest` khi nhận
+ * được gói tin. Chu kỳ 3s đủ để số liệu "chạy" mà chưa dồn tải lên BE.
+ *
+ * → Được dùng bởi `useMasterSensors` và `useFloorEnvironment` (bảng "Cảm biến
+ * môi trường" + drawer môi trường tầng).
+ */
+export const TELEMETRY_POLL_INTERVAL_MS = 3_000
+
 export function useMasterList(
   options?: Partial<UseQueryOptions<IotMaster[], Error>>,
 ) {
@@ -73,6 +85,22 @@ export function useMasterList(
   })
 }
 
+/**
+ * Telemetry cảm biến của một Master — **real-time**.
+ *
+ * ⚠ `refetchInterval: 3000` để bảng "Cảm biến môi trường" tự cập nhật số
+ * liệu mà không cần reload trang.
+ *
+ * ## Tắt polling khi chuyển tab "Lịch sử"
+ *
+ * `options.refetchInterval` được truyền xuống ⇒ consumer chỉ cần truyền
+ * `refetchInterval: false` (hoặc `0`) khi rời khỏi màn hình thời gian thực
+ * ⇒ TanStack Query dừng hẳn timer, không còn gọi API nữa.
+ *
+ * ⚠ `staleTime` **phải** ≤ `refetchInterval` — nếu `staleTime` lớn hơn thì
+ * lần refetch định kỳ sẽ bị coi là "còn fresh" và bị bỏ qua, dữ liệu sẽ
+ * đứng yên. Vì vậy `staleTime` đặt bằng `refetchInterval` (3s).
+ */
 export function useMasterSensors(
   masterId: string | null,
   options?: Partial<UseQueryOptions<IotSensorsResponse, Error>>,
@@ -88,7 +116,8 @@ export function useMasterSensors(
       }
     },
     enabled: masterId !== null && masterId.length > 0,
-    staleTime: 15_000,
+    staleTime: TELEMETRY_POLL_INTERVAL_MS,
+    refetchInterval: TELEMETRY_POLL_INTERVAL_MS,
     ...options,
   })
 }
@@ -156,6 +185,9 @@ export function useFloorList(
  * ⚠ Endpoint `/environment` trả `FloorEnvironmentSensor` (`sensorId` +
  * `humidity`), **khác** `IotSensor` của `/masters/{id}/sensors` (`nodeId` +
  * `temperature`). Giữ đúng shape của endpoint để không mất `temperature`.
+ *
+ * → Polling 3s như `useMasterSensors` để drawer môi trường tầng cũng cập
+ * nhật real-time. Consumer truyền `refetchInterval: false` để tắt.
  */
 export function useFloorEnvironment(
   floorId: number | null,
@@ -181,7 +213,8 @@ export function useFloorEnvironment(
       )
     },
     enabled: floorId !== null && floorId > 0,
-    staleTime: 15_000,
+    staleTime: TELEMETRY_POLL_INTERVAL_MS,
+    refetchInterval: TELEMETRY_POLL_INTERVAL_MS,
     ...options,
   })
 }
@@ -217,10 +250,23 @@ export function useResolvedFloorEnvironment(
   floorId: number | null,
   masterId: string | null,
   nodeAddress: number | null,
+  options?: {
+    /**
+     * Chu kỳ polling (ms) — truyền `false` để tắt polling.
+     *
+     * ⚠ Truyền xuống **cả hai** query (`/environment` và `/masters/{id}/sensors`)
+     * vì cả hai đều là nguồn telemetry. Nếu chỉ tắt một, query còn lại vẫn
+     * gọi API mỗi 3s ⇒ không tiết kiệm được gì.
+     */
+    refetchInterval?: number | false
+  },
 ) {
-  const floorEnv = useFloorEnvironment(floorId)
+  const { refetchInterval = TELEMETRY_POLL_INTERVAL_MS } = options ?? {}
+
+  const floorEnv = useFloorEnvironment(floorId, { refetchInterval })
   const masterSensors = useMasterSensors(masterId, {
     enabled: masterId !== null && masterId.length > 0,
+    refetchInterval,
   })
 
   const resolved = useMemo<ResolvedFloorEnvironment>(() => {
@@ -423,8 +469,9 @@ export function useAutoControlLogs(
  * Endpoint `GET /api/iot/floors/{floorId}/auto-control` là read-only (chỉ cần
  * đăng nhập) nên Admin và Operator đều đọc được.
  *
- * ⚠ `retry: false` — tầng chưa cấu hình trả `config: null` (không phải lỗi),
- * còn lỗi mạng thì không nên spam retry khi người dùng chỉ xem.
+ * ⚠ `retry: retryApiErrors` — chỉ thử lại 1 lần khi lỗi TẠM THỜI (timeout
+ * khi backend Render đang thức dậy, 5xx, 429). Tầng chưa cấu hình trả
+ * `config: null` (không phải lỗi) nên không ảnh hưởng.
  */
 export function useAutoControlConfigList(floorIds: number[]) {
   const queries = useQueries({
@@ -445,7 +492,7 @@ export function useAutoControlConfigList(floorIds: number[]) {
         return result ?? {}
       },
       staleTime: 30_000,
-      retry: false,
+      retry: retryApiErrors,
     })),
   })
 

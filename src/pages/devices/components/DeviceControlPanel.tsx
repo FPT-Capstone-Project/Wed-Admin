@@ -7,6 +7,7 @@ import {
   ExperimentOutlined,
   EyeOutlined,
   NodeIndexOutlined,
+  SyncOutlined,
   ThunderboltOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
@@ -35,6 +36,7 @@ import {
   useMasterList,
   useMasterSensors,
   useResolvedFloorEnvironment,
+  TELEMETRY_POLL_INTERVAL_MS,
 } from '../../../features/devices/hooks/useIoT'
 import type {
   CultivationFloorMapping,
@@ -43,6 +45,7 @@ import type {
   MasterStatus,
 } from '../../../types/iot'
 import { AutoControlDetailModal } from './AutoControlDetailModal'
+import { SensorHistoryPanel } from './SensorHistoryPanel'
 import {
   formatDurationMs,
   formatProfileName,
@@ -56,6 +59,9 @@ const MASTER_STATUS_CONFIG: Record<
   online: { color: 'success', label: 'Trực tuyến' },
   offline: { color: 'default', label: 'Mất kết nối' },
 }
+
+/** Tab của card "Cảm biến môi trường". */
+type SensorTab = 'realtime' | 'history'
 
 function formatTimestamp(timestamp: string | number | null) {
   if (!timestamp) return '—'
@@ -94,12 +100,29 @@ function formatTimestamp(timestamp: string | number | null) {
 export function DeviceControlPanel() {
   const navigate = useNavigate()
 
+  /**
+   * Tab đang xem trong card "Cảm biến môi trường".
+   *
+   * ⚠ `realtime` → polling 3s (bảng số liệu live).
+   * `history`   → **tắt polling** (chỉ tra cứu lịch sử, không cần live).
+   */
+  const [sensorTab, setSensorTab] = useState<SensorTab>('realtime')
+  const isRealtimeTab = sensorTab === 'realtime'
+
   // ── Data from APIs (read-only) ───────────────────────────────────────
   const { data: masters = [] } = useMasterList({ staleTime: 30_000 })
   const { data: floors = [], isLoading: floorsLoading } = useFloorList()
-  const { data: sensorsResponse } = useMasterSensors(
-    masters[0]?.masterId ?? null,
-  )
+
+  /**
+   * Telemetry cảm biến — polling 3s khi đang ở tab "Thời gian thực".
+   *
+   * ⚠ `refetchInterval: false` khi chuyển sang tab "Lịch sử" ⇒ TanStack Query
+   * **xoá timer** ⇒ không còn gọi `GET /api/iot/masters/{id}/sensors` mỗi 3s.
+   */
+  const { data: sensorsResponse, isLoading: sensorsLoading, isFetching: sensorsFetching } =
+    useMasterSensors(masters[0]?.masterId ?? null, {
+      refetchInterval: isRealtimeTab ? TELEMETRY_POLL_INTERVAL_MS : false,
+    })
   const sensors = sensorsResponse?.sensors ?? []
 
   // ── Detail drawers (chỉ xem) ─────────────────────────────────────────
@@ -128,10 +151,18 @@ export function DeviceControlPanel() {
   //
   // ⚠ `floorId` = `floor_id` của BE, **không** phải `room_id` (nhiều tầng
   // có thể cùng room). Xem `CultivationFloorMapping.floor_id`.
+  //
+  // ⚠ Chỉ polling khi đang ở tab "Thời gian thực" — tab "Lịch sử" thì tắt
+  // để không gọi API vô ích.
   const floorEnv = useResolvedFloorEnvironment(
     selectedFloor?.floor_id ?? null,
     selectedFloorMasterId,
     selectedFloor?.node_address ?? null,
+    {
+      refetchInterval: isRealtimeTab
+        ? TELEMETRY_POLL_INTERVAL_MS
+        : false,
+    },
   )
 
   // ── Tables ──────────────────────────────────────────────────────────
@@ -482,38 +513,57 @@ export function DeviceControlPanel() {
             <span>
               Cảm biến môi trường — Bộ điều khiển {masters[0]?.masterId ?? '—'}
             </span>
+            {isRealtimeTab && sensorsFetching && !sensorsLoading && (
+              <Tag color="processing" style={{ fontSize: 11 }}>
+                <SyncOutlined spin /> Đang cập nhật
+              </Tag>
+            )}
           </Flex>
         }
         extra={
-          <Segmented
-            value="realtime"
-            options={[
-              { label: 'Thời gian thực', value: 'realtime' },
-              { label: 'Lịch sử', value: 'history' },
-            ]}
-            onChange={(value) => {
-              if (value === 'history') {
-                navigate('/devices/history')
-              }
-            }}
-          />
+          <Flex align="center" gap={12}>
+            {isRealtimeTab && (
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Tự cập nhật mỗi {TELEMETRY_POLL_INTERVAL_MS / 1000}s
+              </Typography.Text>
+            )}
+            <Segmented<SensorTab>
+              value={sensorTab}
+              options={[
+                { label: 'Thời gian thực', value: 'realtime' },
+                { label: 'Lịch sử', value: 'history' },
+              ]}
+              onChange={setSensorTab}
+            />
+          </Flex>
         }
         styles={{ body: { padding: 12 } }}
       >
-        <Table<IotSensor>
-          rowKey={(row) => `${row.nodeId}-${row.sensorId}`}
-          columns={sensorColumns}
-          dataSource={sensors}
-          loading={masters.length === 0}
-          size="small"
-          pagination={{ pageSize: 10, showSizeChanger: false }}
-          scroll={{ x: 800 }}
-          locale={{
-            emptyText: (
-              <Empty description="Chưa nhận dữ liệu từ cảm biến nào." />
-            ),
-          }}
-        />
+        {isRealtimeTab ? (
+          <Table<IotSensor>
+            rowKey={(row) => `${row.nodeId}-${row.sensorId}`}
+            columns={sensorColumns}
+            dataSource={sensors}
+            loading={masters.length === 0}
+            size="small"
+            pagination={{ pageSize: 10, showSizeChanger: false }}
+            scroll={{ x: 800 }}
+            locale={{
+              emptyText: (
+                <Empty description="Chưa nhận dữ liệu từ cảm biến nào." />
+              ),
+            }}
+          />
+        ) : (
+          /*
+            Tab "Lịch sử" — polling đã TẮT (refetchInterval: false) nên không
+            tốn request nào cho bảng live.
+          */
+          <SensorHistoryPanel
+            masterId={masters[0]?.masterId ?? null}
+            onOpenFullHistory={() => navigate('/devices/history')}
+          />
+        )}
       </Card>
 
       {/* ── Floor Environment Drawer (read-only) ───────────────────────── */}

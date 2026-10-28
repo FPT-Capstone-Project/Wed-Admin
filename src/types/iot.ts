@@ -365,7 +365,7 @@ export interface AutoControlLogEntry {
   /**
    * Loại sự kiện. Giá trị thực tế BE trả về:
    * DECISION, START, STOP, ON_REQUESTED, OFF_REQUESTED, PULSE_RESERVED,
-   * OFF_CONFIRMED, RETRY_WAIT, CONFIG_SAVED, FAULT.
+   * OFF_CONFIRMED, RETRY_WAIT, CONFIG_SAVED, FAULT, MANUAL_OVERRIDE.
    */
   event_type: string
   reason: string | null
@@ -383,6 +383,21 @@ export interface AutoControlLogEntry {
   command_id?: string | null
   /** Tổng thời gian phun đã giữ trong giờ (ms) — dùng cho ngân sách an toàn. */
   reserved_on_ms?: number
+  /**
+   * Thời lượng thực thi của sự kiện (ms).
+   *
+   * ⚠ Cột này **không** có trong schema `iot_auto_control_logs` ở các
+   * migration hiện có (005 → 012). BE trả `SELECT *` nên nếu ai đó thêm
+   * cột ở DB sau này, FE sẽ đọc được; còn không thì là `undefined`.
+   *
+   * → Vì vậy FE đọc **nhiều tên cột** (`duration_ms`, `pulse_duration`,
+   * `execution_ms`) rồi fallback về `reserved_on_ms`. Xem `formatLogDuration`.
+   */
+  duration_ms?: number | null
+  /** Tên thay thế của `duration_ms` — xem ghi chú trên. */
+  pulse_duration?: number | null
+  /** Tên thay thế của `duration_ms` — xem ghi chú trên. */
+  execution_ms?: number | null
 }
 
 /**

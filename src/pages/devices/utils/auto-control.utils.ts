@@ -161,15 +161,14 @@ export type AutoControlLogStatus = 'success' | 'failure'
  */
 const FAILED_EVENT_TYPES = new Set(['FAULT', 'OFF_FAILED', 'RETRY_WAIT'])
 
-/** Phân loại trạng thái một dòng nhật ký (thành công / thất bại). */
-export function resolveLogStatus(
-  eventType: string | null | undefined,
-): AutoControlLogStatus {
-  if (!eventType) return 'success'
-  return FAILED_EVENT_TYPES.has(eventType.toUpperCase()) ? 'failure' : 'success'
-}
-
-/** Nhãn tiếng Việt của loại sự kiện BE ghi trong nhật ký. */
+/**
+ * Sự kiện chỉ **ghi nhận quyết định** — KHÔNG phải lỗi.
+ *
+ * ⚠ `DECISION` là bản ghi "hệ thống đã đánh giá và quyết định X", có thể
+ * là quyết định **không tưới** (vd độ ẩm đã đạt ngưỡng dừng). Không phải
+ * lỗi, nên vẫn xếp "thành công" — nhưng nhãn phải nói rõ là quyết định
+ * chứ không phải "đã tưới". Xem `formatEventType`.
+ */
 export const AUTO_CONTROL_EVENT_LABELS: Readonly<Record<string, string>> = {
   DECISION: 'Quyết định tưới',
   START: 'Bắt đầu phiên tự động',
@@ -184,10 +183,164 @@ export const AUTO_CONTROL_EVENT_LABELS: Readonly<Record<string, string>> = {
   MANUAL_OVERRIDE: 'Nhân viên ngắt tưới',
 }
 
-/** Nhãn tiếng Việt của loại sự kiện (fallback = chính giá trị gốc). */
+/**
+ * Kết quả thực tế của một dòng nhật ký — điều hệ thống **đã làm**,
+ * không phải chỉ là "đã đánh giá".
+ */
+export type AutoControlLogOutcome =
+  | 'misted' // đã phun sương thật
+  | 'skipped' // đánh giá nhưng KHÔNG tưới (điều kiện không thoả)
+  | 'started' // bắt đầu phiên tự động
+  | 'stopped' // dừng phiên tự động
+  | 'waiting' // tạm dừng, chờ thử lại
+  | 'failed' // lỗi hệ thống
+  | 'info' // sự kiện thông tin (lưu cấu hình, ngắt tưới thủ công)
+
+/**
+ * Phân loại kết quả thực tế của một dòng nhật ký.
+ *
+ * ⚠ **Vì sao cần?**
+ *
+ * Sự kiện `DECISION` của BE được ghi cho **MỌI** lần đánh giá — kể cả khi
+ * kết luận là KHÔNG tưới. Nhãn "Quyết định tưới" khiến người đọc tưởng rằng
+ * hệ thống đã phun nước. Ví dụ thực tế:
+ *
+ *   - Cấu hình: `humidity_start_threshold = 82`, `humidity_stop_threshold = 85`
+ *   - Sự kiện: `DECISION`, `average_humidity = 83`
+ *
+ * → 83% **nằm trong vùng hysteresis** (82 ≤ 83 < 85) ⇒ hệ thống giữ
+ *   trạng thái hiện tại (không tưới, không dừng). Đây là hành vi **đúng**
+ *   của thuật toán, nhưng UI phải nói rõ "không tưới" thay vì "quyết định
+ *   tưới" để không gây hoang mang.
+ *
+ * Logic phía BE (xem `Backend/src/services/autoMisting.algorithm.js` — `decide()`):
+ *   - `humidity <  humidity_start_threshold` → `demand = true`  (muốn tưới)
+ *   - `humidity >= humidity_stop_threshold`  → `demand = false` (không tưới)
+ *   - `start < humidity < stop`              → giữ nguyên `runtime.demand`
+ *                                              (vùng hysteresis)
+ *
+ * @param log Dòng nhật ký.
+ */
+export function resolveLogOutcome(
+  log: AutoControlLogEntry | null | undefined,
+): AutoControlLogOutcome {
+  if (!log) return 'info'
+
+  const eventType = log.event_type?.toUpperCase() ?? ''
+
+  switch (eventType) {
+    case 'PULSE_RESERVED':
+    case 'ON_REQUESTED':
+      return 'misted'
+
+    case 'START':
+      return 'started'
+
+    case 'STOP':
+    case 'OFF_REQUESTED':
+    case 'OFF_CONFIRMED':
+      return 'stopped'
+
+    case 'RETRY_WAIT':
+      return 'waiting'
+
+    case 'FAULT':
+    case 'OFF_FAILED':
+      return 'failed'
+
+    case 'DECISION':
+      // Có mở van không? `ON_REQUESTED`/`PULSE_RESERVED` là sự kiện riêng,
+      // nên `DECISION` **luôn** là lần đánh giá không mở van.
+      return 'skipped'
+
+    default:
+      return 'info'
+  }
+}
+
+/**
+ * Phân loại trạng thái một dòng nhật ký (thành công / thất bại).
+ *
+ * @param eventType Loại sự kiện BE ghi.
+ */
+export function resolveLogStatus(
+  eventType: string | null | undefined,
+): AutoControlLogStatus {
+  if (!eventType) return 'success'
+  return FAILED_EVENT_TYPES.has(eventType.toUpperCase()) ? 'failure' : 'success'
+}
+
+/**
+ * Nhãn tiếng Việt của loại sự kiện (fallback = chính giá trị gốc).
+ *
+ * ⚠ `DECISION` = "hệ thống đã đánh giá", KHÔNG phải "đã tưới". Nhãn cũ
+ * "Quyết định tưới" gây hiểu nhầm là đã phun nước — trong khi thực tế sự
+ * kiện này được ghi cho **mọi** lần đánh giá, kể cả khi kết luận là KHÔNG
+ * tưới (độ ẩm đã đạt ngưỡng dừng, hết ngân sách giờ, đang nghỉ cooldown…).
+ *
+ * → Đổi thành "Đánh giá điều kiện" để phản ánh đúng bản chất. Lý do cụ
+ * thể nằm ở cột "Lý do / Ghi chú" (`reason`) — BE trả sẵn.
+ */
 export function formatEventType(eventType: string | null | undefined): string {
   if (!eventType) return '—'
-  return AUTO_CONTROL_EVENT_LABELS[eventType.toUpperCase()] ?? eventType
+  const key = eventType.toUpperCase()
+  if (key === 'DECISION') return 'Đánh giá điều kiện'
+  return AUTO_CONTROL_EVENT_LABELS[key] ?? eventType
+}
+
+/**
+ * Thời lượng thực thi của một dòng nhật ký — đọc đúng trường API trả về.
+ *
+ * ## Nguồn dữ liệu
+ *
+ * Bảng `iot_auto_control_logs` (migration 005 + 007) **không có** cột
+ * `duration_ms`. Các cột thời gian thực sự tồn tại:
+ *
+ * | Cột                | Ý nghĩa                                        |
+ * | ------------------ | ---------------------------------------------- |
+ * | `reserved_on_ms`   | Thời lượng xung phun **đã giữ trong giờ** (ms)   |
+ * | `misting_pulse_ms` | Thời lượng xung phun **cấu hình** của tầng (ms) |
+ *
+ * BE chỉ ghi `reserved_on_ms > 0` cho sự kiện `PULSE_RESERVED`; mọi sự
+ * kiện khác nhận `0` (default cột). Vì vậy hiển thị `reserved_on_ms` cho
+ * mọi dòng ⇒ tất cả đều ra "0 mili giây" ⇒ vô nghĩa.
+ *
+ * → Thứ tự đọc:
+ *   1. `duration_ms` / `pulse_duration` / `execution_ms` — cột thời lượng
+ *      thực thi nếu BE bổ sung sau này (BE trả `SELECT *` nên FE tự nhận).
+ *   2. `reserved_on_ms` — chỉ dùng cho `PULSE_RESERVED` (xung phun thật).
+ *   3. `null` — các sự kiện không có thời lượng riêng (quyết định, cấu
+ *      hình, bắt đầu/dừng phiên…) ⇒ UI hiển thị "—".
+ *
+ * @param log Dòng nhật ký.
+ * @param fallbackPulseMs `misting_pulse_ms` của cấu hình tầng — dùng làm
+ *   fallback cho sự kiện `PULSE_RESERVED` khi BE không ghi `reserved_on_ms`.
+ */
+export function formatLogDuration(
+  log: AutoControlLogEntry | null | undefined,
+  fallbackPulseMs?: number | null,
+): string | null {
+  if (!log) return null
+
+  // 1. Cột thời lượng thực thi (nếu BE đã bổ sung).
+  const explicit = [log.duration_ms, log.pulse_duration, log.execution_ms].find(
+    (value) => typeof value === 'number' && Number.isFinite(value) && value > 0,
+  )
+  if (explicit !== undefined) return formatDurationMs(explicit)
+
+  // 2. Thời lượng xung phun thật — chỉ có nghĩa cho `PULSE_RESERVED`.
+  const isPulse = log.event_type?.toUpperCase() === 'PULSE_RESERVED'
+  if (isPulse) {
+    const reserved = log.reserved_on_ms
+    if (typeof reserved === 'number' && Number.isFinite(reserved) && reserved > 0) {
+      return formatDurationMs(reserved)
+    }
+    // BE ghi 0 (dry-run không reserve) → dùng thời lượng cấu hình.
+    return formatDurationMs(fallbackPulseMs)
+  }
+
+  // 3. Sự kiện không có thời lượng riêng.
+  return null
 }
 
 /**
@@ -208,6 +361,93 @@ export function extractLogNodeAddresses(
     if (typeof node === 'number' && Number.isFinite(node)) nodes.add(node)
   }
   return [...nodes].sort((a, b) => a - b)
+}
+
+/**
+ * Ngưỡng đang áp dụng tại thời điểm ghi nhận ký.
+ *
+ * BE lưu `thresholds_snapshot_json` = `config_snapshot` của run (JSONB), nên
+ * đây chính là cấu hình tại thời điểm sự kiện xảy ra — không phải cấu
+ * hình hiện tại (cấu hình có thể đã đổi sau đó).
+ */
+export function extractLogThresholds(
+  log: AutoControlLogEntry | null | undefined,
+): Record<string, unknown> | null {
+  const raw = log?.thresholds_snapshot_json
+  if (typeof raw === 'string') {
+    try {
+      const parsed: unknown = JSON.parse(raw)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : null
+    } catch {
+      return null
+    }
+  }
+  if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>
+  }
+  return null
+}
+
+/**
+ * Giải thích vì sao hệ thống **không** tưới ở một sự kiện `DECISION`.
+ *
+ * ⚠ Câu hỏi thường gặp: *"Độ ẩm đã 83% mà ngưỡng là < 82%, sao vẫn ghi
+ * nhận sự kiện?"*
+ *
+ * Trả lời: `DECISION` được ghi cho **mọi** lần đánh giá, không phải lúc
+ * phun nước. Thuật toán dùng **hysteresis** (2 ngưỡng):
+ *
+ * ```text
+ *   humidity <  start (82%)  →  demand = true   (tưới)
+ *   humidity >= stop  (85%)  →  demand = false  (dừng)
+ *   start <= humidity < stop →  GIỮ demand cũ   (vùng chết)
+ * ```
+ *
+ * Ở 83% ⇒ nằm trong vùng chết (82 ≤ 83 < 85) ⇒ hệ thống **giữ** trạng
+ * thái trước đó. Nếu trước đó đang tưới thì vẫn tưới tiếp (đó là mục
+ * đích của hysteresis: tránh dao động); nếu đang nghỉ thì vẫn nghỉ.
+ *
+ * → Dùng hàm này để hiển thị lý do cụ thể cho Admin thay vì để họ tự đoán.
+ *
+ * @param log Dòng nhật ký.
+ * @returns Mô tả lý do, hoặc `null` nếu không đủ dữ liệu để kết luận.
+ */
+export function explainSkippedDecision(
+  log: AutoControlLogEntry | null | undefined,
+): string | null {
+  if (!log) return null
+  if (log.event_type?.toUpperCase() !== 'DECISION') return null
+
+  const humidity = log.average_humidity
+  if (typeof humidity !== 'number' || !Number.isFinite(humidity)) return null
+
+  const thresholds = extractLogThresholds(log)
+  const start = thresholds?.humidity_start_threshold
+  const stop = thresholds?.humidity_stop_threshold
+  const max = thresholds?.humidity_max
+
+  const hasStart = typeof start === 'number' && Number.isFinite(start)
+  const hasStop = typeof stop === 'number' && Number.isFinite(stop)
+
+  if (hasStart && hasStop) {
+    if (humidity >= start && humidity < stop) {
+      return `Độ ẩm ${formatPercent(humidity)} nằm trong vùng giữ (${formatPercent(start)} – ${formatPercent(stop)}) → giữ trạng thái hiện tại, không tưới mới.`
+    }
+    if (humidity >= stop) {
+      return `Độ ẩm ${formatPercent(humidity)} ≥ ngưỡng dừng ${formatPercent(stop)} → không tưới.`
+    }
+    if (humidity < start) {
+      return `Độ ẩm ${formatPercent(humidity)} < ngưỡng bắt đầu ${formatPercent(start)} → đủ điều kiện tưới (xem sự kiện phun sương).`
+    }
+  }
+
+  if (typeof max === 'number' && Number.isFinite(max) && humidity >= max) {
+    return `Độ ẩm ${formatPercent(humidity)} ≥ trần cho phép ${formatPercent(max)} → không tưới.`
+  }
+
+  return null
 }
 
 /**

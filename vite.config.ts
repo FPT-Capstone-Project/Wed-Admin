@@ -48,6 +48,16 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: true,
           rewrite: (path) => path,
+          /**
+           * Timeout của dev proxy (ms).
+           *
+           * ⚠ `http-proxy` mặc định **không** timeout → request treo vô hạn
+           * khi backend Render chưa thức dậy. Đặt 60s để khớp với timeout
+           * của axios (`API_TIMEOUT_MS`) → lỗi trả về là "timeout" rõ ràng
+           * thay vì request treo.
+           */
+          timeout: 60_000,
+          proxyTimeout: 60_000,
           configure: (proxy) => {
             proxy.on('error', (err, req) => {
               console.error(

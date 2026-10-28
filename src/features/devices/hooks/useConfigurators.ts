@@ -8,14 +8,16 @@
  *   - tự tắt (`enabled: false`) khi tài khoản thiếu quyền `user.manage`,
  *   - trả map rỗng → UI fallback sang `Nhân viên #<id>`.
  *
- * Hook không bao giờ chặn render lỗi — `retry: false` vì 403 không bao giờ
- * thành công khi thử lại.
+ * ⚠ Retry dùng `retryApiErrors`: 403 **không** được retry (thử lại cũng
+ * không thành công), nhưng timeout / 5xx thì **có** — vì backend Render có
+ * thể đang "thức dậy" và request chỉ bị timeout chứ chưa tới được server.
  */
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { USER_MANAGE } from '../../auth/permissions'
 import { useHasPermission } from '../../auth/hooks/usePermission'
 import { userApi } from '../../users/api/user.api'
+import { retryApiErrors } from '../../../shared/api/retry-policy'
 
 /** `user_id` → tên hiển thị của nhân viên. */
 export type UserNameMap = ReadonlyMap<number, string>
@@ -34,7 +36,7 @@ export function useConfiguratorNames(userId: number | null): UserNameMap {
     queryFn: () => userApi.list(),
     enabled: canViewUsers && userId !== null && userId > 0,
     staleTime: 5 * 60_000,
-    retry: false,
+    retry: retryApiErrors,
   })
 
   return useMemo(() => {
