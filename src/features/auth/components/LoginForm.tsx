@@ -1,6 +1,6 @@
 import { LockOutlined, MailOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Card, Checkbox, Form, Input, Typography } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
 import type { LoginCredentials } from '../types/auth.types'
@@ -16,8 +16,26 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const clearError = useAuthStore((state) => state.clearError)
   const { message: messageApi } = App.useApp()
 
+  const [form] = Form.useForm<LoginCredentials>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
+  /**
+   * Tự điền email + tích sẵn checkbox khi tải lại trang Login.
+   *
+   * ⚠ Dùng `useEffect` + `form.setFieldsValue` thay vì chỉ `initialValues`:
+   * `initialValues` chỉ áp dụng lần mount đầu, còn `rememberedEmail` trong
+   * store có thể được hydrate/migrate **sau** khi component đã render
+   * (vd đọc từ `localStorage` bị trễ, hoặc user vừa logout ở tab khác).
+   * `setFieldsValue` cập nhật được form đã mount.
+   */
+  useEffect(() => {
+    if (!rememberedEmail) return
+    form.setFieldsValue({
+      email: rememberedEmail,
+      rememberMe: true,
+    })
+  }, [form, rememberedEmail])
 
   const handleSubmit = async (credentials: LoginCredentials) => {
     setIsSubmitting(true)
@@ -70,6 +88,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         className="login-form mcms-login-form"
         layout="vertical"
         requiredMark={false}
+        form={form}
         initialValues={{
           email: rememberedEmail,
           rememberMe: Boolean(rememberedEmail),
@@ -86,7 +105,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         >
           <Input
             type="email"
-            autoComplete="email"
+            autoComplete="username"
             inputMode="email"
             placeholder="user@example.com"
             prefix={<MailOutlined aria-hidden="true" />}

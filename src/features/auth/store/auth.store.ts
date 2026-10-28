@@ -2,6 +2,11 @@ import { create } from 'zustand'
 import { useNotificationStore } from '../../notifications/store/notification.store'
 import { authApi } from '../api/auth.api'
 import { tokenStorage } from '../../../shared/api/token-storage'
+import {
+  readKey,
+  removeKeyEverywhere,
+  writeKey,
+} from '../../../shared/api/persistence'
 import { resetErrorToastCache } from '../../../shared/api/error-toast'
 import { rolePermissionsFor } from '../permissions'
 import {
@@ -11,7 +16,31 @@ import {
   type UserRole,
 } from '../../../types/auth'
 
-const REMEMBERED_EMAIL_KEY = 'mcms-remembered-email'
+/**
+ * Key lưu email "ghi nhớ đăng nhập" trong `localStorage`.
+ *
+ * ⚠ Tên key theo đúng yêu cầu nghiệp vụ: `saved_email`.
+ *
+ * ⚠ Email luôn nằm ở `localStorage` (KHÔNG phụ thuộc checkbox) — mục đích
+ * của nó chỉ là "tiện cho user không phải gõ lại email", không liên quan
+ * tới vòng đời phiên đăng nhập. Còn token thì đổi nơi lưu theo checkbox
+ * (xem `tokenStorage`).
+ *
+ * (Key cũ `mcms-remembered-email` vẫn được đọc 1 lần để tương thích với
+ * phiên đã dùng trước khi deploy bản này — xem `readRememberedEmail`.)
+ */
+const REMEMBERED_EMAIL_KEY = 'saved_email'
+
+/** Key cũ — chỉ đọc để migrate, không ghi mới. */
+const LEGACY_REMEMBERED_EMAIL_KEY = 'mcms-remembered-email'
+
+/**
+ * Key cache user trong `localStorage`.
+ *
+ * ⚠ Cache user KHÔNG chứa token — token nằm riêng ở `tokenStorage` (có thể
+ * ở `sessionStorage` tuỳ checkbox). Vì vậy cache user vẫn ở `localStorage`
+ * bất kể chế độ phiên: nó chỉ là dữ liệu hiển thị, không phải xác thực.
+ */
 const USER_CACHE_KEY = 'mcms-user-cache'
 
 /**
@@ -28,10 +57,9 @@ const USER_CACHE_KEY = 'mcms-user-cache'
  *   hoạt động với cả cache cũ lẫn cache mới.
  */
 function readUserCache(): User | null {
-  if (typeof window === 'undefined') return null
+  const raw = readKey(USER_CACHE_KEY, 'local')
+  if (!raw) return null
   try {
-    const raw = window.localStorage.getItem(USER_CACHE_KEY)
-    if (!raw) return null
     const parsed = JSON.parse(raw) as Partial<User> | null
     if (!parsed || typeof parsed !== 'object') return null
 
@@ -50,16 +78,7 @@ function readUserCache(): User | null {
 }
 
 function writeUserCache(user: User | null) {
-  if (typeof window === 'undefined') return
-  try {
-    if (user) {
-      window.localStorage.setItem(USER_CACHE_KEY, JSON.stringify(user))
-    } else {
-      window.localStorage.removeItem(USER_CACHE_KEY)
-    }
-  } catch {
-    /* storage blocked → bỏ qua */
-  }
+  writeKey(USER_CACHE_KEY, user ? JSON.stringify(user) : null, 'local')
 }
 
 interface AuthState {
@@ -82,26 +101,30 @@ interface AuthState {
   clearError: () => void
 }
 
+/**
+ * Đọc email đã "ghi nhớ" từ `localStorage`.
+ *
+ * Ưu tiên key chuẩn `saved_email`; fallback key cũ `mcms-remembered-email`
+ * để user đang đăng nhập không bị mất email đã lưu sau khi deploy.
+ */
 function readRememberedEmail(): string {
-  if (typeof window === 'undefined') return ''
-  try {
-    return window.localStorage.getItem(REMEMBERED_EMAIL_KEY) ?? ''
-  } catch {
-    return ''
-  }
+  return (
+    readKey(REMEMBERED_EMAIL_KEY, 'local') ??
+    readKey(LEGACY_REMEMBERED_EMAIL_KEY, 'local') ??
+    ''
+  )
 }
 
+/**
+ * Ghi (hoặc xoá) email "ghi nhớ" trong `localStorage`.
+ *
+ * - Có giá trị → lưu vào `saved_email`.
+ * - Rỗng → xoá `saved_email` (đồng thời dọn key cũ cho sạch).
+ */
 function writeRememberedEmail(value: string) {
-  if (typeof window === 'undefined') return
-  try {
-    if (value) {
-      window.localStorage.setItem(REMEMBERED_EMAIL_KEY, value)
-    } else {
-      window.localStorage.removeItem(REMEMBERED_EMAIL_KEY)
-    }
-  } catch {
-    /* storage blocked → bỏ qua */
-  }
+  writeKey(REMEMBERED_EMAIL_KEY, value || null, 'local')
+  // Dọn key cũ sau khi đã migrate sang key mới.
+  removeKeyEverywhere(LEGACY_REMEMBERED_EMAIL_KEY)
 }
 
 /**
@@ -137,19 +160,26 @@ export const useAuthStore = create<AuthState>((set) => {
       // Chuẩn hóa role về UPPERCASE để RoleGuard so sánh chính xác
       const user = ensureUpperCaseRole(backendUserToUiUser(response.user))
 
-      tokenStorage.setTokens(response.token)
+      // ── Yêu cầu B: chọn nơi lưu token theo checkbox ──────────────────
+      //   - có tích "Ghi nhớ đăng nhập" → `localStorage` → tồn tại qua
+      //     lần tắt trình duyệt.
+      //   - không tích                  → `sessionStorage` → mất khi đóng tab.
+      tokenStorage.setTokens(
+        response.token,
+        null,
+        rememberMe ? 'local' : 'session',
+      )
       writeUserCache(user)
-      if (rememberMe) {
-        writeRememberedEmail(email.trim().toLowerCase())
-      } else {
-        writeRememberedEmail('')
-      }
+
+      // ── Yêu cầu A: lưu (hoặc xoá) email đã ghi nhớ ───────────────────
+      const normalizedEmail = email.trim().toLowerCase()
+      writeRememberedEmail(rememberMe ? normalizedEmail : '')
 
       set({
         user,
         accessToken: response.token,
         isAuthenticated: true,
-        rememberedEmail: rememberMe ? email.trim().toLowerCase() : '',
+        rememberedEmail: rememberMe ? normalizedEmail : '',
       })
     } catch (cause) {
       const text =

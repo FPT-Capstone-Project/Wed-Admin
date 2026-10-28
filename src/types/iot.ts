@@ -209,6 +209,54 @@ export interface AutoMistingConfiguration {
 }
 
 /**
+ * Row đầy đủ của bảng `iot_auto_control_configs`.
+ *
+ * BE trả `SELECT *` (xem `autoMisting.model.js` → `config()`) nên có thêm
+ * các cột hệ thống mà `AutoMistingConfiguration` (schema ghi) không có:
+ * `id`, `configured_by`, `configured_at`, `updated_at`.
+ *
+ * ⚠ Admin web chỉ **đọc** — không dùng type này để gửi lại lên BE.
+ */
+export interface AutoControlConfigRecord extends AutoMistingConfiguration {
+  id?: number
+  floor_id?: number
+  /** `users.user_id` của nhân viên đã lưu cấu hình gần nhất. */
+  configured_by?: number | null
+  /** Thời điểm tạo bản ghi cấu hình. */
+  configured_at?: string | null
+  /** Thời điểm cập nhật cấu hình gần nhất. */
+  updated_at?: string | null
+  /** Snapshot profile nguồn khi `config_source = 'FLOOR'`. */
+  source_profiles?: unknown
+}
+
+/**
+ * Response `GET /api/iot/floors/{floorId}/auto-control`.
+ *
+ * BE (`service.configuration`) trả:
+ *   `{ config, mode, cultivation, suggestions, floorSuggestion }`
+ *
+ * - `config` → row `iot_auto_control_configs` (xem `AutoControlConfigRecord`).
+ * - `mode` → `'AUTO'` khi còn phiên chạy, ngược lại `'MANUAL'`.
+ * - `cultivation` → `{ profiles, trays, conflict, unassignedTrays, requiresApproval }`.
+ * - `suggestions` → điều kiện nấm tham chiếu của profile đã duyệt.
+ * - `floorSuggestion` → ngưỡng đề xuất chung cho tầng.
+ */
+export interface AutoControlConfigurationResponse {
+  config?: AutoControlConfigRecord | null
+  mode?: AutoControlMode
+  cultivation?: {
+    profiles?: unknown[]
+    trays?: unknown[]
+    conflict?: boolean
+    unassignedTrays?: number
+    requiresApproval?: boolean
+  } | null
+  suggestions?: Record<string, unknown> | null
+  floorSuggestion?: AutoControlSuggestions | null
+}
+
+/**
  * Response `GET /api/iot/floors/{floorId}/auto-control`.
  *
  * Swagger: *"State includes mode, run, runtime, environment, ssr,
@@ -322,6 +370,8 @@ export interface AutoControlLogEntry {
   event_type: string
   reason: string | null
   average_humidity?: number | null
+  /** Nhiệt độ trung bình tại thời điểm ghi nhật ký (cột bổ sung ở migration 012). */
+  average_temperature?: number | null
   created_at?: string
   /** Lý do bị chặn bởi cổng an toàn — BE ghi vào `reason` khi FAULT. */
   safety_blocked_reason?: string | null
@@ -331,6 +381,27 @@ export interface AutoControlLogEntry {
   thresholds_snapshot_json?: unknown
   /** Id lệnh SSR được phát sinh, nếu có. */
   command_id?: string | null
+  /** Tổng thời gian phun đã giữ trong giờ (ms) — dùng cho ngân sách an toàn. */
+  reserved_on_ms?: number
+}
+
+/**
+ * Một phần tử trong `sensor_values_json` của dòng nhật ký.
+ *
+ * BE `aggregate()` dựng mảng này bằng `{ sensorId, ...row, valid, ageMs }`
+ * (xem `autoMisting.algorithm.js`) — nên có thêm cột gốc của
+ * `iot_sensor_latest`, trong đó có `node_address`.
+ */
+export interface AutoControlLogSensor {
+  /** 1..3 */
+  sensorId?: number
+  /** Cụm cảm biến RS485 — cột `node_address` của `iot_sensor_latest`. */
+  node_address?: number
+  humidity?: number | null
+  temperature?: number | null
+  valid?: boolean
+  ageMs?: number | null
+  retained?: boolean
 }
 
 /**

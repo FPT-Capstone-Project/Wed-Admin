@@ -9,9 +9,14 @@ interface AuthGuardProps {
 /**
  * Chặn truy cập khi chưa đăng nhập.
  *
- * - Nếu có token trong localStorage → thử `hydrate()` (gọi /api/users/me).
- *   Trong lúc hydrate, hiển thị fallback nhẹ để tránh flash redirect.
- * - Nếu KHÔNG có token → redirect thẳng về /login.
+ * - Nếu có token trong `localStorage` **hoặc** `sessionStorage` → thử
+ *   `hydrate()` (gọi /api/users/me). Trong lúc hydrate, hiển thị fallback
+ *   nhẹ để tránh flash redirect.
+ * - Nếu KHÔNG có token ở cả hai → redirect thẳng về /login.
+ *
+ * ⚠ Nguồn token là `tokenStorage.getAccessToken()` — đã tự ưu tiên
+ * `localStorage` rồi fallback `sessionStorage`. Vì vậy "Ghi nhớ đăng nhập"
+ * quyết định vòng đời phiên, còn route guard vẫn hoạt động như nhau.
  */
 export function AuthGuard({ children }: AuthGuardProps) {
   const location = useLocation()

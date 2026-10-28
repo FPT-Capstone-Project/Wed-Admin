@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   ApiOutlined,
   BulbOutlined,
   CheckCircleOutlined,
   ControlOutlined,
   ExperimentOutlined,
+  EyeOutlined,
   NodeIndexOutlined,
   ThunderboltOutlined,
   WifiOutlined,
@@ -29,6 +30,7 @@ import { useNavigate } from 'react-router-dom'
 import { ActionButton, StatCard } from '../../../shared/ui'
 import { formatSensorLabel } from '../../../shared/i18n/terms'
 import {
+  useAutoControlConfigList,
   useFloorList,
   useMasterList,
   useMasterSensors,
@@ -40,6 +42,12 @@ import type {
   IotSensor,
   MasterStatus,
 } from '../../../types/iot'
+import { AutoControlDetailModal } from './AutoControlDetailModal'
+import {
+  formatDurationMs,
+  formatProfileName,
+  formatTriggerCondition,
+} from '../utils/auto-control.utils'
 
 const MASTER_STATUS_CONFIG: Record<
   MasterStatus,
@@ -66,14 +74,22 @@ function formatTimestamp(timestamp: string | number | null) {
  *
  * Vì vậy panel này cố tình **không** render:
  *   - nút "Thêm cấu hình tầng"
- *   - cột "Hành động" (điều khiển tưới / cấu hình ngưỡng / sửa / gán khay)
+ *   - nút "Cấu hình" / "Chỉnh sửa" / "Lưu" / "Cập nhật" / "Xóa"
+ *   - toggle bật/tắt tưới thủ công
  *   - các modal cấu hình (assign tray, auto-thresholds, floor form)
+ *
+ * Cột "Hành động" của bảng cấu hình chỉ có **một** nút: `Xem chi tiết`,
+ * mở modal chỉ đọc (`AutoControlDetailModal`) với 2 tab:
+ *   1. Cấu hình tự động hiện tại (Descriptions — không dùng Form/Input)
+ *   2. Nhật ký kích hoạt (bảng log của hệ thống)
  *
  * API gắn trực tiếp (chỉ đọc):
  *  - GET /api/iot/masters
  *  - GET /api/iot/masters/{id}/sensors
  *  - GET /api/iot/floors
  *  - GET /api/iot/floors/{id}/environment
+ *  - GET /api/iot/floors/{id}/auto-control
+ *  - GET /api/iot/floors/{id}/auto-control/logs
  */
 export function DeviceControlPanel() {
   const navigate = useNavigate()
@@ -90,6 +106,18 @@ export function DeviceControlPanel() {
   const [selectedFloor, setSelectedFloor] =
     useState<CultivationFloorMapping | null>(null)
   const [selectedSensor, setSelectedSensor] = useState<IotSensor | null>(null)
+
+  // Tầng đang mở modal "Xem chi tiết" — CHỈ ĐỌC (xem cấu hình + nhật ký).
+  const [autoControlFloor, setAutoControlFloor] =
+    useState<CultivationFloorMapping | null>(null)
+
+  // Cấu hình tự động của từng tầng — để bảng hiển thị tóm tắt ngưỡng.
+  const floorIds = useMemo(
+    () => floors.map((floor) => floor.floor_id).filter((id) => id > 0),
+    [floors],
+  )
+  const { configByFloorId, isLoading: configsLoading } =
+    useAutoControlConfigList(floorIds)
 
   // Master của tầng đang xem — `master_id` là số, API cần `masterId` string.
   const selectedFloorMasterId =
@@ -311,6 +339,71 @@ export function DeviceControlPanel() {
         </Tag>
       ),
     },
+    {
+      title: 'Chế độ / Điều kiện kích hoạt',
+      key: 'triggerCondition',
+      width: 220,
+      render: (_, record) => {
+        const config = configByFloorId.get(record.floor_id)
+        const condition = formatTriggerCondition(config)
+        if (!condition) {
+          return (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Chưa có cấu hình
+            </Typography.Text>
+          )
+        }
+        const profileName = formatProfileName(config)
+        return (
+          <Flex vertical gap={2}>
+            <Tag color="cyan" style={{ fontSize: 12, width: 'fit-content' }}>
+              {condition}
+            </Tag>
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              {profileName ?? 'Tự động theo độ ẩm'}
+            </Typography.Text>
+          </Flex>
+        )
+      },
+    },
+    {
+      title: 'Thời lượng phun',
+      key: 'pulseDuration',
+      width: 140,
+      align: 'right',
+      render: (_, record) => {
+        const config = configByFloorId.get(record.floor_id)
+        const duration = formatDurationMs(config?.misting_pulse_ms)
+        if (!duration) {
+          return (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              —
+            </Typography.Text>
+          )
+        }
+        return (
+          <Typography.Text strong style={{ fontSize: 13 }}>
+            {duration}
+          </Typography.Text>
+        )
+      },
+    },
+    {
+      // ⚠ Cột hành động CHỈ có nút xem — không có Edit / Setting / Xóa /
+      // bật-tắt thủ công (quyền này thuộc staff trên mobile app).
+      title: 'Hành động',
+      key: 'actions',
+      width: 150,
+      align: 'center',
+      render: (_, record) => (
+        <ActionButton
+          icon={<EyeOutlined />}
+          label="Xem chi tiết"
+          description="Xem cấu hình tự động và nhật ký kích hoạt của tầng này"
+          onClick={() => setAutoControlFloor(record)}
+        />
+      ),
+    },
   ]
 
   return (
@@ -369,10 +462,10 @@ export function DeviceControlPanel() {
           rowKey="floor_id"
           columns={floorColumns}
           dataSource={floors}
-          loading={floorsLoading}
+          loading={floorsLoading || configsLoading}
           size="small"
           pagination={{ pageSize: 10, showSizeChanger: false }}
-          scroll={{ x: 900 }}
+          scroll={{ x: 1400 }}
           locale={{
             emptyText: (
               <Empty description="Chưa cấu hình tầng nào. Nhân viên có thể thiết lập trên mobile app." />
@@ -627,6 +720,17 @@ export function DeviceControlPanel() {
           />
         )}
       </Drawer>
+
+      {/* ── Auto Control Detail Modal (READ-ONLY) ─────────────────────── */}
+      {/*
+        Modal chỉ hiển thị: cấu hình tự động + nhật ký kích hoạt.
+        Không có form, không có nút lưu / sửa / xóa / bật-tắt.
+      */}
+      <AutoControlDetailModal
+        floor={autoControlFloor}
+        open={autoControlFloor !== null}
+        onClose={() => setAutoControlFloor(null)}
+      />
     </>
   )
 }

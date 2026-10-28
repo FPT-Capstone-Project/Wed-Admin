@@ -9,12 +9,17 @@
  */
 import { useMemo } from 'react'
 import {
+  useQueries,
   useQuery,
   type UseQueryOptions,
 } from '@tanstack/react-query'
 import { autoMistingApi, iotApi } from '../api/iot.api'
 import { filterActiveSensors } from '../utils/iot-node-scope'
 import type {
+  AutoControlConfigRecord,
+  AutoControlConfigurationResponse,
+  AutoControlLogsQuery,
+  AutoControlLogsResponse,
   CultivationFloorMapping,
   FloorEnvironmentResponse,
   IotHistoryQuery,
@@ -39,6 +44,20 @@ export const iotKeys = {
   floor: (floorId: number) => [...iotKeys.all, 'floors', floorId] as const,
   autoControlSuggestions: (floorId: number) =>
     [...iotKeys.all, 'auto-control-suggestions', floorId] as const,
+  /**
+   * Cache cho endpoint `GET /api/iot/floors/{floorId}/auto-control`.
+   *
+   * ⚠ Một key = MỘT shape dữ liệu. Response đầy đủ `{ config, mode, ... }`
+   * được cache tại đây; các consumer cần view khác (vd chỉ `config`) dùng
+   * `select` để suy ra — **không** tạo key riêng, vì key riêng sẽ gây
+   * tranh chấp shape khi 2 hook dùng chung 1 key.
+   */
+  autoControlConfig: (floorId: number) =>
+    [...iotKeys.all, 'auto-control-config', floorId] as const,
+  autoControlStatus: (floorId: number) =>
+    [...iotKeys.all, 'auto-control-status', floorId] as const,
+  autoControlLogs: (floorId: number, query: AutoControlLogsQuery) =>
+    [...iotKeys.all, 'auto-control-logs', floorId, query] as const,
 }
 
 // ─── Masters / Sensors / History ────────────────────────────────────────
@@ -295,4 +314,153 @@ export function useResolvedFloorEnvironment(
     fallbackNodeAddress: nodeAddress,
     isLoadingMaster: masterSensors.isLoading,
   }
+}
+
+// ─── Tưới phun sương tự động (CHỈ ĐỌC) ─────────────────────────────────
+//
+// ⚠ Web admin KHÔNG sửa cấu hình. Các endpoint ghi (PUT /auto-control,
+// POST /start, /stop, /evaluate) thuộc quyền `iot.automation.manage` —
+// nhân viên (staff) thực hiện trên mobile app. Ở đây chỉ có GET.
+
+/**
+ * Chuẩn hoá response `GET /api/iot/floors/{floorId}/auto-control` về đúng
+ * shape `{ config, mode, ... }`.
+ *
+ * ⚠ BE trả `{ data: { config, mode, ... } }` — `ensureObject` đã bóc lớp
+ * `data` (`response-normalizer.ts`). Nhưng để chống "đọc nhầm shape" khi
+ * cache bị ghi bởi consumer khác, hàm này còn:
+ *   - coi object **không có** key `config` là bản ghi config thuần
+ *     (BE có thể trả thẳng row cấu hình) → bọc lại thành `{ config: row }`,
+ *   - chuẩn hoá `floor_id` về number (BE trả `SERIAL` → number, nhưng
+ *     defensive để tránh so sánh `1` vs `'1'`).
+ */
+function normalizeAutoControlResponse(
+  raw: AutoControlConfigurationResponse | null | undefined,
+): AutoControlConfigurationResponse {
+  if (!raw || typeof raw !== 'object') return {}
+
+  // Đã đúng shape response → trả nguyên vẹn.
+  if ('config' in raw || 'mode' in raw) {
+    return {
+      ...raw,
+      config: raw.config ?? null,
+      mode: raw.mode ?? 'MANUAL',
+    }
+  }
+
+  // Không có key `config`/`mode` → coi như BE trả thẳng bản ghi cấu hình.
+  return { config: raw as unknown as AutoControlConfigRecord, mode: 'MANUAL' }
+}
+
+/**
+ * Cấu hình tự động hiện tại của một tầng.
+ *
+ * `GET /api/iot/floors/{floorId}/auto-control` → `{ config, mode, ... }`.
+ * `config` là `null` khi tầng chưa được cấu hình — UI hiển thị "Chưa có
+ * cấu hình" thay vì đoán.
+ */
+export function useAutoControlConfiguration(
+  floorId: number | null,
+  options?: Partial<
+    UseQueryOptions<AutoControlConfigurationResponse, Error>
+  >,
+) {
+  return useQuery<AutoControlConfigurationResponse, Error>({
+    queryKey: iotKeys.autoControlConfig(floorId ?? -1),
+    queryFn: async () => {
+      const result = await autoMistingApi.getAutoControlConfiguration(
+        floorId as number,
+      )
+      return normalizeAutoControlResponse(result)
+    },
+    enabled: floorId !== null && floorId > 0,
+    staleTime: 30_000,
+    ...options,
+  })
+}
+
+/** Chỉ lấy phần `config` của cấu hình tự động — tiện cho consumer đơn giản. */
+export function useAutoControlConfig(
+  floorId: number | null,
+  options?: Partial<
+    UseQueryOptions<AutoControlConfigurationResponse, Error>
+  >,
+) {
+  const query = useAutoControlConfiguration(floorId, options)
+  const config = query.data?.config ?? null
+  return { ...query, data: config }
+}
+
+/**
+ * Nhật ký kích hoạt của một tầng.
+ *
+ * `GET /api/iot/floors/{floorId}/auto-control/logs` → `{ limit, offset, logs }`.
+ */
+export function useAutoControlLogs(
+  floorId: number | null,
+  query: AutoControlLogsQuery = {},
+  options?: Partial<UseQueryOptions<AutoControlLogsResponse, Error>>,
+) {
+  return useQuery<AutoControlLogsResponse, Error>({
+    queryKey: iotKeys.autoControlLogs(floorId ?? -1, query),
+    queryFn: async () => {
+      const result = await autoMistingApi.getAutoControlLogs(
+        floorId as number,
+        query,
+      )
+      return result ?? { limit: query.limit ?? 100, offset: query.offset ?? 0, logs: [] }
+    },
+    enabled: floorId !== null && floorId > 0,
+    staleTime: 30_000,
+    ...options,
+  })
+}
+
+/**
+ * Cấu hình tự động của **nhiều tầng** — dùng để bảng "Cấu hình tưới phun
+ * sương tự động" hiển thị tóm tắt thông số của từng tầng.
+ *
+ * Endpoint `GET /api/iot/floors/{floorId}/auto-control` là read-only (chỉ cần
+ * đăng nhập) nên Admin và Operator đều đọc được.
+ *
+ * ⚠ `retry: false` — tầng chưa cấu hình trả `config: null` (không phải lỗi),
+ * còn lỗi mạng thì không nên spam retry khi người dùng chỉ xem.
+ */
+export function useAutoControlConfigList(floorIds: number[]) {
+  const queries = useQueries({
+    queries: floorIds.map((floorId) => ({
+      // ⚠ Dùng CHUNG key `autoControlConfig` với `useAutoControlConfiguration`
+      // — nhưng cả hai phải trả về CÙNG shape: response đầy đủ
+      // `{ config, mode, ... }`.
+      //
+      // Lý do: React Query cache theo queryKey ⇒ **một key = một shape**.
+      // Nếu hook này trả về bản ghi config (`{ misting_pulse_ms, ... }`)
+      // còn hook kia trả response đầy đủ (`{ config, mode, ... }`), cache chỉ
+      // giữ shape của hook chạy ĐẦU TIÊN. Modal mở sau sẽ đọc `data.config`
+      // trên một bản ghi config → `undefined` → hiển thị nhầm "Tầng chưa có
+      // cấu hình tưới tự động" dù tầng CÓ cấu hình.
+      queryKey: iotKeys.autoControlConfig(floorId),
+      queryFn: async () => {
+        const result = await autoMistingApi.getAutoControlConfiguration(floorId)
+        return result ?? {}
+      },
+      staleTime: 30_000,
+      retry: false,
+    })),
+  })
+
+  const isLoading = queries.some((query) => query.isLoading)
+  const isFetching = queries.some((query) => query.isFetching)
+
+  /** Map `floor_id` → cấu hình tự động (tầng chưa cấu hình không có entry). */
+  const configByFloorId = useMemo(() => {
+    const map = new Map<number, AutoControlConfigRecord>()
+    floorIds.forEach((floorId, index) => {
+      const config = queries[index]?.data?.config
+      if (config) map.set(floorId, config)
+    })
+    return map
+  }, [floorIds, queries])
+
+  return { configByFloorId, isLoading, isFetching }
 }

@@ -1,6 +1,9 @@
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
 import type {
+  AutoControlConfigurationResponse,
+  AutoControlLogsQuery,
+  AutoControlLogsResponse,
   AutoControlSuggestions,
   AutoMistingConfiguration,
   CultivationFloorMapping,
@@ -104,6 +107,64 @@ export const autoMistingApi = {
       `/api/iot/floors/${floorId}/auto-control/suggestions`,
     )
     return ensureObject<AutoControlSuggestions>(response.data)
+  },
+
+  /**
+   * GET /api/iot/floors/{floorId}/auto-control — cấu hình tự động hiện tại.
+   *
+   * ⚠ Endpoint này **KHÔNG** yêu cầu `iot.automation.manage` (chỉ cần đăng
+   * nhập) → Admin web đọc được để hiển thị, không sửa được.
+   *
+   * BE (`service.configuration`) trả:
+   * `{ config, mode, cultivation, suggestions, floorSuggestion }`.
+   */
+  async getAutoControlConfiguration(
+    floorId: number,
+  ): Promise<AutoControlConfigurationResponse | null> {
+    const response = await apiClient.get<unknown>(
+      `/api/iot/floors/${floorId}/auto-control`,
+    )
+    return ensureObject<AutoControlConfigurationResponse>(response.data)
+  },
+
+  /**
+   * GET /api/iot/floors/{floorId}/auto-control/status — trạng thái chạy.
+   *
+   * BE trả `{ mode, run, runtime, environment, ssr, cooldownRemainingMs,
+   * lastDecision }` — dùng để biết tầng đang AUTO hay MANUAL.
+   */
+  async getAutoControlStatus(
+    floorId: number,
+  ): Promise<AutoControlConfigurationResponse | null> {
+    const response = await apiClient.get<unknown>(
+      `/api/iot/floors/${floorId}/auto-control/status`,
+    )
+    return ensureObject<AutoControlConfigurationResponse>(response.data)
+  },
+
+  /**
+   * GET /api/iot/floors/{floorId}/auto-control/logs — nhật ký kích hoạt.
+   *
+   * BE trả `{ limit, offset, logs }` với `logs` là `SELECT *` từ
+   * `iot_auto_control_logs` (đã sắp xếp mới nhất trước).
+   *
+   * @param query `limit` (1..1000) và `offset` (>= 0)
+   */
+  async getAutoControlLogs(
+    floorId: number,
+    query: AutoControlLogsQuery = {},
+  ): Promise<AutoControlLogsResponse | null> {
+    const response = await apiClient.get<unknown>(
+      `/api/iot/floors/${floorId}/auto-control/logs`,
+      { params: query },
+    )
+    const obj = ensureObject<AutoControlLogsResponse>(response.data)
+    if (!obj) return null
+    return {
+      limit: obj.limit ?? query.limit ?? 100,
+      offset: obj.offset ?? query.offset ?? 0,
+      logs: ensureArray(obj.logs),
+    }
   },
 }
 
