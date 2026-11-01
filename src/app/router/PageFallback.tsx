@@ -1,8 +1,9 @@
+import { LoadingOutlined } from '@ant-design/icons'
 import { Spin } from 'antd'
 
 /**
  * Full-screen loading fallback dùng cho `React.lazy()` route chunks.
- * Hiển thị spinner tinh tế với tone xanh lá chủ đạo của MCMS.
+ * Spinner và nhãn tải dùng token chữ trung tính.
  */
 export function PageFallback() {
   return (
@@ -12,7 +13,12 @@ export function PageFallback() {
       aria-live="polite"
       aria-label="Đang tải trang"
     >
-      <Spin size="large" description="Đang tải trang..." />
+      <Spin
+        size="large"
+        style={{ color: 'var(--mcms-text-muted)' }}
+        indicator={<LoadingOutlined spin style={{ color: 'var(--mcms-text-muted)' }} />}
+        description="Đang tải trang..."
+      />
     </div>
   )
 }

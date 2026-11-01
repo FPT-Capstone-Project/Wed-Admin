@@ -1,3 +1,5 @@
+import '../../../styles/catalog-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import { useEffect } from 'react'
 import { App, Form, Input, InputNumber, Modal } from 'antd'
 import type {
@@ -121,7 +123,10 @@ export function RentalPackageFormModal({
       keyboard={!isSubmitting}
       destroyOnHidden
       width={680}
-    >
+
+ className="mcms-package-modal"
+ footer={<><ActionButton icon={null} variant="text" label="Hủy" disabled={isSubmitting} onClick={onCancel} /><ActionButton icon={null} variant="primary" label="Lưu gói thuê" loading={isSubmitting} onClick={() => form.submit()} /></>}
+>
       <Form<FormShape>
         form={form}
         layout="vertical"

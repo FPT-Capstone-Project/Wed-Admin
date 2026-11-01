@@ -49,7 +49,7 @@ export function LoginPage() {
                 y="16"
                 width="116"
                 height="64"
-                rx="8"
+                rx="6"
                 fill="none"
                 stroke="currentColor"
                 strokeWidth="1.2"

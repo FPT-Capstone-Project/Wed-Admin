@@ -1,3 +1,4 @@
+import '../../../styles/catalog-industrial.css'
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
@@ -13,7 +14,6 @@ import {
   Flex,
   Popconfirm,
   Space,
-  Table,
   Typography,
 } from 'antd'
 import type { TableColumnsType } from 'antd'
@@ -23,7 +23,7 @@ import type {
   RentalPackage,
 } from '../../../types/package.types'
 import type { SemanticTone } from '../../../app/theme/tokens'
-import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { ActionButton, StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
 
 interface PackageComparisonTableProps {
   packages: RentalPackage[]
@@ -78,7 +78,7 @@ export function PackageComparisonTable({
           <Typography.Text strong>{rentalPackage.name}</Typography.Text>
           <Typography.Text type="secondary">{rentalPackage.code}</Typography.Text>
           {rentalPackage.isPopular && (
-            <StatusBadge tone="warning" label="Phổ biến nhất" />
+            <MetadataBadge label="Phổ biến nhất" />
           )}
         </Flex>
       ),
@@ -105,11 +105,7 @@ export function PackageComparisonTable({
       key: 'durationDays',
       width: 120,
       render: (duration: number) => (
-        <StatusBadge
-          tone="info"
-          label={`${duration} ngày`}
-          title="Thời lượng gói thuê"
-        />
+        <MetadataBadge label={`${duration} ngày`} title="Thời lượng gói thuê" />
       ),
     },
     {
@@ -128,7 +124,7 @@ export function PackageComparisonTable({
         <Flex gap={4} wrap>
           {mushrooms.length > 0 ? (
             mushrooms.map((mushroom) => (
-              <StatusBadge key={mushroom} tone="neutral" label={mushroom} />
+              <MetadataBadge key={mushroom} label={mushroom} />
             ))
           ) : (
             <Flex align="center" gap={4}>
@@ -150,7 +146,7 @@ export function PackageComparisonTable({
             features.map((feature) => (
               <Flex key={feature} align="flex-start" gap={6}>
                 <CheckCircleOutlined
-                  style={{ color: 'var(--mcms-primary)', marginTop: 3 }}
+                  style={{ color: 'var(--mcms-text-muted)', marginTop: 3 }}
                 />
                 <Typography.Text>{feature}</Typography.Text>
               </Flex>
@@ -273,12 +269,12 @@ export function PackageComparisonTable({
   ]
 
   return (
-    <Table<RentalPackage>
+    <DataTable<RentalPackage>
       rowKey="id"
       columns={columns}
       dataSource={packages}
       pagination={false}
-      scroll={{ x: 1700 }}
+      scrollX={1700}
     />
   )
 }

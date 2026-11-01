@@ -1,3 +1,4 @@
+import '../../../styles/reports-users-industrial.css'
 import { useEffect } from 'react'
 import { App, Form, Input, Modal, Select } from 'antd'
 import { useCreateUser } from '../../../features/users/hooks/useUsers'
@@ -66,7 +67,7 @@ export function UserFormModal({
   }
 
   return (
-    <Modal
+    <Modal className="mcms-user-modal"
       title="Thêm tài khoản mới"
       open={open}
       onCancel={onCancel}

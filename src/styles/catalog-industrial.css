@@ -1,0 +1,62 @@
+.mcms-package-card.ant-card {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+.mcms-package-specs {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 16px 0 0;
+  padding: 12px 0;
+  border-block: 1px solid var(--mcms-border);
+  font-size: 13px;
+}
+.mcms-package-specs dt {
+  color: var(--mcms-text-muted);
+}
+.mcms-package-specs dd {
+  margin: 0;
+  text-align: right;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.mcms-package-modal .ant-modal-container,
+.mcms-package-modal .ant-modal-content {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+.mcms-package-modal .ant-modal-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mcms-border);
+}
+.mcms-package-modal .ant-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--mcms-border);
+}
+.mcms-package-modal .ant-form-item-label > label {
+  color: var(--mcms-text-muted);
+  font-size: 12px;
+}
+.mcms-package-modal input.ant-input,
+.mcms-package-modal .ant-input-number,
+.mcms-package-modal .ant-select-single {
+  height: 36px;
+}
+.mcms-package-modal .ant-input-number-input {
+  height: 34px;
+}
+.mcms-package-modal .ant-input,
+.mcms-package-modal .ant-input-number,
+.mcms-package-modal .ant-select-selector {
+  border-color: var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+}

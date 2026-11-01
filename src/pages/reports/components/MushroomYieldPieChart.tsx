@@ -1,3 +1,4 @@
+import '../../../styles/reports-users-industrial.css'
 import { Card, Typography } from 'antd'
 import {
   Cell,
@@ -70,8 +71,8 @@ export function MushroomYieldPieChart({
 
                 return `${numericValue} kg`
               }}
-            />
-            <Legend verticalAlign="bottom" />
+             contentStyle={{ background: 'var(--mcms-surface)', border: '1px solid var(--mcms-border)', borderRadius: 6, boxShadow: 'none', fontSize: 12 }} />
+            <Legend verticalAlign="bottom"  wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span style={{ color: 'var(--mcms-nav-item-icon)' }}>{value}</span>} />
           </PieChart>
         </ResponsiveContainer>
       )}

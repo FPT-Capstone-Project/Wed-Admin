@@ -10,6 +10,6 @@ export { EmptyState, EmptyStateAction, type EmptyStateProps } from './EmptyState
 export { FallbackThumbnail, type FallbackThumbnailProps } from './FallbackThumbnail'
 export { PageHeader, type PageHeaderProps } from './PageHeader'
 export { StatCard, type StatCardProps } from './StatCard'
-export { StatusBadge, type StatusBadgeProps } from './StatusBadge'
+export { StatusBadge, MetadataBadge, type StatusBadgeProps, type MetadataBadgeProps } from './StatusBadge'
 export { UserAvatar, type UserAvatarProps } from './UserAvatar'
 export { getUserInitials } from './user-avatar.utils'

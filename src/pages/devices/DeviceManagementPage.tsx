@@ -1,5 +1,7 @@
+import './device-industrial.css'
+import { MetadataBadge } from '../../shared/ui'
 import { HistoryOutlined, EyeOutlined } from '@ant-design/icons'
-import { App, Button, Flex, Tag, Typography } from 'antd'
+import { App, Button, Flex, Typography } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useMasterList } from '../../features/devices/hooks/useIoT'
 import { DeviceControlPanel } from './components/DeviceControlPanel'
@@ -21,16 +23,16 @@ export function DeviceManagementPage() {
   } = useMasterList({ staleTime: 30_000 })
 
   return (
-    <div>
+    <div className="mcms-iot-view">
       <Flex
         align="flex-start"
         justify="space-between"
         gap={16}
         wrap
-        style={{ marginBottom: 20 }}
+        style={{ marginBottom: 16 }}
       >
         <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>
+          <Typography.Title level={1} style={{ margin: 0, fontSize: 18 }}>
             Giám sát thiết bị IoT
           </Typography.Title>
           <Typography.Text type="secondary">
@@ -41,9 +43,9 @@ export function DeviceManagementPage() {
         </div>
 
         <Flex align="center" gap={16} wrap>
-          <Tag icon={<EyeOutlined />} color="default">
+          <MetadataBadge icon={<EyeOutlined />} label={<>
             Chỉ giám sát
-          </Tag>
+          </>} />
           <Button
             icon={<HistoryOutlined />}
             onClick={() => navigate('/devices/history')}

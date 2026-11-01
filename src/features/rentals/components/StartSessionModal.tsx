@@ -1,3 +1,5 @@
+import '../rentals-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import { Alert, App, Form, Modal, Select } from 'antd'
 import { useStartCultivationSession } from '../hooks/useRentals'
 import { useAvailableTrays } from '../../rooms/hooks/useCultivation'
@@ -54,6 +56,12 @@ export function StartSessionModal({
       cancelText="Huỷ"
       confirmLoading={startSession.isPending}
       destroyOnHidden
+
+      className="mcms-rental-modal"
+      footer={<><ActionButton icon={null} variant="text" size="middle" label="Huỷ" onClick={() => {
+        form.resetFields()
+        onClose()
+      }} /><ActionButton icon={null} variant="primary" size="middle" label="Bắt đầu" loading={startSession.isPending} onClick={() => void handleOk()} /></>}
     >
       <Alert
         type="info"

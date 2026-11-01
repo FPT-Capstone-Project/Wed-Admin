@@ -1,3 +1,4 @@
+import '../device-industrial.css'
 import { CloudOutlined, FireOutlined } from '@ant-design/icons'
 import { Typography } from 'antd'
 import { useState } from 'react'
@@ -103,7 +104,7 @@ export function LongTermTrendChart({
   const [hiddenLines, setHiddenLines] = useState<Record<string, boolean>>({})
 
   return (
-    <section className="iot-chart-panel" aria-labelledby="long-term-chart-heading">
+    <section className="iot-chart-panel mcms-iot-chart" aria-labelledby="long-term-chart-heading">
       <div className="iot-chart-header">
         <div>
           <Typography.Title id="long-term-chart-heading" level={4}>
@@ -156,13 +157,13 @@ export function LongTermTrendChart({
           <LineChart data={data} margin={{ top: 16, right: 10, left: 0, bottom: 8 }}>
             <CartesianGrid
               vertical={false}
-              strokeDasharray="4 4"
+              strokeDasharray="3 3"
               stroke="var(--mcms-border)"
             />
             <XAxis
               dataKey="label"
               minTickGap={32}
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
             />
@@ -171,7 +172,7 @@ export function LongTermTrendChart({
               domain={[18, 32]}
               unit="°"
               width={38}
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
             />
@@ -181,7 +182,7 @@ export function LongTermTrendChart({
               domain={[60, 100]}
               unit="%"
               width={42}
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
             />
@@ -189,7 +190,9 @@ export function LongTermTrendChart({
               contentStyle={{
                 border: '1px solid var(--mcms-border)',
                 borderRadius: 6,
-                boxShadow: '0 10px 28px rgb(23 51 33 / 12%)',
+                background: 'var(--mcms-surface)',
+                boxShadow: 'none',
+                fontSize: 12,
               }}
               formatter={(value, name) => [
                 `${Number(value).toLocaleString('vi-VN')} ${String(name).includes('Nhiệt') ? '°C' : '%RH'}`,
@@ -204,7 +207,7 @@ export function LongTermTrendChart({
                 name={line.label}
                 type="monotone"
                 stroke={line.color}
-                strokeWidth={2.4}
+                strokeWidth={2}
                 strokeDasharray={line.dash}
                 connectNulls={false}
                 dot={false}
@@ -216,8 +219,8 @@ export function LongTermTrendChart({
               dataKey="label"
               height={30}
               travellerWidth={10}
-              stroke="var(--mcms-primary)"
-              fill="var(--mcms-primary-faint)"
+              stroke="var(--mcms-border-strong)"
+              fill="var(--mcms-surface-muted)"
             />
           </LineChart>
         </ResponsiveContainer>

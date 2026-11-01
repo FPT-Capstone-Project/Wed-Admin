@@ -1,3 +1,4 @@
+import '../rooms-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   DeleteOutlined,

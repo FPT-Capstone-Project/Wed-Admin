@@ -4,7 +4,6 @@
  * Cải thiện: màu đường biểu đồ dùng CSS variable từ tokens thay vì hardcode hex.
  * Dữ liệu mẫu giữ nguyên (chờ API thực).
  */
-import { CheckCircleFilled } from '@ant-design/icons'
 import { Card, Typography } from 'antd'
 import {
   CartesianGrid,
@@ -16,7 +15,8 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { palette, border } from '../../../app/theme/tokens'
+import { palette, border, navigation, surface } from '../../../app/theme/tokens'
+import { StatusBadge } from '../../../shared/ui'
 
 export interface EnvironmentDataPoint {
   time: string
@@ -41,7 +41,7 @@ const ENVIRONMENT_DATA: EnvironmentDataPoint[] = [
 ]
 
 /** Màu axis/tick — dùng token muted text */
-const AXIS_TICK_COLOR = '#687a6d'
+const AXIS_TICK_COLOR = navigation.itemIcon
 
 interface EnvironmentChartProps {
   data?: EnvironmentDataPoint[]
@@ -51,18 +51,15 @@ export function EnvironmentChart({
   data = ENVIRONMENT_DATA,
 }: EnvironmentChartProps) {
   return (
-    <Card className="environment-chart-card">
+    <Card className="environment-chart-card" size="small">
       <div className="chart-card-header">
         <div>
-          <Typography.Title level={4}>Biến động trong ngày</Typography.Title>
+          <Typography.Title level={3} style={{ fontSize: 14 }}>Biến động trong ngày</Typography.Title>
           <Typography.Text type="secondary">
             Nhiệt độ và độ ẩm trong 24 giờ gần nhất
           </Typography.Text>
         </div>
-        <span className="chart-status">
-          <CheckCircleFilled aria-hidden="true" />
-          Dữ liệu ổn định
-        </span>
+        <StatusBadge tone="ok" label="Dữ liệu ổn định" />
       </div>
 
       <div
@@ -73,12 +70,12 @@ export function EnvironmentChart({
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
             data={data}
-            margin={{ top: 20, right: 12, left: 0, bottom: 0 }}
+            margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
           >
             <CartesianGrid
               vertical={false}
-              strokeDasharray="4 4"
-              stroke={border.soft}
+              strokeDasharray="3 3"
+              stroke={border.base}
             />
             <XAxis
               dataKey="time"
@@ -111,10 +108,15 @@ export function EnvironmentChart({
               contentStyle={{
                 border: `1px solid ${border.base}`,
                 borderRadius: 6,
-                boxShadow: '0 10px 30px rgb(23 51 33 / 12%)',
+                background: surface.surface,
+                boxShadow: 'none',
+                fontSize: 12,
               }}
             />
-            <Legend wrapperStyle={{ paddingTop: 20 }} />
+            <Legend
+              wrapperStyle={{ paddingTop: 8, fontSize: 12, color: AXIS_TICK_COLOR }}
+              formatter={(value) => <span style={{ color: AXIS_TICK_COLOR }}>{value}</span>}
+            />
             {/* Nhiệt độ — dùng palette.coral từ tokens */}
             <Line
               yAxisId="temperature"
@@ -122,9 +124,9 @@ export function EnvironmentChart({
               dataKey="temperature"
               name="Nhiệt độ (°C)"
               stroke={palette.coral}
-              strokeWidth={2.5}
+              strokeWidth={2}
               dot={false}
-              activeDot={{ r: 5, strokeWidth: 3, stroke: '#ffffff' }}
+              activeDot={{ r: 4, strokeWidth: 2, stroke: surface.surface }}
               isAnimationActive={false}
             />
             {/* Độ ẩm — dùng palette.teal từ tokens */}
@@ -134,10 +136,10 @@ export function EnvironmentChart({
               dataKey="humidity"
               name="Độ ẩm (%)"
               stroke={palette.teal}
-              strokeWidth={2.5}
+              strokeWidth={2}
               strokeDasharray="7 5"
               dot={false}
-              activeDot={{ r: 5, strokeWidth: 3, stroke: '#ffffff' }}
+              activeDot={{ r: 4, strokeWidth: 2, stroke: surface.surface }}
               isAnimationActive={false}
             />
           </LineChart>

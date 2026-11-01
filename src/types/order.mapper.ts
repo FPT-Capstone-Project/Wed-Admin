@@ -61,7 +61,10 @@ function bePaymentStatusToUi(
 
 function beItemToUiItem(item: BeOrderItem, index: number): UiOrderItem {
   return {
-    mushroomType: item.mushroom_type_name ?? `Loại nấm #${index + 1}`,
+    // ⚠ BE trả `mushroom_name` (đã join `mushroom_types.name`) — nguyên bản,
+    //   KHÔNG dịch. Trước đây FE đọc `mushroom_type_name` (field không tồn
+    //   tại trong BE) → luôn rơi về fallback "Loại nấm #N".
+    mushroomType: item.mushroom_name ?? `Loại nấm #${index + 1}`,
     weeks: Math.max(1, Math.round((item.growing_days ?? 0) / 7)),
     quantity: item.quantity ?? 1,
     unitPrice: item.unit_price ?? 0,

@@ -1,3 +1,4 @@
+import '../device-industrial.css'
 import {
   CloseCircleOutlined,
   EyeOutlined,
@@ -11,15 +12,13 @@ import {
   Flex,
   Modal,
   Space,
-  Table,
   Tabs,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useMemo } from 'react'
-import { StatusBadge } from '../../../shared/ui'
+import { StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
 import {
   useAutoControlConfiguration,
   useAutoControlLogs,
@@ -123,6 +122,7 @@ export function AutoControlDetailModal({
       title: 'Thời gian chạy',
       dataIndex: 'created_at',
       key: 'created_at',
+      className: 'mcms-iot-mono',
       width: 170,
       // Ghim cột đầu để ngày giờ luôn nhìn thấy khi cuộn ngang.
       fixed: 'left',
@@ -138,9 +138,9 @@ export function AutoControlDetailModal({
       key: 'event_type',
       width: 140,
       render: (eventType: string) => (
-        <Tag color="blue" style={{ fontSize: 12 }}>
+        <MetadataBadge style={{ fontSize: 12 }} label={<>
           {formatEventType(eventType)}
-        </Tag>
+        </>} />
       ),
     },
     {
@@ -156,6 +156,7 @@ export function AutoControlDetailModal({
     {
       title: 'Giá trị đo lúc kích hoạt',
       key: 'measurements',
+      className: 'mcms-iot-mono',
       width: 180,
       render: (_, row) => (
         <Typography.Text style={{ fontSize: 12, overflowWrap: 'break-word' }}>
@@ -169,9 +170,9 @@ export function AutoControlDetailModal({
       width: 110,
       align: 'center',
       render: () => (
-        <Tag color="volcano" style={{ fontSize: 12 }}>
+        <MetadataBadge style={{ fontSize: 12 }} label={<>
           <ThunderboltOutlined /> Kênh {floor?.misting_ssr_channel ?? '—'}
-        </Tag>
+        </>} />
       ),
     },
     {
@@ -190,6 +191,7 @@ export function AutoControlDetailModal({
        */
       title: 'Thời lượng chạy',
       key: 'duration',
+      className: 'mcms-iot-mono',
       width: 130,
       align: 'right',
       render: (_, row) => {
@@ -427,24 +429,21 @@ export function AutoControlDetailModal({
   )
 
   const logsTab = (
-    <Table<AutoControlLogEntry>
+    <DataTable<AutoControlLogEntry>
       rowKey={(row) => String(row.id ?? row.created_at ?? row.event_type)}
       columns={logColumns}
       dataSource={logs}
       loading={logsLoading}
       size="small"
       pagination={{ pageSize: 10, showSizeChanger: false }}
-      scroll={{ x: 1000 }}
-      locale={{
-        emptyText: (
-          <Empty description="Chưa có lần kích hoạt tự động nào được ghi nhận." />
-        ),
-      }}
+      scrollX={1000}
+      emptyTitle="Chưa có lần kích hoạt tự động nào được ghi nhận."
     />
   )
 
   return (
     <Modal
+      className="mcms-iot-modal"
       title={
         <Flex align="center" gap={8}>
           <ThunderboltOutlined aria-hidden="true" />

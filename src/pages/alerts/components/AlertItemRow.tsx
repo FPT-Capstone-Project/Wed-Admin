@@ -8,7 +8,7 @@ import {
   SafetyOutlined,
 } from '@ant-design/icons'
 import { Flex, Popconfirm, Space, Typography } from 'antd'
-import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { ActionButton, MetadataBadge, StatusBadge } from '../../../shared/ui'
 import { formatFriendlyDeviceLocation } from '../../../shared/i18n/terms'
 import type {
   AlertCategory,
@@ -102,7 +102,7 @@ export function AlertItemRow({
           ? 'Cảnh báo này đã được xác nhận xử lý.'
           : 'Xác nhận đã xử lý cảnh báo này.'
       }
-      variant={alert.isAcknowledged ? 'default' : 'primary'}
+      variant="text"
       size="small"
       disabled={alert.isAcknowledged}
       onClick={() => onAcknowledge(alert)}
@@ -116,12 +116,9 @@ export function AlertItemRow({
       gap={16}
       wrap
       style={{
-        padding: 'var(--mcms-space-4) 0',
-        borderBottom: '1px solid var(--mcms-border-soft)',
+        padding: 0,
         opacity: alert.isAcknowledged ? 0.72 : 1,
-        background: alert.isRead
-          ? undefined
-          : 'var(--mcms-tone-warning-bg)',
+        background: 'transparent',
       }}
     >
       <Flex align="flex-start" gap={12} style={{ flex: '1 1 560px' }}>
@@ -135,9 +132,9 @@ export function AlertItemRow({
 
         <div>
           <Flex align="center" gap={8} wrap>
-            <Typography.Text strong>{alert.message}</Typography.Text>
+            <Typography.Text strong={!alert.isRead} type={alert.isAcknowledged ? 'secondary' : undefined}>{alert.message}</Typography.Text>
             {!alert.isRead && (
-              <StatusBadge tone="warning" label="Chưa đọc" dot={false} />
+              <MetadataBadge label="Chưa đọc" />
             )}
           </Flex>
 

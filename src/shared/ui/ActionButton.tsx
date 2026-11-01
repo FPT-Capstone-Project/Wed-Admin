@@ -16,10 +16,10 @@ export interface ActionButtonProps {
   onClick?: () => void
   /**
    * Loại hành động — quyết định màu.
-   *   - `default`   — nút phụ (nền trắng, viền).
+   *   - `default`   — nút phụ dạng text, không viền.
    *   - `primary`   — hành động chính của vùng (chỉ 1 nút/vùng).
    *   - `text`      — nút icon-only trong cột hành động hẹp.
-   *   - `danger`    — hành động phá hủy (nền trắng, viền đỏ).
+   *   - `danger`    — hành động phá hủy dạng text đỏ, không viền.
    *   - `dangerText`— hành động phá hủy dạng icon-only.
    */
   variant?: 'default' | 'primary' | 'danger' | 'text' | 'dangerText'
@@ -28,7 +28,7 @@ export interface ActionButtonProps {
   loading?: boolean
   /** Ẩn chữ nhưng giữ tooltip (dùng trong cột hành động hẹp). */
   hideLabel?: boolean
-  /** Không render tooltip khi đang disabled (tránh tooltip trôi gây rối). */
+  /** Class bổ sung, giữ class mặc định của component. */
   className?: string
 }
 
@@ -58,13 +58,7 @@ export function ActionButton({
 }: ActionButtonProps) {
   const button = (
     <Button
-      type={
-        variant === 'primary'
-          ? 'primary'
-          : variant === 'text' || variant === 'dangerText'
-            ? 'text'
-            : 'default'
-      }
+      type={variant === 'primary' ? 'primary' : 'text'}
       danger={variant === 'danger' || variant === 'dangerText'}
       size={size}
       icon={icon}
@@ -72,7 +66,7 @@ export function ActionButton({
       disabled={disabled}
       loading={loading}
       aria-label={label}
-      className={className}
+      className={['mcms-action-button', className].filter(Boolean).join(' ')}
     >
       {hideLabel ? null : label}
     </Button>
@@ -84,7 +78,7 @@ export function ActionButton({
   return (
     <Tooltip title={description ? `${label} — ${description}` : label}>
       {/* span bao để tooltip bám được cả khi button bị disabled */}
-      <span style={{ display: 'inline-flex' }}>{button}</span>
+      <span className="mcms-action-button-tooltip">{button}</span>
     </Tooltip>
   )
 }

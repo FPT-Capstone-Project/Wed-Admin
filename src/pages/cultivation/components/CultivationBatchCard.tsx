@@ -1,3 +1,4 @@
+import '../../../styles/media-industrial.css'
 import dayjs from 'dayjs'
 import { useState } from 'react'
 import {
@@ -7,7 +8,6 @@ import {
   SearchOutlined,
 } from '@ant-design/icons'
 import {
-  Badge,
   Card,
   Flex,
   Progress,
@@ -16,7 +16,7 @@ import {
 } from 'antd'
 import type { CultivationBatch } from '../../../types/cultivation.types'
 import type { GallerySnapshot } from '../../../types/cultivation.types'
-import { StatusBadge } from '../../../shared/ui'
+import { StatusBadge, MetadataBadge } from '../../../shared/ui'
 import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
 
 interface CultivationBatchCardProps {
@@ -102,13 +102,15 @@ export function CultivationBatchCard({
   const isContaminated = batch.healthStatus === 'WARNING_CONTAMINATED'
 
   return (
-    <Badge.Ribbon
-      text="Cảnh báo"
-      color="#dc2626"
-      style={{ display: isContaminated ? undefined : 'none' }}
-    >
       <Card
         className="cultivation-batch-card"
+        title={<Typography.Text className="media-mono" strong>{batch.batchCode}</Typography.Text>}
+        extra={
+          <StatusBadge
+            tone={isContaminated ? 'danger' : batch.currentStage === 'HARVESTED' ? 'neutral' : 'ok'}
+            label={isContaminated ? 'Cần xử lý sâu bệnh/mốc' : batch.currentStage === 'HARVESTED' ? 'Đã thu hoạch' : 'Đang sinh trưởng'}
+          />
+        }
         styles={{ body: { padding: 0 } }}
       >
         <Flex
@@ -127,10 +129,7 @@ export function CultivationBatchCard({
             />
 
             <div className="cultivation-batch-card-media-tag">
-              <StatusBadge
-                tone="info"
-                label={`Ảnh ngày ${activeCell.dayIndex} · 08:00`}
-              />
+              <MetadataBadge label={`Ảnh ngày ${activeCell.dayIndex} · 08:00`} />
             </div>
 
             <button
@@ -154,24 +153,11 @@ export function CultivationBatchCard({
             {/* Header info */}
             <Flex vertical gap={6}>
               <Flex align="center" gap={8} wrap>
-                <Typography.Title
-                  level={4}
-                  style={{ margin: 0, fontSize: 18 }}
-                >
-                  {batch.batchCode}
-                </Typography.Title>
-                <StatusBadge tone="neutral" label={batch.trayName} />
-                {isContaminated && (
-                  <StatusBadge
-                    tone="danger"
-                    label="Cần xử lý sâu bệnh/mốc"
-                  />
-                )}
+                <MetadataBadge label={batch.trayName} />
+                <MetadataBadge label={`Gieo cấy ${dayjs(batch.startDate).format('DD/MM/YYYY')}`} />
               </Flex>
 
-              <Typography.Text>
-                <ExperimentOutlined aria-hidden="true" /> {batch.mushroomType}
-              </Typography.Text>
+              <MetadataBadge icon={<ExperimentOutlined />} label={batch.mushroomType} />
 
               <Typography.Text type="secondary">
                 Khách thuê: <strong>{batch.tenantName}</strong>
@@ -195,7 +181,7 @@ export function CultivationBatchCard({
             {/* Progress — tính % theo currentDay/totalDays (SSOT) */}
             <div>
               <Flex align="center" justify="space-between" style={{ marginBottom: 4 }}>
-                <Typography.Text strong>{cycleLabel}</Typography.Text>
+                <MetadataBadge label={cycleLabel} />
                 <Typography.Text type="secondary">
                   {progressPercent}% hoàn thành
                 </Typography.Text>
@@ -270,6 +256,5 @@ export function CultivationBatchCard({
           </Flex>
         </Flex>
       </Card>
-    </Badge.Ribbon>
   )
 }

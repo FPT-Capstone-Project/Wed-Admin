@@ -1,7 +1,8 @@
+import '../../../styles/reports-users-industrial.css'
 import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons'
-import { Table, Tooltip, Typography } from 'antd'
+import { Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EmptyState, StatusBadge } from '../../../shared/ui'
+import { EmptyState, StatusBadge, DataTable } from '../../../shared/ui'
 import { formatCurrency } from '../utils/executive-report.utils'
 import type { VarietyPerformance } from '../utils/executive-report.utils'
 import type { SemanticTone } from '../../../app/theme/tokens'
@@ -146,13 +147,13 @@ export function VarietyPerformanceTable({
   ]
 
   return (
-    <Table<VarietyPerformance>
+    <DataTable<VarietyPerformance>
       dataSource={data}
       columns={columns}
       rowKey={(record) => record.varietyId || record.varietyName || 'row'}
       pagination={false}
-      size="middle"
-      scroll={{ x: 900 }}
+      size="small"
+      scrollX={900}
     />
   )
 }

@@ -23,10 +23,18 @@ body,
 
 body {
   min-height: 100vh;
-  color: #1f2937;
-  background: #f5f7f8;
-  font-family:
-    Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: var(--mcms-text, #0f172a);
+  background: var(--mcms-background, #f8fafc);
+  font-family: var(--mcms-font-family);
+  font-size: var(--mcms-font-body);
+}
+
+/* Technical display primitives used by the application shell. */
+.font-mono,
+.mcms-brand-mark,
+.mcms-brand-copy strong,
+.mcms-brand-copy span {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
 button,
@@ -45,15 +53,16 @@ select {
   border: 6px solid #35423a;
   border-top-width: 12px;
   border-bottom-width: 12px;
-  border-radius: 8px;
+  border-radius: var(--mcms-radius-md);
   background: #dfe6e1;
-  box-shadow: inset 0 0 0 1px #bcc8c0;
+  box-shadow: var(--mcms-shadow-xs);
 }
 
 .rack-tier {
   padding: 14px;
   border: 1px solid #a8b7ad;
   border-bottom: 8px solid #53645a;
+  border-radius: var(--mcms-radius-sm);
   background: #f9fbfa;
 }
 
@@ -73,9 +82,9 @@ select {
   padding: 14px;
   overflow: hidden;
   border: 1px solid #cbd5e1;
-  border-left-width: 5px;
-  border-radius: 6px;
-  color: #1f2937;
+  border-left-width: 1px;
+  border-radius: var(--mcms-radius-sm);
+  color: #0f172a;
   background: #ffffff;
   text-align: left;
   cursor: pointer;
@@ -85,29 +94,30 @@ select {
 .rack-tray:hover,
 .rack-tray:focus-visible,
 .rack-tray[data-selected='true'] {
-  border-color: #1677ff;
-  box-shadow: 0 0 0 2px rgb(22 119 255 / 18%);
+  border-color: var(--mcms-text-muted);
+  box-shadow: var(--mcms-shadow-xs);
   transform: translateY(-1px);
-  outline: none;
+  outline: 2px solid var(--mcms-border-strong);
+  outline-offset: 2px;
 }
 
 .rack-tray--empty {
-  border-left-color: #94a3b8;
+  border-left-color: var(--mcms-border);
   background: #ffffff;
 }
 
 .rack-tray--rented {
-  border-left-color: #1677ff;
+  border-left-color: var(--mcms-border);
   background: #f0f7ff;
 }
 
 .rack-tray--harvesting {
-  border-left-color: #d97706;
+  border-left-color: var(--mcms-border);
   background: #fffbeb;
 }
 
 .rack-tray--maintenance {
-  border-left-color: #dc2626;
+  border-left-color: var(--mcms-border);
   background: #fff1f0;
 }
 
@@ -121,7 +131,7 @@ select {
   margin-top: 18px;
   overflow: hidden;
   color: #64748b;
-  font-size: 13px;
+  font-size: var(--mcms-font-body);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -133,7 +143,7 @@ select {
   gap: 12px;
   padding: 18px;
   border: 1px solid #cbd5e1;
-  border-radius: 6px;
+  border-radius: var(--mcms-radius-md);
   background: #ffffff;
 }
 
@@ -146,7 +156,7 @@ select {
   min-height: 92px;
   gap: 4px;
   border: 1px solid #94a3b8;
-  border-radius: 6px;
+  border-radius: var(--mcms-radius-md);
   background: #f8fafc;
 }
 
@@ -159,7 +169,7 @@ select {
 .rs485-bus-line {
   position: relative;
   height: 4px;
-  background: #1677ff;
+  background: var(--mcms-text-muted);
 }
 
 .rs485-bus-line::after {
@@ -170,7 +180,7 @@ select {
   height: 0;
   border-top: 7px solid transparent;
   border-bottom: 7px solid transparent;
-  border-left: 10px solid #1677ff;
+  border-left: 10px solid var(--mcms-text-muted);
   content: '';
 }
 
@@ -178,7 +188,7 @@ select {
   position: absolute;
   top: -24px;
   width: 100%;
-  color: #2563eb;
+  color: var(--mcms-text-muted);
   font-size: 11px;
   font-weight: 700;
   text-align: center;
@@ -193,8 +203,8 @@ select {
 .device-tier-section {
   padding: 20px;
   border: 1px solid #d7e0da;
-  border-left: 5px solid #386641;
-  border-radius: 6px;
+  border-left: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
   background: #ffffff;
 }
 
@@ -204,7 +214,7 @@ select {
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border: 1px solid #33443a;
-  border-radius: 6px;
+  border-radius: var(--mcms-radius-md);
   color: #ffffff;
   background: #121a16;
 }
@@ -218,7 +228,7 @@ select {
   border-top-width: 14px;
   border-bottom-width: 14px;
   background: #202b25;
-  box-shadow: 0 18px 40px rgb(0 0 0 / 45%);
+  box-shadow: var(--mcms-shadow-xs);
 }
 
 .camera-tier-row {
@@ -265,7 +275,7 @@ select {
   color: #e9f2ec;
   font-size: 11px;
   background: #33483b;
-  box-shadow: inset 0 -10px 16px rgb(0 0 0 / 24%);
+  box-shadow: var(--mcms-shadow-xs);
 }
 
 .camera-tray[data-status='rented'] {
@@ -298,7 +308,7 @@ select {
 .camera-hud-bottom {
   bottom: 16px;
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: var(--mcms-radius-sm);
   color: #f8fafc;
   background: rgb(7 17 11 / 72%);
 }
@@ -367,7 +377,7 @@ select {
     top: auto;
     right: -5px;
     bottom: -1px;
-    border-top: 10px solid #1677ff;
+    border-top: 10px solid var(--mcms-text-muted);
     border-right: 7px solid transparent;
     border-bottom: 0;
     border-left: 7px solid transparent;

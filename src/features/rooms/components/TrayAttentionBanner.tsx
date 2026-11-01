@@ -1,3 +1,4 @@
+import '../rooms-industrial.css'
 /**
  * Dải cảnh báo "khay cần xử lý" — đặt TRÊN các StatCard.
  *
@@ -65,7 +66,7 @@ export function TrayAttentionBanner({
           padding: `${tokens.space['2']} ${tokens.space['3']}`,
           borderRadius: tokens.radius.md,
           backgroundColor: tokens.color.surfaceMuted,
-          border: `1px solid ${tokens.color.borderSoft}`,
+          border: `1px solid ${tokens.color.border}`,
         }}
       >
         <CheckCircleOutlined
@@ -92,21 +93,20 @@ export function TrayAttentionBanner({
       style={{
         padding: `${tokens.space['3']} ${tokens.space['4']}`,
         borderRadius: tokens.radius.lg,
-        backgroundColor: tokens.tone.danger.bg,
-        border: `1px solid ${tokens.tone.danger.border}`,
-        borderLeft: `4px solid ${tokens.tone.danger.solid}`,
-        boxShadow: tokens.shadow.xs,
+        backgroundColor: tokens.color.surfaceMuted,
+        border: `1px solid ${tokens.color.border}`,
+        boxShadow: 'none',
       }}
     >
       <Flex align="center" justify="space-between" gap={12} wrap>
         <Flex align="center" gap={8} wrap>
           <BugOutlined
             aria-hidden="true"
-            style={{ color: tokens.tone.danger.text, fontSize: 15 }}
+            style={{ color: tokens.color.text, fontSize: 15 }}
           />
           <Typography.Text
             strong
-            style={{ fontSize: 14, color: tokens.tone.danger.text }}
+            style={{ fontSize: 14, color: tokens.color.text }}
           >
             {trays.length} khay cần xử lý
           </Typography.Text>
@@ -118,7 +118,7 @@ export function TrayAttentionBanner({
                 alignItems: 'center',
                 gap: 4,
                 fontSize: 12,
-                color: tokens.tone.danger.text,
+                color: tokens.color.text,
               }}
             >
               <BugOutlined aria-hidden="true" />
@@ -133,7 +133,7 @@ export function TrayAttentionBanner({
                 alignItems: 'center',
                 gap: 4,
                 fontSize: 12,
-                color: tokens.tone.warning.text,
+                color: tokens.color.textMuted,
               }}
             >
               <ClockCircleOutlined aria-hidden="true" />
@@ -159,13 +159,14 @@ export function TrayAttentionBanner({
             return (
               <Tooltip key={tray.id} title={`${context} — bấm để mở chi tiết`}>
                 <Button
+                  type="text"
                   size="small"
                   onClick={() => onSelectTray(tray.id)}
                   style={{
-                    fontFamily: tokens.typography.fontNumeric,
+                    fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
                     fontWeight: tokens.typography.weightSemibold,
-                    color: tokens.tone.danger.text,
-                    borderColor: tokens.tone.danger.border,
+                    color: tokens.color.text,
+                    borderColor: tokens.color.border,
                     backgroundColor: tokens.color.surface,
                   }}
                 >

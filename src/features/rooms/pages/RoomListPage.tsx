@@ -1,3 +1,4 @@
+import '../rooms-industrial.css'
 import {
   CheckCircleOutlined,
   InboxOutlined,
@@ -140,7 +141,7 @@ export function RoomListPage() {
   const handleSelectTray = (tray: Tray) => navigate(`/rooms/${tray.id}`)
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['5'] }}>
+    <div className="mcms-rooms-view" style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['4'] }}>
 
       {/* ── Page header ──────────────────────────────────────────────── */}
       <PageHeader
@@ -170,7 +171,7 @@ export function RoomListPage() {
       )}
 
       {/* ── Stat cards (bỏ "Cần chú ý" — đã lên dải cảnh báo) ───────── */}
-      <Row gutter={[16, 16]}>
+      <Row gutter={[12, 12]}>
         <Col xs={12} sm={8}>
           <StatCard
             title="Tổng khay"

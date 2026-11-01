@@ -1,1 +1,0 @@
-function e(e,t){return t?e.flatMap(e=>e.trays).filter(e=>e.rental?.tenantName===t).map(e=>e.id):[]}export{e as t};

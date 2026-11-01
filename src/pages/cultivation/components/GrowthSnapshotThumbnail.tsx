@@ -1,3 +1,4 @@
+import '../../../styles/media-industrial.css'
 import { useState } from 'react'
 import { PictureOutlined } from '@ant-design/icons'
 
@@ -63,7 +64,7 @@ export function GrowthSnapshotThumbnail({
     <img
       src={src}
       alt={alt}
-      className={className}
+      className={['mcms-growth-snapshot', className].filter(Boolean).join(' ')}
       loading={loading}
       decoding={decoding}
       onError={() => setHasError(true)}

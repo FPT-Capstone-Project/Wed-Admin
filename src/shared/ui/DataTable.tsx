@@ -72,7 +72,7 @@ export function DataTable<T extends object>({
         description={error.message ?? 'Đã xảy ra lỗi không xác định.'}
         action={
           onRetry ? (
-            <Button size="small" onClick={onRetry}>
+            <Button type="text" size="small" onClick={onRetry} loading={loading}>
               Thử lại
             </Button>
           ) : undefined
@@ -84,7 +84,7 @@ export function DataTable<T extends object>({
   const hasHeader = Boolean(title || description || toolbar)
 
   return (
-    <div className={className}>
+    <div className={['mcms-data-table', className].filter(Boolean).join(' ')} aria-busy={loading}>
       {hasHeader && (
         <div
           style={{
@@ -135,10 +135,16 @@ export function DataTable<T extends object>({
         dataSource={dataSource}
         loading={loading}
         size={size}
-        pagination={pagination}
+        pagination={pagination === false ? false : {
+          size: 'small',
+          responsive: true,
+          showSizeChanger: false,
+          hideOnSinglePage: true,
+          ...pagination,
+        }}
         scroll={{ x: scrollX }}
         locale={{
-          emptyText: (
+          emptyText: loading ? <span role="status">Đang tải dữ liệu…</span> : (
             <EmptyState
               title={emptyTitle}
               description={emptyDescription}

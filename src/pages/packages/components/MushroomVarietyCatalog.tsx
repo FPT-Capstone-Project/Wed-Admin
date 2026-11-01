@@ -1,3 +1,4 @@
+import '../../../styles/catalog-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
@@ -16,7 +17,6 @@ import {
   Popconfirm,
   Segmented,
   Space,
-  Table,
   Tooltip,
   Typography,
 } from 'antd'
@@ -27,8 +27,7 @@ import {
   useMushroomTypes,
   useUpdateMushroomType,
 } from '../../../features/packages/hooks/useMushroomTypes'
-import { translateMushroomName } from '../../../shared/i18n/translate'
-import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { ActionButton, StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
 import { FallbackThumbnail } from './FallbackThumbnail'
 import { MushroomVarietyFormModal } from './MushroomVarietyFormModal'
 
@@ -136,7 +135,8 @@ export function MushroomVarietyCatalog({
       key: 'name',
       width: 280,
       render: (_, record) => {
-        const name = translateMushroomName(record.name)
+        // Hiển thị nguyên bản tên giống nấm từ DB (`mushroom_types.name`).
+        const name = record.name
         return (
           <Flex gap={12} align="center">
             {/* Fallback an toàn: URL rỗng/hỏng → khung đại diện, không tràn chữ. */}
@@ -164,11 +164,7 @@ export function MushroomVarietyCatalog({
       key: 'growing_days',
       width: 180,
       render: (_, record) => (
-        <StatusBadge
-          tone="info"
-          label={`${record.growing_days} ngày`}
-          title="Số ngày từ khi cấy phôi đến khi thu hoạch."
-        />
+        <MetadataBadge label={`${record.growing_days} ngày`} title="Số ngày từ khi cấy phôi đến khi thu hoạch." />
       ),
     },
     {
@@ -212,7 +208,7 @@ export function MushroomVarietyCatalog({
             type="button"
             onClick={() => handleToggleStatus(record)}
             disabled={isToggling(record.mushroom_type_id)}
-            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} cho ${translateMushroomName(record.name)}`}
+            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} cho ${record.name}`}
             style={{
               padding: 0,
               border: 0,
@@ -240,7 +236,7 @@ export function MushroomVarietyCatalog({
                 <ActionButton
                   icon={<EditOutlined />}
                   label="Sửa"
-                  description={`Sửa giống ${translateMushroomName(record.name)}`}
+                  description={`Sửa giống ${record.name}`}
                   onClick={() => handleOpenEdit(record)}
                 />
 
@@ -255,7 +251,7 @@ export function MushroomVarietyCatalog({
                   <ActionButton
                     icon={<DeleteOutlined />}
                     label="Xóa"
-                    description={`Xóa giống ${translateMushroomName(record.name)}`}
+                    description={`Xóa giống ${record.name}`}
                     variant="danger"
                   />
                 </Popconfirm>
@@ -335,14 +331,14 @@ export function MushroomVarietyCatalog({
       ) : filteredVarieties.length === 0 && !isLoading ? (
         <Empty description="Chưa có giống nấm nào" />
       ) : (
-        <Table<MushroomType>
+        <DataTable<MushroomType>
           dataSource={filteredVarieties}
           columns={columns}
           rowKey="mushroom_type_id"
           loading={isLoading}
           pagination={false}
-          scroll={{ x: 900 }}
-          size="middle"
+          scrollX={900}
+          size="small"
         />
       )}
 

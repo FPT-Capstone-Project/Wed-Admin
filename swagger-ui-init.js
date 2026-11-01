@@ -17,7 +17,7 @@ window.onload = function() {
     },
     "servers": [
       {
-        "url": "https://backend-75e1.onrender.com",
+        "url": "https://mcms-h5g5dtdzajf0bebm.eastasia-01.azurewebsites.net",
         "description": "API server"
       }
     ],
@@ -60,11 +60,15 @@ window.onload = function() {
       },
       {
         "name": "Orders",
-        "description": "Customer orders for rental packages and mushroom types"
+        "description": "Customer cultivation orders for packages, mushroom types, and tray quantities"
       },
       {
-        "name": "Rentals",
-        "description": "Rental records created after successful payment and managed by Admin/Farm Operator"
+        "name": "Cultivation Sessions",
+        "description": "Paid cultivation sessions, daily tray inspections, progress, and harvests"
+      },
+      {
+        "name": "Farm Spawn Workflow",
+        "description": "Farm spawn handling and customer cultivation tracking"
       },
       {
         "name": "Payments",
@@ -72,7 +76,7 @@ window.onload = function() {
       },
       {
         "name": "Notifications",
-        "description": "Notifications for rental customers"
+        "description": "Customer notifications linked to cultivation sessions"
       },
       {
         "name": "IoT",
@@ -205,15 +209,15 @@ window.onload = function() {
             },
             "notification_type": {
               "type": "string",
-              "example": "RENTAL_MESSAGE"
+              "example": "CULTIVATION_STARTED"
             },
             "title": {
               "type": "string",
-              "example": "Rental update"
+              "example": "Cultivation update"
             },
             "message": {
               "type": "string",
-              "example": "Your rental is ready for the next step."
+              "example": "Your cultivation session has started."
             },
             "is_read": {
               "type": "boolean",
@@ -228,14 +232,19 @@ window.onload = function() {
               "format": "date-time",
               "nullable": true
             },
-            "rental_id": {
+            "reference_type": {
+              "type": "string",
+              "nullable": true,
+              "example": "CULTIVATION_SESSION"
+            },
+            "reference_id": {
               "type": "integer",
               "nullable": true,
               "example": 12
             }
           }
         },
-        "SentRentalNotification": {
+        "SentCultivationNotification": {
           "type": "object",
           "properties": {
             "notification_id": {
@@ -246,7 +255,11 @@ window.onload = function() {
               "type": "integer",
               "example": 3
             },
-            "rental_id": {
+            "reference_type": {
+              "type": "string",
+              "example": "CULTIVATION_SESSION"
+            },
+            "reference_id": {
               "type": "integer",
               "example": 12
             },
@@ -260,11 +273,11 @@ window.onload = function() {
             },
             "title": {
               "type": "string",
-              "example": "Rental update"
+              "example": "Cultivation update"
             },
             "message": {
               "type": "string",
-              "example": "Your rental is ready for the next step."
+              "example": "Your cultivation session has started."
             },
             "created_at": {
               "type": "string",
@@ -272,7 +285,7 @@ window.onload = function() {
             }
           }
         },
-        "CreateRentalNotificationRequest": {
+        "CreateCultivationNotificationRequest": {
           "type": "object",
           "required": [
             "message"
@@ -282,7 +295,7 @@ window.onload = function() {
               "type": "string",
               "minLength": 1,
               "maxLength": 1000,
-              "example": "Your rental is ready for the next step."
+              "example": "Your cultivation session is ready for the next stage."
             },
             "title": {
               "type": "string",
@@ -371,7 +384,7 @@ window.onload = function() {
                   "minimum": 0,
                   "example": 12
                 },
-                "rental_count": {
+                "cultivation_session_count": {
                   "type": "integer",
                   "minimum": 0,
                   "example": 4
@@ -648,22 +661,29 @@ window.onload = function() {
             }
           }
         },
-        "CreateRentalOrderRequest": {
+        "CreateCultivationOrderRequest": {
           "type": "object",
           "required": [
-            "mushroomTypeId"
+            "packageId",
+            "mushroomTypeId",
+            "quantity"
           ],
           "properties": {
             "packageId": {
               "type": "integer",
-              "nullable": true,
               "example": 1,
-              "description": "Optional rental package ID. When provided, the order has one RENTAL item containing both this package and mushroomTypeId."
+              "description": "Selected active cultivation package. Its database duration must cover the mushroom growing days."
             },
             "mushroomTypeId": {
               "type": "integer",
               "example": 2,
-              "description": "Required mushroom type ID. Without packageId, creates one MUSHROOM order item."
+              "description": "Selected mushroom type."
+            },
+            "quantity": {
+              "type": "integer",
+              "minimum": 1,
+              "example": 3,
+              "description": "Number of cultivation trays requested."
             }
           }
         },
@@ -777,7 +797,7 @@ window.onload = function() {
                     "COMPLETED",
                     "CANCELLED"
                   ],
-                  "description": "Becomes CONFIRMED after a successful PayOS payment.",
+                  "description": "Becomes PROCESSING after a successful PayOS payment and cultivation allocation.",
                   "example": "PENDING"
                 },
                 "paymentStatus": {
@@ -1074,16 +1094,6 @@ window.onload = function() {
               "nullable": true,
               "example": 90
             },
-            "co2_min": {
-              "type": "number",
-              "nullable": true,
-              "example": 350
-            },
-            "co2_max": {
-              "type": "number",
-              "nullable": true,
-              "example": 500
-            },
             "created_at": {
               "type": "string",
               "format": "date-time"
@@ -1123,16 +1133,6 @@ window.onload = function() {
               "type": "number",
               "nullable": true,
               "example": 90
-            },
-            "co2Min": {
-              "type": "number",
-              "nullable": true,
-              "example": 350
-            },
-            "co2Max": {
-              "type": "number",
-              "nullable": true,
-              "example": 500
             }
           }
         },
@@ -1162,16 +1162,6 @@ window.onload = function() {
               "type": "number",
               "nullable": true,
               "example": 88
-            },
-            "co2Min": {
-              "type": "number",
-              "nullable": true,
-              "example": 300
-            },
-            "co2Max": {
-              "type": "number",
-              "nullable": true,
-              "example": 600
             }
           }
         },
@@ -1668,6 +1658,18 @@ window.onload = function() {
                 "ACTIVE",
                 "INACTIVE"
               ]
+            },
+            "total_rows": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32767,
+              "nullable": true
+            },
+            "total_columns": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 32767,
+              "nullable": true
             }
           }
         }
@@ -1841,7 +1843,7 @@ window.onload = function() {
           "tags": [
             "Users"
           ],
-          "summary": "Get an account with role, order count, and rental count",
+          "summary": "Get an account with role, order count, and cultivation session count",
           "security": [
             {
               "bearerAuth": []
@@ -2115,708 +2117,7 @@ window.onload = function() {
               "description": "Rental package not found"
             },
             "409": {
-              "description": "Package is referenced by an order or rental"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin": {
-        "get": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "List rentals managed by admin or farm operator",
-          "description": "Lists rental records created after successful payments. Status values are CONFIRMED, PREPARING, ACTIVE, COMPLETED, and CANCELLED. Role IDs 1 and 2 are allowed.",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "query",
-              "name": "status",
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "CONFIRMED",
-                  "PREPARING",
-                  "ACTIVE",
-                  "COMPLETED",
-                  "CANCELLED"
-                ]
-              }
-            },
-            {
-              "in": "query",
-              "name": "userId",
-              "schema": {
-                "type": "integer"
-              }
-            },
-            {
-              "in": "query",
-              "name": "packageId",
-              "schema": {
-                "type": "integer"
-              }
-            },
-            {
-              "in": "query",
-              "name": "trayId",
-              "schema": {
-                "type": "integer"
-              }
-            },
-            {
-              "in": "query",
-              "name": "startDateFrom",
-              "schema": {
-                "type": "string",
-                "format": "date-time"
-              }
-            },
-            {
-              "in": "query",
-              "name": "startDateTo",
-              "schema": {
-                "type": "string",
-                "format": "date-time"
-              }
-            },
-            {
-              "in": "query",
-              "name": "page",
-              "schema": {
-                "type": "integer",
-                "minimum": 1,
-                "default": 1
-              }
-            },
-            {
-              "in": "query",
-              "name": "pageSize",
-              "schema": {
-                "type": "integer",
-                "minimum": 1,
-                "maximum": 100,
-                "default": 20
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "Rental list with pagination"
-            },
-            "400": {
-              "description": "Invalid filter"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/from-order": {
-        "post": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Manually create a rental from a paid rental order",
-          "description": "Creates a CONFIRMED rental if the payment webhook did not create one. The order must contain a rental package. The operation is idempotent; an existing rental is returned unchanged. Role IDs 1 and 2 are allowed.",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "orderId"
-                  ],
-                  "properties": {
-                    "orderId": {
-                      "type": "integer",
-                      "example": 15
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Rental already exists for this order"
-            },
-            "201": {
-              "description": "Rental created"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Paid rental order not found"
-            },
-            "409": {
-              "description": "Order has not been paid or has been cancelled"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/{rentalId}/notifications": {
-        "post": {
-          "tags": [
-            "Notifications"
-          ],
-          "summary": "Send a notification to a rental customer",
-          "description": "Resolves the rental customer automatically and creates an unread notification. Role IDs 1 and 2 are allowed.",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer",
-                "minimum": 1
-              },
-              "example": 12
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CreateRentalNotificationRequest"
-                },
-                "example": {
-                  "message": "Your rental is ready for the next step.",
-                  "title": "Rental update",
-                  "type": "OPERATOR_MESSAGE"
-                }
-              }
-            }
-          },
-          "responses": {
-            "201": {
-              "description": "Notification sent",
-              "content": {
-                "application/json": {
-                  "schema": {
-                    "type": "object",
-                    "properties": {
-                      "data": {
-                        "$ref": "#/components/schemas/SentRentalNotification"
-                      }
-                    }
-                  }
-                }
-              }
-            },
-            "400": {
-              "description": "Invalid rental ID or message"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Rental not found"
-            },
-            "409": {
-              "description": "Rental cannot receive notifications or recipient account is inactive"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/{rentalId}/cultivation-session": {
-        "post": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Start cultivation for a paid rental",
-          "description": "Selects the mushroom type from the rental order, creates an ACTIVE cultivation session and initial PREPARATION progress, assigns the tray, starts the rental period, marks the tray OCCUPIED, and changes a CONFIRMED order to PROCESSING. Role IDs 1 and 2 are allowed.",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "trayId"
-                  ],
-                  "properties": {
-                    "trayId": {
-                      "type": "integer",
-                      "example": 8
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "201": {
-              "description": "Cultivation session created and rental started"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Rental or cultivation tray not found"
-            },
-            "409": {
-              "description": "Rental is not paid or ready, tray is unavailable, session already exists, or no active mushroom is associated with the rental"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/{rentalId}/progress": {
-        "post": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Record cultivation progress for an active rental",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "currentStage",
-                    "progressPercent"
-                  ],
-                  "properties": {
-                    "currentStage": {
-                      "type": "string",
-                      "enum": [
-                        "PREPARATION",
-                        "INCUBATION",
-                        "PINNING",
-                        "FRUITING",
-                        "HARVEST"
-                      ]
-                    },
-                    "progressPercent": {
-                      "type": "number",
-                      "minimum": 0,
-                      "maximum": 100
-                    },
-                    "description": {
-                      "type": "string",
-                      "maxLength": 1000
-                    }
-                  }
-                },
-                "example": {
-                  "currentStage": "PINNING",
-                  "progressPercent": 60,
-                  "description": "Pinheads have appeared."
-                }
-              }
-            }
-          },
-          "responses": {
-            "201": {
-              "description": "Progress recorded"
-            },
-            "400": {
-              "description": "Invalid progress data"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Rental not found"
-            },
-            "409": {
-              "description": "Rental or session is not active, or progress moves backwards"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/{rentalId}/harvests": {
-        "post": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Record a harvest for an active rental",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "quantity",
-                    "unit"
-                  ],
-                  "properties": {
-                    "quantity": {
-                      "type": "number",
-                      "exclusiveMinimum": 0
-                    },
-                    "unit": {
-                      "type": "string",
-                      "maxLength": 20
-                    },
-                    "qualityGrade": {
-                      "type": "string",
-                      "maxLength": 20
-                    },
-                    "notes": {
-                      "type": "string",
-                      "maxLength": 1000
-                    },
-                    "harvestDate": {
-                      "type": "string",
-                      "format": "date"
-                    }
-                  }
-                },
-                "example": {
-                  "quantity": 1.5,
-                  "unit": "kg",
-                  "qualityGrade": "A",
-                  "notes": "First harvest",
-                  "harvestDate": "2026-10-20"
-                }
-              }
-            }
-          },
-          "responses": {
-            "201": {
-              "description": "Harvest recorded"
-            },
-            "400": {
-              "description": "Invalid harvest data"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Rental not found"
-            },
-            "409": {
-              "description": "Rental or session is not active, or the current stage is not HARVEST"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/{rentalId}/complete": {
-        "post": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Complete an active rental after harvest",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer"
-              }
-            }
-          ],
-          "requestBody": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "note": {
-                      "type": "string",
-                      "maxLength": 1000
-                    }
-                  }
-                },
-                "example": {
-                  "note": "Final harvest collected."
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Rental completed"
-            },
-            "400": {
-              "description": "Invalid completion data"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Rental not found"
-            },
-            "409": {
-              "description": "Rental or session is not active, there is no harvest, or the order is cancelled"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/{rentalId}/cancel": {
-        "post": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Cancel a rental and mark a paid order for manual refund",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "required": [
-                    "reason"
-                  ],
-                  "properties": {
-                    "reason": {
-                      "type": "string",
-                      "minLength": 3,
-                      "maxLength": 500
-                    }
-                  }
-                },
-                "example": {
-                  "reason": "Customer requested cancellation."
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Rental cancelled"
-            },
-            "400": {
-              "description": "Invalid cancellation reason"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin role is allowed"
-            },
-            "404": {
-              "description": "Rental not found"
-            },
-            "409": {
-              "description": "Rental cannot be cancelled in its current status"
-            }
-          }
-        }
-      },
-      "/api/rentals/admin/{rentalId}": {
-        "get": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Get a rental record with customer, order, package, tray and room details",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer"
-              }
-            }
-          ],
-          "responses": {
-            "200": {
-              "description": "Rental detail"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Rental not found"
-            }
-          }
-        },
-        "patch": {
-          "tags": [
-            "Rentals"
-          ],
-          "summary": "Update rental details or approve a confirmed rental",
-          "description": "PATCH only supports the CONFIRMED to PREPARING status transition. Start cultivation, complete, and cancel use their dedicated POST endpoints.",
-          "security": [
-            {
-              "bearerAuth": []
-            }
-          ],
-          "parameters": [
-            {
-              "in": "path",
-              "name": "rentalId",
-              "required": true,
-              "schema": {
-                "type": "integer"
-              }
-            }
-          ],
-          "requestBody": {
-            "required": true,
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "enum": [
-                        "PREPARING"
-                      ]
-                    },
-                    "trayId": {
-                      "type": "integer",
-                      "nullable": true,
-                      "description": "Set null to unassign a tray."
-                    },
-                    "durationDays": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "description": "Rental duration in days."
-                    },
-                    "startDate": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true,
-                      "description": "Set null to clear the start timestamp."
-                    },
-                    "endDate": {
-                      "type": "string",
-                      "format": "date-time",
-                      "nullable": true,
-                      "description": "Set null to clear the end timestamp."
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "responses": {
-            "200": {
-              "description": "Rental updated"
-            },
-            "400": {
-              "description": "Invalid fields or rental date range"
-            },
-            "401": {
-              "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
-            },
-            "404": {
-              "description": "Rental or available tray not found"
-            },
-            "409": {
-              "description": "Invalid status transition or tray date conflict"
+              "description": "Package is referenced by an order and cannot be deleted"
             }
           }
         }
@@ -2863,12 +2164,57 @@ window.onload = function() {
           }
         }
       },
+      "/api/payments/orders/{orderId}/payos/sync": {
+        "post": {
+          "tags": [
+            "Payments"
+          ],
+          "summary": "Synchronize a PayOS payment after returning from checkout",
+          "description": "Queries PayOS directly and updates local payment and fulfillment state only when PayOS confirms PAID. No payment status is accepted from the client.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Current local payment state after synchronization"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "404": {
+              "description": "Order or payment not found"
+            },
+            "409": {
+              "description": "Payment could not be synchronized"
+            },
+            "502": {
+              "description": "PayOS could not confirm the payment"
+            },
+            "503": {
+              "description": "PayOS is not configured"
+            }
+          }
+        }
+      },
       "/api/payments/orders/{orderId}/payos": {
         "post": {
           "tags": [
             "Payments"
           ],
           "summary": "Create or reuse a PayOS payment link for an order",
+          "description": "Rechecks cultivation tray and spawn capacity. A link is returned only while its linked resource hold remains active.",
           "security": [
             {
               "bearerAuth": []
@@ -3085,13 +2431,13 @@ window.onload = function() {
           }
         }
       },
-      "/api/orders/rentals": {
+      "/api/orders/cultivation": {
         "post": {
           "tags": [
             "Orders"
           ],
-          "summary": "Create an order for a mushroom, optionally with a rental package",
-          "description": "The authenticated customer is assigned as the order owner. When packageId is provided, one RENTAL order item stores both the rental package and mushroom type, and mushroom growing time must not exceed package duration. Without packageId, one MUSHROOM order item is created.",
+          "summary": "Create a cultivation order for a mushroom type, package, and tray quantity",
+          "description": "The selected active package must cover the selected mushroom's growing days. Each tray requires three spawn units. Both trays and spawn are held for the configured checkout period and allocated only after successful payment.",
           "security": [
             {
               "bearerAuth": []
@@ -3102,23 +2448,26 @@ window.onload = function() {
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateRentalOrderRequest"
+                  "$ref": "#/components/schemas/CreateCultivationOrderRequest"
                 }
               }
             }
           },
           "responses": {
             "201": {
-              "description": "Order and a single MUSHROOM or RENTAL order item created"
+              "description": "Order and cultivation order item created"
             },
             "400": {
-              "description": "Invalid selection or mushroom growing time exceeds the rental duration"
+              "description": "Invalid selection or mushroom growing time exceeds the selected package duration"
             },
             "401": {
               "description": "Missing or invalid JWT token"
             },
             "404": {
-              "description": "Rental package or mushroom type not found"
+              "description": "Package or mushroom type not found"
+            },
+            "409": {
+              "description": "Insufficient cultivation capacity (`INSUFFICIENT_TRAYS` or `INSUFFICIENT_SPAWN`)"
             }
           }
         }
@@ -3887,6 +3236,451 @@ window.onload = function() {
           }
         }
       },
+      "/api/farm/sessions": {
+        "get": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "List paid sessions in the farm cultivation workflow",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "SPAWN_RESTING",
+                  "MYCELIAL_DEVELOPMENT",
+                  "READY_FOR_CULTIVATION",
+                  "CULTIVATING",
+                  "HARVESTING",
+                  "COMPLETED",
+                  "CANCELLED"
+                ]
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Sessions with spawn and tray quantities"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            }
+          }
+        }
+      },
+      "/api/farm/sessions/{id}/spawn-inspections": {
+        "post": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "Record spawn inspection and optional actual replacement",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "totalChecked",
+                    "normalQuantity",
+                    "warningQuantity",
+                    "abnormalQuantity",
+                    "condition"
+                  ],
+                  "properties": {
+                    "totalChecked": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "normalQuantity": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "warningQuantity": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "abnormalQuantity": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "condition": {
+                      "type": "string",
+                      "enum": [
+                        "NORMAL",
+                        "WARNING",
+                        "ABNORMAL"
+                      ]
+                    },
+                    "replacementQuantity": {
+                      "type": "integer",
+                      "minimum": 0
+                    },
+                    "notes": {
+                      "type": "string"
+                    },
+                    "nextCheckAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Inspection saved; replacement stock is deducted transactionally"
+            },
+            "409": {
+              "description": "Session is not in an inspectable stage or replacement stock is insufficient"
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "View spawn inspection history for a session",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Inspection history, including uploaded image metadata"
+            },
+            "404": {
+              "description": "Session not found"
+            }
+          }
+        }
+      },
+      "/api/farm/spawn-inspections/{id}/images": {
+        "post": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "Upload an inspection image to Cloudinary",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "image"
+                  ],
+                  "properties": {
+                    "image": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "caption": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Uploaded image linked to the spawn inspection"
+            },
+            "404": {
+              "description": "Inspection not found"
+            }
+          }
+        }
+      },
+      "/api/farm/spawn-inspections/{id}/replacements": {
+        "post": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "Issue replacement spawn for abnormal units already recorded",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "replacementQuantity"
+                  ],
+                  "properties": {
+                    "replacementQuantity": {
+                      "type": "integer",
+                      "minimum": 1
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Stock deducted and inventory transaction recorded"
+            },
+            "409": {
+              "description": "Insufficient stock or inspection is no longer in its current stage"
+            }
+          }
+        }
+      },
+      "/api/farm/sessions/{id}/stage": {
+        "patch": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "Advance a session through spawn resting and mycelial development",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "stage"
+                  ],
+                  "properties": {
+                    "stage": {
+                      "type": "string",
+                      "enum": [
+                        "SPAWN_RESTING",
+                        "MYCELIAL_DEVELOPMENT",
+                        "READY_FOR_CULTIVATION",
+                        "CULTIVATING",
+                        "HARVESTING"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Session advanced; trays are assigned when ready, cultivation dates begin at CULTIVATING"
+            },
+            "409": {
+              "description": "Stage transition requirements are not met"
+            }
+          }
+        }
+      },
+      "/api/customer/orders/{orderId}/cultivation-status": {
+        "get": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "View cultivation sessions for an owned order, or any order as an admin",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Current customer-visible cultivation state"
+            },
+            "404": {
+              "description": "Order not found or not accessible to this user"
+            }
+          }
+        }
+      },
+      "/api/customer/orders/{orderId}/cultivation-progress": {
+        "get": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "View cultivation stage history for an owned order, or any order as an admin",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Stage timeline"
+            },
+            "404": {
+              "description": "Order not found or not accessible to this user"
+            }
+          }
+        }
+      },
+      "/api/customer/orders/{orderId}/spawn-inspections": {
+        "get": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "View spawn inspection history for an owned order, or any order as an admin",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Inspection history and image URLs"
+            },
+            "404": {
+              "description": "Order not found or not accessible to this user"
+            }
+          }
+        }
+      },
+      "/api/customer/orders/{orderId}/spawn-inspections/{inspectionId}": {
+        "get": {
+          "tags": [
+            "Farm Spawn Workflow"
+          ],
+          "summary": "View one spawn inspection for an owned order, or any order as an admin",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            },
+            {
+              "in": "path",
+              "name": "inspectionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Inspection details and image URLs"
+            },
+            "404": {
+              "description": "Inspection not found for this order or not accessible to this user"
+            }
+          }
+        }
+      },
       "/api/cultivation-trays": {
         "get": {
           "tags": [
@@ -4061,6 +3855,151 @@ window.onload = function() {
             },
             "409": {
               "description": "Tray is used by a cultivation session"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin": {
+        "get": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "List paid cultivation sessions",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "SPAWN_RESTING",
+                  "MYCELIAL_DEVELOPMENT",
+                  "READY_FOR_CULTIVATION",
+                  "CULTIVATING",
+                  "HARVESTING",
+                  "COMPLETED",
+                  "CANCELLED"
+                ]
+              }
+            },
+            {
+              "in": "query",
+              "name": "userId",
+              "schema": {
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "trayId",
+              "schema": {
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Sessions with assigned trays and latest progress"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Only Admin and Farm Operator roles are allowed"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/session-trays/{sessionTrayId}/inspections": {
+        "post": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "Record a daily inspection and update session progress",
+          "description": "Creates a cultivation_inspections record for the assigned tray and appends the corresponding cultivation_progress record.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionTrayId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "growthStage",
+                    "growthProgress"
+                  ],
+                  "properties": {
+                    "growthStage": {
+                      "type": "string",
+                      "example": "FRUITING"
+                    },
+                    "growthProgress": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100,
+                      "example": 60
+                    },
+                    "trayCondition": {
+                      "type": "string"
+                    },
+                    "mushroomCondition": {
+                      "type": "string"
+                    },
+                    "notes": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Inspection and progress history recorded"
+            },
+            "404": {
+              "description": "Session tray not found"
+            },
+            "409": {
+              "description": "Session tray is not active or progress moved backwards"
             }
           }
         }
@@ -4477,6 +4416,71 @@ window.onload = function() {
           }
         }
       },
+      "/api/cameras/{cameraId}/imou-player-token": {
+        "get": {
+          "tags": [
+            "Cameras"
+          ],
+          "summary": "Get a scoped Imou KitToken for ImouPlayer",
+          "description": "Returns a short-lived KitToken for live preview. The Imou App Secret and Open Platform access token are never exposed.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "cameraId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "channelId",
+              "schema": {
+                "type": "string",
+                "default": "0"
+              }
+            },
+            {
+              "in": "query",
+              "name": "streamId",
+              "description": "ImouPlayer stream ID (0 or 1)",
+              "schema": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ],
+                "default": 0
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "ImouPlayer configuration and KitToken"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "404": {
+              "description": "Camera not found"
+            },
+            "409": {
+              "description": "Camera is not active or has no Imou device ID configured"
+            },
+            "502": {
+              "description": "Imou cloud request failed"
+            },
+            "503": {
+              "description": "Imou cloud credentials are not configured"
+            }
+          }
+        }
+      },
       "/api/cameras/{cameraId}": {
         "get": {
           "tags": [
@@ -4614,7 +4618,7 @@ window.onload = function() {
             "Cameras"
           ],
           "summary": "Get a temporary Imou cloud live-stream link",
-          "description": "The camera's camera_code must contain its Imou cloud device ID. Access is limited to administrators and farm operators.",
+          "description": "The camera's camera_code must contain its Imou cloud device ID. Any authenticated user can view the stream.",
           "security": [
             {
               "bearerAuth": []
@@ -4638,6 +4642,20 @@ window.onload = function() {
                 "type": "string",
                 "default": "0"
               }
+            },
+            {
+              "in": "query",
+              "name": "streamId",
+              "required": false,
+              "description": "Imou stream ID; defaults to 0",
+              "schema": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ],
+                "default": 0
+              }
             }
           ],
           "responses": {
@@ -4646,9 +4664,6 @@ window.onload = function() {
             },
             "401": {
               "description": "Missing or invalid JWT token"
-            },
-            "403": {
-              "description": "User is not an administrator or farm operator"
             },
             "404": {
               "description": "Camera not found"
@@ -4666,6 +4681,7 @@ window.onload = function() {
             "Cameras"
           ],
           "summary": "Start or retrieve an Imou cloud live stream",
+          "description": "Any authenticated user can start or retrieve the stream for viewing.",
           "security": [
             {
               "bearerAuth": []
@@ -4686,6 +4702,18 @@ window.onload = function() {
               "schema": {
                 "type": "string",
                 "default": "0"
+              }
+            },
+            {
+              "in": "query",
+              "name": "streamId",
+              "schema": {
+                "type": "integer",
+                "enum": [
+                  0,
+                  1
+                ],
+                "default": 0
               }
             }
           ],
@@ -4741,43 +4769,6 @@ window.onload = function() {
             },
             "502": {
               "description": "Imou cloud request failed"
-            }
-          }
-        }
-      },
-      "/api/auth/google": {
-        "get": {
-          "tags": [
-            "Auth OTP"
-          ],
-          "summary": "Start Gmail API authorization for the OTP sender account",
-          "responses": {
-            "302": {
-              "description": "Redirect to Google consent screen"
-            },
-            "429": {
-              "description": "Rate limit exceeded"
-            }
-          }
-        }
-      },
-      "/api/auth/google/callback": {
-        "get": {
-          "tags": [
-            "Auth OTP"
-          ],
-          "summary": "Complete Gmail API authorization and return a refresh token",
-          "responses": {
-            "200": {
-              "description": "OAuth complete; copy the refresh token to secret environment variables"
-            },
-            "400": {
-              "description": "Authorization denied",
-              "expired state": null,
-              "or no refresh token": null
-            },
-            "429": {
-              "description": "Rate limit exceeded"
             }
           }
         }
@@ -6080,6 +6071,18 @@ window.onload = function() {
                                 "ACTIVE",
                                 "INACTIVE"
                               ]
+                            },
+                            "total_rows": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 32767,
+                              "nullable": true
+                            },
+                            "total_columns": {
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 32767,
+                              "nullable": true
                             }
                           }
                         }
@@ -6204,6 +6207,18 @@ window.onload = function() {
                         "ACTIVE",
                         "INACTIVE"
                       ]
+                    },
+                    "total_rows": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 32767,
+                      "nullable": true
+                    },
+                    "total_columns": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 32767,
+                      "nullable": true
                     }
                   }
                 }
@@ -6318,6 +6333,18 @@ window.onload = function() {
                         "ACTIVE",
                         "INACTIVE"
                       ]
+                    },
+                    "total_rows": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 32767,
+                      "nullable": true
+                    },
+                    "total_columns": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 32767,
+                      "nullable": true
                     }
                   }
                 }
@@ -6332,7 +6359,7 @@ window.onload = function() {
             "Automatic misting"
           ],
           "summary": "Assign a same-room tray to a stopped floor",
-          "description": " Requires iot.automation.manage permission.",
+          "description": "Optional body: position_id selects an ACTIVE unoccupied position in this floor and room; null clears the position, omission preserves it. Stop AUTO before changing assignment. Requires iot.automation.manage permission.",
           "security": [
             {
               "bearerAuth": []
@@ -6391,6 +6418,24 @@ window.onload = function() {
             },
             "503": {
               "description": "MQTT unavailable; OFF remains pending and is retried"
+            }
+          },
+          "requestBody": {
+            "required": false,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "position_id": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "nullable": true
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -6995,7 +7040,7 @@ window.onload = function() {
             "Automatic misting"
           ],
           "summary": "Suggest a shared floor climate configuration",
-          "description": "Requires iot.automation.manage. Uses ACTIVE tray sessions linked to ACTIVE rentals on the same tray; returns sourceProfiles, common, issues, warnings, config. Config is null for missing, conflicting or too narrow conditions. No database writes or device commands. Review preset, set profile_approved=true and PUT config to auto-control. Authenticated read access.",
+          "description": "Requires iot.automation.manage. Uses ACTIVE cultivation sessions and their ACTIVE session-tray assignments on this floor; returns sourceProfiles, common, issues, warnings, config. Config is null for missing, conflicting or too narrow conditions. No database writes or device commands. Review preset, set profile_approved=true and PUT config to auto-control. Authenticated read access.",
           "security": [
             {
               "bearerAuth": []
@@ -7118,7 +7163,7 @@ window.onload = function() {
               "description": "MQTT unavailable; OFF remains pending and is retried"
             },
             "504": {
-              "description": "OFF publication timed out or no new live OFF feedback within 5 seconds after publication; AUTO was not started"
+              "description": "OFF hết thời gian gửi lệnh or no new live OFF feedback within 5 seconds after publication; AUTO was not started"
             }
           },
           "requestBody": {
@@ -7519,7 +7564,7 @@ window.onload = function() {
             "Automatic misting"
           ],
           "summary": "Get run, operator, desired/reported SSR, deadlines and errors",
-          "description": " Authenticated read access.",
+          "description": "Connection/sensor failure, worker restart or backend shutdown ends the interrupted AUTO run. Reconnection only reconciles OFF_PENDING using fresh live OFF feedback; it never resumes ON. Explicit Start is required. MANUAL with OFF_PENDING does not confirm physical OFF. Authenticated read access.",
           "security": [
             {
               "bearerAuth": []
@@ -7947,7 +7992,7 @@ window.onload = function() {
                       "logs": [
                         {
                           "event_type": "CONFIG_SAVED",
-                          "reason": "Configuration saved; MANUAL remains active"
+                          "reason": "Đã lưu cấu hình; vẫn duy trì chế độ thủ công (MANUAL)"
                         }
                       ]
                     }
@@ -8018,7 +8063,7 @@ window.onload = function() {
                       "decision": {
                         "action": "NONE",
                         "state": "DISABLED",
-                        "reason": "MANUAL mode"
+                        "reason": "Chế độ thủ công (MANUAL)"
                       }
                     }
                   }

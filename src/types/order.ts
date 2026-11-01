@@ -27,13 +27,20 @@ export type PaymentStatus =
   | 'REFUNDED'
 
 export interface OrderItem {
-  /** Mô tả tuỳ backend trả về (ví dụ: tên package + mushroomType). */
+  /** Mô tả tuỳ backend trả về (ví dụ: tên package + tên nấm). */
   item_id?: number
   order_id?: number
   package_id?: number
   mushroom_type_id?: number
   package_name?: string
-  mushroom_type_name?: string
+  /**
+   * Tên giống nấm — **nguyên bản** từ `mushroom_types.name`.
+   *
+   * ⚠ BE join `mushroom_types` và đặt tên cột là `mushroom_name`
+   *   (xem `Backend/src/models/order.model.js` → `mt.name AS mushroom_name`),
+   *   **không** phải `mushroom_type_name`.
+   */
+  mushroom_name?: string
   growing_days?: number
   duration_days?: number
   unit_price?: number

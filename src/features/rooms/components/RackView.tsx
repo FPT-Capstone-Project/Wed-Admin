@@ -1,3 +1,4 @@
+import '../rooms-industrial.css'
 import { CloudOutlined, FireOutlined } from '@ant-design/icons'
 import { Flex, Tooltip, Typography } from 'antd'
 import { useMemo, useState } from 'react'
@@ -56,21 +57,21 @@ interface TrayVisualConfig {
 
 const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
   maintenance: {
-    borderColor: tokens.tone.danger.border,
-    bgColor: tokens.tone.danger.bg,
-    textColor: tokens.tone.danger.text,
+    borderColor: tokens.color.border,
+    bgColor: tokens.color.surface,
+    textColor: tokens.color.text,
     progressColor: tokens.tone.danger.solid,
     borderStyle: 'solid',
   },
   harvesting: {
-    borderColor: tokens.tone.warning.border,
-    bgColor: tokens.tone.warning.bg,
-    textColor: tokens.tone.warning.text,
+    borderColor: tokens.color.border,
+    bgColor: tokens.color.surface,
+    textColor: tokens.color.text,
     progressColor: tokens.tone.warning.solid,
     borderStyle: 'solid',
   },
   rented: {
-    borderColor: tokens.tone.ok.border,
+    borderColor: tokens.color.border,
     bgColor: tokens.color.surface,
     textColor: tokens.color.text,
     progressColor: tokens.tone.ok.solid,
@@ -78,10 +79,10 @@ const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
   },
   empty: {
     borderColor: tokens.color.border,
-    bgColor: tokens.color.surfaceMuted,
+    bgColor: tokens.color.surface,
     textColor: tokens.color.textMuted,
     progressColor: tokens.color.border,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
   },
 }
 
@@ -166,9 +167,9 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
           color: palette.text,
           backgroundColor: palette.bg,
           border: `1px solid ${palette.border}`,
-          borderRadius: tokens.radius.pill,
+          borderRadius: tokens.radius.md,
           padding: '2px 10px',
-          fontFamily: tokens.typography.fontNumeric,
+          fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
           cursor: 'help',
         }}
       >
@@ -201,9 +202,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
   const isEmpty = tray.status === 'empty'
   const trayCode = formatTrayCode(tray.code)
 
-  const baseShadow = isSelected
-    ? `0 0 0 2px ${vis.borderColor}, ${tokens.shadow.sm}`
-    : tokens.shadow.xs
+  const baseShadow = 'none'
 
   // Ô khay trống — gọn, chữ nhạt, KHÔNG lặp lại "Sẵn sàng vào vụ".
   if (isEmpty) {
@@ -215,15 +214,17 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
         aria-current={isSelected ? 'true' : undefined}
         className="rack-tray-btn"
         style={{
-          all: 'unset',
+          appearance: 'none',
+          textAlign: 'left',
+          font: 'inherit',
           display: 'flex',
           alignItems: 'center',
           gap: 6,
           padding: '6px 10px',
           minHeight: 36,
           borderRadius: tokens.radius.md,
-          border: `1px ${vis.borderStyle} ${vis.borderColor}`,
-          backgroundColor: vis.bgColor,
+          border: `1px ${vis.borderStyle} ${isSelected ? tokens.color.borderStrong : vis.borderColor}`,
+          backgroundColor: isSelected ? tokens.color.surfaceMuted : vis.bgColor,
           cursor: 'pointer',
           transition: `box-shadow ${tokens.motion.fast}`,
           boxShadow: baseShadow,
@@ -235,12 +236,12 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
             fontSize: 11,
             fontWeight: tokens.typography.weightSemibold,
             color: vis.textColor,
-            fontFamily: tokens.typography.fontNumeric,
+            fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
           }}
         >
           {trayCode}
         </span>
-        <span style={{ fontSize: 11, color: vis.textColor }}>Trống</span>
+        <StatusBadge tone={TRAY_STATUS_CONFIG.empty.tone} label={TRAY_STATUS_CONFIG.empty.shortLabel} />
       </button>
     )
   }
@@ -259,14 +260,16 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
       aria-current={isSelected ? 'true' : undefined}
       className="tray-card-btn"
       style={{
-        all: 'unset',
+        appearance: 'none',
+          textAlign: 'left',
+          font: 'inherit',
         display: 'flex',
         flexDirection: 'column',
         gap: '6px',
         padding: '10px 12px',
         borderRadius: tokens.radius.lg,
-        border: `1.5px ${vis.borderStyle} ${vis.borderColor}`,
-        backgroundColor: vis.bgColor,
+        border: `1px ${vis.borderStyle} ${isSelected ? tokens.color.borderStrong : vis.borderColor}`,
+        backgroundColor: isSelected ? tokens.color.surfaceMuted : vis.bgColor,
         cursor: 'pointer',
         transition: `box-shadow ${tokens.motion.fast}, transform ${tokens.motion.fast}`,
         boxShadow: baseShadow,
@@ -282,7 +285,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
             fontWeight: tokens.typography.weightSemibold,
             letterSpacing: '0.04em',
             color: vis.textColor,
-            fontFamily: tokens.typography.fontNumeric,
+            fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
           }}
         >
           {trayCode}
@@ -342,7 +345,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
             <span
               style={{
                 flexShrink: 0,
-                fontFamily: tokens.typography.fontNumeric,
+                fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
               }}
             >
               {harvestDate}
@@ -364,7 +367,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
           <div
             style={{
               height: 4,
-              borderRadius: tokens.radius.pill,
+              borderRadius: tokens.radius.sm,
               backgroundColor: `${vis.progressColor}28`,
               overflow: 'hidden',
               marginTop: 2,
@@ -374,7 +377,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
               style={{
                 height: '100%',
                 width: `${progress.percent}%`,
-                borderRadius: tokens.radius.pill,
+                borderRadius: tokens.radius.sm,
                 backgroundColor: vis.progressColor,
                 transition: `width ${tokens.motion.slow}`,
               }}
@@ -416,7 +419,9 @@ function EmptyTrayGroup({
         aria-expanded={false}
         className="rack-tray-btn"
         style={{
-          all: 'unset',
+          appearance: 'none',
+          textAlign: 'left',
+          font: 'inherit',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
@@ -427,7 +432,7 @@ function EmptyTrayGroup({
           backgroundColor: tokens.color.surfaceMuted,
           color: tokens.color.textMuted,
           fontSize: 12,
-          fontFamily: tokens.typography.fontNumeric,
+          fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
           cursor: 'pointer',
           transition: `background-color ${tokens.motion.fast}`,
           WebkitTapHighlightColor: 'transparent',
@@ -448,7 +453,9 @@ function EmptyTrayGroup({
         aria-expanded={true}
         className="rack-tray-btn"
         style={{
-          all: 'unset',
+          appearance: 'none',
+          textAlign: 'left',
+          font: 'inherit',
           display: 'inline-flex',
           alignItems: 'center',
           gap: 6,
@@ -459,7 +466,7 @@ function EmptyTrayGroup({
           backgroundColor: tokens.color.surfaceMuted,
           color: tokens.color.textMuted,
           fontSize: 12,
-          fontFamily: tokens.typography.fontNumeric,
+          fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
           cursor: 'pointer',
           WebkitTapHighlightColor: 'transparent',
         }}
@@ -512,8 +519,12 @@ export function RackView({
   return (
     <div
       aria-label="Kệ nấm"
+      className="mcms-room-rack"
       style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['5'] }}
     >
+      <Typography.Title level={2} style={{ margin: 0, fontSize: 16 }}>
+        Kệ nuôi · {tiers.length} tầng
+      </Typography.Title>
       {orderedTiers.map((tier) => {
         const thresholds = thresholdsByTier?.get(tier.tierId) ?? null
 
@@ -558,7 +569,7 @@ export function RackView({
               border: `1px solid ${tokens.color.border}`,
               borderRadius: tokens.radius.xl,
               overflow: 'hidden',
-              boxShadow: tokens.shadow.xs,
+              boxShadow: 'none',
             }}
           >
             {/* ── Tier header ── */}
@@ -576,8 +587,8 @@ export function RackView({
               <Flex align="center" gap={8} wrap>
                 <Typography.Title
                   id={`tier-${tier.tierId}-title`}
-                  level={5}
-                  style={{ margin: 0, color: tokens.color.text }}
+                  level={3}
+                  style={{ margin: 0, fontSize: 14, color: tokens.color.text }}
                 >
                   {formatRoomLabel(tier.name, tier.roomCode, tier.tierId)}
                 </Typography.Title>

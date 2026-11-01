@@ -1,3 +1,4 @@
+import '../../../styles/media-industrial.css'
 import {
   ExperimentOutlined,
   FieldTimeOutlined,

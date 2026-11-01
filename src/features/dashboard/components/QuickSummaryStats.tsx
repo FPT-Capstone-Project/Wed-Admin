@@ -40,7 +40,7 @@ export function QuickSummaryStats({
   const availablePct = getPercentage(availableTrays, totalTrays)
 
   return (
-    <Row gutter={[16, 16]} aria-label="Thống kê nhanh trang trại">
+    <Row gutter={[12, 12]} aria-label="Thống kê nhanh trang trại">
       {/* KPI 1 — Tổng số khay */}
       <Col xs={24} sm={12} xl={6}>
         <StatCard
@@ -48,7 +48,6 @@ export function QuickSummaryStats({
           value={totalTrays}
           suffix="khay"
           icon={<AppstoreOutlined />}
-          tone="ok"
           description="Công suất toàn trang trại"
         />
       </Col>
@@ -60,7 +59,7 @@ export function QuickSummaryStats({
           value={activeInUseTrays}
           suffix="khay"
           icon={<CheckCircleOutlined />}
-          tone="info"
+          tone="ok"
           description={`${occupancyPct}% tổng công suất`}
         />
       </Col>
@@ -72,7 +71,7 @@ export function QuickSummaryStats({
           value={availableTrays}
           suffix="khay"
           icon={<InboxOutlined />}
-          tone="warning"
+          tone="neutral"
           description={
             <Flex align="center" gap={6} wrap>
               <span>{availablePct}% còn trống</span>

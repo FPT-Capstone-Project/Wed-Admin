@@ -1,3 +1,5 @@
+import '../../../styles/media-industrial.css'
+import { MetadataBadge } from '../../../shared/ui'
 import {
   LeftOutlined,
   PauseCircleOutlined,
@@ -5,7 +7,7 @@ import {
   RightOutlined,
   VideoCameraOutlined,
 } from '@ant-design/icons'
-import { Button, Empty, Modal, Select, Slider, Tabs, Tag, Typography } from 'antd'
+import { Button, Empty, Modal, Select, Slider, Tabs, Typography } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import type {
@@ -159,7 +161,7 @@ export function BatchPlaybackModal({
           <Empty description="Chưa có dữ liệu playback" />
         )}
         <div className="batch-player-overlay">
-          <Tag color="success">TIMELAPSE MOCK</Tag>
+          <MetadataBadge label={<>TIMELAPSE MOCK</>} />
           <span>{batch?.batchCode}</span>
         </div>
         <button
@@ -244,7 +246,7 @@ export function BatchPlaybackModal({
               <strong>{batch?.tenantName}</strong>
               <small>{batch?.mushroomType} · {batch?.trayName}</small>
             </span>
-            <Tag color="processing">{batch?.gallerySnapshots.length ?? 0} ảnh đã lưu</Tag>
+            <MetadataBadge label={<>{batch?.gallerySnapshots.length ?? 0} ảnh đã lưu</>} />
           </div>
           <Tabs
             items={[

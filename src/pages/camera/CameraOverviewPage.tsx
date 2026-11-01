@@ -1,3 +1,4 @@
+import '../../styles/media-industrial.css'
 import { useCallback, useMemo, useState } from 'react'
 import {
   CameraOutlined,
@@ -237,7 +238,7 @@ export function CameraOverviewPage() {
               label="Tải lại"
               description="Tải lại danh sách camera từ máy chủ."
               variant="default"
-              size="middle"
+              size="small"
               loading={isFetching && !isLoading}
               onClick={() => void refetch()}
             />

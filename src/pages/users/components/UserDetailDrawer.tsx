@@ -1,3 +1,5 @@
+import '../../../styles/reports-users-industrial.css'
+import { StatusBadge, MetadataBadge } from '../../../shared/ui'
 import {
   CloseCircleOutlined,
   ExperimentOutlined,
@@ -18,7 +20,6 @@ import {
   Skeleton,
   Space,
   Statistic,
-  Tag,
   Typography,
 } from 'antd'
 import { useState } from 'react'
@@ -97,19 +98,16 @@ export function UserDetailDrawer({
 
   return (
     <>
-      <Drawer
+      <Drawer rootClassName="mcms-user-drawer"
         title={
           <Flex vertical align="flex-start" gap={2}>
             <Typography.Text strong>
               {profile?.full_name ?? `Tài khoản #${userId ?? '—'}`}
             </Typography.Text>
             {status && (
-              <Tag
-                color={USER_STATUS_CONFIG[status]?.color ?? 'default'}
-                style={{ width: 'fit-content', marginTop: 4 }}
-              >
+              <StatusBadge tone={status === 'ACTIVE' ? 'ok' : status === 'BLOCKED' ? 'danger' : 'muted'} label={<>
                 {USER_STATUS_CONFIG[status]?.label ?? status}
-              </Tag>
+              </>} />
             )}
           </Flex>
         }
@@ -224,9 +222,9 @@ export function UserDetailDrawer({
                   label: 'Vai trò',
                   children: (
                     <Space direction="vertical" size={2}>
-                      <Tag color="geekblue">
+                      <MetadataBadge label={<>
                         {getRoleLabel(profile.role_id, profile.role_name)}
-                      </Tag>
+                      </>} />
                       {profile.role_description && (
                         <Typography.Text
                           type="secondary"

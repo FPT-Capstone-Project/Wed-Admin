@@ -146,7 +146,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           block
           loading={isSubmitting}
           className="mcms-login-submit-btn"
-          style={{ minHeight: 46 }}
+          style={{ minHeight: 44 }}
         >
           Đăng nhập
         </Button>

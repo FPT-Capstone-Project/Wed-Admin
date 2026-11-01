@@ -1,5 +1,7 @@
+import './device-industrial.css'
+import { MetadataBadge } from '../../shared/ui'
 import { ArrowLeftOutlined, DatabaseOutlined } from '@ant-design/icons'
-import { Button, Tag, Typography } from 'antd'
+import { Button, Typography } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { TrayIoTHistoryView } from './components/TrayIoTHistoryView'
 
@@ -7,7 +9,7 @@ export function IoTHistoryPage() {
   const navigate = useNavigate()
 
   return (
-    <div className="iot-history-page">
+    <div className="iot-history-page mcms-iot-view">
       <header className="iot-history-page-header">
         <div>
           <Button
@@ -18,7 +20,7 @@ export function IoTHistoryPage() {
           >
             Thiết bị thời gian thực
           </Button>
-          <Typography.Title level={2}>
+          <Typography.Title level={1} style={{ fontSize: 18 }}>
             Lịch sử Telemetry theo Khay
           </Typography.Title>
           <Typography.Paragraph>
@@ -26,9 +28,9 @@ export function IoTHistoryPage() {
             vi khí hậu dài hạn.
           </Typography.Paragraph>
         </div>
-        <Tag icon={<DatabaseOutlined />} color="success">
+        <MetadataBadge icon={<DatabaseOutlined />} label={<>
           Dữ liệu 2025 – 2026
-        </Tag>
+        </>} />
       </header>
 
       <TrayIoTHistoryView />

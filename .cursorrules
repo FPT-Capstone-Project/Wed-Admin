@@ -1,12 +1,36 @@
 # Project Overview
-- Project: mcms-web-admin (IoT / Telemetry monitoring admin dashboard).
+- Project: mcms-web-admin (IoT / Telemetry monitoring admin dashboard for smart agriculture).
 - Tech stack: React, TypeScript, Tailwind CSS, Recharts, Vite.
 - Architecture: Feature-based (`src/features/...`, `components/`, `routes/`, `stores/`).
 
-# Guidelines
+# Code & Development Guidelines
 - Strictly adhere to existing code structure, patterns, and type definitions.
-- Apply UI/UX Pro Max design principles: maintain consistent spacing, typography, color palette, and clear state handling (loading, empty, error, success).
 - Do not refactor unrelated files or functions.
 - Do not install new packages unless explicitly requested.
 - Use strict TypeScript; reuse interfaces/types in `types/`.
 - Keep explanations minimal: output clean, direct diffs without unnecessary chit-chat.
+
+# Visual & UI/UX Standards (B2B Industrial IoT)
+- Border Radius: Strictly use subtle corners: `rounded` (4px) or `rounded-md` (6px). NEVER use full rounded pill shapes (`rounded-full`) for menu items, cards, badges, or buttons.
+- Color Palette:
+  - Background: Crisp neutral/slate (`bg-slate-50` or `#F8FAFC`), card surfaces use pure white (`#FFFFFF`) with thin borders (`border-slate-200`).
+  - Primary Green: Restrict to key interactive elements (CTA buttons) and healthy/online states only.
+  - Border Accents: Do NOT use thick colored borders (red, orange, green) on card edges or badges.
+- Status Indicators:
+  - Replace thick bordered badge tags with subtle "Status Dots": a 6px solid dot (green for active, red for offline, amber for warning) followed by medium neutral text.
+  - Avoid high-saturation outline tags (`border border-green-500 text-green-500`).
+- Sidebar Navigation:
+  - Active menu state: subtle background highlight (`bg-slate-100` or `bg-emerald-50/50`) + a 3px vertical accent bar on the left edge.
+  - Do NOT wrap selected menu items in thick pills or colored borders.
+- Data Tables:
+  - Compact industrial density: compact cell padding (`py-2 px-3` or `py-2.5 px-4`).
+  - Action column: Use minimal text links or clean icon buttons; avoid heavy bordered buttons inside table rows.
+- Charts (Recharts):
+  - Thin line strokes (`strokeWidth={2}`).
+  - Light dashed grid lines (`stroke="#E2E8F0"` / `strokeDasharray="3 3"`).
+  - Compact axis labels and clean tooltip cards.
+
+# Strict Anti-Patterns (Avoid "AI Slop")
+- NO gradients anywhere (no `bg-gradient-to-...`).
+- NO excessive drop shadows (avoid `shadow-lg`, `shadow-xl`, or glowing colored shadows); stick to `shadow-sm` or plain `border`.
+- NO decorative emojis or toy-like icons in production controls.

@@ -1,3 +1,5 @@
+import '../rentals-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import { Alert, App, Form, InputNumber, Modal } from 'antd'
 import { useCreateRentalFromOrder } from '../hooks/useRentals'
 
@@ -54,6 +56,9 @@ export function CreateRentalFromOrderModal({
       cancelText="Huỷ"
       confirmLoading={createFromOrder.isPending}
       destroyOnHidden
+
+      className="mcms-rental-modal"
+      footer={<><ActionButton icon={null} variant="text" size="middle" label="Huỷ" onClick={onClose} /><ActionButton icon={null} variant="primary" size="middle" label="Tạo vụ thuê" loading={createFromOrder.isPending} onClick={() => void handleOk()} /></>}
     >
       <Alert
         type="warning"

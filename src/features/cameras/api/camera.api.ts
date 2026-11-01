@@ -55,6 +55,15 @@ function normalizeCamera(raw: unknown): Camera {
   const streamUrl = pickString(obj, 'streamUrl', 'stream_url')
   const status = pickString(obj, 'status')
 
+  // ── Liên kết tầng (BE mở rộng `cameras.floor_id`) ──────────────────────
+  //
+  // ⚠ Hiện tại BE **chưa** có cột này ⇒ `floorId` luôn `null` và logic map
+  // tầng ↔ camera rơi về `roomId` + cấu hình tay (xem
+  // `pages/devices/utils/floor-camera.utils.ts`). Khi BE bổ sung, normalizer
+  // này tự đọc được → UI không phải sửa.
+  const floorId = pickNumber(obj, 'floorId', 'floor_id')
+  const floorNumber = pickNumber(obj, 'floorNumber', 'floor_number')
+
   return {
     // `id` thiếu → 0. Row key của Table sẽ fallback sang `cameraCode`
     // (xem `rowKey` ở CameraOverviewPage) — dùng -1 sẽ đụng nhau giữa
@@ -65,6 +74,8 @@ function normalizeCamera(raw: unknown): Camera {
     cameraCode: cameraCode ?? '',
     cameraName: cameraName ?? '',
     roomId: roomId ?? null,
+    floorId: floorId ?? null,
+    floorNumber: floorNumber ?? null,
     streamUrl: streamUrl ?? null,
     status: isCameraStatus(status) ? status : 'INACTIVE',
     createdAt: pickString(obj, 'createdAt', 'created_at') ?? undefined,

@@ -39,19 +39,19 @@ export function PageHeader({
         gap={16}
         wrap
       >
-        <Flex vertical gap={4} style={{ minWidth: 0 }}>
-          <Typography.Title level={4} style={{ margin: 0 }}>
+        <Flex vertical gap={4} className="mcms-page-header-copy" style={{ minWidth: 0 }}>
+          <Typography.Title level={1} style={{ margin: 0, fontSize: 'var(--mcms-font-heading)', lineHeight: 1.4 }}>
             {title}
           </Typography.Title>
           {description && (
-            <Typography.Text type="secondary" style={{ fontSize: 14 }}>
+            <Typography.Text type="secondary" style={{ fontSize: 13 }}>
               {description}
             </Typography.Text>
           )}
         </Flex>
 
         {actions && (
-          <Flex gap={8} wrap align="center">
+          <Flex gap={8} wrap align="center" className="mcms-page-header-actions">
             {actions}
           </Flex>
         )}

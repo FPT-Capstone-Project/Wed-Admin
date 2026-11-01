@@ -6,7 +6,6 @@ import {
   SearchOutlined,
 } from '@ant-design/icons'
 import {
-  Badge,
   Button,
   Flex,
   Input,
@@ -20,7 +19,7 @@ import { useAlertStore } from '../../stores/alert.store'
 import { useRoomStore } from '../../stores/room.store'
 import { getCustomerTrayIds } from '../../features/rooms/utils/tray-customer.utils'
 import { AlertItemRow } from './components/AlertItemRow'
-import { ActionButton, EmptyState, PageHeader, StatCard, StatusBadge } from '../../shared/ui'
+import { ActionButton, DataTable, MetadataBadge, PageHeader, StatCard } from '../../shared/ui'
 import type {
   AlertAcknowledgementFilter,
   AlertCategory,
@@ -171,20 +170,8 @@ export function AlertManagementPage() {
         description="Theo dõi sự cố môi trường và Node STM32 theo từng tầng, từng khay"
         actions={
           <Space wrap>
-            <Badge count={unacknowledgedCount} overflowCount={99}>
-              <StatusBadge
-                tone="danger"
-                label="Chưa xử lý"
-                icon={<ExclamationCircleOutlined />}
-              />
-            </Badge>
-            <Badge count={unreadCount} overflowCount={99}>
-              <StatusBadge
-                tone="warning"
-                label="Chưa đọc"
-                icon={<FilterOutlined />}
-              />
-            </Badge>
+            <MetadataBadge label={`${unacknowledgedCount} chưa xử lý`} icon={<ExclamationCircleOutlined />} />
+            <MetadataBadge label={`${unreadCount} chưa đọc`} icon={<FilterOutlined />} />
           </Space>
         }
       />
@@ -295,34 +282,26 @@ export function AlertManagementPage() {
         </Flex>
       )}
 
-      <div
-        style={{
-          padding: '0 var(--mcms-space-4)',
-          border: '1px solid var(--mcms-border)',
-          borderRadius: 'var(--mcms-radius-lg)',
-          background: 'var(--mcms-surface)',
-        }}
-      >
-        {filteredAlerts.length > 0 ? (
-          filteredAlerts.map((alert) => (
+      <DataTable<SystemAlert>
+        rowKey="id"
+        dataSource={filteredAlerts}
+        pagination={false}
+        scrollX={900}
+        columns={[{
+          key: 'alert',
+          title: 'Cảnh báo / Nội dung / Thao tác',
+          render: (_, alert) => (
             <AlertItemRow
-              key={alert.id}
               alert={alert}
               canManage={canManage}
               onMarkRead={handleMarkRead}
               onAcknowledge={handleAcknowledge}
             />
-          ))
-        ) : (
-          <div style={{ padding: 'var(--mcms-space-8) 0' }}>
-            <EmptyState
-              title="Không có cảnh báo phù hợp"
-              description="Thử đổi bộ lọc hoặc xem lại các cảnh báo đã xử lý."
-              icon={<ExclamationCircleOutlined />}
-            />
-          </div>
-        )}
-      </div>
+          ),
+        }]}
+        emptyTitle="Không có cảnh báo phù hợp"
+        emptyDescription="Thử đổi bộ lọc hoặc xem lại các cảnh báo đã xử lý."
+      />
     </div>
   )
 }

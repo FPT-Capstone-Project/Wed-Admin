@@ -1,0 +1,139 @@
+.cultivation-batch-card.ant-card {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+.cultivation-batch-card .ant-card-head {
+  padding: 0 16px;
+  min-height: 44px;
+  border-bottom: 1px solid var(--mcms-border);
+}
+.cultivation-batch-card .cultivation-batch-card-info {
+  padding: 16px;
+  min-width: min(320px, 100%);
+}
+.media-mono,
+.batch-daily-thumb-label,
+.batch-playback-current-meta {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+.mcms-growth-snapshot,
+.growth-snapshot-placeholder {
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-sm);
+  box-sizing: border-box;
+}
+.cultivation-batch-card .day-strip-cell,
+.batch-daily-photos-modal .batch-daily-thumb,
+.batch-playback-modal .batch-gallery-item {
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+.cultivation-batch-card .day-strip-cell.is-active,
+.batch-daily-photos-modal .batch-daily-thumb.is-active {
+  border: 1px solid var(--mcms-border-strong);
+  background: var(--mcms-surface-muted);
+  box-shadow: none;
+}
+.batch-daily-photos-modal .batch-daily-thumb-active-ring {
+  display: none;
+}
+.batch-daily-photos-modal .batch-daily-thumb-label {
+  color: var(--mcms-text-muted);
+  background: var(--mcms-surface-muted);
+  font-size: 12px;
+}
+.growth-stage-timeline .ant-steps-item-icon {
+  border-radius: var(--mcms-radius-sm);
+  box-shadow: none;
+  background: var(--mcms-surface-muted);
+}
+.growth-stage-timeline .ant-steps-item-tail::after {
+  height: 1px;
+  background: var(--mcms-border);
+  box-shadow: none;
+}
+.batch-daily-photos-modal .ant-modal-container,
+.batch-playback-modal .ant-modal-container,
+.mcms-camera-stream-modal .ant-modal-container,
+.mcms-camera-form-modal .ant-modal-container,
+.batch-daily-photos-modal .ant-modal-content,
+.batch-playback-modal .ant-modal-content,
+.mcms-camera-stream-modal .ant-modal-content,
+.mcms-camera-form-modal .ant-modal-content {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+.batch-daily-photos-modal .ant-modal-header,
+.batch-playback-modal .ant-modal-header,
+.mcms-camera-stream-modal .ant-modal-header,
+.mcms-camera-form-modal .ant-modal-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mcms-border);
+}
+.batch-playback-modal .batch-playback-slider,
+.mcms-camera-stream-modal .camera-stream-modal-meta,
+.mcms-camera-stream-modal .ant-modal-footer,
+.mcms-camera-form-modal .ant-modal-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--mcms-border);
+  background: var(--mcms-surface);
+  box-shadow: none;
+}
+.mcms-camera-stream-modal .camera-stream-modal-stage,
+.mcms-camera-stream-modal .camera-stream-modal-player,
+.mcms-camera-stream-modal .camera-stream-modal-player-root {
+  background: #0f172a;
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+
+.mcms-camera-stream-modal .camera-stream-modal-player-root {
+  --imou-icon-color-active: #cbd5e1;
+  --imou-icon-color-rgba43: rgba(203, 213, 225, 0.24);
+  --imou-icon-size: 28px;
+}
+.mcms-camera-stream-modal .imou-controls-container,
+.mcms-camera-stream-modal .imou-controls-record-bottom {
+  box-shadow: none;
+  border-radius: var(--mcms-radius-sm);
+}
+.batch-playback-modal .batch-player-play {
+  border-radius: var(--mcms-radius-sm);
+  background: #0f172a;
+  box-shadow: none;
+}
+.batch-playback-modal .batch-playback-modal-content,
+.batch-daily-photos-modal .batch-daily-modal-context {
+  background: var(--mcms-surface);
+}
+.mcms-camera-stream-modal .ant-btn,
+.mcms-camera-stream-modal .ant-radio-button-wrapper,
+.batch-playback-modal .ant-btn,
+.batch-daily-photos-modal .ant-btn {
+  box-shadow: none;
+  border-radius: var(--mcms-radius-sm);
+}
+.mcms-camera-stream-modal .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled) {
+  color: var(--mcms-text);
+  background: var(--mcms-surface-muted);
+  border-color: var(--mcms-border-strong);
+}
+.mcms-camera-form-modal .ant-form-item-label > label {
+  color: var(--mcms-text-muted);
+  font-size: 12px;
+}
+.mcms-camera-form-modal .ant-input,
+.mcms-camera-form-modal .ant-select-single {
+  height: 36px;
+  border-radius: var(--mcms-radius-md);
+}
+.mcms-camera-form-modal .ant-input,
+.mcms-camera-form-modal .ant-select-selector {
+  border-color: var(--mcms-border);
+}

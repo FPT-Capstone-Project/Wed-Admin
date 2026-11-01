@@ -1,3 +1,5 @@
+import '../rentals-industrial.css'
+import { StatusBadge, ActionButton, MetadataBadge } from '../../../shared/ui'
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -8,13 +10,11 @@ import {
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
 import {
-  Button,
   Descriptions,
   Drawer,
   Flex,
   Skeleton,
   Space,
-  Tag,
   Typography,
 } from 'antd'
 import { useState } from 'react'
@@ -94,7 +94,7 @@ export function RentalDetailDrawer({
 
   return (
     <>
-      <Drawer
+      <Drawer rootClassName="mcms-rental-drawer"
         title={
           <div>
             <Typography.Text strong>Vụ thuê #{rentalId ?? '—'}</Typography.Text>
@@ -102,10 +102,10 @@ export function RentalDetailDrawer({
               <div>
                 <Space size={4} wrap style={{ marginTop: 4 }}>
                   <RentalStatusTag status={rental.status} />
-                  <Tag color={PAYMENT_STATUS_CONFIG[rental.payment_status]?.color}>
+                  <StatusBadge tone={PAYMENT_STATUS_CONFIG[rental.payment_status]?.tone ?? 'neutral'} label={<>
                     {PAYMENT_STATUS_CONFIG[rental.payment_status]?.label ??
                       rental.payment_status}
-                  </Tag>
+                  </>} />
                 </Space>
               </div>
             )}
@@ -138,62 +138,25 @@ export function RentalDetailDrawer({
               </Typography.Title>
               <Flex gap={8} wrap>
                 {canApprove && (
-                  <Button
-                    type="primary"
-                    icon={<SafetyCertificateOutlined />}
-                    onClick={() => setActiveModal('approve')}
-                  >
-                    Duyệt vụ thuê
-                  </Button>
+                  <ActionButton variant="primary" size="middle" label="Duyệt vụ thuê" icon={<SafetyCertificateOutlined />} onClick={() => setActiveModal('approve')} />
                 )}
                 {canStart && (
-                  <Button
-                    icon={<PlayCircleOutlined />}
-                    onClick={() => setActiveModal('start')}
-                  >
-                    Bắt đầu vụ
-                  </Button>
+                  <ActionButton variant="text" size="middle" label="Bắt đầu vụ" icon={<PlayCircleOutlined />} onClick={() => setActiveModal('start')} />
                 )}
                 {isActive && (
-                  <Button
-                    icon={<ExperimentOutlined />}
-                    onClick={() => setActiveModal('progress')}
-                  >
-                    Ghi nhận tiến độ
-                  </Button>
+                  <ActionButton variant="text" size="middle" label="Ghi nhận tiến độ" icon={<ExperimentOutlined />} onClick={() => setActiveModal('progress')} />
                 )}
                 {isActive && (
-                  <Button
-                    icon={<CalendarOutlined />}
-                    onClick={() => setActiveModal('harvest')}
-                  >
-                    Ghi nhận thu hoạch
-                  </Button>
+                  <ActionButton variant="text" size="middle" label="Ghi nhận thu hoạch" icon={<CalendarOutlined />} onClick={() => setActiveModal('harvest')} />
                 )}
                 {isActive && (
-                  <Button
-                    icon={<CheckCircleOutlined />}
-                    onClick={() => setActiveModal('complete')}
-                  >
-                    Hoàn thành
-                  </Button>
+                  <ActionButton variant="text" size="middle" label="Hoàn thành" icon={<CheckCircleOutlined />} onClick={() => setActiveModal('complete')} />
                 )}
                 {canNotify && (
-                  <Button
-                    icon={<MessageOutlined />}
-                    onClick={() => setActiveModal('notify')}
-                  >
-                    Gửi thông báo
-                  </Button>
+                  <ActionButton variant="text" size="middle" label="Gửi thông báo" icon={<MessageOutlined />} onClick={() => setActiveModal('notify')} />
                 )}
                 {canCancelNow && (
-                  <Button
-                    danger
-                    icon={<CloseCircleOutlined />}
-                    onClick={() => setActiveModal('cancel')}
-                  >
-                    Huỷ vụ thuê
-                  </Button>
+                  <ActionButton variant="dangerText" size="middle" label="Huỷ vụ thuê" icon={<CloseCircleOutlined />} onClick={() => setActiveModal('cancel')} />
                 )}
                 {isClosed && (
                   <Typography.Text type="secondary">
@@ -273,7 +236,8 @@ export function RentalDetailDrawer({
 
 function RentalSummary({ rental }: { rental: Rental }) {
   return (
-    <Descriptions column={2} size="small" bordered>
+    <Flex vertical gap={16}>
+    <Descriptions title="Khách hàng" column={{ xs: 1, sm: 2 }} size="small" bordered>
       <Descriptions.Item label="Khách hàng">
         {rental.customer_name}
       </Descriptions.Item>
@@ -283,19 +247,22 @@ function RentalSummary({ rental }: { rental: Rental }) {
       <Descriptions.Item label="SĐT">
         {rental.customer_phone ?? '—'}
       </Descriptions.Item>
-      <Descriptions.Item label="Mã đơn">#{rental.order_id}</Descriptions.Item>
-
+      <Descriptions.Item label="Mã đơn"><MetadataBadge className="mcms-rental-mono" label={`#${rental.order_id}`} /></Descriptions.Item>
+    </Descriptions>
+    <Descriptions title="Vụ nấm" column={{ xs: 1, sm: 2 }} size="small" bordered>
       <Descriptions.Item label="Gói thuê">{rental.package_name}</Descriptions.Item>
       <Descriptions.Item label="Loại nấm">
         {rental.mushroom_name}
       </Descriptions.Item>
       <Descriptions.Item label="Thời hạn">
-        {rental.duration_days} ngày
+        <MetadataBadge label={`${rental.duration_days} ngày`} />
       </Descriptions.Item>
+    </Descriptions>
+    <Descriptions title="Khay gán" column={{ xs: 1, sm: 2 }} size="small" bordered>
       <Descriptions.Item label="Khay">
-        {rental.tray_code
+        <MetadataBadge className="mcms-rental-mono" label={rental.tray_code
           ? `${rental.tray_code}${rental.tray_name ? ` · ${rental.tray_name}` : ''}`
-          : 'Chưa gán khay'}
+          : 'Chưa gán khay'} />
       </Descriptions.Item>
       <Descriptions.Item label="Phòng">
         {rental.room_code ? `${rental.room_name}` : '—'}
@@ -304,6 +271,20 @@ function RentalSummary({ rental }: { rental: Rental }) {
         {rental.floor_name ? `${rental.floor_name}` : '—'}
       </Descriptions.Item>
     </Descriptions>
+    <Descriptions title="Chi phí / thanh toán" column={1} size="small" bordered>
+      <Descriptions.Item label="Thanh toán">
+        <StatusBadge
+          tone={PAYMENT_STATUS_CONFIG[rental.payment_status]?.tone ?? 'neutral'}
+          label={PAYMENT_STATUS_CONFIG[rental.payment_status]?.label ?? rental.payment_status}
+        />
+      </Descriptions.Item>
+      <Descriptions.Item label="Chi phí">
+        <Typography.Text type="secondary">
+          Xem số tiền tại đơn hàng #{rental.order_id}.
+        </Typography.Text>
+      </Descriptions.Item>
+    </Descriptions>
+    </Flex>
   )
 }
 
@@ -318,15 +299,15 @@ function RentalTimeline({ rental }: { rental: Rental }) {
       : '—'
 
   return (
-    <Descriptions column={3} size="small">
+    <Descriptions title="Mốc thời gian" column={{ xs: 1, sm: 3 }} size="small">
       <Descriptions.Item label="Ngày bắt đầu">
-        {formatDate(rental.start_date)}
+        <MetadataBadge className="mcms-rental-mono" label={formatDate(rental.start_date)} />
       </Descriptions.Item>
       <Descriptions.Item label="Ngày kết thúc">
-        {formatDate(rental.end_date)}
+        <MetadataBadge className="mcms-rental-mono" label={formatDate(rental.end_date)} />
       </Descriptions.Item>
       <Descriptions.Item label="Ngày tạo">
-        {formatDate(rental.created_at)}
+        <MetadataBadge className="mcms-rental-mono" label={formatDate(rental.created_at)} />
       </Descriptions.Item>
     </Descriptions>
   )

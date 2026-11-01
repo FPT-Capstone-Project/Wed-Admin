@@ -1,3 +1,4 @@
+import '../device-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   ApiOutlined,
@@ -9,10 +10,12 @@ import {
   NodeIndexOutlined,
   SyncOutlined,
   ThunderboltOutlined,
+  VideoCameraOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
+  App,
   Button,
   Card,
   Descriptions,
@@ -21,15 +24,15 @@ import {
   Flex,
   Segmented,
   Space,
-  Table,
-  Tag,
   Tooltip,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
-import { ActionButton, StatCard } from '../../../shared/ui'
+import { ActionButton, StatCard, MetadataBadge, StatusBadge, DataTable } from '../../../shared/ui'
 import { formatSensorLabel } from '../../../shared/i18n/terms'
+import { CameraStreamModal } from '../../../features/cameras/components/CameraStreamModal'
+import { useFloorCameraMap } from '../../../features/cameras/hooks/useFloorCameras'
 import {
   useAutoControlConfigList,
   useFloorList,
@@ -44,6 +47,7 @@ import type {
   IotSensor,
   MasterStatus,
 } from '../../../types/iot'
+import type { Camera } from '../../../types/camera.types'
 import { AutoControlDetailModal } from './AutoControlDetailModal'
 import { SensorHistoryPanel } from './SensorHistoryPanel'
 import {
@@ -51,6 +55,10 @@ import {
   formatProfileName,
   formatTriggerCondition,
 } from '../utils/auto-control.utils'
+import {
+  FLOOR_CAMERA_UNAVAILABLE_MESSAGES,
+  type FloorCameraUnavailableReason,
+} from '../utils/floor-camera.utils'
 
 const MASTER_STATUS_CONFIG: Record<
   MasterStatus,
@@ -99,6 +107,7 @@ function formatTimestamp(timestamp: string | number | null) {
  */
 export function DeviceControlPanel() {
   const navigate = useNavigate()
+  const { message } = App.useApp()
 
   /**
    * Tab đang xem trong card "Cảm biến môi trường".
@@ -133,6 +142,51 @@ export function DeviceControlPanel() {
   // Tầng đang mở modal "Xem chi tiết" — CHỈ ĐỌC (xem cấu hình + nhật ký).
   const [autoControlFloor, setAutoControlFloor] =
     useState<CultivationFloorMapping | null>(null)
+
+  // ── Camera theo tầng (xem nhanh live stream) ──────────────────────────
+  //
+  // ⚠ Camera **không** nằm trong bảng cấu hình tưới — nó là tài nguyên
+  // riêng (`GET /api/cameras`). Ánh xạ tầng ↔ camera nằm ở
+  // `utils/floor-camera.utils.ts` (đọc `floor_id` từ API nếu BE có, nếu
+  // không thì dùng `FLOOR_CAMERA_CONFIG`) ⇒ khi gắn camera cho Tầng 2 chỉ
+  // cần sửa config/API, **không sửa lại component này**.
+  const floorCameraMap = useFloorCameraMap(floors)
+
+  /** Camera đang phát live — `null` ⇒ modal đóng. */
+  const [streamingCamera, setStreamingCamera] = useState<Camera | null>(null)
+  /** Tầng đang mở modal live (dùng cho tiêu đề + thông báo). */
+  const [streamingFloor, setStreamingFloor] =
+    useState<CultivationFloorMapping | null>(null)
+
+  /**
+   * Bấm nút Camera của một tầng.
+   *
+   * - Có camera → mở modal ImouPlayer (tái sử dụng `CameraStreamModal` của
+   *   trang "Camera toàn cảnh" — cùng component, cùng ImouPlayer SDK).
+   * - Chưa có camera → `message.info` nhẹ (Cách 2 trong yêu cầu). Nút vẫn
+   *   bị disable + có tooltip nên `message` chỉ là bổ sung cho trường hợp
+   *   user bấm rất nhanh trước lúc render.
+   */
+  const handleOpenCamera = (floor: CultivationFloorMapping) => {
+    const resolution = floorCameraMap.byFloorId.get(floor.floor_id)
+    const camera = resolution?.camera ?? null
+
+    if (!camera) {
+      const reason = resolution?.reason as
+        | FloorCameraUnavailableReason
+        | null
+        | undefined
+      const text =
+        reason && FLOOR_CAMERA_UNAVAILABLE_MESSAGES[reason]
+          ? FLOOR_CAMERA_UNAVAILABLE_MESSAGES[reason]
+          : 'Tầng này chưa được lắp camera'
+      message.info(`Tầng ${floor.floor_number} chưa được cấu hình camera. ${text}`)
+      return
+    }
+
+    setStreamingFloor(floor)
+    setStreamingCamera(camera)
+  }
 
   // Cấu hình tự động của từng tầng — để bảng hiển thị tóm tắt ngưỡng.
   const floorIds = useMemo(
@@ -173,7 +227,7 @@ export function DeviceControlPanel() {
       width: 150,
       render: (_, row) => (
         <Flex align="center" gap={6}>
-          <NodeIndexOutlined style={{ color: 'var(--ant-color-primary)' }} />
+          <NodeIndexOutlined style={{ color: 'var(--mcms-text-muted)' }} />
           <Typography.Text strong>
             Cụm cảm biến Tầng {row.nodeId}
           </Typography.Text>
@@ -183,14 +237,16 @@ export function DeviceControlPanel() {
     {
       title: 'Cảm biến',
       key: 'sensorId',
+      className: 'mcms-iot-mono',
       width: 110,
       render: (_, row) => (
-        <Tag color="blue">Cảm biến #{row.sensorId}</Tag>
+        <MetadataBadge  label={<>Cảm biến #{row.sensorId}</>} />
       ),
     },
     {
       title: 'Nhiệt độ (°C)',
       key: 'temp',
+      className: 'mcms-iot-mono',
       width: 130,
       align: 'right',
       render: (_, row) =>
@@ -219,6 +275,7 @@ export function DeviceControlPanel() {
     {
       title: 'Độ ẩm (%)',
       key: 'hum',
+      className: 'mcms-iot-mono',
       width: 120,
       align: 'right',
       render: (_, row) =>
@@ -250,18 +307,19 @@ export function DeviceControlPanel() {
       align: 'center',
       render: (ok: boolean) =>
         ok ? (
-          <Tag icon={<CheckCircleOutlined />} color="success">
+          <StatusBadge tone="ok" icon={<CheckCircleOutlined />} label={<>
             Ổn định
-          </Tag>
+          </>} />
         ) : (
-          <Tag icon={<ApiOutlined />} color="warning">
+          <StatusBadge tone="warning" icon={<ApiOutlined />} label={<>
             Sai số
-          </Tag>
+          </>} />
         ),
     },
     {
       title: 'Cập nhật cuối',
       key: 'lastReceived',
+      className: 'mcms-iot-mono',
       width: 170,
       render: (_, row) => (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -276,7 +334,8 @@ export function DeviceControlPanel() {
       align: 'center',
       render: (_, record) => (
         <ActionButton
-          icon={<BulbOutlined />}
+          variant="text"
+              icon={<BulbOutlined />}
           label="Xem chi tiết cảm biến"
           description="Mở bảng thông số đầy đủ của cảm biến này"
           hideLabel
@@ -295,14 +354,14 @@ export function DeviceControlPanel() {
       render: (_, record) => (
         <Tooltip title="Xem môi trường thực tế của tầng">
           <Button
-            type="link"
+            type="text"
             size="small"
             style={{ padding: 0, height: 'auto' }}
             onClick={() => setSelectedFloor(record)}
           >
-            <Tag color="cyan" style={{ fontSize: 13, padding: '2px 8px' }}>
+            <MetadataBadge style={{ fontSize: 13, padding: '2px 8px' }} label={<>
               Tầng {record.floor_number}
-            </Tag>
+            </>} />
           </Button>
         </Tooltip>
       ),
@@ -329,9 +388,9 @@ export function DeviceControlPanel() {
                 {master.masterId}
               </Typography.Text>
             </Flex>
-            <Tag color={MASTER_STATUS_CONFIG[status].color} style={{ fontSize: 11, width: 'fit-content' }}>
+            <StatusBadge tone={status === 'online' ? 'ok' : 'danger'} style={{ fontSize: 11, width: 'fit-content' }} label={<>
               {MASTER_STATUS_CONFIG[status].label}
-            </Tag>
+            </>} />
           </Flex>
         )
       },
@@ -340,22 +399,24 @@ export function DeviceControlPanel() {
       title: 'Cụm cảm biến',
       dataIndex: 'node_address',
       key: 'node_address',
+      className: 'mcms-iot-mono',
       width: 120,
       align: 'center',
       render: (addr: number) => (
-        <Tag color="geekblue">Cụm {addr}</Tag>
+        <MetadataBadge  label={<>Cụm {addr}</>} />
       ),
     },
     {
       title: 'Kênh rơ-le',
       dataIndex: 'misting_ssr_channel',
       key: 'misting_ssr_channel',
+      className: 'mcms-iot-mono',
       width: 130,
       align: 'center',
       render: (ch: number) => (
-        <Tag color="volcano" style={{ fontSize: 12 }}>
+        <MetadataBadge style={{ fontSize: 12 }} label={<>
           <ThunderboltOutlined /> Kênh {ch}
-        </Tag>
+        </>} />
       ),
     },
     {
@@ -365,9 +426,9 @@ export function DeviceControlPanel() {
       width: 110,
       align: 'center',
       render: (status: FloorStatus) => (
-        <Tag color={status === 'ACTIVE' ? 'success' : 'default'}>
+        <StatusBadge tone={status === 'ACTIVE' ? 'ok' : 'muted'}  label={<>
           {status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng'}
-        </Tag>
+        </>} />
       ),
     },
     {
@@ -387,9 +448,9 @@ export function DeviceControlPanel() {
         const profileName = formatProfileName(config)
         return (
           <Flex vertical gap={2}>
-            <Tag color="cyan" style={{ fontSize: 12, width: 'fit-content' }}>
+            <MetadataBadge style={{ fontSize: 12, width: 'fit-content' }} label={<>
               {condition}
-            </Tag>
+            </>} />
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
               {profileName ?? 'Tự động theo độ ẩm'}
             </Typography.Text>
@@ -422,23 +483,55 @@ export function DeviceControlPanel() {
     {
       // ⚠ Cột hành động CHỈ có nút xem — không có Edit / Setting / Xóa /
       // bật-tắt thủ công (quyền này thuộc staff trên mobile app).
+      //
+      // Có 2 nút **chỉ đọc**:
+      //   1. "Xem chi tiết"  → modal cấu hình + nhật ký tưới tự động.
+      //   2. "Xem camera"    → modal live stream ImouPlayer của tầng đó.
       title: 'Hành động',
       key: 'actions',
-      width: 150,
+      width: 240,
       align: 'center',
-      render: (_, record) => (
-        <ActionButton
-          icon={<EyeOutlined />}
-          label="Xem chi tiết"
-          description="Xem cấu hình tự động và nhật ký kích hoạt của tầng này"
-          onClick={() => setAutoControlFloor(record)}
-        />
-      ),
+      render: (_, record) => {
+        const resolution = floorCameraMap.byFloorId.get(record.floor_id)
+        const camera = resolution?.camera ?? null
+        const reason = resolution?.reason ?? null
+        const canViewCameras = floorCameraMap.canViewCameras
+
+        // Tầng chưa lắp camera → nút mờ + tooltip giải thích.
+        const cameraDisabled = !camera || !canViewCameras
+        const cameraDescription =
+          camera && canViewCameras
+            ? `Xem live stream camera của Tầng ${record.floor_number}`
+            : reason && FLOOR_CAMERA_UNAVAILABLE_MESSAGES[reason]
+              ? FLOOR_CAMERA_UNAVAILABLE_MESSAGES[reason]
+              : 'Tầng này chưa được lắp camera'
+
+        return (
+          <Space size={4}>
+            <ActionButton
+              variant="text"
+              icon={<EyeOutlined />}
+              label="Xem chi tiết"
+              description="Xem cấu hình tự động và nhật ký kích hoạt của tầng này"
+              onClick={() => setAutoControlFloor(record)}
+            />
+            <ActionButton
+              variant="text"
+              icon={<VideoCameraOutlined />}
+              label={`Xem camera Tầng ${record.floor_number}`}
+              description={cameraDescription}
+              hideLabel
+              disabled={cameraDisabled}
+              onClick={() => handleOpenCamera(record)}
+            />
+          </Space>
+        )
+      },
     },
   ]
 
   return (
-    <>
+    <div className="mcms-iot-view">
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
         <StatCard
           title="Bộ điều khiển trung tâm"
@@ -482,26 +575,22 @@ export function DeviceControlPanel() {
           </Flex>
         }
         extra={
-          <Tag icon={<ApiOutlined />} color="default">
+          <MetadataBadge icon={<ApiOutlined />} label={<>
             Chỉ xem
-          </Tag>
+          </>} />
         }
         style={{ marginBottom: 16 }}
         styles={{ body: { padding: 12 } }}
       >
-        <Table<CultivationFloorMapping>
+        <DataTable<CultivationFloorMapping>
           rowKey="floor_id"
           columns={floorColumns}
           dataSource={floors}
           loading={floorsLoading || configsLoading}
           size="small"
           pagination={{ pageSize: 10, showSizeChanger: false }}
-          scroll={{ x: 1400 }}
-          locale={{
-            emptyText: (
-              <Empty description="Chưa cấu hình tầng nào. Nhân viên có thể thiết lập trên mobile app." />
-            ),
-          }}
+          scrollX={1400}
+          emptyTitle="Chưa cấu hình tầng nào. Nhân viên có thể thiết lập trên mobile app."
         />
       </Card>
 
@@ -514,9 +603,9 @@ export function DeviceControlPanel() {
               Cảm biến môi trường — Bộ điều khiển {masters[0]?.masterId ?? '—'}
             </span>
             {isRealtimeTab && sensorsFetching && !sensorsLoading && (
-              <Tag color="processing" style={{ fontSize: 11 }}>
+              <StatusBadge tone="info" style={{ fontSize: 11 }} label={<>
                 <SyncOutlined spin /> Đang cập nhật
-              </Tag>
+              </>} />
             )}
           </Flex>
         }
@@ -540,19 +629,15 @@ export function DeviceControlPanel() {
         styles={{ body: { padding: 12 } }}
       >
         {isRealtimeTab ? (
-          <Table<IotSensor>
+          <DataTable<IotSensor>
             rowKey={(row) => `${row.nodeId}-${row.sensorId}`}
             columns={sensorColumns}
             dataSource={sensors}
             loading={masters.length === 0}
             size="small"
             pagination={{ pageSize: 10, showSizeChanger: false }}
-            scroll={{ x: 800 }}
-            locale={{
-              emptyText: (
-                <Empty description="Chưa nhận dữ liệu từ cảm biến nào." />
-              ),
-            }}
+            scrollX={800}
+            emptyTitle="Chưa nhận dữ liệu từ cảm biến nào."
           />
         ) : (
           /*
@@ -567,7 +652,7 @@ export function DeviceControlPanel() {
       </Card>
 
       {/* ── Floor Environment Drawer (read-only) ───────────────────────── */}
-      <Drawer
+      <Drawer className="mcms-iot-drawer"
         title={
           selectedFloor ? (
             <Space>
@@ -703,7 +788,7 @@ export function DeviceControlPanel() {
       </Drawer>
 
       {/* ── Sensor Detail Drawer ────────────────────────────────────────── */}
-      <Drawer
+      <Drawer className="mcms-iot-drawer"
         title="Chi tiết cảm biến"
         open={Boolean(selectedSensor)}
         onClose={() => setSelectedSensor(null)}
@@ -733,6 +818,7 @@ export function DeviceControlPanel() {
               },
               {
                 key: 'temperature',
+      className: 'mcms-iot-mono',
                 label: 'Nhiệt độ',
                 children:
                   selectedSensor.temperature != null
@@ -741,6 +827,7 @@ export function DeviceControlPanel() {
               },
               {
                 key: 'humidity',
+      className: 'mcms-iot-mono',
                 label: 'Độ ẩm',
                 children:
                   selectedSensor.humidity != null
@@ -751,9 +838,9 @@ export function DeviceControlPanel() {
                 key: 'ok',
                 label: 'Trạng thái',
                 children: selectedSensor.ok ? (
-                  <Tag color="success">OK</Tag>
+                  <StatusBadge tone="ok"  label={<>OK</>} />
                 ) : (
-                  <Tag color="error">Lỗi</Tag>
+                  <StatusBadge tone="danger"  label={<>Lỗi</>} />
                 ),
               },
               {
@@ -781,6 +868,37 @@ export function DeviceControlPanel() {
         open={autoControlFloor !== null}
         onClose={() => setAutoControlFloor(null)}
       />
-    </>
+
+      {/* ── Camera Live Modal (READ-ONLY) ──────────────────────────────── */}
+      {/*
+        Tái sử dụng **đúng component** của trang "Camera toàn cảnh"
+        (`features/cameras/components/CameraStreamModal`) → cùng ImouPlayer
+        SDK, cùng KitToken flow, cùng xử lý lỗi.
+
+        ⚠ Chỉ mở khi `streamingCamera !== null` ⇒ modal tự huỷ player khi
+        đóng (`destroyOnHidden` + cleanup trong `CameraStreamModal`).
+      */}
+      <CameraStreamModal
+        open={streamingCamera !== null}
+        camera={streamingCamera}
+        title={
+          streamingFloor ? (
+            <Space size={8}>
+              <VideoCameraOutlined />
+              <span>
+                Live — Tầng {streamingFloor.floor_number}
+                {streamingCamera?.cameraName
+                  ? ` · ${streamingCamera.cameraName}`
+                  : ''}
+              </span>
+            </Space>
+          ) : undefined
+        }
+        onClose={() => {
+          setStreamingCamera(null)
+          setStreamingFloor(null)
+        }}
+      />
+    </div>
   )
 }

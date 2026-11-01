@@ -1,0 +1,34 @@
+.mcms-user-modal .ant-modal-container,
+.mcms-user-modal .ant-modal-content {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+.mcms-user-modal .ant-modal-header,
+.mcms-user-drawer .ant-drawer-header {
+  background: var(--mcms-surface);
+  border-bottom: 1px solid var(--mcms-border);
+}
+.mcms-user-modal .ant-modal-footer,
+.mcms-user-drawer .ant-drawer-footer {
+  border-top: 1px solid var(--mcms-border);
+  padding-top: 12px;
+}
+.mcms-user-drawer .ant-drawer-body {
+  background: var(--mcms-surface);
+}
+.mcms-user-modal .ant-form-item-label > label {
+  color: var(--mcms-text-muted);
+  font-size: 12px;
+}
+.mcms-user-modal input.ant-input,
+.mcms-user-modal .ant-input-affix-wrapper,
+.mcms-user-modal .ant-select-single {
+  height: 36px;
+  border-radius: var(--mcms-radius-md);
+  border-color: var(--mcms-border);
+}
+.mcms-user-modal .ant-input-affix-wrapper input.ant-input {
+  height: auto;
+}

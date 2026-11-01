@@ -1,3 +1,4 @@
+import '../../styles/reports-users-industrial.css'
 import { useCallback, useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
@@ -21,7 +22,6 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -44,7 +44,7 @@ import type {
   UserWithRole,
 } from '../../types/user.types'
 import type { SemanticTone } from '../../app/theme/tokens'
-import { ActionButton, StatCard, StatusBadge } from '../../shared/ui'
+import { ActionButton, MetadataBadge, StatCard, StatusBadge, DataTable } from '../../shared/ui'
 import { UserDetailDrawer } from './components/UserDetailDrawer'
 import { UserFormModal } from './components/UserFormModal'
 
@@ -165,9 +165,9 @@ export function UserManagementPage() {
               <Avatar
                 size={38}
                 style={{
-                  backgroundColor: 'var(--mcms-primary-soft)',
-                  color: 'var(--mcms-primary)',
-                  border: '1px solid var(--mcms-border-strong)',
+                  backgroundColor: 'var(--mcms-surface-muted)',
+                  color: 'var(--mcms-text-muted)',
+                  border: '1px solid var(--mcms-border)',
                   fontWeight: 650,
                   fontSize: 15,
                   flexShrink: 0,
@@ -219,7 +219,7 @@ export function UserManagementPage() {
           }
           return (
             <Space direction="vertical" size={2}>
-              <StatusBadge tone={config.tone} label={config.label} />
+              <MetadataBadge label={config.label} />
               {user.role_description && (
                 <Typography.Text
                   type="secondary"
@@ -452,14 +452,12 @@ export function UserManagementPage() {
       ) : filteredUsers.length === 0 && !isLoading ? (
         <Empty description="Chưa có tài khoản phù hợp" />
       ) : (
-        <Table<UserWithRole>
+        <DataTable<UserWithRole>
           rowKey="user_id"
           columns={columns}
           dataSource={filteredUsers}
           loading={isLoading}
-          locale={{
-            emptyText: <Empty description="Không có tài khoản phù hợp" />,
-          }}
+          emptyTitle="Không có tài khoản phù hợp"
           pagination={{
             current: visiblePage,
             pageSize: PAGE_SIZE,
@@ -468,7 +466,7 @@ export function UserManagementPage() {
             showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
             onChange: setCurrentPage,
           }}
-          scroll={{ x: 1280 }}
+          scrollX={1280}
         />
       )}
 

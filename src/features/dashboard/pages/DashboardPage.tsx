@@ -11,7 +11,6 @@
  */
 import {
   CalendarOutlined,
-  CheckCircleFilled,
   CloudOutlined,
   FireOutlined,
 } from '@ant-design/icons'
@@ -19,11 +18,12 @@ import { Col, Row, Typography } from 'antd'
 import { useMemo } from 'react'
 import { useAlertStore } from '../../../stores/alert.store'
 import { getAllTrays, useRoomStore } from '../../../stores/room.store'
-import { PageHeader } from '../../../shared/ui'
+import { PageHeader, StatusBadge } from '../../../shared/ui'
 import { EnvironmentChart } from '../components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../components/EnvironmentMetricCard'
 import { QuickSummaryStats } from '../components/QuickSummaryStats'
 import { RecentAlertsTable } from '../components/RecentAlertsTable'
+import '../dashboard.css'
 
 function getFormattedToday() {
   const formattedDate = new Intl.DateTimeFormat('vi-VN', {
@@ -116,20 +116,17 @@ export function DashboardPage() {
       <section className="dashboard-section" aria-labelledby="environment-heading">
         <div className="section-heading-row">
           <div>
-            <Typography.Title id="environment-heading" level={4}>
+            <Typography.Title id="environment-heading" level={2} style={{ fontSize: 15 }}>
               Điều kiện môi trường
             </Typography.Title>
             <Typography.Text type="secondary">
               Giá trị trung bình từ {tiers.length} tầng nuôi nấm
             </Typography.Text>
           </div>
-          <span className="healthy-indicator">
-            <CheckCircleFilled aria-hidden="true" />
-            Trong ngưỡng vận hành
-          </span>
+          <StatusBadge tone="ok" label="Trong ngưỡng vận hành" />
         </div>
 
-        <Row gutter={[16, 16]}>
+        <Row gutter={[12, 12]}>
           <Col xs={24} sm={12} xl={12}>
             <EnvironmentMetricCard
               title="Nhiệt độ trung bình"
@@ -138,6 +135,7 @@ export function DashboardPage() {
               precision={1}
               icon={<FireOutlined />}
               tone="coral"
+              statusTone="ok"
               status="Ổn định"
               target="Mục tiêu 23–28°C"
             />
@@ -150,6 +148,7 @@ export function DashboardPage() {
               unit="%"
               icon={<CloudOutlined />}
               tone="teal"
+              statusTone="ok"
               status="Tối ưu"
               target="Mục tiêu 80–92%"
             />

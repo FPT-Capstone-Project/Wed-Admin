@@ -20,6 +20,21 @@ export interface Camera {
   cameraCode: string
   cameraName: string
   roomId: number | null
+  /**
+   * Tầng mà camera được gắn — BE mở rộng `cameras.floor_id`.
+   *
+   * ⚠ Hiện tại BE **chưa** có cột này ⇒ luôn `null`. Logic map tầng ↔ camera
+   * (xem `pages/devices/utils/floor-camera.utils.ts`) dựa vào `roomId` +
+   * cấu hình tay, nên khi BE bổ sung field này chỉ cần đọc thêm, **không
+   * phải sửa UI**.
+   */
+  floorId?: number | null
+  /**
+   * Số thứ tự tầng trong phòng (`cultivation_floors.floor_number`).
+   *
+   * ⚠ Cũng chưa có ở BE hiện tại ⇒ `null`. Xem `floorId`.
+   */
+  floorNumber?: number | null
   /** HLS/RTSP tùy chọn do admin tự nhập; null nếu chưa cấu hình. */
   streamUrl: string | null
   status: CameraStatus

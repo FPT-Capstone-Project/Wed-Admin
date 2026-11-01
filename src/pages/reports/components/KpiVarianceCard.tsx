@@ -2,9 +2,9 @@ import {
   ArrowDownOutlined,
   ArrowUpOutlined,
 } from '@ant-design/icons'
-import { Card, Flex, Tooltip, Typography } from 'antd'
+import { Flex, Tooltip, Typography } from 'antd'
 import type { ReactNode } from 'react'
-import { StatusBadge } from '../../../shared/ui'
+import { StatCard } from '../../../shared/ui'
 import { tones, type SemanticTone } from '../../../app/theme/tokens'
 
 interface KpiVarianceCardProps {
@@ -34,8 +34,6 @@ interface KpiVarianceCardProps {
  */
 export function KpiVarianceCard({
   icon,
-  iconBg,
-  iconColor,
   title,
   currentLabel,
   currentValue,
@@ -53,100 +51,33 @@ export function KpiVarianceCard({
   const palette = tones[tone]
   const ArrowIcon = deltaPercent >= 0 ? ArrowUpOutlined : ArrowDownOutlined
   const formattedDelta = `${Math.abs(deltaPercent).toFixed(1)}%`
-  const directionArrow = deltaPercent >= 0 ? '↑' : '↓'
+  const directionSign = deltaPercent >= 0 ? '+' : '-'
 
   return (
-    <Card
-      hoverable
-      style={{
-        borderRadius: 'var(--mcms-radius-xl)',
-        borderColor: 'var(--mcms-border)',
-        height: '100%',
-      }}
-      styles={{ body: { padding: 20 } }}
-    >
-      <Flex align="flex-start" gap={12} style={{ marginBottom: 12 }}>
-        <div
-          style={{
-            width: 40,
-            height: 40,
-            borderRadius: 'var(--mcms-radius-lg)',
-            background: iconBg,
-            color: iconColor,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 20,
-            flexShrink: 0,
-          }}
-        >
-          {icon}
-        </div>
-        <div style={{ minWidth: 0, flex: 1 }}>
+    <StatCard
+      title={title}
+      value={currentValue}
+      icon={icon}
+      description={currentLabel}
+      style={{ height: '100%' }}
+      extra={
+        <Flex vertical gap={4}>
+          {subtitle && <Typography.Text type="secondary">{subtitle}</Typography.Text>}
+          <Flex align="center" gap={8} wrap>
+            <Tooltip title={`${previousLabel}: ${previousValue}`}>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {previousLabel}: <strong>{previousValue}</strong>
+              </Typography.Text>
+            </Tooltip>
+            <span style={{ color: palette.text, fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+              <ArrowIcon aria-hidden="true" /> {directionSign}{formattedDelta}
+            </span>
+          </Flex>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {title}
+            {isImprovement ? 'Đang cải thiện so với kỳ trước' : 'Cần chú ý so với kỳ trước'}
           </Typography.Text>
-          {subtitle && (
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 11, display: 'block' }}
-            >
-              {subtitle}
-            </Typography.Text>
-          )}
-        </div>
-      </Flex>
-
-      <Typography.Text
-        type="secondary"
-        style={{ fontSize: 12, display: 'block', marginBottom: 2 }}
-      >
-        {currentLabel}
-      </Typography.Text>
-
-      <Typography.Title
-        level={2}
-        style={{
-          margin: '0 0 6px',
-          color: 'var(--mcms-text)',
-          fontWeight: 600,
-          fontVariantNumeric: 'tabular-nums',
-        }}
-      >
-        {currentValue}
-      </Typography.Title>
-
-      <Flex align="center" gap={8} wrap>
-        <Tooltip title={`${previousLabel}: ${previousValue}`}>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {previousLabel}: <strong>{previousValue}</strong>
-          </Typography.Text>
-        </Tooltip>
-
-        <StatusBadge
-          tone={tone}
-          label={`${directionArrow} ${formattedDelta}`}
-          icon={<ArrowIcon style={{ fontSize: 10 }} />}
-        />
-      </Flex>
-
-      <Typography.Text
-        type="secondary"
-        style={{ fontSize: 11, display: 'block', marginTop: 4 }}
-      >
-        {isImprovement ? 'Đang cải thiện so với kỳ trước' : 'Cần chú ý so với kỳ trước'}
-      </Typography.Text>
-
-      <span
-        aria-hidden="true"
-        style={{
-          display: 'block',
-          height: 3,
-          marginTop: 8,
-          borderRadius: 'var(--mcms-radius-pill)',
-          background: palette.solid,
-        }}
-      />
-    </Card>
+        </Flex>
+      }
+    />
   )
 }

@@ -1,3 +1,4 @@
+import '../../../styles/reports-users-industrial.css'
 import { Card, Typography } from 'antd'
 import {
   CartesianGrid,
@@ -29,26 +30,26 @@ export function EnvironmentTrendChart({
           data={data}
           margin={{ top: 8, right: 54, left: 0, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border-soft)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border)" />
           <XAxis
             dataKey="time"
-            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
-          />
+            tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+           tickLine={false} />
           <YAxis
             yAxisId="temperature"
             domain={[15, 35]}
             unit="°C"
             width={50}
-            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
-          />
+            tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+           tickLine={false} />
           <YAxis
             yAxisId="humidity"
             orientation="right"
             domain={[40, 100]}
             unit="%"
             width={42}
-            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
-          />
+            tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+           tickLine={false} />
           <Tooltip
             formatter={(value, name) => {
               const numericValue =
@@ -61,8 +62,8 @@ export function EnvironmentTrendChart({
 
               return [`${numericValue}%RH`, label]
             }}
-          />
-          <Legend />
+           contentStyle={{ background: 'var(--mcms-surface)', border: '1px solid var(--mcms-border)', borderRadius: 6, boxShadow: 'none', fontSize: 12 }} />
+          <Legend  wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span style={{ color: 'var(--mcms-nav-item-icon)' }}>{value}</span>} />
           <Line
             yAxisId="temperature"
             type="monotone"

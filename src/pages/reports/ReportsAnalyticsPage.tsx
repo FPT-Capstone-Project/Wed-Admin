@@ -1,3 +1,4 @@
+import '../../styles/reports-users-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   BarChartOutlined,

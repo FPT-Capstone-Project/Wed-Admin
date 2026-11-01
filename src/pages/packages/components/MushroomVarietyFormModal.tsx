@@ -1,3 +1,4 @@
+import '../../../styles/catalog-industrial.css'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   App,
@@ -18,7 +19,7 @@ import {
   useCreateMushroomType,
   useUpdateMushroomType,
 } from '../../../features/packages/hooks/useMushroomTypes'
-import { StatusBadge } from '../../../shared/ui'
+import { MetadataBadge, ActionButton } from '../../../shared/ui'
 
 interface MushroomVarietyFormModalProps {
   open: boolean
@@ -211,11 +212,7 @@ function MushroomImageField({
             </Button>
           </Space>
           {isUserPick && (
-            <StatusBadge
-              tone="info"
-              label="Ảnh mới — sẽ lưu khi bấm 'Lưu giống nấm'"
-              className="mcms-image-pending-badge"
-            />
+            <MetadataBadge label="Ảnh mới — sẽ lưu khi bấm 'Lưu giống nấm'" className="mcms-image-pending-badge" />
           )}
         </div>
       ) : (
@@ -356,7 +353,10 @@ export function MushroomVarietyFormModal({
         form.resetFields()
         imageFileRef.current = null
       }}
-    >
+
+ className="mcms-package-modal"
+ footer={<><ActionButton icon={null} variant="text" label="Hủy" disabled={isSubmitting} onClick={onCancel} /><ActionButton icon={null} variant="primary" label="Lưu giống nấm" loading={isSubmitting} onClick={() => form.submit()} /></>}
+>
       <Form<FormShape>
         form={form}
         layout="vertical"

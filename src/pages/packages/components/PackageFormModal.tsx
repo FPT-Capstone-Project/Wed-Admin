@@ -1,3 +1,5 @@
+import '../../../styles/catalog-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import { useEffect, useState } from 'react'
 import {
   DeleteOutlined,
@@ -85,7 +87,10 @@ export function PackageFormModal({
       keyboard={!isSubmitting}
       destroyOnHidden
       afterClose={() => form.resetFields()}
-    >
+
+ className="mcms-package-modal"
+ footer={<><ActionButton icon={null} variant="text" label="Hủy" disabled={isSubmitting} onClick={onCancel} /><ActionButton icon={null} variant="primary" label="Lưu gói cước" loading={isSubmitting} onClick={() => form.submit()} /></>}
+>
       <Form<CreatePackageInput>
         form={form}
         layout="vertical"

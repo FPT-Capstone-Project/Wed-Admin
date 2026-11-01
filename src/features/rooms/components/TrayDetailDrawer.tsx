@@ -1,3 +1,5 @@
+import '../rooms-industrial.css'
+import { MetadataBadge } from '../../../shared/ui'
 import {
   ApiOutlined,
   BookOutlined,
@@ -15,7 +17,6 @@ import {
   Empty,
   Flex,
   Spin,
-  Tag,
   Typography,
 } from 'antd'
 import { useMemo, useState } from 'react'
@@ -157,7 +158,7 @@ function DrawerFooter({ onLogNote, onEarlyHarvest, disabled }: DrawerFooterProps
         backgroundColor: tokens.color.surface,
         borderTop: `1px solid ${tokens.color.border}`,
         padding: `${tokens.space['3']} ${tokens.space['4']}`,
-        boxShadow: `0 -4px 16px rgb(24 73 42 / 6%)`,
+        boxShadow: 'none',
       }}
     >
       <Typography.Text
@@ -176,6 +177,7 @@ function DrawerFooter({ onLogNote, onEarlyHarvest, disabled }: DrawerFooterProps
       <Flex gap={8} wrap>
         <Button
           id="btn-log-note"
+          type="text"
           icon={<BookOutlined />}
           onClick={onLogNote}
           disabled={disabled}
@@ -189,6 +191,7 @@ function DrawerFooter({ onLogNote, onEarlyHarvest, disabled }: DrawerFooterProps
         </Button>
         <Button
           id="btn-early-harvest"
+          type="text"
           icon={<ScissorOutlined />}
           onClick={onEarlyHarvest}
           disabled={disabled}
@@ -196,9 +199,9 @@ function DrawerFooter({ onLogNote, onEarlyHarvest, disabled }: DrawerFooterProps
             minHeight: tokens.targetSize.comfortable,
             flex: 1,
             fontWeight: tokens.typography.weightSemibold,
-            color: tokens.tone.warning.text,
-            borderColor: tokens.tone.warning.border,
-            backgroundColor: tokens.tone.warning.bg,
+            color: tokens.color.text,
+            borderColor: tokens.color.border,
+            backgroundColor: tokens.color.surface,
           }}
         >
           Thu hoạch sớm
@@ -326,7 +329,7 @@ export function TrayDetailDrawer({
             <Flex align="center" gap={8} wrap>
               <TrayStatusTag status={mockDetail.tray.status} />
               {mockDetail.tray.batchId && (
-                <Tag color="processing">{mockDetail.tray.batchId}</Tag>
+                <MetadataBadge  label={<>{mockDetail.tray.batchId}</>} />
               )}
               <Typography.Text style={{ fontSize: 12, color: tokens.color.textMuted }}>
                 Node: {mockDetail.tier.nodeId}
@@ -568,7 +571,7 @@ export function TrayDetailDrawer({
                 fontWeight: tokens.typography.weightMedium,
                 backgroundColor: tokens.color.surfaceMuted,
                 border: `1px solid ${tokens.color.border}`,
-                borderRadius: tokens.radius.pill,
+                borderRadius: tokens.radius.md,
                 padding: '1px 8px',
               }}
             >
@@ -581,7 +584,7 @@ export function TrayDetailDrawer({
         onClose={handleClose}
         destroyOnHidden
         styles={{
-          body: { padding: 0, backgroundColor: tokens.color.bg },
+          body: { padding: 0, backgroundColor: tokens.color.surface },
           header: {
             borderBottom: `1px solid ${tokens.color.border}`,
             backgroundColor: tokens.color.surface,

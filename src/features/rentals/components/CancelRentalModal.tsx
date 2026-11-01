@@ -1,3 +1,5 @@
+import '../rentals-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import { Alert, App, Form, Input, Modal } from 'antd'
 import { useCancelRental } from '../hooks/useRentals'
 
@@ -58,6 +60,12 @@ export function CancelRentalModal({
       okButtonProps={{ danger: true }}
       confirmLoading={cancelRental.isPending}
       destroyOnHidden
+
+      className="mcms-rental-modal"
+      footer={<><ActionButton icon={null} variant="text" size="middle" label="Giữ nguyên" onClick={() => {
+        form.resetFields()
+        onClose()
+      }} /><ActionButton icon={null} variant="dangerText" size="middle" label="Xác nhận huỷ" loading={cancelRental.isPending} onClick={() => void handleOk()} /></>}
     >
       <Alert
         type="error"

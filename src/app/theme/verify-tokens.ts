@@ -9,7 +9,7 @@
  * Mục tiêu: bảo đảm không ai vô tình đổi token làm hỏng WCAG AA.
  */
 
-import { border, palette, surface, text, tones } from './tokens.ts'
+import { border, navigation, palette, surface, text, tones } from './tokens.ts'
 
 /** WCAG 2.x relative luminance. */
 function luminance(hex: string): number {
@@ -54,14 +54,28 @@ check('Chữ chính / nền lạch', text.base, surface.surfaceMuted, 4.5)
 check('Chữ phụ / trắng', text.muted, surface.surface, 4.5)
 check('Chữ phụ / nền app', text.muted, surface.background, 4.5)
 check('Chữ phụ / nền lạch', text.muted, surface.surfaceMuted, 4.5)
-check('Nút chính / trắng trên primary', text.inverse, palette.primary, 4.5)
+check('Nút chính / trắng trên primary (nền CTA)', text.inverse, palette.primaryStrong, 4.5)
 
 /* --- Trạng thái ngữ nghĩa (AA = 4.5:1) -------------------------------- */
 
 for (const [name, tone] of Object.entries(tones)) {
   check(`Tone ${name} / chữ trên nền mềm`, tone.text, tone.bg, 4.5)
   check(`Tone ${name} / chữ trên trắng`, tone.text, surface.surface, 4.5)
+  /** Badge "Status Dot" nền trung tính → chữ vẫn phải đạt AA. */
+  check(`Tone ${name} / chữ trên nền badge`, tone.text, tone.badgeBg, 4.5)
 }
+
+/* --- Điều hướng (sidebar) ---------------------------------------------- */
+
+check('Nav / chữ item / trắng', navigation.itemText, surface.surface, 4.5)
+check('Nav / chữ item / nền hover', navigation.itemText, navigation.itemHoverBg, 4.5)
+check('Nav / chữ item / nền active', navigation.itemText, navigation.itemSelectedBg, 4.5)
+check('Nav / icon item / trắng', navigation.itemIcon, surface.surface, 4.5)
+check('Nav / icon item / nền hover', navigation.itemIcon, navigation.itemHoverBg, 4.5)
+check('Nav / chữ active / nền active', navigation.itemSelectedText, navigation.itemSelectedBg, 4.5)
+/** Vạch nhấn 3px là non-text → chỉ cần 3:1 (WCAG 1.4.11). */
+check('Nav / vạch nhấn / trắng', navigation.activeBar, surface.surface, 3)
+check('Nav / vạch nhấn / nền active', navigation.activeBar, navigation.itemSelectedBg, 3)
 
 /* --- Viền (WCAG 1.4.11 Non-text Contrast = 3:1) ------------------------ */
 
@@ -69,10 +83,19 @@ check('Viền nhấn / trắng', border.strong, surface.surface, 3)
 check('Viền nhấn / nền app', border.strong, surface.background, 3)
 check('Focus ring / trắng', palette.primary, surface.surface, 3)
 check('Focus ring / nền app', palette.primary, surface.background, 3)
+/**
+ * Màu nhấn `#16a34a` — dùng cho chấm tròn trạng thái, dải nhấn sidebar.
+ * Là **non-text**, nên chỉ cần đạt 3:1 (WCAG 1.4.11) — không phải 4.5:1.
+ */
+check('Màu nhấn (chấm tròn) / trắng', palette.primary, surface.surface, 3)
+check('Màu nhấn (chấm tròn) / nền app', palette.primary, surface.background, 3)
 
 for (const [name, tone] of Object.entries(tones)) {
   check(`Viền tone ${name} / nền mềm`, tone.border, tone.bg, 3)
   check(`Viền tone ${name} / trắng`, tone.border, surface.surface, 3)
+  /** Chấm tròn 6px của StatusBadge là non-text → ngưỡng 3:1. */
+  check(`Chấm tròn tone ${name} / nền badge`, tone.dot, tone.badgeBg, 3)
+  check(`Chấm tròn tone ${name} / trắng`, tone.dot, surface.surface, 3)
 }
 
 /* --- Báo cáo ----------------------------------------------------------- */

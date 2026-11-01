@@ -1,6 +1,7 @@
 import type { ThemeConfig } from 'antd'
 import {
   border,
+  componentTokens,
   palette,
   radius,
   shadow,
@@ -9,6 +10,21 @@ import {
   tones,
   typography,
 } from './tokens'
+
+/**
+ * `boxShadowCard` **có thật** trong antd v6 (xem `theme/util/alias.js` → `boxShadowCard`,
+ * và `card/style/index.js` dùng `token.boxShadowCard` cho `cardShadow`).
+ * ⚠ Nhưng antd v6.6.1 **không khai báo** nó trong `AliasToken` → TS báo lỗi.
+ *   Khai báo bổ sung ở đây để ghi đè được mà không cần `as any`.
+ */
+type McmsAliasToken = NonNullable<ThemeConfig['token']> & {
+  /** Shadow riêng cho Card (alias token của antd). */
+  boxShadowCard?: string
+}
+
+export type McmsThemeConfig = Omit<ThemeConfig, 'token'> & {
+  token?: McmsAliasToken
+}
 
 /**
  * Theme antd — dùng chung token với `tokens.ts`.
@@ -20,11 +36,13 @@ import {
  * (success 3.37:1, warning 2.76:1, default 3.22:1) → dùng `StatusBadge`
  * trong `src/shared/ui` thay vì `<Tag color="success">`.
  */
-export const mcmsTheme: ThemeConfig = {
+export const mcmsTheme: McmsThemeConfig = {
   token: {
     colorPrimary: palette.primary,
+    colorLink: text.base,
+    colorLinkHover: text.muted,
     colorSuccess: palette.primary,
-    colorInfo: palette.teal,
+    colorInfo: tones.info.solid,
     colorWarning: palette.amber,
     colorError: palette.coral,
     colorText: text.base,
@@ -33,37 +51,87 @@ export const mcmsTheme: ThemeConfig = {
     colorBgLayout: surface.background,
     colorBgContainer: surface.surface,
     colorBorder: border.base,
-    colorBorderSecondary: border.soft,
+    colorBorderSecondary: border.base,
     /**
      * Focus outline — dùng viền nhấn để đạt 3:1 so với nền liên quan
      * (WCAG 2.4.11 Focus Appearance).
      */
     controlOutline: border.strong,
     controlOutlineWidth: 2,
+    /**
+     * Bo góc — chuẩn B2B Industrial IoT: 4px cho control, 6px cho container.
+     * Không dùng pill.
+     */
     borderRadius: Number.parseInt(radius.md, 10),
     borderRadiusLG: Number.parseInt(radius.lg, 10),
-    controlHeight: 40,
+    borderRadiusSM: Number.parseInt(radius.sm, 10),
+    borderRadiusXS: Number.parseInt(radius.sm, 10),
+    controlHeight: 36,
     fontFamily: typography.fontFamily,
+    /** Cỡ chữ thân 13px — mật độ dashboard. */
+    fontSize: typography.sizeBody,
+    lineHeight: typography.lineHeight,
+    /**
+     * Thang tiêu đề — **nhỏ hơn** mặc định của antd (38/30/24/20/16).
+     * Chuẩn B2B Industrial IoT: phân cấp thị giác dựa trên **cân nặng chữ**
+     * + khoảng cách, không phải trên cỡ chữ to.
+     */
+    fontSizeHeading1: 24,
+    fontSizeHeading2: 20,
+    fontSizeHeading3: 18,
+    fontSizeHeading4: 15,
+    fontSizeHeading5: 13,
+    boxShadow: shadow.sm,
     boxShadowTertiary: shadow.xs,
+    /**
+     * Card dùng **viền mảnh**, không đổ bóng đậm — chuẩn industrial.
+     *
+     * ⚠ `boxShadowCard` là alias token của antd (sinh từ `boxShadowSecondary`).
+     *   Ghi đè ở đây để Card không dùng shadow 3 lớp mặc định của antd.
+     */
+    boxShadowCard: 'none',
+    boxShadowSecondary: shadow.sm,
   },
   components: {
     Layout: {
       bodyBg: surface.background,
-      headerBg: surface.surface,
+      headerBg: componentTokens.card.background,
+      colorBorderSecondary: componentTokens.card.border,
       siderBg: surface.surface,
     },
     Menu: {
-      itemHeight: 44,
-      itemBorderRadius: Number.parseInt(radius.md, 10),
-      itemMarginInline: 12,
-      itemMarginBlock: 3,
-      itemSelectedBg: palette.primarySoft,
-      itemSelectedColor: palette.primaryDark,
-      itemHoverBg: surface.surfaceHover,
-      itemHoverColor: palette.primaryDark,
+      itemHeight: 40,
+      /**
+       * Bo góc item — **0px**.
+       *
+       * ⚠ Chuẩn Enterprise IoT: item điều hướng **không** có viền bo tròn
+       *   quanh (dạng pill/viên thuốc). Bo góc chỉ dành cho control nhỏ
+       *   (button, input, badge).
+       */
+      itemBorderRadius: 0,
+      /**
+       * Margin 0 → vạch nhấn 3px nằm **sát mép trái** của sidebar.
+       * Khoảng cách trái được bù bằng `itemPaddingInline`.
+       */
+      itemMarginInline: 0,
+      /** Canh chữ item khớp với tiêu đề nhóm (`padding: 0 20px`). */
+      itemPaddingInline: 20,
+      itemMarginBlock: 2,
+      /**
+       * Active menu — nền Slate-100 + chữ đậm (không viền, không pill).
+       * Vạch nhấn 3px sát mép trái được vẽ bằng CSS (`App.css`).
+       */
+      itemSelectedBg: componentTokens.menu.itemSelectedBg,
+      itemSelectedColor: componentTokens.menu.itemSelectedText,
+      itemColor: componentTokens.menu.itemText,
+      itemHoverBg: componentTokens.menu.itemHoverBg,
+      itemHoverColor: text.base,
       groupTitleColor: text.muted,
     },
     Button: {
+      colorPrimary: componentTokens.button.background,
+      colorPrimaryHover: palette.primaryDark,
+      colorPrimaryActive: palette.primaryDark,
       borderRadius: Number.parseInt(radius.md, 10),
       primaryShadow: 'none',
       defaultShadow: 'none',
@@ -74,28 +142,49 @@ export const mcmsTheme: ThemeConfig = {
     },
     Card: {
       borderRadiusLG: Number.parseInt(radius.lg, 10),
-      headerBg: surface.surface,
+      headerBg: componentTokens.card.background,
+      colorBorderSecondary: componentTokens.card.border,
+      /** Card dựa trên viền mảnh, không đổ bóng. */
+      boxShadowTertiary: 'none',
     },
     Table: {
-      headerBg: surface.surfaceMuted,
+      headerBorderRadius: Number.parseInt(radius.md, 10),
+      headerBg: componentTokens.table.header,
       headerColor: text.base,
-      borderColor: border.soft,
+      borderColor: componentTokens.table.border,
       rowHoverBg: surface.surfaceHover,
+      /** Mật độ công nghiệp — padding ô gọn. */
+      cellPaddingBlock: 8,
+      cellPaddingInline: 12,
     },
     Input: {
-      activeBorderColor: palette.primary,
-      hoverBorderColor: palette.primary,
+      colorBgContainer: componentTokens.input.background,
+      colorBorder: componentTokens.input.border,
+      activeBorderColor: palette.primaryStrong,
+      hoverBorderColor: border.strong,
       activeShadow: shadow.focus,
     },
     Select: {
-      activeBorderColor: palette.primary,
-      hoverBorderColor: palette.primary,
-      activeOutlineColor: 'rgb(21 128 61 / 12%)',
+      activeBorderColor: palette.primaryStrong,
+      hoverBorderColor: border.strong,
+      activeOutlineColor: 'rgb(22 163 74 / 12%)',
+    },
+    Modal: {
+      contentBg: componentTokens.modal.background,
+      headerBg: componentTokens.modal.background,
+      borderRadiusLG: Number.parseInt(radius.md, 10),
+    },
+    Tooltip: {
+      colorBgSpotlight: componentTokens.tooltip.background,
+      colorTextLightSolid: componentTokens.tooltip.text,
+      borderRadius: Number.parseInt(radius.sm, 10),
     },
     Tabs: {
-      itemSelectedColor: palette.primary,
-      itemHoverColor: palette.primary,
-      inkBarColor: palette.primary,
+      itemColor: componentTokens.tabs.text,
+      itemActiveColor: componentTokens.tabs.text,
+      itemSelectedColor: componentTokens.tabs.text,
+      itemHoverColor: text.base,
+      inkBarColor: componentTokens.tabs.indicator,
     },
     Tag: {
       borderRadiusSM: Number.parseInt(radius.sm, 10),

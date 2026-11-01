@@ -4,11 +4,11 @@ import {
   EyeOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
-import { Card, Flex, Space, Tag, Typography } from 'antd'
+import { Card, Flex, Space, Typography } from 'antd'
+import { MetadataBadge } from '../../shared/ui'
 import { useAuthStore } from '../../features/auth/store/auth.store'
-import { useCultivationStore } from '../../stores/cultivation.store'
-import { useRoomStore } from '../../stores/room.store'
-import { getCustomerTrayIds } from '../../features/rooms/utils/tray-customer.utils'
+import { useCustomerMushroomTypeIds } from '../../features/settings/hooks/useCustomerMushroomTypeIds'
+import { useThresholdProfiles } from '../../features/settings/hooks/useThresholdProfiles'
 import { ThresholdProfileTab } from './components/ThresholdProfileTab'
 
 function normalizeRole(role: string | undefined) {
@@ -26,30 +26,30 @@ function normalizeRole(role: string | undefined) {
  * Vì vậy trang này:
  *   - không render modal nhập liệu (`ThresholdProfileModal`),
  *   - không có nút thêm / sửa / xoá hồ sơ.
+ *
+ * ⚠ Nguồn dữ liệu: **Database** (không dùng mock store).
+ *   - Hồ sơ + tên giống nấm → `useThresholdProfiles` (join
+ *     `mushroom_types` × `mushroom_conditions`).
+ *   - Lọc theo khách hàng   → `useCustomerMushroomTypeIds` (đơn của chính
+ *     khách đang đăng nhập → `items[].mushroom_type_id`).
  */
 export function SettingsPage() {
   const authUser = useAuthStore((state) => state.user)
-  const tiers = useRoomStore((state) => state.tiers)
-  const batches = useCultivationStore((state) => state.batches)
 
   const role = normalizeRole(authUser?.role)
   const isAdmin = role === 'ADMIN'
+  const isCustomer = role === 'CUSTOMER'
 
-  const visibleMushroomTypes = useMemo(() => {
-    if (!authUser || role !== 'CUSTOMER') {
-      return undefined
-    }
+  // Chỉ khách hàng mới bị giới hạn theo vụ thuê của mình.
+  const customerMushroomTypeIds = useCustomerMushroomTypeIds(isCustomer)
 
-    const assignedTrayIds = getCustomerTrayIds(tiers, authUser.fullName)
+  const { data: profiles = [] } = useThresholdProfiles()
 
-    return [
-      ...new Set(
-        batches
-          .filter((batch) => assignedTrayIds.includes(batch.trayId))
-          .map((batch) => batch.mushroomType),
-      ),
-    ]
-  }, [authUser, batches, role, tiers])
+  const visibleMushroomTypeIds = useMemo(
+    () =>
+      isCustomer ? new Set(customerMushroomTypeIds) : null,
+    [customerMushroomTypeIds, isCustomer],
+  )
 
   return (
     <div>
@@ -65,37 +65,36 @@ export function SettingsPage() {
             <ExperimentOutlined /> Hồ sơ Vi khí hậu &amp; Ngưỡng AUTO
           </Typography.Title>
           <Typography.Text type="secondary">
-            Theo dõi dải thông số nhiệt độ, độ ẩm và ẩm giá thể chuẩn
-            đang áp dụng cho từng giống nấm.
+            Theo dõi dải thông số nhiệt độ, độ ẩm và CO₂ chuẩn đang áp dụng
+            cho từng giống nấm.
           </Typography.Text>
         </div>
 
         <Space wrap>
-          <Tag
+          <MetadataBadge
             icon={<SafetyCertificateOutlined />}
-            color={isAdmin ? 'success' : 'default'}
-          >
-            {isAdmin
-              ? 'ADMIN · Toàn quyền'
+            label={isAdmin
+              ? 'ADMIN · Chỉ xem'
               : role === 'OPERATOR'
-                ? 'OPERATOR · Chỉnh ngưỡng'
+                ? 'OPERATOR · Chỉ xem'
                 : 'CUSTOMER · Chỉ xem'}
-          </Tag>
-          <Tag icon={<EyeOutlined />} color="default">
-            Chỉ xem
-          </Tag>
+          />
+          <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
         </Space>
       </Flex>
 
       <Card
         style={{
-          borderRadius: 12,
-          borderColor: '#e5e7eb',
-          background: 'linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%)',
+          borderRadius: 6,
+          borderColor: 'var(--mcms-border)',
+          background: 'var(--mcms-surface)',
         }}
         styles={{ body: { padding: 20 } }}
       >
-        <ThresholdProfileTab visibleMushroomTypes={visibleMushroomTypes} />
+        <ThresholdProfileTab
+          visibleMushroomTypeIds={visibleMushroomTypeIds}
+          profileCount={profiles.length}
+        />
       </Card>
     </div>
   )

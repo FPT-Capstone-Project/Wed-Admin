@@ -6,33 +6,105 @@
 
 /* --- PageHeader ------------------------------------------------------- */
 
-.mcms-page-header .ant-typography {
+.mcms-page-header h1.ant-typography {
   color: var(--mcms-text);
+}
+
+.mcms-page-header-copy {
+  flex: 1 1 240px;
+}
+
+.mcms-page-header-actions {
+  max-width: 100%;
+}
+
+@media (max-width: 575px) {
+  .mcms-page-header-actions {
+    width: 100%;
+  }
+
+  .mcms-page-header-actions > * {
+    max-width: 100%;
+  }
+
+  .mcms-page-header-actions .ant-btn {
+    height: auto;
+    min-height: 32px;
+    white-space: normal;
+  }
 }
 
 /* --- StatCard --------------------------------------------------------- */
 
+/*
+ * Thẻ thống kê — **không** viền trái 3px màu (chuẩn Enterprise IoT:
+ * không dùng viền màu đậm ở cạnh card).
+ * Trạng thái được truyền đạt bằng **điểm tròn 6px** + màu chữ số liệu,
+ * luôn kèm nhãn chữ ở nơi khác (không chỉ dựa vào màu).
+ *
+ * Layout: nhãn xám nhỏ (12px) → số liệu đậm (28px) → icon xám muted ở
+ * góc trên bên phải.
+ */
 .mcms-stat-card {
-  border-left-width: 3px;
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+
+.mcms-stat-card-label {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /* --- StatusBadge ------------------------------------------------------ */
 
 /*
- * Badge trạng thái: luôn có nhãn chữ + viền đủ tương phản.
- * Bỏ style mặc định của antd vì preset color FAIL WCAG AA.
+ * Badge trạng thái dạng **Status Dot** (chuẩn Enterprise IoT):
+ *   - chấm tròn 6px + chữ trung tính, medium
+ *   - nền xám/xanh rất nhạt, **KHÔNG viền**
+ *   - KHÔNG viền màu sặc sỡ, KHÔNG pill
+ *   - bo góc 4px
+ *
+ * Màu chữ/nền đều lấy từ tone đã verify WCAG AA trong `tokens.ts`.
  */
-.ant-tag.mcms-status-badge {
-  border-width: 1px;
-  font-weight: 600;
-  line-height: 20px;
+.mcms-status-badge {
+  border: none;
+}
+
+.mcms-metadata-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  border: none;
   border-radius: var(--mcms-radius-sm);
+  color: var(--mcms-text-muted);
+  background: var(--mcms-surface-muted);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 20px;
+  white-space: nowrap;
+}
+
+.mcms-status-badge .anticon {
+  font-size: 12px;
 }
 
 /* --- DataTable -------------------------------------------------------- */
 
 .mcms-data-table .ant-table-wrapper {
   border-radius: var(--mcms-radius-lg);
+}
+
+.mcms-data-table .ant-table.ant-table-small .ant-table-thead > tr > th,
+.mcms-data-table .ant-table.ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+}
+
+.mcms-data-table .ant-table-pagination {
+  gap: 4px;
+  flex-wrap: wrap;
 }
 
 .mcms-data-table .ant-table-thead > tr > th {
@@ -62,8 +134,11 @@
  * Nút hành động: khi ẩn chữ (icon-only trong cột hành động), vẫn giữ
  * kích thước mục tiêu chạm tối thiểu 24px theo WCAG 2.5.8.
  */
-.mcms-action-button .ant-btn {
+.mcms-action-button.ant-btn {
   min-height: 24px;
+  min-width: 24px;
+  border-radius: var(--mcms-radius-sm);
+  box-shadow: none;
 }
 
 /* Tooltip bám được cả khi button disabled */

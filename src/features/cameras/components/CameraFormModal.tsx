@@ -1,3 +1,4 @@
+import '../../../styles/media-industrial.css'
 import { useEffect, useMemo } from 'react'
 import { App, Form, Input, Modal, Select } from 'antd'
 import {
@@ -148,7 +149,7 @@ export function CameraFormModal({
   }
 
   return (
-    <Modal
+    <Modal className="mcms-camera-form-modal"
       title={isEdit ? `Sửa camera ${camera?.cameraCode}` : 'Thêm camera Imou'}
       open={open}
       onCancel={onCancel}

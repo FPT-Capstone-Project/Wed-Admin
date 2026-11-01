@@ -1,3 +1,5 @@
+import '../rooms-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import {
   CheckCircleOutlined,
   DeleteOutlined,
@@ -6,7 +8,7 @@ import {
   ScissorOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { Alert, Button, Typography } from 'antd'
+import { Alert, Typography } from 'antd'
 import type { HarvestStatus } from '../../../types/room.types'
 
 interface TrayAdminActionsProps {
@@ -60,22 +62,12 @@ export function TrayAdminActions({
             className="tray-admin-alert"
           />
           <div className="tray-admin-actions tray-admin-actions--crisis">
-            <Button
-              type="primary"
-              className="tray-action-button tray-action-button--late"
-              icon={<FileDoneOutlined />}
-              onClick={onLateHarvest}
-            >
-              Thu hoạch trễ & Xuất hóa đơn phạt
-            </Button>
-            <Button
-              danger
-              className="tray-action-button"
-              icon={<DeleteOutlined />}
-              onClick={onDestroyOverdue}
-            >
-              Cưỡng chế hủy & Tiêu hủy nấm
-            </Button>
+            <ActionButton variant="primary" size="middle" className="tray-action-button"
+icon={<FileDoneOutlined />}
+onClick={onLateHarvest} label="Thu hoạch trễ & Xuất hóa đơn phạt" />
+            <ActionButton variant="dangerText" size="middle" className="tray-action-button"
+icon={<DeleteOutlined />}
+onClick={onDestroyOverdue} label="Cưỡng chế hủy & Tiêu hủy nấm" />
           </div>
         </>
       ) : isAutoHarvested ? (
@@ -86,41 +78,22 @@ export function TrayAdminActions({
             phóng khay.
           </div>
           <div className="tray-admin-actions tray-admin-actions--single">
-            <Button
-              type="primary"
-              className="tray-action-button"
-              icon={<FileDoneOutlined />}
-              onClick={onOnTimeHarvest}
-            >
-              Xuất hóa đơn & Giải phóng khay
-            </Button>
+            <ActionButton variant="primary" size="middle" className="tray-action-button"
+icon={<FileDoneOutlined />}
+onClick={onOnTimeHarvest} label="Xuất hóa đơn & Giải phóng khay" />
           </div>
         </>
       ) : (
         <div className="tray-admin-actions tray-admin-actions--standard">
-          <Button
-            className="tray-action-button tray-action-button--early"
-            icon={<ScissorOutlined />}
-            onClick={onEarlyHarvest}
-          >
-            Thu hoạch sớm (Yêu cầu của khách)
-          </Button>
-          <Button
-            type="primary"
-            className="tray-action-button"
-            icon={<FileDoneOutlined />}
-            onClick={onOnTimeHarvest}
-          >
-            Thu hoạch đúng hạn & Xuất hóa đơn
-          </Button>
-          <Button
-            danger
-            className="tray-action-button tray-action-button--cancel"
-            icon={<WarningOutlined />}
-            onClick={onForceCancel}
-          >
-            Cưỡng chế hủy mẻ
-          </Button>
+          <ActionButton variant="text" size="middle" className="tray-action-button"
+icon={<ScissorOutlined />}
+onClick={onEarlyHarvest} label="Thu hoạch sớm (Yêu cầu của khách)" />
+          <ActionButton variant="primary" size="middle" className="tray-action-button"
+icon={<FileDoneOutlined />}
+onClick={onOnTimeHarvest} label="Thu hoạch đúng hạn & Xuất hóa đơn" />
+          <ActionButton variant="dangerText" size="middle" className="tray-action-button"
+icon={<WarningOutlined />}
+onClick={onForceCancel} label="Cưỡng chế hủy mẻ" />
         </div>
       )}
     </section>

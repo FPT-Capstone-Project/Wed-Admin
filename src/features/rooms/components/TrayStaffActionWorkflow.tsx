@@ -1,3 +1,5 @@
+import '../rooms-industrial.css'
+import { StatusBadge, ActionButton } from '../../../shared/ui'
 import {
   CalendarOutlined,
   CheckCircleOutlined,
@@ -16,7 +18,6 @@ import {
   Form,
   Input,
   Modal,
-  Tag,
   Typography,
 } from 'antd'
 import { useState } from 'react'
@@ -129,28 +130,20 @@ export function TrayStaffActionWorkflow({
               className="staff-stage-badge staff-stage-badge--care"
               role="status"
             >
-              <Tag color="success" icon={<CheckCircleOutlined />}>
+              <StatusBadge tone="ok" icon={<CheckCircleOutlined />} label={<>
                 Đang chăm sóc bình thường
-              </Tag>
+              </>} />
               <span>
                 Tiếp tục theo dõi vi khí hậu và ghi nhận nhật ký hằng ngày.
               </span>
             </div>
 
             <div className="tray-staff-actions tray-staff-actions--care">
-              <Button
-                icon={<PhoneOutlined />}
-                onClick={() => setIsLogModalOpen(true)}
-              >
-                Ghi chú nhật ký
-              </Button>
-              <Button
-                className="tray-staff-action-button--early"
-                icon={<ScissorOutlined />}
-                onClick={onEarlyHarvest}
-              >
-                Thu hoạch sớm theo yêu cầu khách
-              </Button>
+              <ActionButton variant="text" size="middle" icon={<PhoneOutlined />}
+onClick={() => setIsLogModalOpen(true)} label="Ghi chú nhật ký" />
+              <ActionButton variant="text" size="middle" className="tray-staff-action-button"
+icon={<ScissorOutlined />}
+onClick={onEarlyHarvest} label="Thu hoạch sớm theo yêu cầu khách" />
             </div>
 
             {latestCareLog && (
@@ -204,37 +197,27 @@ export function TrayStaffActionWorkflow({
                 >
                   Gọi khách
                 </Button>
-                <Button
-                  type="text"
-                  icon={<CopyOutlined />}
-                  onClick={() => void handleCopyPhone()}
-                >
-                  Sao chép
-                </Button>
+                <ActionButton variant="text" size="middle" icon={<CopyOutlined />}
+onClick={() => void handleCopyPhone()} label="Sao chép" />
               </div>
             </div>
 
-            <Button
-              type={contactConfirmed ? 'default' : 'primary'}
-              className={`staff-contact-confirm-btn ${
+            <ActionButton variant={contactConfirmed ? 'text' : 'primary'} size="middle" className={`staff-contact-confirm-btn ${
                 contactConfirmed
                   ? 'staff-contact-confirm-btn--confirmed'
                   : ''
               }`}
-              icon={
+icon={
                 contactConfirmed ? (
                   <CheckCircleOutlined />
                 ) : (
                   <CalendarOutlined />
                 )
               }
-              onClick={onContactConfirmed}
-              disabled={contactConfirmed}
-            >
-              {contactConfirmed
+onClick={onContactConfirmed}
+disabled={contactConfirmed} label={contactConfirmed
                 ? 'Đã xác nhận hẹn ngày giao với khách'
-                : 'Đã gọi xác nhận với khách'}
-            </Button>
+                : 'Đã gọi xác nhận với khách'} />
           </>
         )}
 
@@ -251,22 +234,12 @@ export function TrayStaffActionWorkflow({
             />
 
             <div className="tray-staff-actions tray-staff-actions--harvest">
-              <Button
-                type="primary"
-                className="tray-staff-action-button--harvest"
-                icon={<FileDoneOutlined />}
-                onClick={onHarvest}
-              >
-                Thu hoạch &amp; Xuất hóa đơn
-              </Button>
-              <Button
-                danger
-                className="tray-staff-action-button--destroy"
-                icon={<DeleteOutlined />}
-                onClick={onDestroy}
-              >
-                Tiêu hủy mẻ (Khách từ chối nhận)
-              </Button>
+              <ActionButton variant="primary" size="middle" className="tray-staff-action-button"
+icon={<FileDoneOutlined />}
+onClick={onHarvest} label="Thu hoạch & Xuất hóa đơn" />
+              <ActionButton variant="dangerText" size="middle" className="tray-staff-action-button"
+icon={<DeleteOutlined />}
+onClick={onDestroy} label="Tiêu hủy mẻ (Khách từ chối nhận)" />
             </div>
 
             <div className="tray-staff-actions-note">

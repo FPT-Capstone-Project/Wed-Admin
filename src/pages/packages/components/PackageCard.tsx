@@ -1,3 +1,4 @@
+import '../../../styles/catalog-industrial.css'
 import {
   CheckOutlined,
   EditOutlined,
@@ -7,10 +8,8 @@ import {
   DeleteOutlined,
 } from '@ant-design/icons'
 import {
-  Badge,
   Button,
   Card,
-  Divider,
   Flex,
   Popconfirm,
   Space,
@@ -18,7 +17,7 @@ import {
 } from 'antd'
 import type { BillingCycle, PackageStatus, RentalPackage } from '../../../types/package.types'
 import type { SemanticTone } from '../../../app/theme/tokens'
-import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { ActionButton, StatusBadge, MetadataBadge } from '../../../shared/ui'
 
 interface PackageCardProps {
   rentalPackage: RentalPackage
@@ -66,13 +65,9 @@ export function PackageCard({
   const isAvailable = rentalPackage.status !== 'INACTIVE'
 
   return (
-    <Badge.Ribbon
-      text={rentalPackage.isPopular ? 'Phổ biến nhất' : rentalPackage.status === 'PROMOTION' ? 'Ưu đãi' : undefined}
-      color={rentalPackage.isPopular ? 'var(--mcms-amber)' : 'var(--mcms-blue)'}
-      style={{ display: rentalPackage.isPopular || rentalPackage.status === 'PROMOTION' ? undefined : 'none' }}
-    >
-      <Card
-        style={{ height: '100%', borderRadius: 8 }}
+
+      <Card className="mcms-package-card"
+        style={{ height: '100%', borderRadius: 6 }}
         styles={{ body: { padding: 20, height: '100%' } }}
       >
         <Flex vertical style={{ height: '100%' }}>
@@ -89,30 +84,24 @@ export function PackageCard({
             />
           </Flex>
 
-          <Typography.Title level={2} style={{ margin: '20px 0 4px' }}>
-            {VND_FORMATTER.format(rentalPackage.price)}
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            {BILLING_CYCLE_LABELS[rentalPackage.billingCycle]} · {rentalPackage.durationDays} ngày
-          </Typography.Text>
-
-          <Divider style={{ margin: '18px 0' }} />
-
-          <Space direction="vertical" size={8} style={{ width: '100%' }}>
-            <Typography.Text>
-              Tối đa <strong>{rentalPackage.maxTrays} khay</strong>
-            </Typography.Text>
-            <Typography.Text type="secondary">
-              {rentalPackage.totalSubscribers} khách đang đăng ký
-            </Typography.Text>
-          </Space>
+          <Flex gap={6} wrap style={{ marginTop: 8 }}>
+            {rentalPackage.isPopular && <MetadataBadge label="Phổ biến nhất" />}
+            {rentalPackage.status === 'PROMOTION' && <MetadataBadge label="Ưu đãi" />}
+          </Flex>
+          <dl className="mcms-package-specs">
+            <dt>Giá cước</dt><dd>{VND_FORMATTER.format(rentalPackage.price)}</dd>
+            <dt>Chu kỳ</dt><dd>{BILLING_CYCLE_LABELS[rentalPackage.billingCycle]}</dd>
+            <dt>Thời hạn</dt><dd>{rentalPackage.durationDays} ngày</dd>
+            <dt>Số khay tối đa</dt><dd>{rentalPackage.maxTrays}</dd>
+            <dt>Khách đăng ký</dt><dd>{rentalPackage.totalSubscribers}</dd>
+          </dl>
 
           <Typography.Text strong style={{ display: 'block', marginTop: 18 }}>
             Giống nấm hỗ trợ
           </Typography.Text>
           <Flex gap={6} wrap style={{ marginTop: 8 }}>
             {rentalPackage.supportedMushrooms.map((mushroom) => (
-              <StatusBadge key={mushroom} tone="neutral" label={mushroom} />
+              <MetadataBadge key={mushroom} label={mushroom} />
             ))}
           </Flex>
 
@@ -124,7 +113,7 @@ export function PackageCard({
               rentalPackage.features.map((feature) => (
                 <Flex key={feature} align="flex-start" gap={8}>
                   <CheckOutlined
-                  style={{ color: 'var(--mcms-primary)', marginTop: 4 }}
+                  style={{ color: 'var(--mcms-text-muted)', marginTop: 4 }}
                 />
                   <Typography.Text>{feature}</Typography.Text>
                 </Flex>
@@ -223,6 +212,6 @@ export function PackageCard({
           </Flex>
         </Flex>
       </Card>
-    </Badge.Ribbon>
+
   )
 }

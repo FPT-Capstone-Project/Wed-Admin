@@ -1,3 +1,4 @@
+import '../../../styles/reports-users-industrial.css'
 import { Card, Typography } from 'antd'
 import {
   Bar,
@@ -32,21 +33,21 @@ export function RevenueBarChart({ data }: RevenueBarChartProps) {
           data={data}
           margin={{ top: 8, right: 12, left: 8, bottom: 0 }}
         >
-          <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border-soft)" />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border)" />
           <XAxis
             dataKey="month"
-            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
-          />
+            tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+           tickLine={false} />
           <YAxis
             yAxisId="revenue"
             tickFormatter={(value: number) => `${value / 1000000}M`}
-            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
-          />
+            tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+           tickLine={false} />
           <YAxis
             yAxisId="rentals"
             orientation="right"
-            tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
-          />
+            tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+           tickLine={false} />
           <Tooltip
             formatter={(value, name) => {
               const numericValue =
@@ -57,8 +58,8 @@ export function RevenueBarChart({ data }: RevenueBarChartProps) {
                 ? [VND_FORMATTER.format(numericValue), label]
                 : [`${numericValue} lượt`, label]
             }}
-          />
-          <Legend />
+           contentStyle={{ background: 'var(--mcms-surface)', border: '1px solid var(--mcms-border)', borderRadius: 6, boxShadow: 'none', fontSize: 12 }} />
+          <Legend  wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span style={{ color: 'var(--mcms-nav-item-icon)' }}>{value}</span>} />
           <Bar
             yAxisId="revenue"
             dataKey="totalRevenue"

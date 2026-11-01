@@ -1,13 +1,12 @@
+import '../device-industrial.css'
+import { StatusBadge, DataTable } from '../../../shared/ui'
 import { useMemo, useState } from 'react'
 import { HistoryOutlined, RightOutlined } from '@ant-design/icons'
 import {
   Button,
-  Empty,
   Flex,
   InputNumber,
   Select,
-  Table,
-  Tag,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -68,6 +67,7 @@ export function SensorHistoryPanel({
     {
       title: 'Thời điểm',
       key: 'measured',
+      className: 'mcms-iot-mono',
       width: 180,
       render: (_, row) => (
         <Typography.Text style={{ fontSize: 12 }}>
@@ -78,6 +78,7 @@ export function SensorHistoryPanel({
     {
       title: 'Nhiệt độ',
       key: 'temperature',
+      className: 'mcms-iot-mono',
       width: 110,
       align: 'right',
       render: (_, row) =>
@@ -92,6 +93,7 @@ export function SensorHistoryPanel({
     {
       title: 'Độ ẩm',
       key: 'humidity',
+      className: 'mcms-iot-mono',
       width: 100,
       align: 'right',
       render: (_, row) =>
@@ -108,15 +110,15 @@ export function SensorHistoryPanel({
       align: 'center',
       render: (_, row) =>
         row.ok ? (
-          <Tag color="success">OK</Tag>
+          <StatusBadge tone="ok"  label={<>OK</>} />
         ) : (
-          <Tag color="warning">Sai số</Tag>
+          <StatusBadge tone="warning"  label={<>Sai số</>} />
         ),
     },
   ]
 
   return (
-    <Flex vertical gap={12}>
+    <Flex vertical gap={12} className="mcms-iot-view mcms-sensor-history">
       <Flex gap={12} wrap align="center">
         <Flex gap={6} align="center">
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -175,25 +177,19 @@ export function SensorHistoryPanel({
         </Button>
       </Flex>
 
-      <Table<IotHistoryReading>
+      <DataTable<IotHistoryReading>
         rowKey={(row) => row.id}
         columns={columns}
         dataSource={readings}
         loading={isLoading}
         size="small"
         pagination={{ pageSize: 10, showSizeChanger: false }}
-        scroll={{ x: 600 }}
-        locale={{
-          emptyText: (
-            <Empty
-              description={
+        scrollX={600}
+        emptyTitle={
                 isError
                   ? 'Không tải được lịch sử telemetry.'
                   : 'Chưa có dữ liệu lịch sử cho cảm biến này.'
               }
-            />
-          ),
-        }}
       />
     </Flex>
   )

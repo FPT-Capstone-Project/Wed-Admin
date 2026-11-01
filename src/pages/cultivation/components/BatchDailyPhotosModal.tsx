@@ -1,5 +1,7 @@
+import '../../../styles/media-industrial.css'
+import { MetadataBadge } from '../../../shared/ui'
 import { LeftOutlined, PictureOutlined, RightOutlined } from '@ant-design/icons'
-import { Button, Empty, Modal, Tag, Typography } from 'antd'
+import { Button, Empty, Modal, Typography } from 'antd'
 import dayjs from 'dayjs'
 import { useEffect, useMemo, useState } from 'react'
 import type { CultivationBatch } from '../../../types/cultivation.types'
@@ -202,7 +204,7 @@ export function BatchDailyPhotosModal({
 
         {/* Label trên ảnh */}
         <div className="batch-daily-viewer-label">
-          <Tag color={activeStage.color}>{activeStage.name}</Tag>
+          <MetadataBadge label={<>{activeStage.name}</>} />
           <strong>
             Ngày {activeDayIndex} / {snapshots.length} —{' '}
             {dayjs(activeSnapshot?.timestamp).format('DD/MM/YYYY HH:mm')}

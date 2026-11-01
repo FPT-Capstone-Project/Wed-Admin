@@ -2,33 +2,42 @@ import { useMemo } from 'react'
 import { EyeOutlined } from '@ant-design/icons'
 import {
   Alert,
+  Button,
   Empty,
   Flex,
-  Table,
   Tooltip,
   Typography,
 } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { useSettingStore } from '../../../stores/setting.store'
+import { useThresholdProfiles } from '../../../features/settings/hooks/useThresholdProfiles'
 import type { MushroomThresholdProfile } from '../../../types/setting.types'
 import type { SemanticTone } from '../../../app/theme/tokens'
-import { StatusBadge } from '../../../shared/ui'
+import { DataTable, MetadataBadge, StatusBadge } from '../../../shared/ui'
 
 interface ThresholdProfileTabProps {
-  visibleMushroomTypes?: string[]
+  /**
+   * Chỉ hiển thị các hồ sơ của những giống nấm trong tập id này.
+   *
+   * ⚠ Lọc theo **id** (`mushroom_type_id`), KHÔNG theo tên — tên là dữ liệu
+   *   người dùng tự nhập trong DB nên so khớp chuỗi rất dễ vỡ.
+   *
+   * `null` = không lọc (admin / operator xem toàn bộ).
+   */
+  visibleMushroomTypeIds?: Set<number> | null
+  /** Tổng số hồ sơ trong hệ thống (dùng cho thông báo). */
+  profileCount?: number
 }
 
 /**
  * Ô hiển thị một dải min–max chuẩn hoá bằng StatusBadge.
  *
- * `null` ở cả hai đầu → giống nấm **không đặt ngưỡng** cho chỉ số này
+ * `null` ở cả hai đầu → giống nấm **chưa đặt ngưỡng** cho chỉ số này
  * (không phải thiếu dữ liệu) → hiện "—".
  */
 function RangeCell({
   min,
   max,
   unit,
-  tone,
 }: {
   min: number | null
   max: number | null
@@ -40,10 +49,16 @@ function RangeCell({
   }
 
   return (
-    <StatusBadge
-      tone={tone}
-      label={`${min ?? '—'} – ${max ?? '—'} ${unit}`}
-    />
+    <div style={{
+      display: 'grid', gap: 4, padding: '6px 8px',
+      border: '1px solid var(--mcms-border)', borderRadius: 6,
+      background: 'var(--mcms-surface)',
+      fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+      fontVariantNumeric: 'tabular-nums', fontSize: 12,
+    }}>
+      <span><span style={{ color: 'var(--mcms-text-muted)' }}>Min </span>{min ?? '—'} {unit}</span>
+      <span><span style={{ color: 'var(--mcms-text-muted)' }}>Max </span>{max ?? '—'} {unit}</span>
+    </div>
   )
 }
 
@@ -55,20 +70,31 @@ function RangeCell({
  *
  * Vì vậy bảng không có cột "Hành động" và không có nút "Thêm giống nấm" —
  * chỉ hiển thị dải ngưỡng đang áp dụng để admin theo dõi.
+ *
+ * ⚠ Nguồn dữ liệu: **Database** (qua `useThresholdProfiles`).
+ *   - Tên giống nấm → `mushroom_types.name` (nguyên bản, không dịch).
+ *   - Dải ngưỡng     → `mushroom_conditions`.
  */
 export function ThresholdProfileTab({
-  visibleMushroomTypes,
+  visibleMushroomTypeIds,
+  profileCount,
 }: ThresholdProfileTabProps) {
-  const profiles = useSettingStore((state) => state.thresholdProfiles)
+  const {
+    data: profiles = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+  } = useThresholdProfiles()
 
   const visibleProfiles = useMemo(
     () =>
-      visibleMushroomTypes
+      visibleMushroomTypeIds
         ? profiles.filter((profile) =>
-            visibleMushroomTypes.includes(profile.mushroomType),
+            visibleMushroomTypeIds.has(profile.mushroomTypeId),
           )
         : profiles,
-    [profiles, visibleMushroomTypes],
+    [profiles, visibleMushroomTypeIds],
   )
 
   const columns: TableColumnsType<MushroomThresholdProfile> = [
@@ -76,17 +102,18 @@ export function ThresholdProfileTab({
       title: 'Tên giống nấm',
       dataIndex: 'mushroomType',
       key: 'mushroomType',
-      width: 220,
+      width: 240,
       render: (value: string, profile) => (
         <Flex vertical gap={4}>
           <Typography.Text strong>{value}</Typography.Text>
           <Flex gap={4} wrap>
-            {profile.isDefault && <StatusBadge tone="warning" label="Mặc định" />}
-            <StatusBadge tone="info" label={`Gói ${profile.cycleWeeks ?? 1} tuần`} />
+            <MetadataBadge label={`Gói ${profile.cycleWeeks} tuần`} />
           </Flex>
-          <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-            {profile.name}
-          </Typography.Text>
+          {profile.description && (
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              {profile.description}
+            </Typography.Text>
+          )}
         </Flex>
       ),
     },
@@ -117,14 +144,14 @@ export function ThresholdProfileTab({
       ),
     },
     {
-      title: 'Ẩm giá thể (%)',
-      key: 'soilMoisture',
+      title: 'CO₂ (ppm)',
+      key: 'co2',
       width: 160,
       render: (_, profile) => (
         <RangeCell
-          min={profile.soilMoistureMin}
-          max={profile.soilMoistureMax}
-          unit="%"
+          min={profile.co2Min}
+          max={profile.co2Max}
+          unit="ppm"
           tone="ok"
         />
       ),
@@ -157,7 +184,7 @@ export function ThresholdProfileTab({
             Việc đặt / sửa ngưỡng do nhân viên thực hiện trên mobile app.
           </Typography.Text>
         }
-        style={{ marginBottom: 16, borderRadius: 10 }}
+        style={{ marginBottom: 16, borderRadius: 6, borderColor: 'var(--mcms-border)', background: 'var(--mcms-surface-muted)' }}
       />
 
       <Flex
@@ -172,27 +199,56 @@ export function ThresholdProfileTab({
             Thông số canh tác theo giống nấm
           </Typography.Title>
           <Typography.Text type="secondary">
-            Dải nhiệt độ, độ ẩm và ẩm giá thể áp dụng cho relay AUTO và
-            cảnh báo cảm biến
+            Dải nhiệt độ, độ ẩm và CO₂ áp dụng cho relay AUTO và cảnh báo
+            cảm biến
           </Typography.Text>
         </div>
 
-        <StatusBadge
-          tone="neutral"
-          label="Chỉ xem — nhân viên thiết lập trên mobile app"
-        />
+        <Flex gap={8} align="center" wrap>
+          {visibleMushroomTypeIds ? (
+            <MetadataBadge
+              label={`${visibleProfiles.length}/${profileCount ?? visibleProfiles.length} giống nấm bạn đang thuê`}
+            />
+          ) : null}
+          <MetadataBadge
+            label="Chỉ xem — nhân viên thiết lập trên mobile app"
+          />
+          <Button
+            size="small"
+            onClick={() => {
+              void refetch()
+            }}
+            loading={isLoading}
+          >
+            Tải lại
+          </Button>
+        </Flex>
       </Flex>
 
-      <Table<MushroomThresholdProfile>
-        rowKey="id"
-        columns={columns}
-        dataSource={visibleProfiles}
-        pagination={false}
-        scroll={{ x: 1140 }}
-        locale={{
-          emptyText: <Empty description="Không có hồ sơ phù hợp" />,
-        }}
-      />
+      {isError ? (
+        <Empty
+          description={
+            <Flex vertical align="center" gap={4}>
+              <Typography.Text type="danger">
+                Không tải được hồ sơ vi khí hậu.
+              </Typography.Text>
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {error?.message ?? 'Lỗi không xác định.'}
+              </Typography.Text>
+            </Flex>
+          }
+        />
+      ) : (
+        <DataTable<MushroomThresholdProfile>
+          rowKey="mushroomTypeId"
+          columns={columns}
+          dataSource={visibleProfiles}
+          loading={isLoading}
+          pagination={false}
+          scrollX={1140}
+          emptyTitle="Không có hồ sơ phù hợp"
+        />
+      )}
     </div>
   )
 }

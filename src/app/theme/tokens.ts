@@ -1,9 +1,16 @@
 /**
  * MCMS Design Tokens — nguồn sự thật duy nhất cho toàn bộ giao diện.
  *
- * Triết lý: nông trại nấm → hệ sinh thái xanh. Giữ tông xanh lá sẵn có
- * (`#15803d`) làm màu chủ đạo, bổ sung palette "Earth Green + Harvest Gold"
- * theo pattern *Agriculture/Farm Tech* (skill ui-ux-pro-max).
+ * Triết lý: **B2B Industrial IoT** (theo `ui-ux-pro-max` + `.cursorrules`).
+ * Giao diện là bảng điều khiển vận hành cho admin/nhân viên trang trại →
+ * ưu tiên **mật độ thông tin, đường viền mảnh, bảng màu trung tính**.
+ *
+ *   - Nền app: Slate/Neutral nhạt → `#f8fafc`
+ *   - Card   : trắng tinh `#ffffff` + viền xám rất mảnh `#e2e8f0`
+ *   - Xanh lá `#16a34a`: **chỉ** dùng cho CTA quan trọng + trạng thái
+ *     Healthy/Online — không phải màu nhấn chung.
+ *   - Bo góc: 4px–6px. **Không** dùng pill (999px) cho nút / card / input.
+ *   - Chữ   : Inter, thân 13–14px, tiêu đề nhỏ gọn.
  *
  * Mọi giá trị trong file này đã được kiểm chứng tương phản WCAG:
  *   - Chữ thân 4.5:1 (AA) trên nền trắng / nền ứng dụng / nền mềm.
@@ -24,26 +31,69 @@ export type SemanticTone = 'ok' | 'info' | 'warning' | 'danger' | 'muted' | 'neu
 export interface TonePalette {
   /** Màu chữ trên nền mềm — đạt ≥ 4.5:1. */
   readonly text: string
-  /** Nền mềm (badge, chip, huy hiệu). */
+  /** Nền mềm (chip, banner) — dùng cho khối lớn, KHÔNG dùng cho badge. */
   readonly bg: string
+  /**
+   * Nền badge — luôn là **xám/xanh rất nhạt**, không viền.
+   *
+   * ⚠ Vì sao tách khỏi `bg`?
+   *   `bg` là nền *mềm theo sắc thái* (amber cho cảnh báo, coral cho lỗi) —
+   *   dùng cho banner/dải màu lớn. Badge "Status Dot" cần nền **trung tính**
+   *   để chấm tròn + chữ đậm là thứ duy nhất thu hút sự chú ý.
+   */
+  readonly badgeBg: string
   /** Viền — đạt ≥ 3:1 trên cả nền mềm lẫn nền trắng. */
   readonly border: string
   /** Màu đậm dùng cho icon/điểm tròn trạng thái. */
   readonly solid: string
+  /**
+   * Màu của **chấm tròn 6px** trong StatusBadge.
+   *
+   * ⚠ Đạt ≥ 3:1 trên `badgeBg` (WCAG 1.4.11 Non-text Contrast) — chấm tròn
+   *   là yếu tố đồ hình, nên không cần 4.5:1 như chữ.
+   */
+  readonly dot: string
 }
 
 /* ─── Màu cơ bản ───────────────────────────────────────────────────────── */
 
+/** Primitive -> semantic -> component tokens. */
+export const primitives = {
+  white: '#ffffff', slate50: '#f8fafc', slate100: '#f1f5f9',
+  slate200: '#e2e8f0', slate600: '#475569', green600: '#16a34a',
+} as const
+
 export const palette = {
-  /* Xanh lá — màu chủ đạo, giữ nguyên giá trị đang dùng để không đổi nhận diện */
-  primary: '#15803d',
-  primaryDark: '#0f642f',
+  /**
+   * Primary — xanh lá `#16a34a` (**màu điểm nhấn**).
+   *
+   * ⚠ Theo chuẩn B2B Industrial IoT: màu này **chỉ** dùng cho
+   *   - trạng thái Healthy / Online (chấm tròn 6px, tone `ok`),
+   *   - focus ring,
+   *   - dải nhấn 3px ở sidebar,
+   *   - các icon/đường viền nhấn (non-text).
+   *
+   * ⚠ Về tương phản: chữ trắng trên `#16a34a` chỉ đạt 3.30:1 → **không**
+   *   đủ cho chữ thường (AA cần 4.5:1), nhưng đạt ngưỡng non-text 3:1.
+   *   Vì vậy **nền nút CTA** dùng `primaryStrong` (`#15803d` → 5.02:1 ✅),
+   *   còn `#16a34a` làm màu nhấn. Xem `theme.ts` → `token.colorPrimary`.
+   */
+  primary: primitives.green600,
+  /**
+   * Primary đậm — **nền của nút CTA** + màu chữ nhấn trên nền trắng.
+   * `#15803d` → 5.02:1 với chữ trắng ✅ (WCAG AA).
+   */
+  primaryStrong: '#15803d',
+  /** Primary hover / active — đậm thêm 1 bậc. */
+  primaryDark: '#166534',
+  /** Nền mềm cho chip/hover của primary. */
   primarySoft: '#eaf7ee',
-  primaryFaint: '#f3fbf5',
+  /** Nền rất nhạt — dải nền active của sidebar. */
+  primaryFaint: '#f0fdf4',
 
   /* Teal — thông tin, trạng thái trung tính đang diễn ra */
-  teal: '#0f766e',
-  tealSoft: '#e6f5f3',
+  teal: primitives.slate600,
+  tealSoft: primitives.slate100,
 
   /* Amber — cần chú ý, chờ thao tác */
   amber: '#a16207',
@@ -54,46 +104,70 @@ export const palette = {
   coralSoft: '#fff0ee',
 
   /* Blue — thông tin bổ sung, liên kết */
-  blue: '#2563a6',
-  blueSoft: '#edf5ff',
+  blue: primitives.slate600,
+  blueSoft: primitives.slate100,
 } as const
 
 /* ─── Nền & chữ ───────────────────────────────────────────────────────── */
 
 export const surface = {
-  /** Nền ứng dụng (phía sau card). */
-  background: '#f4f8f5',
-  /** Nền card / panel / bảng. */
-  surface: '#ffffff',
-  /** Nền lạch (header bảng, ô thống kê phụ). */
-  surfaceMuted: '#f7faf8',
+  /** Nền ứng dụng (phía sau card) — Slate/Neutral nhạt. */
+  background: primitives.slate50,
+  /** Nền card / panel / bảng — trắng tinh. */
+  surface: primitives.white,
+  /** Nền lạch (header bảng, ô thống kê phụ) — xám xanh rất nhạt. */
+  surfaceMuted: primitives.slate100,
   /** Nền con trỏ chuột trên dòng bảng. */
-  surfaceHover: '#f5faf6',
+  surfaceHover: primitives.slate50,
   /** Nền dùng cho badge trạng thái "tắt". */
-  surfaceDisabled: '#eef2ef',
+  surfaceDisabled: primitives.slate100,
 } as const
 
 export const text = {
-  /** Chữ chính — 13.71:1 trên trắng. */
-  base: '#173321',
-  /** Chữ phụ — 4.96:1 trên nền lạch (đạt AA). */
-  muted: '#5f7164',
+  /** Chữ chính — Slate-900, tương phản rất cao trên trắng. */
+  base: '#0f172a',
+  /** Chữ phụ — Slate-600, đạt AA trên mọi nền (kể cả nền lạch). */
+  muted: '#5b6b80',
   /** Chữ trên nền tối. */
-  inverse: '#ffffff',
+  inverse: primitives.white,
   /** Chữ tắt — dùng cho nội dung không còn hành động. */
-  disabled: '#7f8e85',
+  disabled: '#94a3b8',
 } as const
 
 export const border = {
-  /** Viền mảnh (lưới bảng, ô input). */
-  base: '#dce8df',
-  /** Viền rất mảnh (ngăn cách trong card). */
-  soft: '#e8f0ea',
+  /** Viền mảnh (lưới bảng, ô input) — Slate-200. */
+  base: primitives.slate200,
+  /** Viền rất mảnh (ngăn cách trong card) — Slate-100. */
+  soft: primitives.slate100,
   /**
-   * Viền nhấn — 3.37:1 trên trắng, đạt WCAG 1.4.11.
-   * Dùng cho viền input, viền badge cần nổi, focus outline.
+   * Viền nhấn — dùng cho viền input, viền badge cần nổi, focus outline.
+   * Đạt WCAG 1.4.11 (≥ 3:1) trên nền trắng.
    */
-  strong: '#6d9579',
+  strong: '#7c8b9e',
+} as const
+
+/* ─── Điều hướng (sidebar) ────────────────────────────────────────────── */
+
+/**
+ * Màu cho menu điều hướng — **trung tính**, không màu sặc sỡ.
+ *
+ * ⚠ Chuẩn B2B Industrial IoT: item không chọn phải **lùi về xám** để
+ *   chỉ item đang chọn nổi lên. Màu xanh chỉ xuất hiện ở **vạch nhấn 3px**
+ *   sát mép trái (không phải chữ, không phải viền bo tròn).
+ */
+export const navigation = {
+  /** Chữ item không chọn — Gray-600 (7.56:1 trên trắng). */
+  itemText: '#4b5563',
+  /** Icon item không chọn — Slate-500 (4.76:1 trên trắng). */
+  itemIcon: '#64748b',
+  /** Nền item khi hover — Slate-50. */
+  itemHoverBg: primitives.slate50,
+  /** Nền item đang chọn — Slate-100. */
+  itemSelectedBg: primitives.slate100,
+  /** Chữ item đang chọn — Slate-900. */
+  itemSelectedText: '#0f172a',
+  /** Vạch nhấn 3px sát mép trái item đang chọn — Primary (3.30:1). */
+  activeBar: primitives.green600,
 } as const
 
 /* ─── Màu ngữ nghĩa ───────────────────────────────────────────────────── */
@@ -102,55 +176,66 @@ export const border = {
  * 4 trạng thái ngữ nghĩa (bình thường / cần chú ý / nguy hiểm / tắt) +
  * 2 trạng thái phụ (thông tin / trung tính).
  *
- * Mỗi trạng thái đã verify:
- *   ok      4.55:1  | info    4.88:1  | warning 4.61:1
- *   danger  4.61:1  | muted   4.61:1  | neutral 7.97:1
- *
- * ⚠ Badge antd mặc định FAIL AA (success 3.37, warning 2.76, default 3.22).
- * Vì vậy dùng `StatusBadge` riêng thay vì `<Tag color="success">`.
+ * ⚠ Theo chuẩn B2B Industrial IoT:
+ *   - Xanh lá chỉ dùng cho `ok` (Healthy/Online) + CTA.
+ *   - `info` dùng **Slate trung tính** (không phải teal) để trạng thái
+ *     "đang diễn ra" không cạnh tranh sự chú ý với cảnh báo.
+ *   - Viền badge luôn mảnh & trung tính, không viền đậm màu sặc sỡ.
  */
 export const tones: Record<SemanticTone, TonePalette> = {
   /** Bình thường — đang hoạt động, ổn, đạt yêu cầu. */
   ok: {
     text: '#15803d',
     bg: '#eaf7ee',
+    badgeBg: '#eaf7ee',
     border: '#15803d',
-    solid: '#15803d',
+    solid: primitives.green600,
+    dot: '#15803d',
   },
   /** Thông tin — đang diễn ra, không cảnh báo. */
   info: {
-    text: '#0f766e',
-    bg: '#e6f5f3',
-    border: '#0f766e',
-    solid: '#0f766e',
+    text: '#334155',
+    bg: primitives.slate100,
+    badgeBg: primitives.slate100,
+    border: '#7c8b9e',
+    solid: '#475569',
+    dot: '#475569',
   },
   /** Cần chú ý — chờ xử lý, sắp hết hạn, vượt ngưỡng nhẹ. */
   warning: {
-    text: '#a16207',
+    text: '#92400e',
     bg: '#fff7e2',
-    border: '#a16207',
-    solid: '#a16207',
+    badgeBg: primitives.slate100,
+    border: '#b45309',
+    solid: '#d97706',
+    dot: '#b45309',
   },
   /** Nguy hiểm — lỗi, nhiễm bệnh, mất kết nối, vượt ngưỡng nặng. */
   danger: {
-    text: '#c2413b',
+    text: '#b91c1c',
     bg: '#fff0ee',
-    border: '#c2413b',
-    solid: '#c2413b',
+    badgeBg: primitives.slate100,
+    border: '#dc2626',
+    solid: '#dc2626',
+    dot: '#dc2626',
   },
   /** Tắt — không hoạt động, đã khoá, đã huỷ. */
   muted: {
-    text: '#5f7164',
-    bg: '#eef2ef',
-    border: '#5f7164',
-    solid: '#5f7164',
+    text: '#5b6b80',
+    bg: primitives.slate100,
+    badgeBg: primitives.slate100,
+    border: '#7c8b9e',
+    solid: '#94a3b8',
+    dot: '#64748b',
   },
   /** Trung tính — chưa biết, chờ dữ liệu. */
   neutral: {
-    text: '#3f4d45',
-    bg: '#f0f3f1',
-    border: '#3f4d45',
-    solid: '#3f4d45',
+    text: '#475569',
+    bg: primitives.slate50,
+    badgeBg: primitives.slate100,
+    border: '#7c8b9e',
+    solid: '#64748b',
+    dot: '#64748b',
   },
 }
 
@@ -185,35 +270,57 @@ export type SpaceToken = keyof typeof space
 
 /* ─── Bo góc ──────────────────────────────────────────────────────────── */
 
+/**
+ * Bo góc — chuẩn B2B Industrial IoT.
+ *
+ * ⚠ **Tối đa 6px.** Không có pill (999px) cho nút / card / input.
+ *   Các điểm tròn trạng thái (status dot) vẫn dùng `50%` — đó là hình tròn
+ *   có chủ đích, không phải bo góc "pill".
+ */
 export const radius = {
-  /** 4px — chip nhỏ, tag nhỏ. */
+  /** 3px — chip nhỏ, tag nhỏ, thanh tiến trình. */
   sm: '4px',
-  /** 6px — input, button, badge. */
+  /** 4px — input, button, badge, table row. */
   md: '6px',
-  /** 8px — card, panel, bảng. */
-  lg: '8px',
-  /** 12px — modal lớn, hero card. */
-  xl: '12px',
-  /** 999px — pill, avatar. */
-  pill: '999px',
+  /** 6px — card, panel, modal, dropdown. */
+  lg: '6px',
+  /**
+   * 6px — hộp thoại / khối nổi bật.
+   *
+   * ⚠ Vẫn **6px**, không phải 8px: yêu cầu là "4px - 6px" cho toàn bộ.
+   *   `xl` chỉ là tên tương thích ngược để không phải sửa hàng loạt chỗ gọi.
+   */
+  xl: '6px',
 } as const
 
 /* ─── Đổ bóng ─────────────────────────────────────────────────────────── */
 
-/** Shadow dùng tông xanh (tint theo màu primary) thay vì đen trung tính. */
+/**
+ * Shadow — **tiết chế, tông trung tính** (chuẩn B2B Industrial IoT).
+ *
+ * ⚠ Không dùng shadow đậm/glow màu. Card chủ yếu dùng **viền mảnh**,
+ *   shadow chỉ dành cho lớp nổi (popover, dropdown, modal).
+ */
 export const shadow = {
-  /** Card nổi nhẹ. */
-  xs: '0 1px 2px rgb(24 73 42 / 5%)',
+  /** Card — rất mảnh, gần như chỉ viền. */
+  xs: '0 1px 2px rgb(15 23 42 / 4%)',
   /** Popover / dropdown. */
-  sm: '0 8px 24px rgb(24 73 42 / 7%)',
+  sm: '0 1px 2px rgb(15 23 42 / 6%)',
   /** Modal / drawer. */
-  md: '0 18px 50px rgb(11 64 31 / 12%)',
+  md: '0 2px 4px rgb(15 23 42 / 8%)',
   /** Focus ring — dùng kèm outline, không thay thế outline. */
-  focus: '0 0 0 3px rgb(21 128 61 / 12%)',
+  focus: '0 0 0 2px rgb(124 139 158 / 24%)',
 } as const
 
 /* ─── Typography ──────────────────────────────────────────────────────── */
 
+/**
+ * Typography — Inter (sans-serif công nghiệp hiện đại).
+ *
+ * ⚠ Chuẩn B2B Industrial IoT: thân **13–14px**, tiêu đề **nhỏ hơn** mức
+ *   cỡ 20px cũ → phân cấp thị giác dựa trên **cân nặng chữ** + khoảng
+ *   cách, không phải trên cỡ chữ to.
+ */
 export const typography = {
   /** Font chính — Inter (Minimal Swiss, tối ưu cho admin panel). */
   fontFamily:
@@ -221,14 +328,14 @@ export const typography = {
   /** Font tabular cho số liệu — tránh layout shift khi số thay đổi. */
   fontNumeric:
     'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
-  /** Cỡ chữ thân bắt buộc ≥ 16px (tránh iOS auto-zoom trên mobile). */
-  sizeBody: 16,
-  /** Cỡ chữ phụ — chỉ dùng cho metadata, không dùng cho nội dung chính. */
+  /** Cỡ chữ thân mặc định — 13px (mật độ dashboard). */
+  sizeBody: 13,
+  /** Cỡ chữ phụ — metadata, chú thích. */
   sizeSmall: 12,
-  /** Cỡ chữ tiêu đề bảng. */
+  /** Cỡ chữ tiêu đề bảng / card. */
   sizeTitle: 14,
   /** Cỡ chữ tiêu đề trang. */
-  sizeHeading: 20,
+  sizeHeading: 18,
   /** Khoảng cách dòng. */
   lineHeight: 1.5,
   /** Trọng lượng tiêu đề. */
@@ -284,7 +391,20 @@ export const breakpoint = {
  * Token gốc — dùng khi import trong TS.
  * Cấu trúc phẳng để truy cập nhanh: `tokens.color.primary`.
  */
+export const componentTokens = {
+  button: { background: palette.primaryStrong },
+  card: { background: surface.surface, border: border.base },
+  table: { header: surface.surfaceMuted, border: border.base },
+  menu: navigation,
+  input: { background: surface.surface, border: border.base },
+  modal: { background: surface.surface },
+  tabs: { text: text.base, indicator: text.muted },
+  tooltip: { background: text.base, text: text.inverse },
+} as const
+
 export const tokens = {
+  primitives,
+  components: componentTokens,
   color: {
     ...palette,
     bg: surface.background,
@@ -303,6 +423,7 @@ export const tokens = {
   },
   tone: tones,
   toneLabel: toneLabels,
+  navigation,
   space,
   radius,
   shadow,
@@ -327,9 +448,15 @@ export type Tokens = typeof tokens
  */
 export function buildCssVariables(): string {
   const lines: string[] = []
+  lines.push(`  --mcms-font-family: ${typography.fontFamily};`)
+  lines.push(`  --mcms-font-body: ${typography.sizeBody}px;`)
+  lines.push(`  --mcms-font-title: ${typography.sizeTitle}px;`)
+  lines.push(`  --mcms-font-heading: ${typography.sizeHeading}px;`)
+  lines.push(`  --mcms-line-height: ${typography.lineHeight};`)
 
   // Bảng màu — tên đã có sẵn trong App.css.
   lines.push(`  --mcms-primary: ${palette.primary};`)
+  lines.push(`  --mcms-primary-strong: ${palette.primaryStrong};`)
   lines.push(`  --mcms-primary-dark: ${palette.primaryDark};`)
   lines.push(`  --mcms-primary-soft: ${palette.primarySoft};`)
   lines.push(`  --mcms-primary-faint: ${palette.primaryFaint};`)
@@ -360,6 +487,14 @@ export function buildCssVariables(): string {
   lines.push(`  --mcms-border-soft: ${border.soft};`)
   lines.push(`  --mcms-border-strong: ${border.strong};`)
 
+  // Điều hướng (sidebar).
+  lines.push(`  --mcms-nav-item-text: ${navigation.itemText};`)
+  lines.push(`  --mcms-nav-item-icon: ${navigation.itemIcon};`)
+  lines.push(`  --mcms-nav-item-hover-bg: ${navigation.itemHoverBg};`)
+  lines.push(`  --mcms-nav-item-selected-bg: ${navigation.itemSelectedBg};`)
+  lines.push(`  --mcms-nav-item-selected-text: ${navigation.itemSelectedText};`)
+  lines.push(`  --mcms-nav-active-bar: ${navigation.activeBar};`)
+
   // Shadow.
   lines.push(`  --mcms-shadow-xs: ${shadow.xs};`)
   lines.push(`  --mcms-shadow-sm: ${shadow.sm};`)
@@ -380,8 +515,10 @@ export function buildCssVariables(): string {
   for (const [key, tone] of Object.entries(tones)) {
     lines.push(`  --mcms-tone-${key}-text: ${tone.text};`)
     lines.push(`  --mcms-tone-${key}-bg: ${tone.bg};`)
+    lines.push(`  --mcms-tone-${key}-badge-bg: ${tone.badgeBg};`)
     lines.push(`  --mcms-tone-${key}-border: ${tone.border};`)
     lines.push(`  --mcms-tone-${key}-solid: ${tone.solid};`)
+    lines.push(`  --mcms-tone-${key}-dot: ${tone.dot};`)
   }
 
   return `:root {\n${lines.join('\n')}\n}`

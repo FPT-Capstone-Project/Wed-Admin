@@ -1,3 +1,4 @@
+import '../../../styles/catalog-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
@@ -16,7 +17,6 @@ import {
   Popconfirm,
   Segmented,
   Space,
-  Table,
   Tooltip,
   Typography,
 } from 'antd'
@@ -30,8 +30,7 @@ import {
   useRentalPackages,
   useUpdateRentalPackage,
 } from '../../../features/packages/hooks/useRentalPackages'
-import { translatePackageName } from '../../../shared/i18n/translate'
-import { ActionButton, StatusBadge } from '../../../shared/ui'
+import { ActionButton, StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
 import { RentalPackageFormModal } from './RentalPackageFormModal'
 
 const VND = new Intl.NumberFormat('vi-VN', {
@@ -138,7 +137,8 @@ export function RentalPackageCatalog({
       key: 'name',
       width: 320,
       render: (_, record) => {
-        const name = translatePackageName(record.package_name)
+        // Hiển thị nguyên bản tên gói thuê từ DB (`rental_packages.package_name`).
+        const name = record.package_name
         return (
           <Flex vertical gap={2} style={{ minWidth: 0 }}>
             <Typography.Text strong ellipsis={{ tooltip: name }}>
@@ -162,11 +162,7 @@ export function RentalPackageCatalog({
       key: 'duration_days',
       width: 140,
       render: (_, record) => (
-        <StatusBadge
-          tone="info"
-          label={`${record.duration_days} ngày`}
-          title="Thời lượng gói thuê tính bằng ngày."
-        />
+        <MetadataBadge label={`${record.duration_days} ngày`} title="Thời lượng gói thuê tính bằng ngày." />
       ),
     },
     {
@@ -210,7 +206,7 @@ export function RentalPackageCatalog({
             type="button"
             onClick={() => handleToggleStatus(record)}
             disabled={isToggling(record.package_id)}
-            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} gói ${translatePackageName(record.package_name)}`}
+            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} gói ${record.package_name}`}
             style={{
               padding: 0,
               border: 0,
@@ -236,7 +232,7 @@ export function RentalPackageCatalog({
                 <ActionButton
                   icon={<EditOutlined />}
                   label="Sửa"
-                  description={`Sửa gói ${translatePackageName(record.package_name)}`}
+                  description={`Sửa gói ${record.package_name}`}
                   onClick={() => handleOpenEdit(record)}
                 />
 
@@ -251,7 +247,7 @@ export function RentalPackageCatalog({
                   <ActionButton
                     icon={<DeleteOutlined />}
                     label="Xóa"
-                    description={`Xóa gói ${translatePackageName(record.package_name)}`}
+                    description={`Xóa gói ${record.package_name}`}
                     variant="danger"
                   />
                 </Popconfirm>
@@ -331,14 +327,14 @@ export function RentalPackageCatalog({
       ) : filteredPackages.length === 0 && !isLoading ? (
         <Empty description="Chưa có gói thuê nào" />
       ) : (
-        <Table<RentalPackage>
+        <DataTable<RentalPackage>
           dataSource={filteredPackages}
           columns={columns}
           rowKey="package_id"
           loading={isLoading}
           pagination={false}
-          scroll={{ x: 900 }}
-          size="middle"
+          scrollX={900}
+          size="small"
         />
       )}
 

@@ -33,8 +33,7 @@ interface AuthShellProps {
 /**
  * Layout dùng chung cho các trang đăng ký / OTP / quên mật khẩu.
  *
- * Đơn giản: logo + brand ở top, card form canh giữa. Một chút ảnh hero
- * blur ở góc phải-bottom làm background atmosphere — không phân tâm.
+ * Logo ở đầu trang, card trắng có viền mảnh trên nền trung tính.
  *
  * Mobile: 1 cột. Tablet/desktop: card giãn ra tối đa 480px để dễ đọc.
  *
@@ -58,10 +57,9 @@ export function AuthShell({
   const hasError = Boolean(errorMessage)
 
   return (
-    <main className="auth-v2">
+    <main className="auth-v2 mcms-auth-shell">
       {/*
-        Background atmosphere: gradient theo token + hoạ tiết nhẹ.
-        KHÔNG dùng ảnh nền (ảnh cũ là sân bóng đá — không liên quan nông nghiệp).
+        Nền trung tính dùng chung token với giao diện quản trị.
       */}
       <div className="auth-v2-bg mcms-auth-bg" aria-hidden="true">
         <div className="auth-v2-bg-overlay" />

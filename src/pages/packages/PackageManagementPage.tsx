@@ -28,7 +28,7 @@ export function PackageManagementPage() {
           background: 'var(--mcms-surface)',
           borderRadius: 'var(--mcms-radius-xl)',
           border: '1px solid var(--mcms-border)',
-          padding: 20,
+          padding: 16,
         }}
       >
         <Tabs

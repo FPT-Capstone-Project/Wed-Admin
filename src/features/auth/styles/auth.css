@@ -27,24 +27,13 @@
   display: flex;
   min-height: 100dvh;
   overflow: hidden;
-  color: var(--mcms-text-inverse);
-  background:
-    radial-gradient(
-      115% 85% at 12% 8%,
-      color-mix(in srgb, var(--mcms-teal) 60%, transparent) 0%,
-      transparent 58%
-    ),
-    radial-gradient(
-      105% 75% at 92% 96%,
-      color-mix(in srgb, var(--mcms-primary) 72%, transparent) 0%,
-      transparent 60%
-    ),
-    linear-gradient(
-      155deg,
-      var(--mcms-primary-dark) 0%,
-      var(--mcms-primary) 52%,
-      var(--mcms-teal) 100%
-    );
+  color: var(--mcms-text);
+  /*
+   * Nền phẳng (không gradient) — chuẩn B2B Industrial IoT.
+   * Dải tông xanh đậm đủ tương phản cho chữ trắng.
+   */
+  background: var(--mcms-surface-muted);
+  border-right: 1px solid var(--mcms-border);
 }
 
 /* Hoạ tiết trang trại nấm & mạng cảm biến IoT */
@@ -53,28 +42,9 @@
   inset: 0;
   width: 100%;
   height: 100%;
-  color: var(--mcms-primary-soft);
-  opacity: 0.22;
+  color: var(--mcms-text-muted);
+  opacity: 0.14;
   pointer-events: none;
-}
-
-/* Vệt sáng mềm ở góc trên — tạo chiều sâu sang trọng */
-.mcms-login-brand::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(
-      70% 45% at 78% 12%,
-      color-mix(in srgb, var(--mcms-surface) 16%, transparent) 0%,
-      transparent 65%
-    ),
-    linear-gradient(
-      180deg,
-      transparent 45%,
-      color-mix(in srgb, var(--mcms-primary-dark) 55%, transparent) 100%
-    );
 }
 
 .mcms-login-brand-inner {
@@ -103,11 +73,9 @@
   align-items: center;
   gap: 10px;
   padding: 6px 16px 6px 8px;
-  border: 1px solid color-mix(in srgb, var(--mcms-surface) 24%, transparent);
-  border-radius: var(--mcms-radius-pill);
-  background: color-mix(in srgb, var(--mcms-surface) 14%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-lg);
+  background: var(--mcms-surface);
 }
 
 .mcms-login-brand-mark img {
@@ -127,21 +95,19 @@
   align-items: center;
   gap: 8px;
   padding: 6px 14px;
-  border-radius: var(--mcms-radius-pill);
-  background: color-mix(in srgb, var(--mcms-surface) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--mcms-surface) 20%, transparent);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  border-radius: var(--mcms-radius-md);
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
   font-size: 12px;
-  color: var(--mcms-text-inverse);
+  color: var(--mcms-text);
 }
 
 .mcms-telemetry-pulse {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--mcms-primary-soft);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--mcms-surface) 40%, transparent);
+  background: var(--mcms-text-muted);
+  box-shadow: none;
 }
 
 .mcms-login-brand-copy {
@@ -152,7 +118,7 @@
 
 .mcms-login-brand-eyebrow {
   margin: 0;
-  color: color-mix(in srgb, var(--mcms-primary-soft) 85%, transparent);
+  color: var(--mcms-text-muted);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -161,7 +127,7 @@
 
 .mcms-login-brand-title {
   margin: 0;
-  color: var(--mcms-text-inverse);
+  color: var(--mcms-text);
   font-size: clamp(30px, 3.5vw, 42px);
   font-weight: 700;
   line-height: 1.18;
@@ -172,13 +138,13 @@
 .mcms-login-brand-title em {
   font-style: normal;
   font-weight: 600;
-  color: color-mix(in srgb, var(--mcms-primary-soft) 92%, transparent);
+  color: var(--mcms-text-muted);
 }
 
 .mcms-login-brand-desc {
   margin: 0;
   max-width: 46ch;
-  color: color-mix(in srgb, var(--mcms-surface) 80%, transparent);
+  color: var(--mcms-text-muted);
   font-size: 15px;
   line-height: 1.6;
 }
@@ -196,17 +162,15 @@
   align-items: flex-start;
   gap: var(--mcms-space-3);
   padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, var(--mcms-surface) 18%, transparent);
+  border: 1px solid var(--mcms-border);
   border-radius: var(--mcms-radius-lg);
-  background: color-mix(in srgb, var(--mcms-surface) 9%, transparent);
-  backdrop-filter: blur(6px);
-  -webkit-backdrop-filter: blur(6px);
+  background: var(--mcms-surface);
 }
 
 .mcms-login-brand-feature > .anticon {
   flex: 0 0 auto;
   margin-top: 2px;
-  color: var(--mcms-primary-soft);
+  color: var(--mcms-text-muted);
   font-size: 18px;
 }
 
@@ -217,13 +181,13 @@
 }
 
 .mcms-login-brand-feature-text strong {
-  color: var(--mcms-text-inverse);
+  color: var(--mcms-text);
   font-size: 14px;
   font-weight: 650;
 }
 
 .mcms-login-brand-feature-text span {
-  color: color-mix(in srgb, var(--mcms-surface) 75%, transparent);
+  color: var(--mcms-text-muted);
   font-size: 13px;
   line-height: 1.5;
 }
@@ -236,13 +200,7 @@
   justify-content: center;
   min-height: 100dvh;
   padding: clamp(24px, 3.5vw, 56px);
-  background:
-    radial-gradient(
-      85% 55% at 100% 0%,
-      var(--mcms-primary-faint) 0%,
-      transparent 60%
-    ),
-    var(--mcms-background);
+  background: var(--mcms-background);
 }
 
 .login-card.mcms-login-card {
@@ -251,7 +209,7 @@
   border: 1px solid var(--mcms-border);
   border-radius: var(--mcms-radius-xl);
   background: var(--mcms-surface);
-  box-shadow: var(--mcms-shadow-md);
+  box-shadow: none;
 }
 
 .login-card.mcms-login-card > .ant-card-body {
@@ -265,15 +223,15 @@
 .login-card.mcms-login-card .login-card-title {
   margin: 0 0 var(--mcms-space-2) 0 !important;
   color: var(--mcms-text) !important;
-  font-size: 26px !important;
+  font-size: 22px !important;
   font-weight: 700 !important;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.2px;
 }
 
 .login-card.mcms-login-card .login-card-desc {
   margin: 0 !important;
   color: var(--mcms-text-muted);
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -303,8 +261,8 @@
 .login-form.mcms-login-form .ant-input-affix-wrapper-lg:focus,
 .login-form.mcms-login-form .ant-input-affix-wrapper-lg-focused,
 .login-form.mcms-login-form .ant-input-lg:focus {
-  border-color: var(--mcms-primary);
-  box-shadow: var(--mcms-shadow-focus);
+  border-color: var(--mcms-primary-strong);
+  box-shadow: none;
 }
 
 .login-remember-row {
@@ -312,11 +270,11 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--mcms-space-5);
-  font-size: 14px;
+  font-size: 13px;
 }
 
 .login-forgot {
-  color: var(--mcms-primary);
+  color: var(--mcms-primary-strong);
   text-decoration: none;
   font-weight: 500;
   transition: color var(--mcms-motion-fast);
@@ -330,14 +288,14 @@
 /* Nút chính — chiều cao tối thiểu 44px (WCAG 2.5.5 / khuyến nghị 44px). */
 .login-form.mcms-login-form .mcms-login-submit-btn,
 .login-form.mcms-login-form .ant-btn-lg {
-  min-height: 46px;
-  height: 46px;
-  font-size: 15px;
+  min-height: 44px;
+  height: 44px;
+  font-size: 14px;
   font-weight: 650;
   border-radius: var(--mcms-radius-md);
   background: var(--mcms-primary);
   border-color: var(--mcms-primary);
-  box-shadow: var(--mcms-shadow-xs);
+  box-shadow: none;
 }
 
 .login-form.mcms-login-form .mcms-login-submit-btn:hover,
@@ -358,23 +316,7 @@
 /* ─────────────────────── Auth shell (quên/đổi mật khẩu) ─────────────────────── */
 
 .auth-v2-bg.mcms-auth-bg {
-  background:
-    radial-gradient(
-      70% 55% at 84% 10%,
-      color-mix(in srgb, var(--mcms-primary-soft) 80%, transparent) 0%,
-      transparent 62%
-    ),
-    radial-gradient(
-      62% 48% at 8% 94%,
-      color-mix(in srgb, var(--mcms-teal-soft) 75%, transparent) 0%,
-      transparent 60%
-    ),
-    linear-gradient(
-      165deg,
-      var(--mcms-surface) 0%,
-      var(--mcms-primary-faint) 62%,
-      var(--mcms-background) 100%
-    );
+  background: var(--mcms-background);
 }
 
 .auth-v2-bg.mcms-auth-bg > .auth-v2-bg-overlay {
@@ -438,4 +380,19 @@
   .mcms-login-brand-title {
     font-size: 26px;
   }
+}
+
+.auth-v2.mcms-auth-shell .auth-v2-card {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+.auth-v2.mcms-auth-shell .auth-v2-step.is-active {
+  color: var(--mcms-text);
+  background: var(--mcms-surface-muted);
+}
+.auth-v2.mcms-auth-shell .auth-v2-step.is-active .auth-v2-step-index {
+  color: var(--mcms-text);
+  background: var(--mcms-surface);
 }

@@ -1,3 +1,5 @@
+import '../rentals-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import { Alert, App, Form, Input, Modal } from 'antd'
 import { useCompleteRental } from '../hooks/useRentals'
 
@@ -52,6 +54,12 @@ export function CompleteRentalModal({
       cancelText="Huỷ"
       confirmLoading={completeRental.isPending}
       destroyOnHidden
+
+      className="mcms-rental-modal"
+      footer={<><ActionButton icon={null} variant="text" size="middle" label="Huỷ" onClick={() => {
+        form.resetFields()
+        onClose()
+      }} /><ActionButton icon={null} variant="primary" size="middle" label="Xác nhận hoàn thành" loading={completeRental.isPending} onClick={() => void handleOk()} /></>}
     >
       <Alert
         type="warning"

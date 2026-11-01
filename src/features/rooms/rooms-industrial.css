@@ -1,0 +1,110 @@
+.mcms-rooms-view .ant-card,
+.tray-detail-drawer .ant-drawer-body,
+.tray-detail-drawer .ant-drawer-header,
+.tray-detail-drawer .ant-drawer-footer {
+  background: var(--mcms-surface);
+  box-shadow: none;
+}
+
+.mcms-room-rack .tray-card-btn,
+.mcms-room-rack .rack-tray-btn {
+  min-width: 0;
+}
+
+.tray-detail-drawer .ant-drawer-header {
+  border-bottom: 1px solid var(--mcms-border);
+}
+
+.tray-detail-drawer .ant-drawer-footer {
+  border-top: 1px solid var(--mcms-border);
+}
+
+.tray-log-note-modal .ant-modal-container,
+.tray-log-note-modal .ant-modal-content {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+
+.tray-log-note-modal .ant-modal-header {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--mcms-border);
+}
+
+.tray-log-note-modal .ant-modal-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--mcms-border);
+}
+
+.mcms-room-rack .tray-card-btn:hover,
+.mcms-room-rack .rack-tray-btn:hover {
+  box-shadow: none;
+  transform: none;
+}
+
+.mcms-room-rack .tray-card-btn:focus-visible,
+.mcms-room-rack .rack-tray-btn:focus-visible {
+  outline: 2px solid var(--mcms-border-strong);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.tray-admin-section .mcms-action-button.ant-btn,
+.tray-staff-workflow .mcms-action-button.ant-btn {
+  height: auto;
+  min-height: 32px;
+  padding: 6px 12px;
+  white-space: normal;
+  border-radius: var(--mcms-radius-sm);
+  box-shadow: none;
+}
+
+.tray-admin-section .mcms-action-button.ant-btn-text,
+.tray-staff-workflow .mcms-action-button.ant-btn-text {
+  color: var(--mcms-text);
+  border-color: transparent;
+  background: transparent;
+}
+
+.tray-admin-section .mcms-action-button.ant-btn-dangerous,
+.tray-staff-workflow .mcms-action-button.ant-btn-dangerous {
+  color: var(--mcms-tone-danger-text);
+  border-color: transparent;
+  background: transparent;
+}
+
+.tray-admin-section .mcms-action-button.ant-btn-primary,
+.tray-staff-workflow .mcms-action-button.ant-btn-primary {
+  background: var(--mcms-primary);
+  border-color: var(--mcms-primary);
+  color: var(--mcms-text-inverse);
+}
+
+.tray-admin-section .mcms-action-button.ant-btn-primary:hover:not(:disabled),
+.tray-staff-workflow .mcms-action-button.ant-btn-primary:hover:not(:disabled) {
+  background: var(--mcms-primary-strong);
+  border-color: var(--mcms-primary-strong);
+}
+
+.tray-staff-workflow .mcms-action-button.ant-btn:disabled {
+  color: var(--mcms-text-disabled);
+  background: var(--mcms-surface-muted);
+  border-color: transparent;
+}
+
+.tray-admin-section .tray-admin-alert,
+.tray-staff-workflow .staff-stage-alert,
+.tray-staff-workflow .staff-contact-panel,
+.tray-staff-workflow .staff-latest-log {
+  color: var(--mcms-text);
+  background: var(--mcms-surface-muted);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+
+.mcms-rooms-view .ant-table-small .ant-table-thead > tr > th,
+.mcms-rooms-view .ant-table-small .ant-table-tbody > tr > td {
+  padding: 8px 12px;
+}

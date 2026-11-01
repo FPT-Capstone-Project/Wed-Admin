@@ -1,3 +1,4 @@
+import '../../styles/media-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   FilterOutlined,
@@ -14,7 +15,7 @@ import {
 } from 'antd'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useCultivationStore } from '../../stores/cultivation.store'
-import { StatusBadge } from '../../shared/ui'
+import { MetadataBadge } from '../../shared/ui'
 import { CultivationBatchCard } from './components/CultivationBatchCard'
 import { BatchDailyPhotosModal } from './components/BatchDailyPhotosModal'
 import type {
@@ -149,11 +150,7 @@ export function CultivationManagementPage() {
           </Typography.Text>
         </div>
 
-        <StatusBadge
-          tone={canManage ? 'ok' : 'neutral'}
-          icon={<FilterOutlined />}
-          label={canManage ? 'Toàn quyền vận hành' : 'Chỉ xem mẻ của bạn'}
-        />
+        <MetadataBadge icon={<FilterOutlined />} label={canManage ? 'Toàn quyền vận hành' : 'Chỉ xem mẻ của bạn'} />
       </Flex>
 
       <Flex gap={12} wrap style={{ marginBottom: 20 }}>

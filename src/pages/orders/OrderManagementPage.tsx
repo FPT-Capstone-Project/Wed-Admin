@@ -1,3 +1,4 @@
+import '../../features/rentals/rentals-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   CreditCardOutlined,
@@ -33,6 +34,7 @@ import {
   PageHeader,
   StatCard,
   StatusBadge,
+  MetadataBadge,
   UserAvatar,
 } from '../../shared/ui'
 import type { SemanticTone } from '../../app/theme/tokens'
@@ -155,6 +157,7 @@ export function OrderManagementPage() {
       title: 'Mã đơn',
       dataIndex: 'orderCode',
       key: 'orderCode',
+      className: 'mcms-rental-mono',
       width: 200,
       render: (code: string) => (
         <Typography.Text code style={{ fontSize: 13 }}>
@@ -192,8 +195,8 @@ export function OrderManagementPage() {
             record.items.map((item, idx) => (
               <Flex key={idx} vertical gap={2}>
                 <Flex gap={4} align="center" wrap>
-                  <StatusBadge tone="ok" label={item.mushroomType} />
-                  <StatusBadge tone="info" label={`× ${item.weeks} tuần`} />
+                  <MetadataBadge label={item.mushroomType} />
+                  <MetadataBadge label={`× ${item.weeks} tuần`} />
                 </Flex>
                 <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                   ×{item.quantity} khay · {VND.format(item.unitPrice)}/khay/tuần
@@ -211,20 +214,12 @@ export function OrderManagementPage() {
       render: (_, record) => {
         if (record.deliveryMethod === 'PICKUP') {
           return (
-            <StatusBadge
-              tone="info"
-              label="Tự đến hái"
-              icon={<EnvironmentOutlined />}
-            />
+            <MetadataBadge label="Tự đến hái" icon={<EnvironmentOutlined />} />
           )
         }
         return (
           <Flex vertical gap={2}>
-            <StatusBadge
-              tone="warning"
-              label="Giao tận nhà"
-              icon={<HomeOutlined />}
-            />
+            <MetadataBadge label="Giao tận nhà" icon={<HomeOutlined />} />
             <Typography.Text
               type="secondary"
               style={{ fontSize: 11 }}
@@ -245,7 +240,7 @@ export function OrderManagementPage() {
         const paymentConfig = PAYMENT_STATUS_CONFIG[record.paymentStatus]
         return (
           <Flex vertical gap={2}>
-            <Typography.Text strong type="danger">
+            <Typography.Text strong className="mcms-rental-mono">
               {VND.format(amount)}
             </Typography.Text>
             <Typography.Text type="secondary" style={{ fontSize: 11 }}>
@@ -284,6 +279,7 @@ export function OrderManagementPage() {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
+      className: 'mcms-rental-mono',
       width: 140,
       render: (date: string) => (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -301,7 +297,7 @@ export function OrderManagementPage() {
           icon={<EyeOutlined />}
           label="Chi tiết"
           description={`Xem chi tiết đơn ${record.orderCode}`}
-          variant="default"
+          variant="text"
           size="small"
           onClick={() => setDetailOrder(record)}
         />
@@ -391,7 +387,7 @@ export function OrderManagementPage() {
         dataSource={filteredOrders}
         columns={columns}
         rowKey="id"
-        size="middle"
+        size="small"
         loading={isLoading}
         error={
           isError
@@ -414,8 +410,7 @@ export function OrderManagementPage() {
       />
 
       {/* ── Drawer chi tiết đơn (read-only) ───────────────────────────── */}
-      <Drawer
-        title={
+      <Drawer rootClassName="mcms-rental-drawer"         title={
           detailOrder ? (
             <Space>
               <Typography.Text code>{detailOrder.orderCode}</Typography.Text>
@@ -460,6 +455,7 @@ export function OrderManagementPage() {
                 },
                 {
                   key: 'createdAt',
+      className: 'mcms-rental-mono',
                   label: 'Ngày tạo',
                   children: DATE_FORMATTER.format(
                     new Date(detailOrder.createdAt),
@@ -470,18 +466,10 @@ export function OrderManagementPage() {
                   label: 'Nhận hàng',
                   children:
                     detailOrder.deliveryMethod === 'PICKUP' ? (
-                      <StatusBadge
-                        tone="info"
-                        label="Tự đến hái"
-                        icon={<EnvironmentOutlined />}
-                      />
+                      <MetadataBadge label="Tự đến hái" icon={<EnvironmentOutlined />} />
                     ) : (
                       <Flex vertical gap={2}>
-                        <StatusBadge
-                          tone="warning"
-                          label="Giao tận nhà"
-                          icon={<HomeOutlined />}
-                        />
+                        <MetadataBadge label="Giao tận nhà" icon={<HomeOutlined />} />
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                           {detailOrder.deliveryAddress ??
                             detailOrder.tenantAddress}
@@ -491,6 +479,7 @@ export function OrderManagementPage() {
                 },
                 {
                   key: 'tray',
+      className: 'mcms-rental-mono',
                   label: 'Khay được gán',
                   children: detailOrder.trayId ? (
                     <Typography.Text code>{detailOrder.trayId}</Typography.Text>

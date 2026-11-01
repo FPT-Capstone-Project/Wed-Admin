@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import '../../../styles/media-industrial.css'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Alert, Button, Modal, Radio, Space, Spin, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useImouPlayerToken } from '../hooks/useCameras'
@@ -21,6 +22,13 @@ interface CameraStreamModalProps {
   /** Camera đang xem; null → modal đóng. */
   camera: Camera | null
   onClose: () => void
+  /**
+   * Tiêu đề tuỳ chọn — ghi đè tiêu đề mặc định.
+   *
+   * Dùng khi modal được mở từ ngữ cảnh khác (vd trang "Thiết bị IoT" mở
+   * camera **theo tầng** ⇒ tiêu đề "Live — Tầng 1 · Camera hành lang").
+   */
+  title?: ReactNode
 }
 
 /** Channel mặc định: channel 0 */
@@ -35,6 +43,7 @@ export function CameraStreamModal({
   open,
   camera,
   onClose,
+  title,
 }: CameraStreamModalProps) {
   const hostRef = useRef<HTMLDivElement | null>(null)
   const playerRef = useRef<ImouPlayerInstance | null>(null)
@@ -229,16 +238,18 @@ export function CameraStreamModal({
     (isLoadingToken || isFetchingToken || (Boolean(kitToken) && isPlayerBooting))
 
   return (
-    <Modal
+    <Modal className="mcms-camera-stream-modal"
       title={
-        <span>
-          Live — {camera?.cameraName || camera?.cameraCode || 'Camera'}
-        </span>
+        title ?? (
+          <span>
+            Live — {camera?.cameraName || camera?.cameraCode || 'Camera'}
+          </span>
+        )
       }
       open={open}
       onCancel={onClose}
       footer={
-        <Button type="primary" onClick={onClose}>
+        <Button type="text" onClick={onClose}>
           Đóng
         </Button>
       }
@@ -307,7 +318,7 @@ export function CameraStreamModal({
                   setPlayerGeneration((gen) => gen + 1)
                 }}
                 optionType="button"
-                buttonStyle="solid"
+                buttonStyle="outline"
               >
                 <Radio.Button value={HD_STREAM_ID}>HD (Luồng 0)</Radio.Button>
                 <Radio.Button value={SD_STREAM_ID}>SD (Luồng 1)</Radio.Button>

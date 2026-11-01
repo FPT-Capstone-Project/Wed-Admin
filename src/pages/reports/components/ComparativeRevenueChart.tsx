@@ -1,3 +1,4 @@
+import '../../../styles/reports-users-industrial.css'
 import { memo, useMemo } from 'react'
 import {
   Bar,
@@ -63,7 +64,7 @@ function CustomTooltip({
         border: '1px solid var(--mcms-border)',
         borderRadius: 'var(--mcms-radius-lg)',
         padding: 12,
-        boxShadow: 'var(--mcms-shadow-sm)',
+        boxShadow: 'none',
         minWidth: 220,
       }}
     >
@@ -246,16 +247,16 @@ function ComparativeRevenueChartInner({
             margin={{ top: 8, right: 16, left: 0, bottom: 8 }}
             barCategoryGap="20%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border-soft)" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border)" vertical={false} />
             <XAxis
               dataKey="month"
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}
             />
             <YAxis
               tickFormatter={(v: number) => `${VND_COMPACT.format(v)}`}
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}
             />
@@ -268,7 +269,7 @@ function ComparativeRevenueChartInner({
               iconType="circle"
               iconSize={8}
               formatter={(value) =>
-                value === 'current' ? currentLabel : previousLabel
+                <span style={{ color: 'var(--mcms-nav-item-icon)' }}>{value === 'current' ? currentLabel : previousLabel}</span>
               }
             />
             <Bar

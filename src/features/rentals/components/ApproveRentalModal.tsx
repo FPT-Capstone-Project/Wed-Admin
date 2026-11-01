@@ -1,3 +1,5 @@
+import '../rentals-industrial.css'
+import { ActionButton } from '../../../shared/ui'
 import { Alert, App, Form, InputNumber, Modal, Switch } from 'antd'
 import { useEffect } from 'react'
 import { useUpdateRental } from '../hooks/useRentals'
@@ -74,6 +76,9 @@ export function ApproveRentalModal({
       cancelText="Huỷ"
       confirmLoading={updateRental.isPending}
       destroyOnHidden
+
+      className="mcms-rental-modal"
+      footer={<><ActionButton icon={null} variant="text" size="middle" label="Huỷ" onClick={onClose} /><ActionButton icon={null} variant="primary" size="middle" label="Duyệt" loading={updateRental.isPending} onClick={() => void handleOk()} /></>}
     >
       <Alert
         type="info"

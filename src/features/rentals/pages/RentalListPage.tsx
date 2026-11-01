@@ -1,3 +1,4 @@
+import '../rentals-industrial.css'
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -16,7 +17,6 @@ import {
   Row,
   Select,
   Space,
-  Table,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -27,7 +27,7 @@ import { RentalStatusTag } from '../components/RentalStatusTag'
 import { RENTAL_STATUS_CONFIG } from '../components/rental-status.config'
 import { useRentals } from '../hooks/useRentals'
 import type { Rental, RentalListQuery, RentalStatus } from '../types/rental.types'
-import { ActionButton, StatCard } from '../../../shared/ui'
+import { ActionButton, StatCard, DataTable } from '../../../shared/ui'
 
 const STATUS_OPTIONS = (
   Object.keys(RENTAL_STATUS_CONFIG) as RentalStatus[]
@@ -96,6 +96,7 @@ export function RentalListPage() {
         title: 'Mã',
         dataIndex: 'rental_id',
         key: 'rental_id',
+      className: 'mcms-rental-mono',
         width: 80,
         render: (value: number) => <Typography.Text strong>#{value}</Typography.Text>,
       },
@@ -128,6 +129,7 @@ export function RentalListPage() {
       {
         title: 'Khay',
         key: 'tray',
+      className: 'mcms-rental-mono',
         width: 130,
         render: (_, rental) =>
           rental.tray_code ? (
@@ -226,7 +228,7 @@ export function RentalListPage() {
             icon={<EyeOutlined />}
             label="Chi tiết"
             description={`Xem chi tiết vụ thuê #${rental.rental_id}`}
-            variant="default"
+            variant="text"
             size="small"
             onClick={() => setSelectedRentalId(rental.rental_id)}
           />
@@ -343,13 +345,14 @@ export function RentalListPage() {
         />
       ) : (
         <Card styles={{ body: { padding: 0 } }}>
-          <Table<Rental>
+          <DataTable<Rental>
             rowKey="rental_id"
             columns={columns}
             dataSource={filteredItems}
             loading={isLoading || isFetching}
-            scroll={{ x: 1050 }}
+            scrollX={1050}
             pagination={{
+              hideOnSinglePage: false,
               current: page,
               pageSize,
               total: pagination?.total ?? filteredItems.length,
@@ -361,14 +364,7 @@ export function RentalListPage() {
                 setPageSize(nextPageSize)
               },
             }}
-            locale={{
-              emptyText: (
-                <Empty
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  description="Chưa có vụ thuê nào"
-                />
-              ),
-            }}
+            emptyTitle="Chưa có vụ thuê nào"
           />
         </Card>
       )}

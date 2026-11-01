@@ -1,31 +1,37 @@
+import type { SemanticTone } from '../../../app/theme/tokens'
 import type { CultivationStage, RentalStatus } from '../types/rental.types'
 
 /** Nhãn + màu cho RentalStatus — khớp 5 giá trị BE thực sự trả về. */
 export const RENTAL_STATUS_CONFIG: Record<
   RentalStatus,
-  { color: string; label: string; badge: string }
+  { color: string; label: string; badge: string; tone: SemanticTone }
 > = {
   CONFIRMED: {
+    tone: 'warning',
     color: 'warning',
     label: 'Chờ duyệt',
     badge: 'warning',
   },
   PREPARING: {
+    tone: 'info',
     color: 'processing',
     label: 'Đang chuẩn bị',
     badge: 'processing',
   },
   ACTIVE: {
+    tone: 'ok',
     color: 'success',
     label: 'Đang canh tác',
     badge: 'processing',
   },
   COMPLETED: {
+    tone: 'neutral',
     color: 'default',
     label: 'Hoàn thành',
     badge: 'default',
   },
   CANCELLED: {
+    tone: 'danger',
     color: 'error',
     label: 'Đã hủy',
     badge: 'error',
@@ -45,8 +51,8 @@ export const CULTIVATION_STAGE_CONFIG: Record<
 }
 
 /** Màu badge thanh toán. */
-export const PAYMENT_STATUS_CONFIG: Record<string, { color: string; label: string }> = {
-  PAID: { color: 'success', label: 'Đã thanh toán' },
-  PENDING: { color: 'warning', label: 'Chờ thanh toán' },
-  REFUNDED: { color: 'default', label: 'Đã hoàn tiền' },
+export const PAYMENT_STATUS_CONFIG: Record<string, { color: string; label: string; tone: SemanticTone }> = {
+  PAID: { tone: 'ok', color: 'success', label: 'Đã thanh toán' },
+  PENDING: { tone: 'warning', color: 'warning', label: 'Chờ thanh toán' },
+  REFUNDED: { tone: 'neutral', color: 'default', label: 'Đã hoàn tiền' },
 }

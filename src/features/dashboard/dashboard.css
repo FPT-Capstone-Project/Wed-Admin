@@ -1,0 +1,62 @@
+.dashboard-page .dashboard-section,
+.dashboard-page .recent-alerts-card {
+  margin-top: 16px;
+}
+
+.dashboard-page .section-heading-row {
+  margin-bottom: 12px;
+}
+
+.dashboard-page .dashboard-chart-wrap {
+  margin-top: 12px;
+}
+
+.dashboard-page .dashboard-date {
+  min-height: 40px;
+  gap: 8px;
+  padding: 6px 12px;
+  box-shadow: none;
+}
+
+.dashboard-page .dashboard-date > .anticon {
+  color: var(--mcms-text-muted);
+  font-size: 16px;
+}
+
+.dashboard-page .mcms-stat-card {
+  height: 100%;
+}
+
+.dashboard-page .environment-chart-card,
+.dashboard-page .recent-alerts-card {
+  background: var(--mcms-surface);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  box-shadow: none;
+}
+
+.dashboard-page .environment-chart-card .ant-card-body {
+  padding: 12px;
+}
+
+.dashboard-page .environment-chart {
+  height: 280px;
+  min-height: 240px;
+}
+
+.dashboard-page .recent-alerts-header {
+  min-height: 0;
+  padding: 12px;
+  gap: 12px;
+}
+
+.dashboard-page .recent-alerts-card .ant-table-wrapper {
+  border: 0;
+  border-radius: 0 0 var(--mcms-radius-md) var(--mcms-radius-md);
+}
+
+.dashboard-page .chart-card-header,
+.dashboard-page .section-heading-row {
+  flex-wrap: wrap;
+  gap: 8px;
+}

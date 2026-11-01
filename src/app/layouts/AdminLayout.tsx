@@ -153,16 +153,10 @@ interface BrandProps {
 function Brand({ onClose }: BrandProps) {
   return (
     <div className="mcms-brand">
-      <img
-        className="mcms-brand-mark"
-        src="/mcms-mark.svg"
-        alt=""
-        width="42"
-        height="42"
-      />
+      <span className="mcms-brand-mark" aria-hidden="true">M</span>
       <div className="mcms-brand-copy">
         <strong>MCMS</strong>
-        <span>Mushroom Control</span>
+        <span>INDUSTRIAL TELEMETRY</span>
       </div>
       {onClose && (
         <Button

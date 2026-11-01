@@ -1,3 +1,4 @@
+import '../device-industrial.css'
 import {
   CloudOutlined,
   CompressOutlined,
@@ -229,7 +230,7 @@ export function IoTTelemetryChart({
   const chartEventPoints = buildChartPoints(session, visiblePoints)
 
   return (
-    <section className="iot-chart-panel" aria-labelledby="session-chart-heading">
+    <section className="iot-chart-panel mcms-iot-chart" aria-labelledby="session-chart-heading">
       <div className="iot-chart-header">
         <div>
           <Typography.Title id="session-chart-heading" level={4}>
@@ -321,7 +322,7 @@ export function IoTTelemetryChart({
           >
             <CartesianGrid
               vertical={false}
-              strokeDasharray="4 4"
+              strokeDasharray="3 3"
               stroke="var(--mcms-border)"
             />
             {session.stagesTimeline.map((stage) => (
@@ -340,7 +341,7 @@ export function IoTTelemetryChart({
               dataKey="timestamp"
               minTickGap={36}
               tickFormatter={formatAxisTimestamp}
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
             />
@@ -349,7 +350,7 @@ export function IoTTelemetryChart({
               domain={[18, 32]}
               unit="°"
               width={38}
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
             />
@@ -359,7 +360,7 @@ export function IoTTelemetryChart({
               domain={[60, 100]}
               unit="%"
               width={42}
-              tick={{ fill: 'var(--mcms-text-muted)', fontSize: 12 }}
+              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
               axisLine={false}
               tickLine={false}
             />
@@ -370,7 +371,7 @@ export function IoTTelemetryChart({
               name="Nhiệt độ"
               type="monotone"
               stroke="var(--mcms-coral)"
-              strokeWidth={2.4}
+              strokeWidth={2}
               dot={false}
               hide={!visibleMetrics.temperature}
               isAnimationActive={false}
@@ -381,7 +382,7 @@ export function IoTTelemetryChart({
               name="Độ ẩm"
               type="monotone"
               stroke="var(--mcms-teal)"
-              strokeWidth={2.4}
+              strokeWidth={2}
               strokeDasharray="7 4"
               dot={false}
               hide={!visibleMetrics.humidity}
@@ -419,8 +420,8 @@ export function IoTTelemetryChart({
               dataKey="timestamp"
               height={32}
               travellerWidth={10}
-              stroke="var(--mcms-primary)"
-              fill="var(--mcms-primary-faint)"
+              stroke="var(--mcms-border-strong)"
+              fill="var(--mcms-surface-muted)"
               startIndex={range.startIndex}
               endIndex={range.endIndex}
               tickFormatter={(value) =>
