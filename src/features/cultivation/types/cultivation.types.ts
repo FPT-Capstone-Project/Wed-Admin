@@ -4,7 +4,7 @@
  * ⚠ Thay thế hoàn toàn `types/cultivation.types.ts` cũ (mock `CultivationBatch`).
  *
  * Nguồn dữ liệu:
- *   - `GET /api/cultivation-sessions/admin` → tiến độ, giai đoạn, khách, gói.
+ *   - `GET /api/farm/sessions` → tiến độ, giai đoạn, khách, gói.
  *   - `GET /api/farm/sessions` → phôi đã cấp / còn lại, tên nấm, khách.
  *   - `GET /api/farm/sessions/{id}/spawn-inspections` → lịch sử kiểm tra phôi
  *     kèm ảnh thực tế trên Cloudinary.
@@ -23,6 +23,7 @@ export type GrowthStage =
   | 'MYCELIAL_DEVELOPMENT'
   | 'READY_FOR_CULTIVATION'
   | 'CULTIVATING'
+  | 'HARVEST_READY'
   | 'HARVESTING'
   | 'COMPLETED'
   | 'CANCELLED'
@@ -53,6 +54,7 @@ export const GROWTH_STAGE_META: Record<
     shortLabel: 'Đang canh tác',
     defaultProgress: 70,
   },
+  HARVEST_READY: { label: 'Sẵn sàng thu hoạch', shortLabel: 'Sẵn sàng thu hoạch', defaultProgress: 85 },
   HARVESTING: {
     label: 'Thu hoạch',
     shortLabel: 'Thu hoạch',

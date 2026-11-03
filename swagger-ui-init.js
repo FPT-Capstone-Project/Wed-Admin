@@ -64,11 +64,27 @@ window.onload = function() {
       },
       {
         "name": "Cultivation Sessions",
-        "description": "Paid cultivation sessions, daily tray inspections, progress, and harvests"
+        "description": "WF-03: assign floor and trays, monitor growth, then confirm harvest readiness separately"
+      },
+      {
+        "name": "Cultivation Audit",
+        "description": "Supporting tray inspections, images, incidents, and immutable growth history; not required lifecycle steps"
+      },
+      {
+        "name": "Harvests",
+        "description": "WF-04 harvest lifecycle, actual yield, and order history"
+      },
+      {
+        "name": "Harvest Requests",
+        "description": "WF-04 customer receiving method, pickup schedule, and handover completion"
       },
       {
         "name": "Farm Spawn Workflow",
         "description": "Farm spawn handling and customer cultivation tracking"
+      },
+      {
+        "name": "Disease Management",
+        "description": "WF-06 issue diagnosis, expert consultations, treatments, media, and customer timelines"
       },
       {
         "name": "Payments",
@@ -126,7 +142,7 @@ window.onload = function() {
               "type": "integer",
               "minimum": 1,
               "example": 3,
-              "description": "Optional; role IDs in the current seed: 1 = Farm Operator, 2 = Admin, 3 = Customer. Without roleId, Customer (3) is assigned."
+              "description": "Optional; role IDs: 1 = Admin, 2 = Farm Operator, 3 = Customer. Without roleId, Customer (3) is assigned."
             },
             "phone": {
               "type": "string",
@@ -1568,6 +1584,17 @@ window.onload = function() {
               "type": "boolean",
               "default": false
             },
+            "mushroom_type_ids": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 2147483647
+              },
+              "description": "FLOOR only: approve crop types before assigning sessions. Server reads conditions and stores source_profiles. Must include all crops currently on the floor."
+            },
             "config_source": {
               "type": "string",
               "enum": [
@@ -2351,10 +2378,213 @@ window.onload = function() {
           ],
           "responses": {
             "200": {
-              "description": "Customer order list"
+              "description": "Customer order list",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "description": "One record per order, retaining all existing order fields. Names are joined with commas in item ID order; total_price sums item totals. Item summary fields are null for orders without items.",
+                          "properties": {
+                            "order_id": {
+                              "type": "integer"
+                            },
+                            "user_id": {
+                              "type": "integer"
+                            },
+                            "subtotal": {
+                              "type": "string"
+                            },
+                            "discount": {
+                              "type": "string"
+                            },
+                            "shipping_fee": {
+                              "type": "string"
+                            },
+                            "total_amount": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "payment_status": {
+                              "type": "string",
+                              "description": "Current orders.payment_status"
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "package_name": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "mushroom_name": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "total_price": {
+                              "type": "string",
+                              "nullable": true
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
             },
             "401": {
               "description": "Missing or invalid JWT token"
+            }
+          }
+        }
+      },
+      "/api/orders/admin": {
+        "get": {
+          "tags": [
+            "Orders"
+          ],
+          "summary": "List orders from all customers for Admin and Farm Operator",
+          "description": "Roles: 1 = Admin, 2 = Farm Operator, 3 = Customer. Only roles 1 and 2 may access. One record per order; names are comma-separated in item ID order, quantity and total_price sum all items. Item summaries are null without items. Payment status comes from orders.payment_status. No synthetic order_code is generated.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Customer orders with pagination, newest first with order ID as tie breaker",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "order_id": {
+                              "type": "integer"
+                            },
+                            "customer_id": {
+                              "type": "integer"
+                            },
+                            "customer_name": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "customer_email": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "package_name": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "mushroom_name": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "quantity": {
+                              "type": "integer",
+                              "nullable": true,
+                              "description": "Sum of item quantities"
+                            },
+                            "total_price": {
+                              "type": "string",
+                              "nullable": true
+                            },
+                            "subtotal": {
+                              "type": "string"
+                            },
+                            "discount": {
+                              "type": "string"
+                            },
+                            "shipping_fee": {
+                              "type": "string"
+                            },
+                            "total_amount": {
+                              "type": "string"
+                            },
+                            "status": {
+                              "type": "string"
+                            },
+                            "payment_status": {
+                              "type": "string"
+                            },
+                            "created_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            },
+                            "updated_at": {
+                              "type": "string",
+                              "format": "date-time"
+                            }
+                          }
+                        }
+                      },
+                      "pagination": {
+                        "type": "object",
+                        "properties": {
+                          "page": {
+                            "type": "integer"
+                          },
+                          "pageSize": {
+                            "type": "integer"
+                          },
+                          "total": {
+                            "type": "integer"
+                          },
+                          "totalPages": {
+                            "type": "integer"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid pagination"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
             }
           }
         }
@@ -2393,6 +2623,47 @@ window.onload = function() {
             },
             "409": {
               "description": "Order is not eligible for cancellation"
+            }
+          }
+        }
+      },
+      "/api/orders/{orderId}/harvest-history": {
+        "get": {
+          "tags": [
+            "Harvests"
+          ],
+          "summary": "Trace cultivation sessions, mushroom types, harvests, yield, and receiving method for an order",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "orderId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Order harvest history"
+            },
+            "400": {
+              "description": "Invalid order ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Order not found"
             }
           }
         }
@@ -2437,7 +2708,7 @@ window.onload = function() {
             "Orders"
           ],
           "summary": "Create a cultivation order for a mushroom type, package, and tray quantity",
-          "description": "The selected active package must cover the selected mushroom's growing days. Each tray requires three spawn units. Both trays and spawn are held for the configured checkout period and allocated only after successful payment.",
+          "description": "The selected active package must cover the selected active mushroom's growing days. One ACTIVE floor with an approved matching mushroom profile must have enough AVAILABLE trays with ACTIVE positions in the same floor and room, after unexpired HELD reservations. Capacity is never combined across floors. Each tray requires three spawn units. Reservations are consumed after successful payment; Farm Operator selects physical trays later in WF-03.",
           "security": [
             {
               "bearerAuth": []
@@ -3236,6 +3507,566 @@ window.onload = function() {
           }
         }
       },
+      "/api/harvest-requests": {
+        "post": {
+          "tags": [
+            "Harvest Requests"
+          ],
+          "summary": "Choose a receiving method for a harvest-ready cultivation session",
+          "description": "Select PICKUP or DELIVERY from Examples. Replace sessionId with your own harvest-ready session ID. PICKUP requires scheduledAt; DELIVERY does not. customerNote is optional. Schedule examples use Vietnam time (UTC+07:00); adjust the date and time before testing.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "sessionId",
+                    "harvestMethod"
+                  ],
+                  "properties": {
+                    "sessionId": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "description": "Your harvest-ready cultivation session ID"
+                    },
+                    "harvestMethod": {
+                      "type": "string",
+                      "enum": [
+                        "PICKUP",
+                        "DELIVERY"
+                      ],
+                      "description": "PICKUP for customer self-harvest at the farm; DELIVERY for external delivery arranged by staff"
+                    },
+                    "scheduledAt": {
+                      "type": "string",
+                      "format": "date-time",
+                      "description": "Required for PICKUP; optional for DELIVERY"
+                    },
+                    "customerNote": {
+                      "type": "string",
+                      "maxLength": 2000,
+                      "description": "Optional receiving instructions"
+                    }
+                  }
+                },
+                "examples": {
+                  "PICKUP": {
+                    "summary": "PICKUP",
+                    "value": {
+                      "sessionId": 15,
+                      "harvestMethod": "PICKUP",
+                      "scheduledAt": "2026-11-05T09:00:00+07:00",
+                      "customerNote": "I will collect the mushrooms at the farm at the scheduled time."
+                    }
+                  },
+                  "DELIVERY": {
+                    "summary": "DELIVERY",
+                    "value": {
+                      "sessionId": 15,
+                      "harvestMethod": "DELIVERY",
+                      "customerNote": "Please contact me before delivery."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Receiving request created"
+            },
+            "400": {
+              "description": "Invalid request or missing pickup schedule"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Request does not belong to the customer"
+            },
+            "404": {
+              "description": "Cultivation session not found"
+            },
+            "409": {
+              "description": "Session is not ready or already has a receiving request"
+            }
+          }
+        }
+      },
+      "/api/harvest-requests/{id}": {
+        "patch": {
+          "tags": [
+            "Harvest Requests"
+          ],
+          "summary": "Update receiving method or pickup schedule",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "harvestMethod"
+                  ],
+                  "properties": {
+                    "harvestMethod": {
+                      "type": "string",
+                      "enum": [
+                        "PICKUP",
+                        "DELIVERY"
+                      ]
+                    },
+                    "scheduledAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "customerNote": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Receiving request updated"
+            },
+            "400": {
+              "description": "Invalid receiving method or pickup schedule"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Request does not belong to the customer"
+            },
+            "404": {
+              "description": "Harvest request not found"
+            },
+            "409": {
+              "description": "Request is completed or the session is no longer eligible"
+            }
+          }
+        }
+      },
+      "/api/harvest-requests/{id}/complete": {
+        "post": {
+          "tags": [
+            "Harvest Requests"
+          ],
+          "summary": "Complete receiving or handover after harvest completion",
+          "description": "Requires a completed harvest. PICKUP may be confirmed by the owning customer or farm staff; DELIVERY must be confirmed by farm staff after the external delivery is completed. No shipment record is required. Records confirmed_by and confirmation time, completes the session, and places its trays in MAINTENANCE awaiting WF-05 sanitation.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Receiving completed"
+            },
+            "400": {
+              "description": "Invalid harvest request ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Request does not belong to the customer"
+            },
+            "404": {
+              "description": "Harvest request not found"
+            },
+            "409": {
+              "description": "Harvest or pickup schedule is incomplete",
+              "or session is not HARVESTING": null
+            }
+          }
+        }
+      },
+      "/api/harvests": {
+        "post": {
+          "tags": [
+            "Harvests"
+          ],
+          "summary": "Create the one planned harvest for a harvest-ready cultivation session",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "sessionId"
+                  ],
+                  "properties": {
+                    "sessionId": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "example": 15
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Planned harvest created"
+            },
+            "400": {
+              "description": "Invalid session ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Cultivation session not found"
+            },
+            "409": {
+              "description": "Session is not harvest ready or already has a harvest"
+            }
+          }
+        }
+      },
+      "/api/harvests/admin": {
+        "get": {
+          "tags": [
+            "Harvests"
+          ],
+          "summary": "List harvests for Admin and Farm Operators",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "PLANNED",
+                  "IN_PROGRESS",
+                  "COMPLETED",
+                  "CANCELLED"
+                ]
+              }
+            },
+            {
+              "in": "query",
+              "name": "mushroomTypeId",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "fromDate",
+              "schema": {
+                "type": "string",
+                "format": "date"
+              }
+            },
+            {
+              "in": "query",
+              "name": "toDate",
+              "schema": {
+                "type": "string",
+                "format": "date"
+              }
+            },
+            {
+              "in": "query",
+              "name": "orderId",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Harvest list with order",
+              "customer": null,
+              "mushroom": null,
+              "yield": null,
+              "and receiving method": null
+            },
+            "400": {
+              "description": "Invalid filter"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            }
+          }
+        }
+      },
+      "/api/harvests/{id}/start": {
+        "post": {
+          "tags": [
+            "Harvests"
+          ],
+          "summary": "Start a planned harvest and move its session into HARVESTING",
+          "description": "Requires a customer receiving method, a schedule for PICKUP, and no unresolved quality or HIGH-severity incidents. PICKUP means customer self-harvest at the farm; DELIVERY means staff harvest followed by delivery arranged outside this system.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Harvest started"
+            },
+            "400": {
+              "description": "Invalid harvest ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Harvest not found"
+            },
+            "409": {
+              "description": "Invalid harvest or cultivation-session transition"
+            }
+          }
+        }
+      },
+      "/api/harvests/{id}/yield": {
+        "post": {
+          "tags": [
+            "Harvests"
+          ],
+          "summary": "Record the actual yield of an in-progress harvest",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "totalWeightKg",
+                    "usableWeightKg",
+                    "rejectedWeightKg"
+                  ],
+                  "properties": {
+                    "totalWeightKg": {
+                      "type": "number",
+                      "minimum": 0,
+                      "example": 5.2
+                    },
+                    "usableWeightKg": {
+                      "type": "number",
+                      "minimum": 0,
+                      "example": 4.8
+                    },
+                    "rejectedWeightKg": {
+                      "type": "number",
+                      "minimum": 0,
+                      "example": 0.4
+                    },
+                    "qualityGrade": {
+                      "type": "string",
+                      "maxLength": 20,
+                      "example": "A"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "maxLength": 2000
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Actual yield recorded"
+            },
+            "400": {
+              "description": "Invalid weight or classified weights do not equal total weight"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Harvest not found"
+            },
+            "409": {
+              "description": "Harvest is not in progress"
+            }
+          }
+        }
+      },
+      "/api/harvests/{id}/complete": {
+        "post": {
+          "tags": [
+            "Harvests"
+          ],
+          "summary": "Complete an in-progress harvest after yield is recorded",
+          "description": "Completes only the harvest. The session stays HARVESTING until handover is confirmed through the harvest request complete API.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Harvest completed; customer handover is still required"
+            },
+            "400": {
+              "description": "Invalid harvest ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Harvest not found"
+            },
+            "409": {
+              "description": "Yield is missing or the harvest cannot transition to completed"
+            }
+          }
+        }
+      },
+      "/api/harvests/{id}": {
+        "get": {
+          "tags": [
+            "Harvests"
+          ],
+          "summary": "Get harvest detail with order, session, mushroom, yield, and receiving data",
+          "description": "Includes harvest_method (PICKUP for customer self-harvest at the farm or DELIVERY for external delivery), scheduled_at, customer_note, harvest_request_status, confirmed_by, confirmed_at, and completed_at.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "id",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Harvest detail"
+            },
+            "400": {
+              "description": "Invalid harvest ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Harvest not found"
+            }
+          }
+        }
+      },
       "/api/farm/sessions": {
         "get": {
           "tags": [
@@ -3259,6 +4090,7 @@ window.onload = function() {
                   "MYCELIAL_DEVELOPMENT",
                   "READY_FOR_CULTIVATION",
                   "CULTIVATING",
+                  "HARVEST_READY",
                   "HARVESTING",
                   "COMPLETED",
                   "CANCELLED"
@@ -3498,7 +4330,8 @@ window.onload = function() {
           "tags": [
             "Farm Spawn Workflow"
           ],
-          "summary": "Advance a session through spawn resting and mycelial development",
+          "summary": "Start the combined resting/incubation phase or mark spawn ready for cultivation",
+          "description": "Resting and mycelial development happen together. From PENDING choose SPAWN_RESTING or MYCELIAL_DEVELOPMENT (existing equivalent phase values). Either can move directly to READY_FOR_CULTIVATION after the latest spawn inspection is NORMAL and covers all spawn units. Payment and stock issuance are required. No sequential resting-to-incubation transition is needed.",
           "security": [
             {
               "bearerAuth": []
@@ -3529,9 +4362,7 @@ window.onload = function() {
                       "enum": [
                         "SPAWN_RESTING",
                         "MYCELIAL_DEVELOPMENT",
-                        "READY_FOR_CULTIVATION",
-                        "CULTIVATING",
-                        "HARVESTING"
+                        "READY_FOR_CULTIVATION"
                       ]
                     }
                   }
@@ -3541,10 +4372,924 @@ window.onload = function() {
           },
           "responses": {
             "200": {
-              "description": "Session advanced; trays are assigned when ready, cultivation dates begin at CULTIVATING"
+              "description": "Spawn phase updated successfully"
+            },
+            "400": {
+              "description": "Invalid stage or session ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Session not found"
             },
             "409": {
               "description": "Stage transition requirements are not met"
+            }
+          }
+        }
+      },
+      "/api/issues": {
+        "post": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Create a spawn- or tray-based cultivation issue",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "issueType",
+                    "title",
+                    "description"
+                  ],
+                  "properties": {
+                    "sessionTrayId": {
+                      "type": "integer",
+                      "description": "Required for tray issues"
+                    },
+                    "inspectionId": {
+                      "type": "integer",
+                      "description": "Optional tray inspection"
+                    },
+                    "spawnInspectionId": {
+                      "type": "integer",
+                      "description": "Required for spawn issues"
+                    },
+                    "issueType": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "LOW",
+                        "MEDIUM",
+                        "HIGH"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Issue created; stage and sensor context are included in the response but not persisted"
+            },
+            "400": {
+              "description": "Invalid issue source or payload"
+            },
+            "403": {
+              "description": "Farm Operator or Admin role required"
+            },
+            "404": {
+              "description": "Source inspection not found"
+            },
+            "409": {
+              "description": "Session is not in the relevant cultivation stage"
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "List issues with status, severity, and session filters",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "OPEN",
+                  "WAITING_EXPERT",
+                  "IN_PROGRESS",
+                  "MONITORING",
+                  "RESOLVED"
+                ]
+              }
+            },
+            {
+              "in": "query",
+              "name": "severity",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "LOW",
+                  "MEDIUM",
+                  "HIGH"
+                ]
+              }
+            },
+            {
+              "in": "query",
+              "name": "sessionId",
+              "schema": {
+                "type": "integer"
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Paginated issue list"
+            },
+            "403": {
+              "description": "Staff role required"
+            }
+          }
+        }
+      },
+      "/api/issues/{issueId}": {
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Get issue details and evidence media",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "issueId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Issue details"
+            },
+            "404": {
+              "description": "Issue not found"
+            }
+          }
+        }
+      },
+      "/api/issues/{issueId}/status": {
+        "patch": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Change issue status using an allowed workflow transition",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "issueId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "status"
+                  ],
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "enum": [
+                        "IN_PROGRESS",
+                        "MONITORING"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Issue status updated using statuses supported by the current database"
+            },
+            "409": {
+              "description": "Invalid workflow transition or missing treatment result"
+            }
+          }
+        }
+      },
+      "/api/issues/{issueId}/resolve": {
+        "patch": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Resolve an issue after expert review",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "issueId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Issue resolved"
+            },
+            "403": {
+              "description": "Assigned expert or Admin role required"
+            },
+            "409": {
+              "description": "Issue is not in MONITORING status"
+            }
+          }
+        }
+      },
+      "/api/issues/{issueId}/media": {
+        "post": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Upload an issue image to its linked inspection image history",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "issueId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "file"
+                  ],
+                  "properties": {
+                    "file": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "caption": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Image added to the linked inspection image history"
+            },
+            "400": {
+              "description": "Only images are supported by the current issue-image tables"
+            },
+            "409": {
+              "description": "Issue has no linked inspection or evidence is locked"
+            }
+          }
+        }
+      },
+      "/api/issues/{issueId}/consultations": {
+        "post": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Request expert consultation for an issue",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "issueId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "question"
+                  ],
+                  "properties": {
+                    "question": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Consultation created and experts notified"
+            },
+            "409": {
+              "description": "Issue already has an active consultation"
+            }
+          }
+        }
+      },
+      "/api/consultations": {
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "List consultations for experts",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "status",
+              "schema": {
+                "type": "string",
+                "enum": [
+                  "PENDING",
+                  "IN_PROGRESS",
+                  "ANSWERED",
+                  "CLOSED"
+                ]
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Paginated consultation list"
+            },
+            "403": {
+              "description": "Expert or Admin role required"
+            }
+          }
+        }
+      },
+      "/api/consultations/{consultationId}": {
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Get consultation, treatment, and question follow-up history",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "consultationId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Consultation details"
+            },
+            "404": {
+              "description": "Consultation not found"
+            }
+          }
+        }
+      },
+      "/api/consultations/{consultationId}/assign": {
+        "patch": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Accept a consultation or assign an expert as Admin",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "consultationId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "expertId": {
+                      "type": "integer",
+                      "description": "Required for Admin assignment"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Consultation assigned"
+            },
+            "400": {
+              "description": "Selected account is not an expert"
+            }
+          }
+        }
+      },
+      "/api/consultations/{consultationId}/respond": {
+        "patch": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Submit diagnosis and solution or request more information",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "consultationId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "diagnosis"
+                  ],
+                  "properties": {
+                    "diagnosis": {
+                      "type": "string"
+                    },
+                    "solution": {
+                      "type": "string"
+                    },
+                    "needsMoreInfo": {
+                      "type": "boolean"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Expert response submitted; request-more-info maps to PENDING consultation and WAITING_EXPERT issue"
+            },
+            "403": {
+              "description": "Assigned expert or Admin role required"
+            }
+          }
+        }
+      },
+      "/api/consultations/{consultationId}/close": {
+        "patch": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Close a responded consultation",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "consultationId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Consultation closed"
+            }
+          }
+        }
+      },
+      "/api/consultations/{consultationId}/messages": {
+        "post": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Append follow-up information to the consultation question",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "consultationId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "message"
+                  ],
+                  "properties": {
+                    "message": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Follow-up appended to the consultation question and returned to the assigned expert; no separate message table is used"
+            }
+          }
+        }
+      },
+      "/api/consultations/{consultationId}/treatments": {
+        "post": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Record an operator treatment action and outcome",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "consultationId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "actionDescription"
+                  ],
+                  "properties": {
+                    "actionDescription": {
+                      "type": "string"
+                    },
+                    "resultDescription": {
+                      "type": "string"
+                    },
+                    "performedAt": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Treatment recorded"
+            },
+            "409": {
+              "description": "Expert solution is not available"
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "List treatments and attached media for a consultation",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "consultationId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Treatment history"
+            }
+          }
+        }
+      },
+      "/api/treatments/{treatmentLogId}/media": {
+        "post": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Upload treatment evidence to Cloudinary and save its URL",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "treatmentLogId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "file",
+                    "mediaStage"
+                  ],
+                  "properties": {
+                    "file": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "mediaStage": {
+                      "type": "string",
+                      "enum": [
+                        "BEFORE",
+                        "DURING",
+                        "AFTER"
+                      ]
+                    },
+                    "caption": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Media uploaded"
+            }
+          }
+        }
+      },
+      "/api/treatments/{treatmentLogId}/media/{mediaId}": {
+        "delete": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Delete treatment media before issue review locks it",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "treatmentLogId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            },
+            {
+              "in": "path",
+              "name": "mediaId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Media deleted from Cloudinary and database using its stored URL"
+            },
+            "409": {
+              "description": "Media is locked or stored URL is not a Cloudinary URL"
+            }
+          }
+        }
+      },
+      "/api/customer/sessions/{sessionId}/issues": {
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "List issues for a session owned by the authenticated customer",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Session issue list"
+            },
+            "404": {
+              "description": "Session not found or not owned by customer"
+            }
+          }
+        }
+      },
+      "/api/customer/issues/{issueId}": {
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Get an issue owned by the authenticated customer",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "issueId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Customer-visible issue"
+            },
+            "404": {
+              "description": "Issue not found or not owned by customer"
+            }
+          }
+        }
+      },
+      "/api/customer/issues/{issueId}/timeline": {
+        "get": {
+          "tags": [
+            "Disease Management"
+          ],
+          "summary": "Get customer-visible issue, consultation, treatment, follow-up, and media timeline",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "issueId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Issue timeline"
+            },
+            "404": {
+              "description": "Issue not found or not owned by customer"
             }
           }
         }
@@ -3572,7 +5317,7 @@ window.onload = function() {
           ],
           "responses": {
             "200": {
-              "description": "Current customer-visible cultivation state"
+              "description": "Customer-visible session status, harvest readiness, latest growth progress, and assigned trays"
             },
             "404": {
               "description": "Order not found or not accessible to this user"
@@ -3864,7 +5609,8 @@ window.onload = function() {
           "tags": [
             "Cultivation Sessions"
           ],
-          "summary": "List paid cultivation sessions",
+          "summary": "List cultivation sessions for Admin and Farm Operator",
+          "description": "Roles: 1 = Admin, 2 = Farm Operator, 3 = Customer. Only roles 1 and 2 may access. Returns data and pagination using the existing session filters.",
           "security": [
             {
               "bearerAuth": []
@@ -3873,41 +5619,11 @@ window.onload = function() {
           "parameters": [
             {
               "in": "query",
-              "name": "status",
-              "schema": {
-                "type": "string",
-                "enum": [
-                  "PENDING",
-                  "SPAWN_RESTING",
-                  "MYCELIAL_DEVELOPMENT",
-                  "READY_FOR_CULTIVATION",
-                  "CULTIVATING",
-                  "HARVESTING",
-                  "COMPLETED",
-                  "CANCELLED"
-                ]
-              }
-            },
-            {
-              "in": "query",
-              "name": "userId",
-              "schema": {
-                "type": "integer"
-              }
-            },
-            {
-              "in": "query",
-              "name": "trayId",
-              "schema": {
-                "type": "integer"
-              }
-            },
-            {
-              "in": "query",
               "name": "page",
               "schema": {
                 "type": "integer",
-                "minimum": 1
+                "minimum": 1,
+                "default": 1
               }
             },
             {
@@ -3916,19 +5632,304 @@ window.onload = function() {
               "schema": {
                 "type": "integer",
                 "minimum": 1,
-                "maximum": 100
+                "maximum": 100,
+                "default": 20
               }
             }
           ],
           "responses": {
             "200": {
-              "description": "Sessions with assigned trays and latest progress"
+              "description": "Cultivation session list with pagination"
+            },
+            "400": {
+              "description": "Invalid filters or pagination"
             },
             "401": {
               "description": "Missing or invalid JWT token"
             },
             "403": {
-              "description": "Only Admin and Farm Operator roles are allowed"
+              "description": "Admin or Farm Operator role required"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/available-trays": {
+        "get": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "List trays currently assignable to a qualified cultivation session",
+          "description": "Returns AVAILABLE trays with ACTIVE positions in the same floor and room, on ACTIVE floors with no active cultivation-session assignment. Optionally filter by floorId. Read-only preview; assignment rechecks positions and availability under row locks.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "floorId",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "description": "Optional active cultivation floor ID"
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Active-floor trays available for assignment",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "tray_id": {
+                              "type": "integer",
+                              "example": 21
+                            },
+                            "tray_code": {
+                              "type": "string",
+                              "example": "F2-TRAY-01"
+                            },
+                            "floor_id": {
+                              "type": "integer",
+                              "example": 2
+                            },
+                            "floor_name": {
+                              "type": "string",
+                              "example": "Floor 2"
+                            },
+                            "position_id": {
+                              "type": "integer",
+                              "example": 12
+                            },
+                            "row_number": {
+                              "type": "integer",
+                              "example": 1
+                            },
+                            "column_number": {
+                              "type": "integer",
+                              "example": 2
+                            },
+                            "status": {
+                              "type": "string",
+                              "example": "AVAILABLE"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid floor ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/{sessionId}": {
+        "get": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "Get a cultivation session with latest progress and assigned trays",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Session detail including status, harvest_status, harvest_ready, growth_status, progress_percent, condition, notes, mushroom, and trays with floor details"
+            },
+            "400": {
+              "description": "Invalid session ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Session not found"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/{sessionId}/trays": {
+        "post": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "Assign selected floor and trays to a ready cultivation session",
+          "description": "Submit floorId and trayIds explicitly. The Farm Operator determines cultivation suitability. All selected trays must belong to the ACTIVE floor with ACTIVE positions in the same room. Atomic assignment requires READY_FOR_CULTIVATION and exactly tray_quantity trays. Success starts CULTIVATING with initial progress at 0 percent.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "floorId",
+                    "trayIds"
+                  ],
+                  "properties": {
+                    "floorId": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "example": 2
+                    },
+                    "trayIds": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "example": [
+                        21,
+                        22,
+                        25
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Selected floor and trays assigned; session is CULTIVATING",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string"
+                      },
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "session_id": {
+                            "type": "integer",
+                            "example": 9
+                          },
+                          "status": {
+                            "type": "string",
+                            "example": "CULTIVATING"
+                          },
+                          "floor": {
+                            "type": "object",
+                            "properties": {
+                              "floor_id": {
+                                "type": "integer",
+                                "example": 2
+                              },
+                              "floor_name": {
+                                "type": "string",
+                                "example": "Floor 2"
+                              }
+                            }
+                          },
+                          "required_trays": {
+                            "type": "integer",
+                            "example": 3
+                          },
+                          "assigned_trays_count": {
+                            "type": "integer",
+                            "example": 3
+                          },
+                          "assigned_trays": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "session_tray_id": {
+                                  "type": "integer",
+                                  "example": 31
+                                },
+                                "tray_id": {
+                                  "type": "integer",
+                                  "example": 21
+                                },
+                                "tray_code": {
+                                  "type": "string",
+                                  "example": "F2-TRAY-01"
+                                },
+                                "status": {
+                                  "type": "string",
+                                  "example": "ACTIVE"
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid session ID",
+              "floor ID": null,
+              "or selected tray IDs": null
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Session",
+              "floor": null,
+              "or selected tray not found": null
+            },
+            "409": {
+              "description": "INVALID_SESSION_STATUS, INVALID_TRAY_QUANTITY, FLOOR_NOT_ACTIVE, TRAY_FLOOR_MISMATCH, TRAY_UNAVAILABLE, TRAY_POSITION_UNAVAILABLE, or TRAYS_ALREADY_ASSIGNED"
             }
           }
         }
@@ -3936,10 +5937,10 @@ window.onload = function() {
       "/api/cultivation-sessions/admin/session-trays/{sessionTrayId}/inspections": {
         "post": {
           "tags": [
-            "Cultivation Sessions"
+            "Cultivation Audit"
           ],
-          "summary": "Record a daily inspection and update session progress",
-          "description": "Creates a cultivation_inspections record for the assigned tray and appends the corresponding cultivation_progress record.",
+          "summary": "Record a daily tray inspection",
+          "description": "Records tray observations only. Use the session progress API to update cultivation progress and lifecycle status.",
           "security": [
             {
               "bearerAuth": []
@@ -3969,7 +5970,13 @@ window.onload = function() {
                   "properties": {
                     "growthStage": {
                       "type": "string",
-                      "example": "FRUITING"
+                      "enum": [
+                        "FRUITING_INITIATION",
+                        "PINNING",
+                        "YOUNG_FRUITING",
+                        "MATURATION"
+                      ],
+                      "example": "PINNING"
                     },
                     "growthProgress": {
                       "type": "number",
@@ -3993,13 +6000,440 @@ window.onload = function() {
           },
           "responses": {
             "201": {
-              "description": "Inspection and progress history recorded"
+              "description": "Tray inspection recorded"
+            },
+            "400": {
+              "description": "Invalid stage or inspection input"
             },
             "404": {
               "description": "Session tray not found"
             },
             "409": {
-              "description": "Session tray is not active or progress moved backwards"
+              "description": "Session tray is not active"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/inspections/{inspectionId}/images": {
+        "post": {
+          "tags": [
+            "Cultivation Audit"
+          ],
+          "summary": "Upload an image for a cultivation inspection",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "inspectionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "multipart/form-data": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "image"
+                  ],
+                  "properties": {
+                    "image": {
+                      "type": "string",
+                      "format": "binary"
+                    },
+                    "caption": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Inspection image uploaded"
+            },
+            "400": {
+              "description": "Invalid image or request input"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Inspection not found"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/{sessionId}/incidents": {
+        "post": {
+          "tags": [
+            "Cultivation Audit"
+          ],
+          "summary": "Record an immutable cultivation incident for an active session tray",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "sessionTrayId",
+                    "incidentType"
+                  ],
+                  "properties": {
+                    "sessionTrayId": {
+                      "type": "integer"
+                    },
+                    "inspectionId": {
+                      "type": "integer"
+                    },
+                    "incidentType": {
+                      "type": "string",
+                      "enum": [
+                        "NO_PINNING",
+                        "SLOW_GROWTH",
+                        "DRY_SHRIVELED",
+                        "MUSHY",
+                        "DEFORMED_GROWTH",
+                        "CONTAMINATION",
+                        "DISEASE",
+                        "DAMAGE",
+                        "SENSOR_DATA_LOSS",
+                        "DEVICE_FAILURE",
+                        "DELAYED_MATURATION",
+                        "QUALITY_FAILURE",
+                        "OTHER"
+                      ]
+                    },
+                    "severity": {
+                      "type": "string",
+                      "enum": [
+                        "LOW",
+                        "MEDIUM",
+                        "HIGH"
+                      ]
+                    },
+                    "description": {
+                      "type": "string"
+                    },
+                    "actionTaken": {
+                      "type": "string"
+                    },
+                    "nextAction": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "get": {
+          "tags": [
+            "Cultivation Audit"
+          ],
+          "summary": "List cultivation incident history for a session",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Incident history"
+            },
+            "400": {
+              "description": "Invalid incident input or session ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Session not found"
+            },
+            "409": {
+              "description": "Session is not in a valid incident-recording state"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/{sessionId}/growth": {
+        "patch": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "Update current mushroom growth condition and progress",
+          "description": "Select a growth status from Examples below, then click Try it out to send the request.\nExample percentages are testing and operational guidelines, not validation constraints between growthStatus and progressPercent.\nprogressPercent must be between 0 and 100 and cannot decrease from the previous update.\ngrowthStatus corresponds to the four WF-03 stages in order: FRUITING_INITIATION, PINNING, YOUNG_FRUITING, and MATURATION.\ncondition describes the observed condition, for example NORMAL. notes is optional. expectedHarvestDate optionally updates the forecast (YYYY-MM-DD), records it in history, and notifies the customer. New growth observations reset readiness and require a fresh assessment.\nMATURATION or 100% does not automatically set HARVEST_READY. Call PATCH /api/cultivation-sessions/admin/{sessionId}/harvest-readiness with harvestReady=true to confirm readiness separately.\n",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "growthStatus",
+                    "progressPercent",
+                    "condition"
+                  ],
+                  "properties": {
+                    "growthStatus": {
+                      "type": "string",
+                      "enum": [
+                        "FRUITING_INITIATION",
+                        "PINNING",
+                        "YOUNG_FRUITING",
+                        "MATURATION"
+                      ],
+                      "example": "FRUITING_INITIATION"
+                    },
+                    "progressPercent": {
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 100,
+                      "example": 10
+                    },
+                    "condition": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 500,
+                      "example": "NORMAL"
+                    },
+                    "notes": {
+                      "type": "string",
+                      "maxLength": 1000
+                    },
+                    "expectedHarvestDate": {
+                      "type": "string",
+                      "format": "date",
+                      "example": "2026-11-10"
+                    }
+                  }
+                },
+                "examples": {
+                  "FRUITING_INITIATION": {
+                    "summary": "FRUITING_INITIATION",
+                    "value": {
+                      "growthStatus": "FRUITING_INITIATION",
+                      "progressPercent": 10,
+                      "condition": "NORMAL",
+                      "notes": "Spawn has been placed on the assigned trays and fruiting initiation has started."
+                    }
+                  },
+                  "PINNING": {
+                    "summary": "PINNING",
+                    "value": {
+                      "growthStatus": "PINNING",
+                      "progressPercent": 30,
+                      "condition": "NORMAL",
+                      "notes": "Initial mushroom pins are appearing normally."
+                    }
+                  },
+                  "YOUNG_FRUITING": {
+                    "summary": "YOUNG_FRUITING",
+                    "value": {
+                      "growthStatus": "YOUNG_FRUITING",
+                      "progressPercent": 60,
+                      "condition": "NORMAL",
+                      "notes": "Young fruiting bodies are developing normally."
+                    }
+                  },
+                  "MATURATION": {
+                    "summary": "MATURATION",
+                    "value": {
+                      "growthStatus": "MATURATION",
+                      "progressPercent": 90,
+                      "condition": "NORMAL",
+                      "notes": "Mushrooms are approaching the expected mature condition and should be evaluated for harvest readiness."
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Growth history recorded; session remains CULTIVATING"
+            },
+            "400": {
+              "description": "Invalid input"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Session not found"
+            },
+            "409": {
+              "description": "Invalid session state or growth regression"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/{sessionId}/harvest-readiness": {
+        "patch": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "Confirm whether the cultivation session is ready for harvesting",
+          "description": "Only CULTIVATING sessions with all required trays ACTIVE and OCCUPIED and a recorded growth condition can be assessed. True requires MATURATION and no unresolved quality or HIGH-severity incidents, and sets harvest_status to HARVEST_READY while status stays CULTIVATING. False sets NOT_READY. The confirming operator and time are recorded and the customer is notified when ready. The assessment and optional notes are appended to history. This API never performs harvesting.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "harvestReady"
+                  ],
+                  "properties": {
+                    "harvestReady": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "notes": {
+                      "type": "string",
+                      "maxLength": 1000
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Harvest readiness assessment recorded"
+            },
+            "400": {
+              "description": "Invalid input"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Session not found"
+            },
+            "409": {
+              "description": "Invalid session state",
+              "missing trays or growth condition": null,
+              "or immature growth": null
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/{sessionId}/progress": {
+        "get": {
+          "tags": [
+            "Cultivation Audit"
+          ],
+          "summary": "Get immutable WF-03 progress history for a cultivation session",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Session status, harvest status, latest progress, and complete progress history"
+            },
+            "400": {
+              "description": "Invalid session ID"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
+            },
+            "404": {
+              "description": "Session not found"
             }
           }
         }
@@ -5168,6 +7602,95 @@ window.onload = function() {
             },
             "500": {
               "description": "Internal server error"
+            }
+          }
+        }
+      },
+      "/api/analytics/dashboard": {
+        "get": {
+          "tags": [
+            "Analytics"
+          ],
+          "summary": "Get all-time dashboard revenue, tray usages and harvest quality percentages",
+          "description": "Roles: 1 = Admin, 2 = Farm Operator, 3 = Customer. Only roles 1 and 2 may access. Revenue sums orders.total_amount where orders.payment_status is PAID, regardless of order status. Trays count ACTIVE or RELEASED assignments in CULTIVATING, HARVEST_READY, HARVESTING or COMPLETED sessions; cancelled and pre-cultivation sessions are excluded. Repeated use of a physical tray counts each assignment. Harvest quality includes COMPLETED harvests with all three weights present and nonnegative. usable_rate = usable harvested weight / total harvested weight × 100; waste_rate = rejected harvested weight / total harvested weight × 100. Rates are percentages rounded to at most two decimals, without normalization to 100. Empty metrics and rates with zero total weight return 0. No date filter.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Dashboard metrics (quality rates are percentages)",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "required": [
+                      "data"
+                    ],
+                    "properties": {
+                      "data": {
+                        "type": "object",
+                        "required": [
+                          "revenue",
+                          "trays_used",
+                          "harvest_quality"
+                        ],
+                        "properties": {
+                          "revenue": {
+                            "type": "object",
+                            "required": [
+                              "value",
+                              "currency"
+                            ],
+                            "properties": {
+                              "value": {
+                                "type": "number",
+                                "example": 128500000
+                              },
+                              "currency": {
+                                "type": "string",
+                                "enum": [
+                                  "VND"
+                                ]
+                              }
+                            }
+                          },
+                          "trays_used": {
+                            "type": "integer",
+                            "example": 36
+                          },
+                          "harvest_quality": {
+                            "type": "object",
+                            "required": [
+                              "usable_rate",
+                              "waste_rate"
+                            ],
+                            "properties": {
+                              "usable_rate": {
+                                "type": "number",
+                                "description": "Percentage of total harvested weight that is usable",
+                                "example": 93
+                              },
+                              "waste_rate": {
+                                "type": "number",
+                                "description": "Percentage of total harvested weight that is rejected",
+                                "example": 7
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin or Farm Operator role required"
             }
           }
         }
@@ -6353,6 +8876,126 @@ window.onload = function() {
           }
         }
       },
+      "/api/iot/floors/{floorId}/trays/generate": {
+        "post": {
+          "tags": [
+            "Automatic misting"
+          ],
+          "summary": "Generate trays from floor rows and columns",
+          "description": "No body required. Uses saved total_rows and total_columns (maximum 10000 trays). Coordinates start at 1. Creates ACTIVE positions and AVAILABLE trays with codes ROOM{roomId}-F{floorNumber}-R{row}-C{column}; the room prefix prevents conflicts between rooms. Existing trays are preserved; repeated calls fill missing positions only. Returns floor_id, total_rows, total_columns, created_count, total and trays ordered by row_number and column_number. Stop AUTO and resolve OFF first. Conflicting positions or trays without positions return 409. All writes are atomic. Requires iot.automation.manage permission.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "floorId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Result in {data: ...}. State includes mode, run, runtime, environment, ssr, cooldownRemainingMs and lastDecision.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid fields, thresholds, ranges or pagination"
+            },
+            "401": {
+              "description": "JWT missing or invalid"
+            },
+            "403": {
+              "description": "Missing automation permission"
+            },
+            "404": {
+              "description": "Floor not found"
+            },
+            "409": {
+              "description": "Active run, unresolved OFF, invalid mapping, unhealthy sensors, unapproved profiles or hardware safety gate closed"
+            },
+            "503": {
+              "description": "MQTT unavailable; OFF remains pending and is retried"
+            }
+          }
+        }
+      },
+      "/api/iot/floors/{floorId}/trays": {
+        "delete": {
+          "tags": [
+            "Automatic misting"
+          ],
+          "summary": "Delete all trays on a floor",
+          "description": "No body required. Returns floor_id and deleted_count. Keeps tray positions for reuse. Stop AUTO and resolve OFF first. Occupied trays or trays referenced by cultivation records return 409 and nothing is deleted. Requires iot.automation.manage permission. Requires iot.automation.manage permission.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "name": "floorId",
+              "in": "path",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Result in {data: ...}. State includes mode, run, runtime, environment, ssr, cooldownRemainingMs and lastDecision.",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "object"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid fields, thresholds, ranges or pagination"
+            },
+            "401": {
+              "description": "JWT missing or invalid"
+            },
+            "403": {
+              "description": "Missing automation permission"
+            },
+            "404": {
+              "description": "Floor not found"
+            },
+            "409": {
+              "description": "Active run, unresolved OFF, invalid mapping, unhealthy sensors, unapproved profiles or hardware safety gate closed"
+            },
+            "503": {
+              "description": "MQTT unavailable; OFF remains pending and is retried"
+            }
+          }
+        }
+      },
       "/api/iot/floors/{floorId}/trays/{trayId}": {
         "put": {
           "tags": [
@@ -6613,6 +9256,17 @@ window.onload = function() {
                               "profile_approved": {
                                 "type": "boolean",
                                 "default": false
+                              },
+                              "mushroom_type_ids": {
+                                "type": "array",
+                                "minItems": 1,
+                                "uniqueItems": true,
+                                "items": {
+                                  "type": "integer",
+                                  "minimum": 1,
+                                  "maximum": 2147483647
+                                },
+                                "description": "FLOOR only: approve crop types before assigning sessions. Server reads conditions and stores source_profiles. Must include all crops currently on the floor."
                               },
                               "config_source": {
                                 "type": "string",
@@ -6967,6 +9621,17 @@ window.onload = function() {
                     "profile_approved": {
                       "type": "boolean",
                       "default": false
+                    },
+                    "mushroom_type_ids": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 2147483647
+                      },
+                      "description": "FLOOR only: approve crop types before assigning sessions. Server reads conditions and stores source_profiles. Must include all crops currently on the floor."
                     },
                     "config_source": {
                       "type": "string",
@@ -7433,6 +10098,17 @@ window.onload = function() {
                                     "type": "boolean",
                                     "default": false
                                   },
+                                  "mushroom_type_ids": {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "uniqueItems": true,
+                                    "items": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 2147483647
+                                    },
+                                    "description": "FLOOR only: approve crop types before assigning sessions. Server reads conditions and stores source_profiles. Must include all crops currently on the floor."
+                                  },
                                   "config_source": {
                                     "type": "string",
                                     "enum": [
@@ -7805,6 +10481,17 @@ window.onload = function() {
                                   "profile_approved": {
                                     "type": "boolean",
                                     "default": false
+                                  },
+                                  "mushroom_type_ids": {
+                                    "type": "array",
+                                    "minItems": 1,
+                                    "uniqueItems": true,
+                                    "items": {
+                                      "type": "integer",
+                                      "minimum": 1,
+                                      "maximum": 2147483647
+                                    },
+                                    "description": "FLOOR only: approve crop types before assigning sessions. Server reads conditions and stores source_profiles. Must include all crops currently on the floor."
                                   },
                                   "config_source": {
                                     "type": "string",

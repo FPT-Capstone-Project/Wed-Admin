@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { BellOutlined, SearchOutlined } from '@ant-design/icons'
-import { Col, Flex, Input, Row, Select, Skeleton, Typography } from 'antd'
+import { Button, Col, Flex, Input, Row, Select, Skeleton, Typography } from 'antd'
 import {
   DataTable,
   MetadataBadge,
@@ -8,7 +8,7 @@ import {
   StatCard,
   StatusBadge,
 } from '../../../shared/ui'
-import { useNotifications } from '../hooks/useNotifications'
+import { useNotifications, useNotificationActions } from '../hooks/useNotifications'
 import type { AppNotification } from '../types/notification.types'
 
 const READ_OPTIONS = [
@@ -43,16 +43,8 @@ function fmtDate(value: string | null | undefined): string {
   return DATE_FMT.format(date)
 }
 
-/**
- * Trang thông báo — **100% READ-ONLY**.
- *
- * Nguồn: `GET /api/notifications` (danh sách + `isRead` + phân trang +
- * `meta.unread_count`).
- *
- * ⚠ Không có nút "đánh dấu đã đọc": BE có `PATCH /api/notifications/read-all`
- * nhưng đó là thao tác của app người dùng — Admin web chỉ quan sát.
- */
 export function NotificationsPage() {
+  const { read, readAll, pending } = useNotificationActions()
   const [searchText, setSearchText] = useState('')
   const [readFilter, setReadFilter] = useState<'ALL' | 'UNREAD' | 'READ'>('ALL')
   const [page, setPage] = useState(1)
@@ -60,7 +52,7 @@ export function NotificationsPage() {
 
   const query = useMemo(
     () => ({
-      isRead: readFilter === 'ALL' ? undefined : readFilter === 'UNREAD',
+      isRead: readFilter === 'ALL' ? undefined : readFilter === 'READ',
       page,
       pageSize,
     }),
@@ -87,12 +79,12 @@ export function NotificationsPage() {
     <div>
       <PageHeader
         title="Thông báo"
-        description="Danh sách thông báo của tài khoản đang đăng nhập — chỉ đọc."
+        description="Danh sách thông báo của tài khoản đang đăng nhập."
         actions={
-          <MetadataBadge
+          <Flex gap={8}><Button loading={readAll.isPending} disabled={pending || !data?.unreadCount} onClick={() => readAll.mutate()}>Đánh dấu tất cả đã đọc</Button><MetadataBadge
             label={`${data?.unreadCount ?? 0} chưa đọc`}
             icon={<BellOutlined />}
-          />
+          /></Flex>
         }
       />
 
@@ -102,7 +94,7 @@ export function NotificationsPage() {
             title="Tổng thông báo"
             value={pagination?.total ?? items.length}
             tone="neutral"
-            description="Trong toàn bộ hệ thống"
+            description="Theo bộ lọc của tài khoản"
           />
         </Col>
         <Col xs={12} lg={8}>
@@ -111,7 +103,7 @@ export function NotificationsPage() {
             value={data?.unreadCount ?? 0}
             tone="info"
             highlightValue
-            description="Theo meta.unread_count của Backend"
+            description="Thông báo chưa đọc của tài khoản"
           />
         </Col>
         <Col xs={24} lg={8}>
@@ -142,6 +134,13 @@ export function NotificationsPage() {
       ) : (
         <DataTable<AppNotification>
           rowKey="notification_id"
+          onRow={item => ({
+            onClick: event => {
+              if (event.target instanceof Element && event.target.closest('button')) return
+              if (!item.is_read && !pending) read.mutate(item.notification_id)
+            },
+            style: { cursor: item.is_read ? 'default' : 'pointer' },
+          })}
           dataSource={filteredItems}
           loading={false}
           scrollX={760}
@@ -186,9 +185,7 @@ export function NotificationsPage() {
               key: 'content',
               render: (_, item) => (
                 <Flex vertical gap={2}>
-                  <Typography.Text strong={!item.is_read}>
-                    {item.title ?? '—'}
-                  </Typography.Text>
+                  <Button type="link" disabled={item.is_read || pending} onClick={() => read.mutate(item.notification_id)} style={{ padding: 0, height: 'auto', whiteSpace: 'normal', textAlign: 'left' }}>{item.title ?? 'Thông báo'}</Button>
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {item.message ?? '—'}
                   </Typography.Text>

@@ -21,7 +21,7 @@ export type SpawnInspectionCondition = 'NORMAL' | 'WARNING' | 'ABNORMAL'
  * Phiên canh tác trong luồng Farm Spawn Workflow.
  *
  * ⚠ BE (`GET /api/farm/sessions`) trả **flat** và có các field mà
- *   `GET /api/cultivation-sessions/admin` không có:
+ *   `GET /api/farm/sessions` không có:
  *   - `order_id`, `customer_name`, `customer_email` — để Admin dựng lại
  *     danh sách đơn khách đã đặt (vì `GET /api/orders` chỉ trả đơn của
  *     chính user đăng nhập).
@@ -29,6 +29,10 @@ export type SpawnInspectionCondition = 'NORMAL' | 'WARNING' | 'ABNORMAL'
  *   - `spawn_issued` — số đơn vị phôi đã cấp.
  */
 export interface FarmSession {
+  harvest_status?: string | null
+  expected_harvest_date?: string | null
+  last_inspected_at?: string | null
+  order_item_id?: number | null
   session_id: number
   order_id?: number | null
   user_id?: number | null

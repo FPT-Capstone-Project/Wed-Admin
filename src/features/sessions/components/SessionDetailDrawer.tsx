@@ -250,6 +250,8 @@ function SessionDetailContent({
                         />
                       ),
                     },
+                    { key: 'spawnRequested', label: 'Số phôi yêu cầu', children: session.spawn_quantity ?? '—' },
+                    { key: 'harvestStatus', label: 'Trạng thái thu hoạch', children: session.harvest_status ?? '—' },
                     {
                       key: 'spawn',
                       label: 'Phôi đã cấp',

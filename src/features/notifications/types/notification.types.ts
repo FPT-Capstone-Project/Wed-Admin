@@ -74,7 +74,7 @@ export interface NotificationListResult {
 
 /** Bộ lọc `GET /api/notifications`. */
 export interface NotificationListQuery {
-  /** `true` = chỉ lấy chưa đọc, `false` = chỉ lấy đã đọc. */
+  /** `true` = chỉ lấy đã đọc, `false` = chỉ lấy chưa đọc. */
   isRead?: boolean
   /** Mặc định BE = 1 */
   page?: number

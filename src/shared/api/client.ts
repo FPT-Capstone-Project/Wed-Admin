@@ -3,43 +3,34 @@ import { tokenStorage } from './token-storage'
 import { extractApiError } from './error'
 import { installErrorToast, cancelPendingErrorToast } from './error-toast'
 import { normalizeResponse } from './response-adapter'
+import {
+  reportApiConfigProblem,
+  resolveApiConfig,
+  type ApiConfigResolution,
+} from './api-config'
 
 /**
- * Base URL — đọc từ Vite env `VITE_API_BASE_URL` trong file `.env`.
+ * Cấu hình API đã resolve — đọc `import.meta.env` **một lần** cho cả app.
  *
- * Phân biệt theo mode:
- *   - Dev  : '' → axios dùng window.location.origin (cùng-origin với Vite proxy).
- *            Vite (xem vite.config.ts) sẽ forward /api/* → backend thật → né CORS.
- *   - Prod : **origin** của backend để client gọi thẳng (HTTPS, không CORS).
- *
- * ⚠ `VITE_API_BASE_URL` có thể được khai báo 2 kiểu:
- *     https://mcms-h5g5dtdzajf0bebm.eastasia-01.azurewebsites.net        (origin — chuẩn, nên dùng)
- *     https://mcms-h5g5dtdzajf0bebm.eastasia-01.azurewebsites.net/api    (kèm hậu tố /api)
- *   Endpoint trong `*.api.ts` đã chứa sẵn `/api/...` và axios cộng chuỗi,
- *   nên giữ hậu tố `/api` sẽ tạo ra `/api/api/users` → 404. Vì vậy hàm này
- *   luôn chuẩn hoá về origin (bỏ dấu `/` cuối và hậu tố `/api`).
+ * ⚠ `import.meta.env` chỉ tồn tại trong bundle Vite ⇒ đọc ở đây (client
+ *   layer), còn `api-config.ts` giữ logic thuần để test được.
  */
-function resolveApiBaseUrl(): string {
-  // Trong dev: luôn trả '' → axios dùng window.location.origin,
-  // request /api/* sẽ được Vite proxy forward sang backend Azure (xem vite.config.ts).
-  // Lý do dùng DEV làm primary: lệch mode chỉ xảy ra khi build static, lúc đó
-  // import.meta.env.VITE_API_BASE_URL trong .env mới là giá trị production thật.
-  if (import.meta.env.DEV) return ''
+export const apiConfig: ApiConfigResolution = resolveApiConfig(
+  (import.meta.env ?? {}) as unknown as Record<string, unknown>,
+)
 
-  const raw = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? ''
-  const cleaned = raw.trim().replace(/\/+$/, '').replace(/\/api$/i, '')
-
-  if (!cleaned) {
-    console.warn(
-      '[MCMS API] VITE_API_BASE_URL chưa được cấu hình trong production. ' +
-        'Mọi request sẽ thất bại. Hãy set biến này qua CI/CD environment.',
-    )
-  }
-
-  return cleaned
-}
-
-export const API_BASE_URL = resolveApiBaseUrl()
+/**
+ * Base URL của axios — xuất từ `api-config.ts` (đã validate).
+ *
+ * - **Dev**: `''` ⇒ axios gọi `window.location.origin/api/...` ⇒ **Vite proxy**
+ *   forward sang backend thật ⇒ không bị CORS.
+ * - **Production**: origin của backend (chuẩn hoá bỏ hậu tố `/api` vì các
+ *   endpoint đã chứa sẵn `/api/...`).
+ *
+ * ⚐ Xem `api-config.ts` để hiểu vì sao `VITE_API_BASE_URL` được chuẩn hoá
+ *   về origin và vì sao dev KHÔNG dùng nó làm `baseURL`.
+ */
+export const API_BASE_URL = apiConfig.baseUrl
 
 /**
  * Custom event dispatched khi phiên đăng nhập hết hạn (HTTP 401).
@@ -47,13 +38,32 @@ export const API_BASE_URL = resolveApiBaseUrl()
  */
 export const AUTH_EXPIRED_EVENT = 'mcms:auth-expired'
 
+/**
+ * Đánh dấu đã thông báo hết phiên — tránh dispatch lặp khi nhiều request
+ * cùng trả 401 (poll nền 5s + 3 request song song).
+ */
+let hasNotifiedAuthExpired = false
+
 function notifyAuthExpired(error: AxiosError) {
   if (typeof window === 'undefined') return
+  if (hasNotifiedAuthExpired) return
+  hasNotifiedAuthExpired = true
+
   window.dispatchEvent(
     new CustomEvent(AUTH_EXPIRED_EVENT, {
       detail: { status: error.response?.status ?? null },
     }),
   )
+}
+
+/**
+ * Reset cờ "đã thông báo hết phiên" — gọi khi user đăng nhập lại.
+ *
+ * ⚠ Không có bước này thì sau khi 1 lần 401, mọi 401 về sau đều bị bỏ qua
+ *   ⇒ user đăng nhập lại xong thì lần 401 kế tiếp không thoát được nữa.
+ */
+export function resetAuthExpiredNotice(): void {
+  hasNotifiedAuthExpired = false
 }
 
 /**
@@ -73,7 +83,8 @@ const API_TIMEOUT_MS = 60_000
 /**
  * Axios instance dùng chung cho toàn bộ app.
  *
- * - Tự đính kèm Bearer token vào mọi request (đọc từ tokenStorage).
+ * - Tự đính kèm Bearer token vào mọi request (đọc từ `tokenStorage` —
+ *   cùng nguồn với Zustand `auth.store`).
  * - Tự clear session + dispatch event khi backend trả 401.
  * - Không retry tự động ở tầng axios — để React Query quản lý retry policy
  *   (`retryApiErrors` ở `QueryProvider`).
@@ -90,6 +101,12 @@ export const apiClient: AxiosInstance = axios.create({
 // ─── Request interceptor ─────────────────────────────────────────────────
 apiClient.interceptors.request.use(
   (config) => {
+    // Bearer token lấy từ `tokenStorage` — cùng nguồn với Zustand
+    // `auth.store` (store ghi token vào đây khi đăng nhập, xoá khi logout).
+    //
+    // ⚠ Đọc **trực tiếp** từ storage thay vì từ Zustand store:
+    //   `client.ts` nằm ở tầng thấp, import `auth.store` sẽ tạo vòng lặp
+    //   (store → api → store). Storage là nguồn sự thật duy nhất cho token.
     const token = tokenStorage.getAccessToken()
     if (token) {
       config.headers = config.headers ?? {}
@@ -113,7 +130,14 @@ apiClient.interceptors.response.use(
     return normalizeResponse(response)
   },
   (error: AxiosError) => {
-    // 401: token sai / hết hạn → clear + phát event
+    // 401: token sai / hết hạn →
+    //   1. xoá token ở CẢ localStorage lẫn sessionStorage,
+    //   2. dispatch `mcms:auth-expired` ⇒ `AdminLayout` clear store + về /login.
+    //
+    // ⚠ BE **không** có endpoint refresh token (`/api/auth/refresh` không tồn
+    //   tại — xem `Backend/src/routes/auth.routes.js`), JWT là access token
+    //   thuần. Vì vậy không có luồng refresh ⇒ 401 luôn dẫn tới đăng nhập lại.
+    //   `tokenStorage` vẫn hỗ trợ refresh token để sẵn sàng khi BE bổ sung.
     if (error.response?.status === 401) {
       tokenStorage.clear()
       notifyAuthExpired(error)
@@ -125,6 +149,24 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
+/**
+ * Validate cấu hình API — gọi **một lần** khi app khởi động.
+ *
+ * ⚠ Ở production, thiếu `VITE_API_BASE_URL` ⇒ mọi request gọi tới
+ *   `window.location.origin` (trang static) ⇒ hỏng hết.
+ *   Hàm này in lỗi rõ ràng ra console **trước** khi app render.
+ *
+ * @returns `true` nếu cấu hình hợp lệ.
+ */
+export function validateApiConfig(
+  config: ApiConfigResolution = apiConfig,
+): boolean {
+  if (config.isValid) return true
+
+  reportApiConfigProblem(config)
+  return false
+}
 
 /** Helper: chuẩn hoá error thành Error có message tiếng Việt. */
 export async function unwrapApiCall<T>(

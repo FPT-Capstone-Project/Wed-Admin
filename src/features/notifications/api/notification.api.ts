@@ -7,20 +7,11 @@ import type {
   NotificationPagination,
 } from '../types/notification.types'
 
-/**
- * Notification API — **100% READ-ONLY**.
- *
- * ⚠ TUYỆT ĐỐI KHÔNG thêm hàm POST/PATCH/PUT/DELETE ở đây.
- *   BE có `PATCH /api/notifications/read-all` và `PATCH /api/notifications/{id}/read`
- *   nhưng đó là thao tác của app người dùng — Admin web chỉ quan sát.
- *
- * Endpoint: `GET /api/notifications`
- *   - query: `isRead` (boolean), `page` (>=1), `pageSize` (1..100)
- *   - response: `{ data: Notification[], pagination: {...}, meta: { unread_count } }`
- */
 const BASE = '/api/notifications'
 
 export const notificationApi = {
+  async markRead(id: number): Promise<void> { await apiClient.patch(`${BASE}/${id}/read`) },
+  async markAllRead(): Promise<void> { await apiClient.patch(`${BASE}/read-all`) },
   async list(
     query: NotificationListQuery = {},
   ): Promise<NotificationListResult> {
@@ -28,8 +19,8 @@ export const notificationApi = {
 
     const items = ensureArray<unknown>(response.data).map(normalizeNotification)
 
-    const body = ensureObject<Record<string, unknown>>(response.data) ?? {}
-    const pagination = normalizePagination(body.pagination)
+    const body = response.data as { pagination?: unknown } | null
+    const pagination = normalizePagination(body?.pagination)
     const unreadCount = pickUnreadCount(response.data) ?? items.filter((n) => !n.is_read).length
 
     return { items, pagination, unreadCount }
@@ -68,7 +59,6 @@ function normalizePagination(raw: unknown): NotificationPagination | null {
   return { page, pageSize, total, totalPages }
 }
 
-/** Đọc `meta.unread_count` từ body gốc (response đã bị adapter bọc). */
 function pickUnreadCount(raw: unknown): number | null {
   if (typeof raw !== 'object' || raw === null) return null
   const body = raw as Record<string, unknown>

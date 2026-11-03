@@ -1,4 +1,5 @@
 import '../rooms-industrial.css'
+import { RoomAdministration } from '../components/RoomAdministration'
 import {
   CheckCircleOutlined,
   InboxOutlined,
@@ -6,7 +7,7 @@ import {
   ToolOutlined,
 } from '@ant-design/icons'
 import { Col, Row } from 'antd'
-import { useMemo } from 'react'
+import { Suspense, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Tier, Tray } from '../../../types/room.types'
 import { tokens } from '../../../app/theme/tokens'
@@ -14,7 +15,7 @@ import { ActionButton, EmptyState, PageHeader, StatCard } from '../../../shared/
 import { getApiErrorMessage } from '../../../shared/api/error'
 import { RackView } from '../components/RackView'
 import { TrayAttentionBanner, type AttentionTray } from '../components/TrayAttentionBanner'
-import { TrayDetailDrawer } from '../components/TrayDetailDrawer'
+import { TrayDetailDrawer } from '../../../app/router/lazy-modals'
 import { TrayStatusLegend } from '../components/TrayStatusLegend'
 import { useTiersWithEnvironment } from '../hooks/useTiersWithEnvironment'
 import { useTraySessionSummaries } from '../hooks/useTraySessionSummaries'
@@ -141,16 +142,13 @@ export function RoomListPage() {
     <div className="mcms-rooms-view" style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['4'] }}>
 
       {/* ── Page header ──────────────────────────────────────────────── */}
-      {/*
-        ⚠ KHÔNG có nút "Quản trị" (icon bánh răng) — Admin web chỉ **quan
-        sát** phòng & khay, không thêm / sửa / xoá hạ tầng. Mọi thao tác
-        ghi do **nhân viên (staff)** thực hiện trên mobile app.
-      */}
+
       <PageHeader
         title="Quản lý khay nấm"
         description={`${tiers.length} tầng nuôi · ${summary.total} khay`}
       />
 
+      <RoomAdministration />
       {/* ── Legend nhỏ — chú thích trạng thái, không phải nút bấm ───── */}
       <TrayStatusLegend />
 
@@ -225,10 +223,12 @@ export function RoomListPage() {
       )}
 
       {/* ── Drawer ───────────────────────────────────────────────────── */}
-      <TrayDetailDrawer
-        trayId={id}
-        onClose={() => navigate('/rooms', { replace: true })}
-      />
+            <Suspense fallback={null}>
+              <TrayDetailDrawer
+              trayId={id}
+              onClose={() => navigate('/rooms', { replace: true })}
+              />
+            </Suspense>
     </div>
   )
 }

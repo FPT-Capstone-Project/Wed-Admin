@@ -1,3 +1,4 @@
+import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import '../sessions-industrial.css'
 import {
   CheckCircleOutlined,
@@ -19,7 +20,7 @@ import {
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { ActionButton, DataTable, StatCard } from '../../../shared/ui'
 import { useSessions } from '../hooks/useSessions'
 import {
@@ -34,7 +35,7 @@ import {
   SESSION_DEFAULT_PROGRESS,
   SESSION_STATUS_CONFIG,
 } from '../components/session-status.config'
-import { SessionDetailDrawer } from '../components/SessionDetailDrawer'
+import { SessionDetailDrawer } from '../../../app/router/lazy-modals'
 
 /**
  * Trang danh sách phiên canh tác — **100% READ-ONLY**.
@@ -80,7 +81,7 @@ export function SessionListPage() {
     null,
   )
 
-  // Query params: status + phân trang (BE hỗ trợ thêm userId/trayId/…).
+  // Server nhận status; page/pageSize được áp dụng tại frontend.
   const listQuery = useMemo<SessionListQuery>(
     () => ({
       status: statusFilter,
@@ -170,7 +171,7 @@ export function SessionListPage() {
         render: (_, session) => {
           if (session.trays.length === 0) {
             return (
-              <Typography.Text type="secondary">Chưa gán khay</Typography.Text>
+              <Typography.Text type="secondary">Xem phân bổ trong chi tiết</Typography.Text>
             )
           }
           const codes = session.trays
@@ -203,7 +204,7 @@ export function SessionListPage() {
         },
       },
       {
-        title: 'Tiến độ',
+        title: 'Tiến độ theo giai đoạn',
         key: 'progress',
         width: 160,
         render: (_, session) => {
@@ -236,6 +237,10 @@ export function SessionListPage() {
           )
         },
       },
+      { title: 'Số khay', dataIndex: 'tray_count', width: 90, render: (value: number | null) => value ?? '—' },
+      { title: 'Số phôi yêu cầu', dataIndex: 'spawn_quantity', width: 110, render: (value: number | null) => value ?? '—' },
+      { title: 'Dự kiến thu hoạch', dataIndex: 'expected_harvest_date', width: 140, render: (value: string | null) => fmtDate(value) },
+      { title: 'Kiểm tra gần nhất', dataIndex: 'last_inspected_at', width: 140, render: (value: string | null) => fmtDate(value) },
       {
         title: 'Bắt đầu',
         dataIndex: 'start_date',
@@ -283,6 +288,8 @@ export function SessionListPage() {
     setPage(1)
   }
 
+  if (isError) return <LoadErrorAlert error={error} resource="danh sách phiên canh tác" onRetry={refetch} />
+
   return (
     <div>
       <Flex
@@ -297,7 +304,7 @@ export function SessionListPage() {
             Quản lý phiên canh tác
           </Typography.Title>
           <Typography.Text type="secondary">
-            Theo dõi vòng đời canh tác, khay được gán và lịch sử kiểm tra phôi
+            Theo dõi các phiên đã thanh toán trong luồng farm, khay và lịch sử kiểm tra phôi
             — chỉ đọc.
           </Typography.Text>
         </div>
@@ -364,23 +371,7 @@ export function SessionListPage() {
         </Col>
       </Row>
 
-      {isError ? (
-        <Card styles={{ body: { padding: 0 } }}>
-          <DataTable<CultivationSession>
-            rowKey="session_id"
-            columns={columns}
-            dataSource={[]}
-            loading={false}
-            error={{
-              message:
-                error?.message ??
-                'Không tải được danh sách phiên canh tác. Lỗi không xác định.',
-            }}
-            onRetry={() => void refetch()}
-            emptyTitle="Chưa có phiên canh tác nào"
-          />
-        </Card>
-      ) : (        <Card styles={{ body: { padding: 0 } }}>
+      <Card styles={{ body: { padding: 0 } }}>
           <DataTable<CultivationSession>
             rowKey="session_id"
             columns={columns}
@@ -403,13 +394,14 @@ export function SessionListPage() {
             emptyTitle="Chưa có phiên canh tác nào"
             emptyDescription="Phiên sẽ xuất hiện khi khách đặt gói và hệ thống khởi tạo."
           />
-        </Card>
-      )}
+      </Card>
 
-      <SessionDetailDrawer
-        sessionId={selectedSessionId}
-        onClose={() => setSelectedSessionId(null)}
-      />
+            <Suspense fallback={null}>
+              <SessionDetailDrawer
+              sessionId={selectedSessionId}
+              onClose={() => setSelectedSessionId(null)}
+              />
+            </Suspense>
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import '../../styles/reports-users-industrial.css'
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
   EyeOutlined,
@@ -34,7 +34,7 @@ import type {
 } from '../../types/user.types'
 import type { SemanticTone } from '../../app/theme/tokens'
 import { ActionButton, MetadataBadge, StatCard, StatusBadge, DataTable } from '../../shared/ui'
-import { UserDetailDrawer } from './components/UserDetailDrawer'
+import { UserDetailDrawer } from '../../app/router/lazy-modals'
 
 const PAGE_SIZE = 20
 
@@ -389,11 +389,13 @@ export function UserManagementPage() {
         />
       )}
 
-      <UserDetailDrawer
-        userId={selectedUserId}
-        user={selectedUser}
-        onClose={() => setSelectedUserId(null)}
-      />
+            <Suspense fallback={null}>
+              <UserDetailDrawer
+              userId={selectedUserId}
+              user={selectedUser}
+              onClose={() => setSelectedUserId(null)}
+              />
+            </Suspense>
     </div>
   )
 }

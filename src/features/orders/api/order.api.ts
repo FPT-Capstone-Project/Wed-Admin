@@ -1,3 +1,4 @@
+import { normalizeOrder } from './order-normalizer'
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
 import { isNotFoundError } from '../../../shared/api/safe-fetch'
@@ -24,7 +25,7 @@ export const orderApi = {
    */
   async list(): Promise<Order[]> {
     const response = await apiClient.get<unknown>('/api/orders')
-    return ensureArray<Order>(response.data)
+    return ensureArray<unknown>(response.data).map(normalizeOrder)
   },
 
   /** GET /api/orders/{orderId}
@@ -33,7 +34,8 @@ export const orderApi = {
   async getById(orderId: number): Promise<Order | null> {
     try {
       const response = await apiClient.get<unknown>(`/api/orders/${orderId}`)
-      return ensureObject<Order>(response.data)
+      const raw = ensureObject<unknown>(response.data)
+      return raw ? normalizeOrder(raw) : null
     } catch (error) {
       // 404 → đơn không tồn tại (hoặc không thuộc user đang đăng nhập).
       if (isNotFoundError(error)) return null

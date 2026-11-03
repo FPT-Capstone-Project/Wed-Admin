@@ -186,7 +186,17 @@ function normalizeLiveStream(
   }
 }
 
+export interface AdminLiveSession { liveToken: string; deviceId: string | null; channelId: string | null; liveStatus: string | number; camera: { cameraId: number; cameraName: string } | null }
+export interface AdminLiveSessionsResponse { count: number; start: number; limit: number; lives: AdminLiveSession[] }
+export interface StopLiveSessionRequest { liveToken: string }
 export const cameraApi = {
+  async adminLiveSessions(page: number, limit: number): Promise<AdminLiveSessionsResponse> {
+    return (await apiClient.get<{ data: AdminLiveSessionsResponse }>('/api/cameras/live-streams', { params: { start: (page - 1) * limit + 1, limit } })).data.data
+  },
+  async stopLiveSession(liveToken: string): Promise<void> {
+    const payload: StopLiveSessionRequest = { liveToken }
+    await apiClient.post('/api/cameras/live-streams/stop', payload)
+  },
   /** GET /api/cameras — danh sách camera. */
   async list(query: CameraListQuery = {}): Promise<Camera[]> {
     const response = await apiClient.get<unknown>('/api/cameras', {

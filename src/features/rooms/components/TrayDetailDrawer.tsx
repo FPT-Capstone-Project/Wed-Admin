@@ -1,3 +1,4 @@
+import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import '../rooms-industrial.css'
 import { MetadataBadge } from '../../../shared/ui'
 import {
@@ -9,6 +10,7 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import {
+  Alert,
   Descriptions,
   Drawer,
   Empty,
@@ -117,7 +119,7 @@ function InfoCard({ icon, title, subtitle, children }: InfoCardProps) {
  * Drawer chi tiết khay — **100% READ-ONLY**.
  *
  * ⚠ Giai đoạn 1: chuyển từ nguồn `/api/rentals/admin` (module `features/rentals`
- *   đã bị gỡ) sang `GET /api/cultivation-sessions/admin`.
+ *   đã bị gỡ) sang `GET /api/farm/sessions`.
  *
  * ⚠ KHÔNG có thao tác ghi: ghi nhật nhật ký chăm sóc, thu hoạch sớm, tiêu hủy
  *   mẻ, xuất hóa đơn… đều do **nhân viên (staff)** thực hiện trên app.
@@ -140,19 +142,20 @@ export function TrayDetailDrawer({
   }, [trayId])
 
   // Phiên canh tác đang gán cho khay — nguồn duy nhất.
-  const { data: sessionsData, isLoading: sessionsLoading } = useSessions(
+  const { data: sessionsData, isLoading: sessionsLoading, isError: sessionsError, error: sessionError, refetch: refetchSessions } = useSessions(
     { trayId: trayNumericId ?? undefined, pageSize: 10 },
-    { enabled: trayNumericId !== null },
+    { enabled: trayNumericId !== null, placeholderData: undefined },
   )
 
   const session = useMemo(() => {
+    if (sessionsError) return null
     const items = sessionsData?.items ?? []
     return (
-      items.find((s) => ACTIVE_SESSION_STATUSES.has(s.status)) ?? items[0] ?? null
+      items.find((s) => ACTIVE_SESSION_STATUSES.has(s.status)) ?? (apiTray?.status === 'rented' ? null : items[0] ?? null)
     )
-  }, [sessionsData])
+  }, [sessionsData, sessionsError, apiTray?.status])
 
-  const { data: inspections, isLoading: inspectionsLoading } =
+  const { data: inspections, isLoading: inspectionsLoading, isError: inspectionsError, error: inspectionError, refetch: refetchInspections } =
     useSpawnInspections(session?.session_id ?? null)
 
   /**
@@ -198,6 +201,7 @@ export function TrayDetailDrawer({
       )
     }
 
+    const occupiedNotice = <Alert type="info" showIcon message="Khay đang trong chu kỳ nuôi trồng" description="Hệ thống đã ghi nhận khay được phân bổ. Dữ liệu tiến độ phiên canh tác chi tiết đang được cập nhật từ máy chủ." />
     const isLoadingAny = traysLoading || sessionsLoading
 
     if (isLoadingAny) {
@@ -219,6 +223,7 @@ export function TrayDetailDrawer({
               <TrayStatusTag status={apiTray.status} />
             </Flex>
           </InfoCard>
+          {apiTray.status === 'rented' && !session && occupiedNotice}
           <div
             style={{
               display: 'flex',
@@ -357,6 +362,8 @@ export function TrayDetailDrawer({
           >
             {inspectionsLoading ? (
               <Spin tip="Đang tải lịch sử kiểm tra phôi..." />
+            ) : inspectionsError ? (
+              <LoadErrorAlert error={inspectionError} resource="lịch sử kiểm tra phôi" onRetry={refetchInspections} />
             ) : (
               <SpawnInspectionList inspections={inspections?.inspections ?? []} />
             )}
@@ -384,14 +391,8 @@ export function TrayDetailDrawer({
             <TrayStatusTag status={apiTray.status} />
           </Flex>
         </InfoCard>
-        <Empty
-          image={Empty.PRESENTED_IMAGE_SIMPLE}
-          description={
-            apiTray.status === 'rented'
-              ? 'Khay đang sử dụng nhưng chưa tìm thấy phiên canh tác đang chạy.'
-              : 'Khay chưa có phiên canh tác nào đang chạy.'
-          }
-        />
+        {apiTray.status === 'rented' ? occupiedNotice : !sessionsError && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Khay chưa có phiên canh tác nào đang chạy." />}
+        {sessionsError && <LoadErrorAlert error={sessionError} resource="dữ liệu phiên của khay" onRetry={refetchSessions} />}
       </div>
     )
   }

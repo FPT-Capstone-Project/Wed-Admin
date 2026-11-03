@@ -8,6 +8,7 @@ import {
   writeKey,
 } from '../../../shared/api/persistence'
 import { resetErrorToastCache } from '../../../shared/api/error-toast'
+import { resetAuthExpiredNotice } from '../../../shared/api/client'
 import { rolePermissionsFor } from '../permissions'
 import {
   backendUserToUiUser,
@@ -170,6 +171,10 @@ export const useAuthStore = create<AuthState>((set) => {
         rememberMe ? 'local' : 'session',
       )
       writeUserCache(user)
+
+      // Đăng nhập lại sau khi 401 ⇒ cho phép interceptor thông báo hết phiên
+      // lần sau (cờ đã bật sau lần 401 trước đó).
+      resetAuthExpiredNotice()
 
       // ── Yêu cầu A: lưu (hoặc xoá) email đã ghi nhớ ───────────────────
       const normalizedEmail = email.trim().toLowerCase()

@@ -2,7 +2,7 @@
  * Tóm tắt phiên canh tác theo khay — dùng để hiển thị "khách + phiên đang
  * chạy" ngay trên ô khay (thay cho chữ "Sẵn sàng vào vụ" lặp lại).
  *
- * ⚠ Nguồn dữ liệu: `GET /api/cultivation-sessions/admin` (đã có sẵn, không
+ * ⚠ Nguồn dữ liệu: `GET /api/farm/sessions` (đã có sẵn, không
  *   thêm endpoint mới). Endpoint này yêu cầu role Admin (1) hoặc Farm
  *   Operator (2) → hook tự tắt khi người dùng không có quyền, tránh gọi
  *   API và luôn nhận 403.
@@ -63,7 +63,7 @@ export function useTraySessionSummaries(): TraySessionSummaryMap {
   const canViewSessions = useHasPermission(SESSION_MANAGE)
 
   const { data } = useSessions(
-    { page: 1, pageSize: 100 },
+    { includeTrays: true },
     { enabled: canViewSessions, staleTime: 60_000 },
   )
 

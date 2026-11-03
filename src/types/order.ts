@@ -65,8 +65,10 @@ export interface Order {
   status: OrderStatus
   payment_status?: PaymentStatus
   total_amount?: number
+  package_name?: string
+  mushroom_name?: string
   items?: OrderItem[]
-  created_at: string
+  created_at: string | null
   updated_at?: string
 }
 

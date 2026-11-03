@@ -92,7 +92,7 @@ const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
  *
  * ⚠ `tray.rental` luôn là `null` khi dữ liệu đến từ BE
  * (`toUiTray` không map rental) → thanh tiến độ trước đây không bao giờ
- * hiện. Nay tính từ `TraySessionSummary` (đọc `GET /api/cultivation-sessions/admin`).
+ * hiện. Nay tính từ `TraySessionSummary` (đọc `GET /api/rentals/admin`).
  *
  * @returns `{ percent, dayLabel }` hoặc `null` khi không có vụ thuê.
  */

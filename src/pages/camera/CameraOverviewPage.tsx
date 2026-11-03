@@ -1,14 +1,14 @@
 import '../../styles/media-industrial.css'
-import { useMemo, useState } from 'react'
+import { CameraRegistrationButton, CameraRowActions, LiveSessionManager } from '../../features/cameras/components/CameraAdministration'
+import { Suspense, useMemo, useState } from 'react'
 import {
   CameraOutlined,
-  EyeOutlined,
   PlayCircleOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
 import { Flex, Space, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { CameraStreamModal } from '../../features/cameras/components/CameraStreamModal'
+import { CameraStreamModal } from '../../app/router/lazy-modals'
 import { useCameras } from '../../features/cameras/hooks/useCameras'
 import {
   CAMERA_STATUSES,
@@ -18,7 +18,6 @@ import {
 import {
   ActionButton,
   DataTable,
-  MetadataBadge,
   PageHeader,
   StatCard,
   StatusBadge,
@@ -34,15 +33,7 @@ const STATUS_META: Record<
   OFFLINE: { tone: 'danger', label: 'Mất kết nối' },
 }
 
-/**
- * Camera toàn cảnh — dữ liệu thật từ `GET /api/cameras`.
- *
- * Live dùng ImouPlayer + KitToken (`GET /api/cameras/{id}/imou-player-token`).
- *
- * ⚠ **CHỈ XEM (Giai đoạn 5)**: Admin web chỉ xem danh sách camera và xem
- * live stream Imou. Đã gỡ toàn bộ nút Thêm / Sửa / Xoá camera (và modal
- * `CameraFormModal`) — việc đăng ký / cấu hình camera thuộc nhân viên (staff).
- */
+
 export function CameraOverviewPage() {
   const [statusFilter, setStatusFilter] = useState<CameraStatus | undefined>()
   const [streamingCamera, setStreamingCamera] = useState<Camera | null>(null)
@@ -119,14 +110,13 @@ export function CameraOverviewPage() {
         },
       },
       {
-        // ⚠ Cột hành động CHỈ có nút xem live stream — không có
-        // Thêm / Sửa / Xoá (chế độ chỉ xem của Admin).
         title: 'Hành động',
         key: 'actions',
         width: 150,
         align: 'right',
         render: (_: unknown, camera: Camera) => (
-          <Space size={0}>
+          <Space size={8} wrap>
+            <CameraRowActions camera={camera} />
             <ActionButton
               icon={<PlayCircleOutlined />}
               label="Xem live stream"
@@ -162,7 +152,7 @@ export function CameraOverviewPage() {
         description="Góc nhìn chính diện bao quét toàn bộ bốn tầng kệ"
         actions={
           <Space size={8} wrap>
-            <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
+            <CameraRegistrationButton /><LiveSessionManager />
             <ActionButton
               icon={<ReloadOutlined />}
               label="Tải lại"
@@ -252,15 +242,22 @@ export function CameraOverviewPage() {
         emptyDescription={
           statusFilter
             ? 'Thử chọn trạng thái khác hoặc tải lại danh sách camera.'
-            : 'Nhân viên vận hành đăng ký camera Imou để theo dõi toàn cảnh nhà trồng.'
+            : 'Đăng ký camera Imou để theo dõi toàn cảnh nhà trồng.'
         }
       />
 
-      <CameraStreamModal
-        open={streamingCamera !== null}
-        camera={streamingCamera}
-        onClose={() => setStreamingCamera(null)}
-      />
+      {/*
+        ⚠ `CameraStreamModal` được lazy-load (xem `app/router/lazy-modals.ts`)
+        ⇒ code modal + ImouPlayer SDK chỉ nạp khi modal mở lần đầu.
+        `Suspense` bọc quanh vì component là `React.lazy`.
+      */}
+      <Suspense fallback={null}>
+        <CameraStreamModal
+          open={streamingCamera !== null}
+          camera={streamingCamera}
+          onClose={() => setStreamingCamera(null)}
+        />
+      </Suspense>
     </div>
   )
 }

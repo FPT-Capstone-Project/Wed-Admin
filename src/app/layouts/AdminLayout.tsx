@@ -1,127 +1,29 @@
-import {
-  AlertOutlined,
-  ApiOutlined,
-  AppstoreOutlined,
-  BarChartOutlined,
-  BellOutlined,
+﻿import {
   CloseOutlined,
-  DashboardOutlined,
-  ExperimentOutlined,
-  FundOutlined,
   KeyOutlined,
   LogoutOutlined,
   MenuOutlined,
-  OrderedListOutlined,
-  TagsOutlined,
-  TeamOutlined,
-  VideoCameraOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
 import {
   Avatar,
-  Badge,
   Button,
   Drawer,
   Dropdown,
   Layout,
   Menu,
-  Tooltip,
   Typography,
 } from 'antd'
 import type { MenuProps } from 'antd'
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { AUTH_EXPIRED_EVENT } from '../../shared/api/client'
-import { useUnreadNotificationCount } from '../../features/notifications/hooks/useNotifications'
+import { NotificationBell } from '../../features/notifications/components/NotificationBell'
+import { resolveUserRole, ROLE_LABELS } from '../../routes/access-policy'
+import { buildMenuItems } from './navigation-menu'
 
 const { Content, Header, Sider } = Layout
-
-const MENU_ITEMS: MenuProps['items'] = [
-  {
-    type: 'group',
-    label: 'TỔNG QUAN',
-    children: [
-      {
-        key: '/',
-        icon: <DashboardOutlined />,
-        label: 'Dashboard',
-      },
-    ],
-  },
-  {
-    type: 'group',
-    label: 'VẬN HÀNH TRANG TRẠI',
-    children: [
-      {
-        key: '/rooms',
-        icon: <AppstoreOutlined />,
-        label: 'Quản lý khay',
-      },
-      {
-        key: '/devices',
-        icon: <ApiOutlined />,
-        label: 'Thiết bị IoT',
-      },
-      {
-        key: '/camera',
-        icon: <VideoCameraOutlined />,
-        label: 'Camera toàn cảnh',
-      },
-      {
-        key: '/cultivation',
-        icon: <FundOutlined />,
-        label: 'Sinh trưởng & thu hoạch',
-      },
-      {
-        key: '/alerts',
-        icon: <AlertOutlined />,
-        label: 'Cảnh báo vi khí hậu',
-      },
-      {
-        key: '/notifications',
-        icon: <BellOutlined />,
-        label: 'Thông báo',
-      },
-      {
-        key: '/reports',
-        icon: <BarChartOutlined />,
-        label: 'Báo cáo & phân tích',
-      },
-    ],
-  },
-  {
-    type: 'group',
-    label: 'QUẢN TRỊ',
-    children: [
-      {
-        key: '/orders',
-        icon: <OrderedListOutlined />,
-        label: 'Đơn đặt từ App',
-      },
-      {
-        key: '/sessions',
-        icon: <FundOutlined />,
-        label: 'Phiên canh tác',
-      },
-      {
-        key: '/packages',
-        icon: <TagsOutlined />,
-        label: 'Gói cước thuê',
-      },
-      {
-        key: '/users',
-        icon: <TeamOutlined />,
-        label: 'Tài khoản',
-      },
-      {
-        key: '/settings',
-        icon: <ExperimentOutlined />,
-        label: 'Hồ sơ Vi khí hậu',
-      },
-    ],
-  },
-]
 
 const PAGE_TITLES: Record<string, string> = {
   '/': 'Tổng quan trang trại',
@@ -131,6 +33,8 @@ const PAGE_TITLES: Record<string, string> = {
   '/cultivation': 'Sinh trưởng & thu hoạch',
   '/alerts': 'Cảnh báo vi khí hậu',
   '/notifications': 'Thông báo',
+  '/issues': 'Sự cố & Bệnh hại',
+  '/harvests': 'Quản lý Thu hoạch',
   '/reports': 'Báo cáo & phân tích',
   '/orders': 'Quản lý đơn đặt',
   '/sessions': 'Quản lý phiên canh tác',
@@ -138,6 +42,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/users': 'Quản lý tài khoản',
   '/settings': 'Hồ sơ Vi khí hậu',
   '/change-password': 'Đổi mật khẩu',
+  '/unauthorized': 'Không có quyền truy cập',
 }
 
 function getSelectedMenuKey(pathname: string) {
@@ -181,12 +86,15 @@ interface NavigationPanelProps {
   selectedKey: string
   onNavigate: (path: string) => void
   onClose?: () => void
+  /** Menu đã lọc theo vai trò hiện tại. */
+  items: MenuProps['items']
 }
 
 function NavigationPanel({
   selectedKey,
   onNavigate,
   onClose,
+  items,
 }: NavigationPanelProps) {
   return (
     <div className="sidebar-panel">
@@ -194,7 +102,7 @@ function NavigationPanel({
       <Menu
         className="mcms-menu"
         mode="inline"
-        items={MENU_ITEMS}
+        items={items}
         selectedKeys={[selectedKey]}
         onClick={({ key }) => {
           onNavigate(key)
@@ -223,7 +131,7 @@ export function AdminLayout() {
   const logout = useAuthStore((state) => state.logout)
   // Badge chuông — số thông báo chưa đọc từ `GET /api/notifications`
   // (`meta.unread_count`). Đọc trực tiếp API, không qua mock store.
-  const unreadNotifications = useUnreadNotificationCount()
+
 
   // ── Lắng nghe event "auth expired" từ axios interceptor ──────────────
   // Khi backend trả 401 ở bất kỳ request nào → axios interceptor sẽ
@@ -246,6 +154,17 @@ export function AdminLayout() {
       : import.meta.env.DEV && location.pathname.startsWith('/dev/style-guide')
         ? 'Cẩm nang giao diện (dev)'
         : PAGE_TITLES[selectedMenuKey]
+
+  // ── Vai trò hiện tại (đọc từ Zustand auth store) ─────────────────────
+  // Dùng để ẩn các mục menu chỉ dành cho ADMIN (Tài khoản, Cài đặt,
+  // Sự cố, Thu hoạch, Camera) khi user là OPERATOR.
+  const currentRole = resolveUserRole(user)
+  const isAdmin = currentRole === 'ADMIN'
+  const roleLabel = currentRole
+    ? (ROLE_LABELS[currentRole] ?? currentRole)
+    : 'Thành viên'
+
+  const menuItems = useMemo(() => buildMenuItems(isAdmin), [isAdmin])
 
   // User.fullName là field mới (chuẩn hoá) — fallback an toàn nếu BE chưa trả
   const displayName = user?.fullName ?? 'Quản trị viên MCMS'
@@ -315,6 +234,7 @@ export function AdminLayout() {
           <NavigationPanel
             selectedKey={selectedMenuKey}
             onNavigate={navigate}
+            items={menuItems}
           />
         </Sider>
 
@@ -331,6 +251,7 @@ export function AdminLayout() {
             selectedKey={selectedMenuKey}
             onNavigate={navigate}
             onClose={() => setIsNavigationOpen(false)}
+            items={menuItems}
           />
         </Drawer>
 
@@ -355,17 +276,7 @@ export function AdminLayout() {
                 <span className="status-pulse" aria-hidden="true" />
                 Hệ thống trực tuyến
               </div>
-              <Tooltip title="Xem thông báo">
-                <Badge count={unreadNotifications.data ?? 0} size="small" overflowCount={99}>
-                  <Button
-                    type="text"
-                    className="header-icon-button"
-                    icon={<BellOutlined />}
-                    aria-label={`${unreadNotifications.data ?? 0} thông báo chưa đọc`}
-                    onClick={() => navigate('/notifications')}
-                  />
-                </Badge>
-              </Tooltip>
+              <NotificationBell />
               <Dropdown
                 trigger={['click']}
                 menu={{
@@ -381,7 +292,7 @@ export function AdminLayout() {
                   <Avatar className="account-avatar">{initials}</Avatar>
                   <span className="account-trigger-copy">
                     <strong>{displayName}</strong>
-                    <small>Quản trị hệ thống</small>
+                    <small>{roleLabel}</small>
                   </span>
                 </Button>
               </Dropdown>

@@ -1,5 +1,5 @@
 import type {
-  FarmAnalytics,
+  ReportsAnalytics,
   MonthlyRevenue,
   SpeciesBreakdown,
 } from '../../../features/analytics/api/analytics.api'
@@ -8,8 +8,8 @@ import type {
  * Utilities cho Executive Dashboard — **dữ liệu thật**.
  *
  * ⚠ Đã bỏ hoàn toàn `MOCK_REVENUE_SUMMARIES` / `MOCK_YIELD_SUMMARIES` /
- *   `MOCK_ENVIRONMENT_HISTORY`. Mọi hàm dưới đây nhận `FarmAnalytics` tổng hợp
- *   từ 8 endpoint GET.
+ *   `MOCK_ENVIRONMENT_HISTORY`. Mọi hàm dưới đây nhận `ReportsAnalytics` tổng hợp
+ *   từ các endpoint GET (không còn vòng lặp N+1 theo tầng/phiên).
  *
  * Quy ước: mọi hàm số đều có fallback an toàn — KHÔNG BAO GIỜ trả NaN /
  * undefined / Infinity ra UI.
@@ -62,7 +62,7 @@ export interface VarietyPerformance {
   varietyName: string
   /** Số phiên canh tác của giống nấm. */
   traysRented: number
-  /** Tỷ lệ phôi đạt chuẩn (0–100) — suy ra từ kiểm tra phôi. */
+  /** Tỷ lệ thu hoạch đạt chuẩn (0–100) — suy ra từ tổng quan BE. */
   successRate: number
   currentRevenue: number
   previousRevenue: number
@@ -71,16 +71,16 @@ export interface VarietyPerformance {
 
 /** KPI executive tính từ dữ liệu thật. */
 export interface ExecutiveKpis {
-  /** Doanh thu ước tính (giá gói thuê × số phiên). */
+  /** Doanh thu thật (đơn đã thanh toán) — từ `/api/analytics/dashboard`. */
   totalRevenue: number
-  /** Kỳ trước — cùng kỳ năm trước (nếu có dữ liệu). */
+  /** Kỳ trước — chưa có dữ liệu lịch sử ⇒ 0. */
   previousTotalRevenue: number
   occupancyRate: number
   previousOccupancyRate: number
-  /** Tổng số phôi đạt chuẩn. */
+  /** Khối lượng thu hoạch đạt chuẩn (kg). */
   harvestedGradeAKg: number
   previousHarvestedGradeAKg: number
-  /** Tỷ lệ phôi bất thường (%). */
+  /** Tỷ lệ thu hoạch hao hụt (%). */
   spoilageRate: number
   previousSpoilageRate: number
   totalTrays: number
@@ -140,8 +140,8 @@ export function buildQuarterlyRevenue(
 /**
  * Dựng bảng hiệu suất theo giống nấm từ cơ cấu giống nấm thật.
  *
- * ⚠ BE chưa trả "tỷ lệ thành công" theo giống ⇒ dùng `spawnQuality.successRate`
- *   chung cho toàn trang trại (từ lịch sử kiểm tra phôi).
+ * ⚠ BE chưa trả "tỷ lệ thành công" theo từng giống ⇒ dùng tỷ lệ đạt chung
+ *   toàn trang trại (từ `/api/analytics/dashboard`).
  */
 export function buildVarietyPerformance(
   speciesBreakdown: SpeciesBreakdown[],
@@ -167,9 +167,11 @@ export function buildVarietyPerformance(
 /**
  * Tính KPI executive từ dữ liệu thật.
  *
- * @param analytics tổng hợp từ `useFarmAnalytics`
+ * @param analytics tổng hợp từ `useReportsAnalytics`
  */
-export function computeExecutiveKpis(analytics: FarmAnalytics): ExecutiveKpis {
+export function computeExecutiveKpis(
+  analytics: ReportsAnalytics,
+): ExecutiveKpis {
   const trays = analytics.trays
 
   // Kỳ trước chưa có dữ liệu thật (BE không lưu lịch sử doanh thu) → 0.
@@ -179,13 +181,13 @@ export function computeExecutiveKpis(analytics: FarmAnalytics): ExecutiveKpis {
   const previousSpoilageRate = 0
 
   return {
-    totalRevenue: Math.round(toSafeNumber(analytics.estimatedRevenue)),
+    totalRevenue: Math.round(toSafeNumber(analytics.totalRevenue)),
     previousTotalRevenue,
     occupancyRate: toSafeNumber(trays.occupancyRate),
     previousOccupancyRate,
-    harvestedGradeAKg: toSafeNumber(analytics.spawnQuality.normalQuantity),
+    harvestedGradeAKg: toSafeNumber(analytics.usableHarvestWeightKg),
     previousHarvestedGradeAKg,
-    spoilageRate: toSafeNumber(analytics.spawnQuality.spoilageRate),
+    spoilageRate: toSafeNumber(analytics.wasteRate),
     previousSpoilageRate,
     totalTrays: toSafeNumber(trays.total),
     rentedTrays: toSafeNumber(trays.occupied),
@@ -195,7 +197,7 @@ export function computeExecutiveKpis(analytics: FarmAnalytics): ExecutiveKpis {
 /**
  * Phân bổ phiên canh tác theo giai đoạn — dùng vẽ biểu đồ cột.
  */
-export function buildStageDistribution(analytics: FarmAnalytics) {
+export function buildStageDistribution(analytics: ReportsAnalytics) {
   return Object.entries(analytics.sessionsByStage)
     .filter(([, count]) => count > 0)
     .map(([stage, count]) => ({
@@ -210,6 +212,7 @@ const STAGE_LABELS: Record<string, string> = {
   MYCELIAL_DEVELOPMENT: 'Phát triển tơ',
   READY_FOR_CULTIVATION: 'Sẵn sàng canh tác',
   CULTIVATING: 'Đang canh tác',
+  HARVEST_READY: 'Sẵn sàng thu hoạch',
   HARVESTING: 'Thu hoạch',
   COMPLETED: 'Đã thu hoạch',
   CANCELLED: 'Đã huỷ',

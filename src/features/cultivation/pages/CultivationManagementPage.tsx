@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
+import { Suspense, useMemo, useState } from 'react'
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons'
 import {
   Button,
@@ -12,7 +13,7 @@ import {
 } from 'antd'
 import { MetadataBadge, StatCard } from '../../../shared/ui'
 import { CultivationBatchCard } from '../components/CultivationBatchCard'
-import { CultivationGalleryModal } from '../components/CultivationGalleryModal'
+import { CultivationGalleryModal } from '../../../app/router/lazy-modals'
 import { useCultivationBatches } from '../hooks/useCultivationBatches'
 import {
   GROWTH_STAGE_META,
@@ -39,7 +40,7 @@ const PAGE_SIZE = 4
  * Trang Sinh trưởng & Thu hoạch — **100% READ-ONLY**.
  *
  * Dữ liệu thật từ:
- *   - `GET /api/cultivation-sessions/admin` (tiến độ + giai đoạn + khách)
+ *   - `GET /api/farm/sessions` (tiến độ + giai đoạn + khách)
  *   - `GET /api/farm/sessions` (phôi đã cấp / còn lại)
  *   - `GET /api/farm/sessions/{id}/spawn-inspections` (lịch sử kiểm tra phôi +
  *     ảnh thực tế trên Cloudinary)
@@ -117,17 +118,7 @@ export function CultivationManagementPage() {
     return <Skeleton active paragraph={{ rows: 10 }} />
   }
 
-  if (isError) {
-    return (
-      <Flex vertical gap={12}>
-        <MetadataBadge label="Không tải được dữ liệu canh tác" />
-        <Typography.Text type="secondary">
-          {error?.message ?? 'Đã xảy ra lỗi không xác định.'}
-        </Typography.Text>
-        <Button onClick={() => void refetch()}>Thử lại</Button>
-      </Flex>
-    )
-  }
+  if (isError) return <LoadErrorAlert error={error} resource="dữ liệu sinh trưởng" onRetry={refetch} />
 
   return (
     <div>
@@ -259,12 +250,14 @@ export function CultivationManagementPage() {
         </Flex>
       )}
 
-      <CultivationGalleryModal
-        key={galleryBatch?.id ?? 'gallery-closed'}
-        open={Boolean(galleryBatch)}
-        batch={galleryBatch}
-        onCancel={() => setGalleryBatch(null)}
-      />
+            <Suspense fallback={null}>
+              <CultivationGalleryModal
+              key={galleryBatch?.id ?? 'gallery-closed'}
+              open={Boolean(galleryBatch)}
+              batch={galleryBatch}
+              onCancel={() => setGalleryBatch(null)}
+              />
+            </Suspense>
     </div>
   )
 }

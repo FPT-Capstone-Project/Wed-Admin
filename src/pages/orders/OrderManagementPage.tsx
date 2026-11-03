@@ -1,3 +1,6 @@
+import { LoadErrorAlert } from '../../shared/ui/LoadErrorAlert'
+import { formatDate } from '../../shared/utils/date'
+import { OrderAuditTabs } from '../../features/orders/components/OrderAuditTabs'
 import '../../features/sessions/sessions-industrial.css'
 import { useMemo, useState } from 'react'
 import {
@@ -51,7 +54,7 @@ import type { SemanticTone } from '../../app/theme/tokens'
  *
  * ⚠ `GET /api/orders` của BE chỉ trả đơn của chính user đăng nhập → Admin
  *   dùng `useAdminOrders()` để hợp nhất thêm dữ liệu từ
- *   `GET /api/cultivation-sessions/admin` + `GET /api/farm/sessions`.
+ *   `GET /api/farm/sessions` + `GET /api/farm/sessions`.
  */
 
 const STATUS_CONFIG: Record<
@@ -83,14 +86,6 @@ const VND = new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 0,
 })
 
-const DATE_FORMATTER = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
-
 type OrderTab = 'ALL' | AdminOrderStatus
 
 /** Bộ lọc tab khớp **đúng 5 trạng thái** của BE (`orders.status`). */
@@ -105,7 +100,7 @@ const TAB_OPTIONS: Array<{ value: OrderTab; label: string }> = [
 
 export function OrderManagementPage() {
   // ── Data from API (read-only) ──────────────────────────────────────────
-  const { orders, isLoading, isError, error, refetch } = useAdminOrders()
+  const { orders, isLoading, isError, error, refetch, sourceErrors } = useAdminOrders()
 
   const [searchText, setSearchText] = useState('')
   const [activeTab, setActiveTab] = useState<OrderTab>('ALL')
@@ -271,9 +266,9 @@ export function OrderManagementPage() {
       key: 'createdAt',
       className: 'mcms-session-mono',
       width: 140,
-      render: (date: string) => (
+      render: (date: string | null) => (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          {DATE_FORMATTER.format(new Date(date))}
+          {formatDate(date)}
         </Typography.Text>
       ),
     },
@@ -309,6 +304,8 @@ export function OrderManagementPage() {
           />
         }
       />
+
+      {sourceErrors.map(item => <div key={item.source} style={{ marginBottom: 12 }}><LoadErrorAlert error={item.error} resource={item.source} onRetry={refetch} /></div>)}
 
       <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
         <Col xs={12} lg={6}>
@@ -421,7 +418,7 @@ export function OrderManagementPage() {
         destroyOnHidden
       >
         {detailOrder && (
-          <Flex vertical gap={20}>
+          <OrderAuditTabs key={detailOrder.orderId} orderId={detailOrder.orderId}><Flex vertical gap={20}>
             {/* ── Thông tin đơn ─────────────────────────────────────── */}
             <Descriptions
               column={1}
@@ -450,9 +447,7 @@ export function OrderManagementPage() {
                   key: 'createdAt',
                   label: 'Ngày tạo',
                   className: 'mcms-session-mono',
-                  children: DATE_FORMATTER.format(
-                    new Date(detailOrder.createdAt),
-                  ),
+                  children: formatDate(detailOrder.createdAt),
                 },
                 {
                   key: 'package',
@@ -577,9 +572,7 @@ export function OrderManagementPage() {
                       key: 'harvest',
                       label: 'Dự kiến thu hoạch',
                       children: cultivationStatus.expected_harvest_date
-                        ? DATE_FORMATTER.format(
-                            new Date(cultivationStatus.expected_harvest_date),
-                          )
+                        ? formatDate(cultivationStatus.expected_harvest_date)
                         : '—',
                     },
                   ]}
@@ -616,7 +609,7 @@ export function OrderManagementPage() {
                           style={{ fontSize: 11 }}
                         >
                           {entry.created_at
-                            ? DATE_FORMATTER.format(new Date(entry.created_at))
+                            ? formatDate(entry.created_at)
                             : '—'}
                         </Typography.Text>
                       </Flex>
@@ -650,7 +643,7 @@ export function OrderManagementPage() {
             </Flex>
 
             {isLoading && <Skeleton active paragraph={{ rows: 2 }} />}
-          </Flex>
+          </Flex></OrderAuditTabs>
         )}
       </Drawer>
     </div>

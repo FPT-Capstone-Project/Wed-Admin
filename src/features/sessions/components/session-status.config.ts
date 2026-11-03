@@ -42,6 +42,7 @@ export const SESSION_STATUS_CONFIG: Record<
     shortLabel: 'Đang canh tác',
     step: 5,
   },
+  HARVEST_READY: { tone: 'warning', label: 'Sẵn sàng thu hoạch', shortLabel: 'Sẵn sàng thu hoạch', step: 6 },
   HARVESTING: {
     tone: 'warning',
     label: 'Đang thu hoạch',
@@ -75,6 +76,7 @@ export const SESSION_DEFAULT_PROGRESS: Record<
   MYCELIAL_DEVELOPMENT: 30,
   READY_FOR_CULTIVATION: 45,
   CULTIVATING: 65,
+  HARVEST_READY: 85,
   HARVESTING: 90,
   COMPLETED: 100,
   CANCELLED: 0,

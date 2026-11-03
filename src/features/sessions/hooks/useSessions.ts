@@ -16,7 +16,7 @@ import type {
 
 /** Query keys */
 export const sessionKeys = {
-  all: ['cultivation-sessions'] as const,
+  all: ['farm-session-views'] as const,
   lists: () => [...sessionKeys.all, 'list'] as const,
   list: (query: SessionListQuery) => [...sessionKeys.lists(), query] as const,
   details: () => [...sessionKeys.all, 'detail'] as const,
@@ -54,7 +54,7 @@ export function useSession(
   return useQuery<CultivationSession, Error>({
     queryKey: sessionKeys.detail(sessionId ?? -1),
     queryFn: async () => {
-      const result = await sessionApi.getById(sessionId as number)
+      const result = await sessionApi.getById(sessionId as number, true)
       if (!result) {
         throw new Error(`Không tìm thấy phiên canh tác ID ${sessionId}`)
       }
@@ -68,7 +68,7 @@ export function useSession(
 /**
  * Danh sách phiên đang chạy theo khay.
  *
- * ⚠ Dùng cho ô khay ở `RoomListPage`: BE hỗ trợ lọc theo `trayId`, nên
+ * ⚠ Dùng cho ô khay ở `RoomListPage`: FE đối chiếu quan hệ khay từ trạng thái đơn hàng, nên
  *   gọi 1 lần với `pageSize` lớn rồi lọc tại client — nhanh hơn gọi N
  *   request theo từng khay.
  */

@@ -137,7 +137,7 @@ export function formatVnd(value: number) {
 
 /**
  * Chuyển `CultivationSession` (BE flat DTO từ
- * `GET /api/cultivation-sessions/admin`) → `TrayRental` (UI shape cho
+ * `GET /api/farm/sessions`) → `TrayRental` (UI shape cho
  * drawer / lifecycle).
  *
  * Quy tắc mapping:

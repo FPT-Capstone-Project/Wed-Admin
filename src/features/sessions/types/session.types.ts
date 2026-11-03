@@ -1,8 +1,8 @@
 /**
  * Phiên canh tác (Cultivation Session) — DTO **read-only** cho Web Admin.
  *
- * Nguồn: `GET /api/cultivation-sessions/admin` và
- *        `GET /api/cultivation-sessions/admin/{sessionId}`.
+ * Nguồn: `GET /api/farm/sessions` và
+ *        `GET /api/farm/sessions/{sessionId}`.
  *
  * ⚠ Web Admin chỉ GIÁM SÁT. Mọi hành động ghi (tạo tiến độ, ghi nhận
  *   kiểm tra, nhập thu hoạch, chuyển giai đoạn, huỷ, gửi thông báo) do
@@ -17,7 +17,7 @@
 /**
  * Trạng thái phiên canh tác — **8 trạng thái** của BE.
  *
- * Nguồn: Swagger `GET /api/cultivation-sessions/admin` → `status.enum`.
+ * Nguồn: Swagger `GET /api/farm/sessions` → `status.enum`.
  * Thứ tự là thứ tự vòng đời thật:
  *   PENDING → SPAWN_RESTING → MYCELIAL_DEVELOPMENT → READY_FOR_CULTIVATION
  *   → CULTIVATING → HARVESTING → COMPLETED | CANCELLED
@@ -28,6 +28,7 @@ export type CultivationSessionStatus =
   | 'MYCELIAL_DEVELOPMENT'
   | 'READY_FOR_CULTIVATION'
   | 'CULTIVATING'
+  | 'HARVEST_READY'
   | 'HARVESTING'
   | 'COMPLETED'
   | 'CANCELLED'
@@ -40,6 +41,7 @@ export const CULTIVATION_SESSION_STATUSES: readonly CultivationSessionStatus[] =
     'MYCELIAL_DEVELOPMENT',
     'READY_FOR_CULTIVATION',
     'CULTIVATING',
+    'HARVEST_READY',
     'HARVESTING',
     'COMPLETED',
     'CANCELLED',
@@ -56,6 +58,7 @@ export const ACTIVE_SESSION_STATUSES: ReadonlySet<CultivationSessionStatus> =
     'MYCELIAL_DEVELOPMENT',
     'READY_FOR_CULTIVATION',
     'CULTIVATING',
+    'HARVEST_READY',
     'HARVESTING',
   ])
 
@@ -84,6 +87,10 @@ export interface SessionTray {
 
 /** Phiên canh tác — BE trả flat, đã join customer / package / mushroom. */
 export interface CultivationSession {
+  harvest_status?: string | null
+  order_item_id?: number | null
+  spawn_quantity?: number | null
+  last_inspected_at?: string | null
   session_id: number
   order_id?: number | null
   user_id?: number | null
@@ -111,7 +118,7 @@ export interface CultivationSession {
   updated_at?: string | null
 }
 
-/** Metadata phân trang — BE trả kèm list dưới key `pagination`. */
+/** Metadata phân trang được tính tại frontend từ danh sách farm. */
 export interface SessionPagination {
   page: number
   pageSize: number
@@ -119,8 +126,10 @@ export interface SessionPagination {
   totalPages: number
 }
 
-/** Bộ lọc `GET /api/cultivation-sessions/admin`. */
+/** Bộ lọc UI: chỉ status gửi lên API; các trường còn lại xử lý tại frontend. */
 export interface SessionListQuery {
+  /** Đọc quan hệ khay từ trạng thái canh tác của đơn hàng. */
+  includeTrays?: boolean
   status?: CultivationSessionStatus
   userId?: number
   trayId?: number
@@ -129,8 +138,25 @@ export interface SessionListQuery {
   startDateFrom?: string
   /** ISO date-time */
   startDateTo?: string
-  /** Mặc định BE = 1 */
+  /** Trang UI, mặc định 1 */
   page?: number
-  /** Mặc định BE = 20, tối đa 100 */
+  /** Kích thước trang UI; bỏ trống để lấy đủ danh sách */
   pageSize?: number
 }
+
+/** Contract returned by GET /api/farm/sessions (no server pagination). */
+export interface FarmSessionListDto {
+  session_id: number
+  status: CultivationSessionStatus
+  harvest_status: string
+  start_at: string | null
+  harvest_date: string | null
+  order_item_id: number
+  tray_quantity: number
+  spawn_quantity: number
+  mushroom_name: string
+  order_id: number
+  customer_name: string
+  last_inspected_at: string | null
+}
+export interface FarmSessionListResponse { data: FarmSessionListDto[] }

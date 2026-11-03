@@ -10,6 +10,7 @@ export interface DataTableProps<T> {
   dataSource: T[]
   /** Khoá dòng — bắt buộc để React không re-mount sai dòng. */
   rowKey: TableProps<T>['rowKey']
+  onRow?: TableProps<T>['onRow']
   /** Đang tải — hiện spinner của antd. */
   loading?: boolean
   /** Lỗi tải dữ liệu — hiển thị alert có nút thử lại. */
@@ -49,6 +50,7 @@ export function DataTable<T extends object>({
   columns,
   dataSource,
   rowKey,
+  onRow,
   loading = false,
   error = null,
   title,
@@ -131,6 +133,7 @@ export function DataTable<T extends object>({
 
       <Table<T>
         rowKey={rowKey}
+        onRow={onRow}
         columns={columns}
         dataSource={dataSource}
         loading={loading}

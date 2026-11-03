@@ -1,3 +1,6 @@
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { App } from 'antd'
+import { getApiErrorMessage } from '../../../shared/api/error'
 import {
   useQuery,
   type UseQueryOptions,
@@ -8,24 +11,12 @@ import type {
   NotificationListResult,
 } from '../types/notification.types'
 
-/**
- * Hooks thông báo — **chỉ đọc**.
- *
- * ⚠ Không có `useMutation` nào: Web Admin không đánh dấu đã đọc.
- */
-
-/** Query keys */
 export const notificationKeys = {
   all: ['notifications'] as const,
   lists: () => [...notificationKeys.all, 'list'] as const,
   list: (query: NotificationListQuery) => [...notificationKeys.lists(), query] as const,
 }
 
-/**
- * Danh sách thông báo của user đang đăng nhập.
- *
- * @param query bộ lọc `isRead` + phân trang
- */
 export function useNotifications(
   query: NotificationListQuery = {},
   options?: Partial<UseQueryOptions<NotificationListResult, Error>>,
@@ -39,11 +30,6 @@ export function useNotifications(
   })
 }
 
-/**
- * Số thông báo chưa đọc — lấy từ `meta.unread_count` của BE.
- *
- * Dùng cho badge chuông ở header.
- */
 export function useUnreadNotificationCount(
   options?: Partial<UseQueryOptions<number, Error>>,
 ) {
@@ -56,4 +42,19 @@ export function useUnreadNotificationCount(
     staleTime: 30_000,
     ...options,
   })
+}
+
+export function useNotificationActions() {
+  const client = useQueryClient()
+  const { message } = App.useApp()
+  const options = {
+    onSuccess: async () => {
+      await client.invalidateQueries({ queryKey: notificationKeys.all })
+      void message.success('Đã đánh dấu thông báo đã đọc')
+    },
+    onError: (error: Error) => { void message.error(getApiErrorMessage(error)) },
+  }
+  const read = useMutation({ mutationFn: notificationApi.markRead, ...options })
+  const readAll = useMutation({ mutationFn: notificationApi.markAllRead, ...options })
+  return { read, readAll, pending: read.isPending || readAll.isPending }
 }

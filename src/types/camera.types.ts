@@ -4,8 +4,7 @@
  * Nguồn: OpenAPI spec sống của BE (`swagger-ui-init.js`, tag `Cameras`).
  * Mọi endpoint đều yêu cầu `bearerAuth`.
  *
- * ⚠ Giai đoạn 5 (read-only): Web admin chỉ XEM danh sách camera và xem
- *   live stream Imou. Không có thao tác Thêm / Sửa / Xoá.
+ * Admin đăng ký, cập nhật, xóa camera và quản lý phiên live stream.
  */
 
 export const CAMERA_STATUSES = ['ACTIVE', 'INACTIVE', 'OFFLINE'] as const

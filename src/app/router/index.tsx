@@ -4,8 +4,14 @@ import { LoginPage } from '../../features/auth/pages/LoginPage'
 import { AdminLayout } from '../layouts/AdminLayout'
 import { AuthGuard } from './guards/AuthGuard'
 import { RoleGuard } from '../../routes/RoleGuard'
+import {
+  ADMIN_AND_OPERATOR,
+  ADMIN_ONLY,
+} from '../../routes/access-policy'
 import { PageFallback } from './PageFallback'
 import {
+  IssueManagementPage,
+  HarvestManagementPage,
   AlertManagementPage,
   CameraOverviewPage,
   ChangePasswordPage,
@@ -22,6 +28,7 @@ import {
   SessionListPage,
   SettingsPage,
   StyleGuidePage,
+  UnauthorizedPage,
   UserManagementPage,
   NotificationsPage,
 } from './lazy-pages'
@@ -44,10 +51,70 @@ export const router = createBrowserRouter([
     path: '/',
     element: (
       <AuthGuard>
-        <AdminLayout />
+        {/*
+          ⚠ Route CHA phải cho phép CẢ ADMIN lẫn OPERATOR.
+          Trước đây route cha chỉ mở `['ADMIN']` ⇒ Farm Operator bị chặn
+          ngay ở cổng vào dù các route con (devices, devices/history,
+          sessions) đã cho phép OPERATOR ⇒ không bao giờ tới được.
+          → Route con tự quyết định quyền (xem `RoleGuard` bên dưới).
+        */}
+        <RoleGuard
+          allowedRoles={ADMIN_AND_OPERATOR}
+          unauthorizedBehavior="inline"
+        >
+          <AdminLayout />
+        </RoleGuard>
       </AuthGuard>
     ),
     children: [
+      // ── ADMIN ONLY ────────────────────────────────────────────────────
+      // Quản lý sự cố & bệnh hại (gán chuyên gia, đóng hồ sơ) — chỉ Admin.
+      {
+        path: 'issues',
+        element: (
+          <RoleGuard allowedRoles={ADMIN_ONLY}>
+            {withSuspense(<IssueManagementPage />)}
+          </RoleGuard>
+        ),
+      },
+      // Quản lý thu hoạch — chỉ Admin.
+      {
+        path: 'harvests',
+        element: (
+          <RoleGuard allowedRoles={ADMIN_ONLY}>
+            {withSuspense(<HarvestManagementPage />)}
+          </RoleGuard>
+        ),
+      },
+      // Quản lý tài khoản & phân quyền — chỉ Admin.
+      {
+        path: 'users',
+        element: (
+          <RoleGuard allowedRoles={ADMIN_ONLY}>
+            {withSuspense(<UserManagementPage />)}
+          </RoleGuard>
+        ),
+      },
+      // Cài đặt hệ thống / hồ sơ vi khí hậu — chỉ Admin.
+      {
+        path: 'settings',
+        element: (
+          <RoleGuard allowedRoles={ADMIN_ONLY}>
+            {withSuspense(<SettingsPage />)}
+          </RoleGuard>
+        ),
+      },
+      // Danh sách camera: BE `GET /api/cameras` yêu cầu `authorizeRoles(1)`
+      // ⇒ OPERATOR sẽ nhận 403 từ BE ⇒ chặn sớm ở FE.
+      {
+        path: 'camera',
+        element: (
+          <RoleGuard allowedRoles={ADMIN_ONLY}>
+            {withSuspense(<CameraOverviewPage />)}
+          </RoleGuard>
+        ),
+      },
+      // ── ADMIN + OPERATOR ─────────────────────────────────────────────
       {
         index: true,
         element: withSuspense(<DashboardPage />),
@@ -67,7 +134,7 @@ export const router = createBrowserRouter([
       {
         path: 'devices',
         element: (
-          <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
+          <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>
             {withSuspense(<DeviceManagementPage />)}
           </RoleGuard>
         ),
@@ -75,7 +142,7 @@ export const router = createBrowserRouter([
       {
         path: 'devices/history',
         element: (
-          <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
+          <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>
             {withSuspense(<IoTHistoryPage />)}
           </RoleGuard>
         ),
@@ -93,7 +160,7 @@ export const router = createBrowserRouter([
         // Customer không được truy cập — RoleGuard chặn trước khi gọi API.
         path: 'sessions',
         element: (
-          <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
+          <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>
             {withSuspense(<SessionListPage />)}
           </RoleGuard>
         ),
@@ -126,26 +193,25 @@ export const router = createBrowserRouter([
         ),
       },
       {
-        path: 'camera',
-        element: withSuspense(<CameraOverviewPage />),
-      },
-      {
-        path: 'users',
-        element: (
-          <RoleGuard allowedRoles={['ADMIN']}>
-            {withSuspense(<UserManagementPage />)}
-          </RoleGuard>
-        ),
-      },
-      {
-        path: 'settings',
-        element: withSuspense(<SettingsPage />),
-      },
-      {
         // Yêu cầu token (bearerAuth) — nằm trong AuthGuard nên chỉ render
         // khi user đã đăng nhập.
         path: 'change-password',
         element: withSuspense(<ChangePasswordPage />),
+      },
+      {
+        /**
+         * 403 — user đã đăng nhập nhưng không đủ quyền truy cập trang được
+         * yêu cầu (`RoleGuard` ở route con chuyển hướng tới đây).
+         *
+         * ⚠ Nằm trong route cha `/` ⇒ hiển thị **kèm sidebar + header** giữa
+         *   lúc user đang đăng nhập ở khu vực quản trị (giữ nguyên ngữ cảnh
+         *   điều hướng, không mất menu).
+         *   Route cha dùng `unauthorizedBehavior="inline"` ⇒ CUSTOMER bị chặn
+         *   ngay tại route cha (render 403 tại chỗ) ⇒ **không** có vòng lặp
+         *   redirect vô hạn.
+         */
+        path: 'unauthorized',
+        element: withSuspense(<UnauthorizedPage />),
       },
       // ──────────────────────────────────────────────────────────────────────
       // Cẩm nang giao diện — CHỈ có ở môi trường dev.

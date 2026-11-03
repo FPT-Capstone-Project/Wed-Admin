@@ -15,14 +15,14 @@ import {
  * ⚠ TUYỆT ĐỐI KHÔNG thêm hàm POST/PATCH/PUT/DELETE ở đây.
  *
  * Gộp 3 nguồn thật:
- *   1. `GET /api/cultivation-sessions/admin` — tiến độ + giai đoạn + khách.
+ *   1. `GET /api/farm/sessions` — tiến độ + giai đoạn + khách.
  *   2. `GET /api/farm/sessions` — phôi đã cấp / còn lại + tên nấm.
  *   3. `GET /api/farm/sessions/{id}/spawn-inspections` — lịch sử kiểm tra phôi
  *      kèm ảnh Cloudinary.
  */
 
-/** Số phiên lấy từ `/api/cultivation-sessions/admin` mỗi lần. */
-const SESSION_PAGE_SIZE = 100
+/** Số phiên lấy từ `/api/farm/sessions` mỗi lần. */
+
 
 export interface BuildBatchesInput {
   sessions: CultivationSession[]
@@ -124,35 +124,15 @@ export function buildCultivationBatches(
  * ⚠ Chỉ gọi các endpoint GET.
  */
 export async function fetchCultivationBatches(): Promise<BuiltBatches> {
-  const [sessionResult, farmSessions] = await Promise.all([
-    // ⚠ `sessionApi.list()` tự trả `{ items: [] }` khi BE trả 404 (endpoint
-    //   chưa có trên server) → trang hiển thị bảng trống thay vì báo lỗi đỏ.
-    sessionApi
-      .list({ page: 1, pageSize: SESSION_PAGE_SIZE })
-      .catch(() => ({
-        items: [] as CultivationSession[],
-        pagination: {
-          page: 1,
-          pageSize: SESSION_PAGE_SIZE,
-          total: 0,
-          totalPages: 0,
-        },
-      })),
-    farmApi.list().catch(() => [] as FarmSession[]),
-  ])
+  const sessionResult = await sessionApi.list()
+  const farmSessions: FarmSession[] = sessionResult.items
 
   // Chỉ lấy lịch sử kiểm tra phôi của các phiên đang có trong danh sách.
   const inspectionsBySessionId = new Map<number, SpawnInspection[]>()
   await Promise.all(
     sessionResult.items.map(async (session) => {
-      try {
-        const history = await farmApi.getSpawnInspections(session.session_id)
-        if (!history) return
-        inspectionsBySessionId.set(session.session_id, history.inspections ?? [])
-      } catch {
-        // Phiên không có lịch sử kiểm tra phôi (hoặc lỗi) → bỏ qua, không
-        // làm hỏng toàn trang.
-      }
+      const history = await farmApi.getSpawnInspections(session.session_id)
+      if (history) inspectionsBySessionId.set(session.session_id, history.inspections ?? [])
     }),
   )
 

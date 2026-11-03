@@ -101,3 +101,12 @@ export const StyleGuidePage = lazy(() =>
     default: m.StyleGuidePage,
   })),
 )
+/** Trang 403 — user đã đăng nhập nhưng không đủ quyền truy cập. */
+export const UnauthorizedPage = lazy(() =>
+  import('../../pages/errors/UnauthorizedPage').then((m) => ({
+    default: m.UnauthorizedPage,
+  })),
+)
+
+export const IssueManagementPage = lazy(() => import('../../features/disease-management/pages/IssueManagementPage').then(m => ({ default: m.IssueManagementPage })))
+export const HarvestManagementPage = lazy(() => import('../../features/harvest/pages/HarvestManagementPage').then(m => ({ default: m.HarvestManagementPage })))

@@ -8,7 +8,7 @@
  *
  *   → Admin dựng lại danh sách đơn bằng cách **hợp nhất 3 nguồn GET**:
  *     1. `GET /api/orders`                        — đơn của chính admin (nếu có).
- *     2. `GET /api/cultivation-sessions/admin`    — có `order_id` + khách + gói.
+ *     2. `GET /api/farm/sessions`    — có `order_id` + khách + gói.
  *     3. `GET /api/farm/sessions`                 — có `order_id` + khách + gói +
  *                                                   `mushroom_name` + `spawn_issued`.
  *
@@ -51,7 +51,7 @@ export interface AdminOrderRow {
   totalAmount: number
   /** Số phôi đã cấp (từ nguồn `farm`). */
   spawnIssued: number | null
-  createdAt: string
+  createdAt: string | null
   /** Các nguồn đã dùng để dựng dòng này. */
   sources: AdminOrderSource[]
 }

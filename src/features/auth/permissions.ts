@@ -13,7 +13,7 @@
  *   `rental.cancel` đã bị gỡ vì luồng "vụ thuê" không còn tồn tại — thay
  *   bằng `session.view` (quyền ĐỌC phiên canh tác).
  *
- * ⚠ Web Admin **không** có quyền ghi nào: không tạo/sửa/xoá phiên, không
+ * Web Admin quản trị tài nguyên và điều phối bệnh học; nghiệp vụ hiện trường: không tạo/sửa/xoá phiên, không
  *   ghi tiến độ, không tạo kiểm tra phôi, không nhập thu hoạch, không chuyển
  *   giai đoạn, không gửi thông báo. Mọi thao tác đó do **nhân viên (staff)**
  *   thực hiện trên app — BE kiểm tra server-side.
@@ -23,7 +23,7 @@
 
 export const IOT_AUTOMATION_MANAGE = 'iot.automation.manage'
 export const USER_MANAGE = 'user.manage'
-/** Quyền ĐỌC phiên canh tác (`GET /api/cultivation-sessions/admin`). */
+/** Quyền ĐỌC phiên canh tác (`GET /api/farm/sessions`). */
 export const SESSION_VIEW = 'session.view'
 /** Alias giữ tên gọi "xem & quản lý phiên" cho Admin. */
 export const SESSION_MANAGE = SESSION_VIEW

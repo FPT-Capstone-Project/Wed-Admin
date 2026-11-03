@@ -4,7 +4,7 @@
  * ⚠ Thay thế hoàn toàn `pages/devices/data/iot-history.mock.ts`.
  *
  * Nguồn (100% GET):
- *   - `GET /api/cultivation-sessions/admin` → phiên canh tác gắn với khay.
+ *   - `GET /api/farm/sessions` → phiên canh tác gắn với khay.
  *   - `GET /api/customer/orders/{orderId}/cultivation-progress` → timeline
  *     giai đoạn sinh trưởng thật của mẻ.
  *   - `GET /api/iot/floors/{floorId}/auto-control/logs` → nhật ký sự kiện

@@ -25,8 +25,8 @@ import type { CultivationSessionStatus } from '../../sessions/types/session.type
  * ## Về HTTP 404
  *
  * ⚠ Khi phiên canh tác chưa tồn tại (hoặc route chưa có trên bản deploy
- *   hiện tại), BE trả `404`. FE **không** để lỗi nổi lên làm hỏng cả trang
- *   → `list()` trả `[]`, `getById()` / `getSpawnInspections()` trả `null`.
+ *   hiện tại), BE trả `404`. Lỗi danh sách phải hiển thị rõ ở UI.
+ *   → Lỗi danh sách được chuyển cho React Query; chi tiết không tồn tại trả `null`.
  *
  * Phân quyền (Swagger): `403` nếu không phải Admin / Farm Operator.
  */
@@ -45,16 +45,9 @@ export const farmApi = {
    *   đăng nhập).
    */
   async list(status?: string): Promise<FarmSession[]> {
-    let response: { data?: unknown }
-    try {
-      response = await apiClient.get<unknown>(BASE, {
-        params: status ? { status } : undefined,
-      })
-    } catch (error) {
-      // 404 → chưa có luồng farm trên server ⇒ coi như danh sách rỗng.
-      if (isNotFoundError(error)) return []
-      throw error
-    }
+    const response = await apiClient.get<unknown>(BASE, {
+      params: status ? { status } : undefined,
+    })
 
     const body = (response.data ?? {}) as Record<string, unknown>
     const rawItems = Array.isArray(body.data) ? body.data : ensureArray(body)
@@ -91,33 +84,28 @@ export const farmApi = {
   async getSpawnInspections(
     sessionId: number,
   ): Promise<SpawnInspectionHistory | null> {
-    try {
-      const response = await apiClient.get<unknown>(
-        `${BASE}/${sessionId}/spawn-inspections`,
-      )
-      const obj = ensureObject<Record<string, unknown>>(response.data)
-      if (!obj) return null
+    const response = await apiClient.get<unknown>(
+      `${BASE}/${sessionId}/spawn-inspections`,
+    )
+    const obj = ensureObject<Record<string, unknown>>(response.data)
+    if (!obj) return null
 
-      const inspections = ensureArray<unknown>(
-        obj.inspections ?? obj.data ?? obj,
-      ).map((item) => normalizeInspection(item))
+    const inspections = ensureArray<unknown>(
+      obj.inspections ?? obj.data ?? obj,
+    ).map((item) => normalizeInspection(item))
 
-      return {
-        session_id: pickNumber(obj, 'session_id', 'sessionId') ?? sessionId,
-        inspections,
-        total_checked: pickNumber(obj, 'totalChecked', 'total_checked'),
-        normal_quantity: pickNumber(obj, 'normalQuantity', 'normal_quantity'),
-        warning_quantity: pickNumber(obj, 'warningQuantity', 'warning_quantity'),
-        abnormal_quantity: pickNumber(obj, 'abnormalQuantity', 'abnormal_quantity'),
-        replacement_quantity: pickNumber(
-          obj,
-          'replacementQuantity',
-          'replacement_quantity',
-        ),
-      }
-    } catch (error) {
-      if (isNotFoundError(error)) return null
-      throw error
+    return {
+      session_id: pickNumber(obj, 'session_id', 'sessionId') ?? sessionId,
+      inspections,
+      total_checked: pickNumber(obj, 'totalChecked', 'total_checked'),
+      normal_quantity: pickNumber(obj, 'normalQuantity', 'normal_quantity'),
+      warning_quantity: pickNumber(obj, 'warningQuantity', 'warning_quantity'),
+      abnormal_quantity: pickNumber(obj, 'abnormalQuantity', 'abnormal_quantity'),
+      replacement_quantity: pickNumber(
+        obj,
+        'replacementQuantity',
+        'replacement_quantity',
+      ),
     }
   },
 }
@@ -125,11 +113,15 @@ export const farmApi = {
 // ─── Normalizers ─────────────────────────────────────────────────────────
 
 /** Chuẩn hoá 1 phiên farm — đọc nhiều tên field (camelCase lẫn snake_case). */
-function normalizeFarmSession(raw: unknown): FarmSession {
+export function normalizeFarmSession(raw: unknown): FarmSession {
   const obj = ensureObject<Record<string, unknown>>(raw) ?? {}
 
   return {
     session_id: pickNumber(obj, 'session_id', 'sessionId', 'id') ?? 0,
+    harvest_status: pickString(obj, 'harvest_status'),
+    expected_harvest_date: pickString(obj, 'harvest_date', 'expected_harvest_date'),
+    last_inspected_at: pickString(obj, 'last_inspected_at'),
+    order_item_id: pickNumber(obj, 'order_item_id'),
     order_id: pickNumber(obj, 'order_id', 'orderId'),
     user_id: pickNumber(obj, 'user_id', 'userId', 'customer_id'),
     customer_name: pickString(obj, 'customer_name', 'customerName'),
@@ -142,9 +134,9 @@ function normalizeFarmSession(raw: unknown): FarmSession {
       'PENDING') as CultivationSessionStatus,
     spawn_issued: pickNumber(obj, 'spawn_issued', 'spawnIssued', 'spawn_used'),
     spawn_remaining: pickNumber(obj, 'spawn_remaining', 'spawnRemaining'),
-    tray_count: pickNumber(obj, 'tray_count', 'trayCount', 'trays_count'),
+    tray_count: pickNumber(obj, 'tray_quantity', 'tray_count', 'trayCount', 'trays_count'),
     spawn_quantity: pickNumber(obj, 'spawn_quantity', 'spawnQuantity'),
-    start_date: pickString(obj, 'start_date', 'startDate'),
+    start_date: pickString(obj, 'start_at', 'start_date', 'startDate'),
     end_date: pickString(obj, 'end_date', 'endDate'),
     created_at: pickString(obj, 'created_at', 'createdAt'),
     updated_at: pickString(obj, 'updated_at', 'updatedAt'),

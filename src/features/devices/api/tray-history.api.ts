@@ -4,7 +4,7 @@
  * ⚠ TUYỆT ĐỐI KHÔNG thêm hàm POST/PATCH/PUT/DELETE ở đây.
  *
  * Gộp nhiều endpoint GET để dựng lại lịch sử vận hành của một khay:
- *   - `GET /api/cultivation-sessions/admin?trayId=` → các phiên của khay.
+ *   - `GET /api/farm/sessions?trayId=` → các phiên của khay.
  *   - `GET /api/customer/orders/{orderId}/cultivation-progress` → timeline
  *     giai đoạn sinh trưởng thật của từng mẻ.
  *   - `GET /api/iot/floors` → map tầng ↔ master ↔ node RS485.
@@ -72,10 +72,7 @@ export async function fetchTrayHistory(
   if (!trayId || trayId <= 0) return empty
 
   const [sessionsResult, floors, masters] = await Promise.all([
-    // ⚠ 404 (endpoint chưa có trên server) → danh sách rỗng, không ném lỗi.
-    sessionApi
-      .list({ trayId, pageSize: 20 })
-      .catch(() => ({ items: [], pagination: null })),
+    sessionApi.list({ trayId }),
     autoMistingApi.listFloors().catch(() => []),
     iotApi.listMasters().catch(() => []),
   ])

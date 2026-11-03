@@ -15,7 +15,7 @@ export const cultivationKeys = {
 }
 
 /**
- * Danh sách mẻ nấm, gộp từ `/api/cultivation-sessions/admin`,
+ * Danh sách mẻ nấm, gộp từ `/api/farm/sessions`,
  * `/api/farm/sessions` và `/api/farm/sessions/{id}/spawn-inspections`.
  */
 export function useCultivationBatches(

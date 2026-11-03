@@ -1,5 +1,5 @@
 import '../device-industrial.css'
-import { useMemo, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import {
   ApiOutlined,
   BulbOutlined,
@@ -31,7 +31,7 @@ import type { ColumnsType } from 'antd/es/table'
 import { useNavigate } from 'react-router-dom'
 import { ActionButton, StatCard, MetadataBadge, StatusBadge, DataTable } from '../../../shared/ui'
 import { formatSensorLabel } from '../../../shared/i18n/terms'
-import { CameraStreamModal } from '../../../features/cameras/components/CameraStreamModal'
+import { CameraStreamModal } from '../../../app/router/lazy-modals'
 import { useFloorCameraMap } from '../../../features/cameras/hooks/useFloorCameras'
 import {
   useAutoControlConfigList,
@@ -48,7 +48,7 @@ import type {
   MasterStatus,
 } from '../../../types/iot'
 import type { Camera } from '../../../types/camera.types'
-import { AutoControlDetailModal } from './AutoControlDetailModal'
+import { AutoControlDetailModal } from '../../../app/router/lazy-modals'
 import { SensorHistoryPanel } from './SensorHistoryPanel'
 import {
   formatDurationMs,
@@ -869,11 +869,13 @@ export function DeviceControlPanel() {
         Modal chỉ hiển thị: cấu hình tự động + nhật ký kích hoạt.
         Không có form, không có nút lưu / sửa / xóa / bật-tắt.
       */}
-      <AutoControlDetailModal
-        floor={autoControlFloor}
-        open={autoControlFloor !== null}
-        onClose={() => setAutoControlFloor(null)}
-      />
+            <Suspense fallback={null}>
+              <AutoControlDetailModal
+              floor={autoControlFloor}
+              open={autoControlFloor !== null}
+              onClose={() => setAutoControlFloor(null)}
+              />
+            </Suspense>
 
       {/* ── Camera Live Modal (READ-ONLY) ──────────────────────────────── */}
       {/*
@@ -884,27 +886,33 @@ export function DeviceControlPanel() {
         ⚠ Chỉ mở khi `streamingCamera !== null` ⇒ modal tự huỷ player khi
         đóng (`destroyOnHidden` + cleanup trong `CameraStreamModal`).
       */}
-      <CameraStreamModal
-        open={streamingCamera !== null}
-        camera={streamingCamera}
-        title={
-          streamingFloor ? (
-            <Space size={8}>
-              <VideoCameraOutlined />
-              <span>
-                Live — Tầng {streamingFloor.floor_number}
-                {streamingCamera?.cameraName
-                  ? ` · ${streamingCamera.cameraName}`
-                  : ''}
-              </span>
-            </Space>
-          ) : undefined
-        }
-        onClose={() => {
-          setStreamingCamera(null)
-          setStreamingFloor(null)
-        }}
-      />
+      {/*
+        ⚠ `CameraStreamModal` lazy-load (xem `app/router/lazy-modals.ts`)
+        ⇒ code modal + ImouPlayer SDK chỉ nạp khi modal mở lần đầu.
+      */}
+      <Suspense fallback={null}>
+        <CameraStreamModal
+          open={streamingCamera !== null}
+          camera={streamingCamera}
+          title={
+            streamingFloor ? (
+              <Space size={8}>
+                <VideoCameraOutlined />
+                <span>
+                  Live — Tầng {streamingFloor.floor_number}
+                  {streamingCamera?.cameraName
+                    ? ` · ${streamingCamera.cameraName}`
+                    : ''}
+                </span>
+              </Space>
+            ) : undefined
+          }
+          onClose={() => {
+            setStreamingCamera(null)
+            setStreamingFloor(null)
+          }}
+        />
+      </Suspense>
     </div>
   )
 }

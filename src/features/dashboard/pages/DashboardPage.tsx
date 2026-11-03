@@ -1,14 +1,23 @@
 /**
  * DashboardPage — Trang tổng quan trang trại MCMS.
  *
- * ⚠ 100% READ-ONLY — mọi số liệu đến từ API GET thật qua `useFarmAnalytics`:
- *   - `/api/cultivation-rooms` — tổng số phòng
- *   - `/api/iot/floors` — tổng số tầng
- *   - `/api/cultivation-trays` — tỷ lệ lấp đầy khay
- *   - `/api/cultivation-sessions/admin` — phiên canh tác theo giai đoạn
- *   - `/api/rental-packages` — giá gói thuê (doanh thu ước tính)
- *   - `/api/iot/masters` + `/api/iot/floors/{id}/environment` — sức khoẻ IoT
- *   - `/api/notifications` — thông báo chưa đọc
+ * ⚠ 100% READ-ONLY — mọi số liệu đến từ API GET thật.
+ *
+ * ## Nguồn số liệu (đã refactor)
+ *
+ * **KPI tổng quan** — `GET /api/analytics/dashboard` (một request duy nhất):
+ *   - `revenue` → doanh thu
+ *   - `trays_used` → số khay đã sử dụng
+ *   - `harvest_quality.usable_rate` / `waste_rate` → tỷ lệ đạt / hao hụt
+ *
+ * **Cơ cấu trang trại** — 4 endpoint danh sách, gọi song song, **không** có
+ *   vòng lặp N+1 (xem `useFarmStructure`):
+ *   - `/api/cultivation-rooms`, `/api/cultivation-trays`
+ *   - `/api/iot/floors`, `/api/iot/masters`
+ *
+ * **Môi trường theo tầng** — `/api/iot/floors/{id}/environment` cho từng tầng,
+ *   nhưng mỗi tầng là một query độc lập (`useQueries`) ⇒ một tầng lỗi **không**
+ *   làm hỏng cả trang (không còn cascade failure như `Promise.all` cũ).
  *
  * → KHÔNG dùng `useRoomStore` / `useAlertStore` / `useOrderStore` (mock).
  */
@@ -16,11 +25,16 @@ import { CalendarOutlined, CloudOutlined, FireOutlined } from '@ant-design/icons
 import { Col, Row, Skeleton, Typography } from 'antd'
 import { useMemo } from 'react'
 import { PageHeader, StatusBadge } from '../../../shared/ui'
-import { useFarmAnalytics } from '../../analytics/hooks/useFarmAnalytics'
+import { getApiErrorMessage } from '../../../shared/api/error'
+import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
+import { useFarmStructure } from '../hooks/useFarmStructure'
+import { useFloorEnvironmentOverview } from '../hooks/useFloorEnvironmentOverview'
+import { useOperationalAlerts } from '../../alerts/hooks/useOperationalAlerts'
 import { EnvironmentChart } from '../components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../components/EnvironmentMetricCard'
 import { QuickSummaryStats } from '../components/QuickSummaryStats'
 import { RecentAlertsTable } from '../components/RecentAlertsTable'
+import type { DashboardAnalyticsData } from '../../../types/dashboard'
 import '../dashboard.css'
 
 function getFormattedToday() {
@@ -48,47 +62,90 @@ function TodayChip() {
   )
 }
 
+/** Fallback khi query chưa có dữ liệu (không bao giờ render `NaN`). */
+const EMPTY_METRICS: DashboardAnalyticsData = {
+  revenue: { value: 0, currency: 'VND' },
+  trays_used: 0,
+  harvest_quality: { usable_rate: 0, waste_rate: 0 },
+}
+
+/** Trung bình các số đo hợp lệ — `null` khi không có số nào. */
+function average(values: Array<number | null>): number | null {
+  const valid = values.filter(
+    (value): value is number =>
+      typeof value === 'number' && Number.isFinite(value),
+  )
+  if (valid.length === 0) return null
+  return (
+    Math.round((valid.reduce((sum, v) => sum + v, 0) / valid.length) * 10) / 10
+  )
+}
+
 export function DashboardPage() {
-  const { data, isLoading, isError, error, refetch } = useFarmAnalytics()
+  // ── KPI tổng quan: một request duy nhất ──────────────────────────────
+  const metricsQuery = useDashboardMetrics()
+  const metrics = metricsQuery.data
 
-  const summary = useMemo(() => {
-    const trays = data?.trays
-    const devices = data?.devices
+  // ── Cơ cấu trang trại: 4 request song song, không N+1 ─────────────────
+  const structureQuery = useFarmStructure()
+  const structure = structureQuery.structure
 
-    return {
-      totalTrays: trays?.total ?? 0,
-      activeInUseTrays: trays?.occupied ?? 0,
-      availableTrays: trays?.available ?? 0,
-      maintenanceTrays: trays?.maintenance ?? 0,
-      activeAlerts: data?.activeAlerts ?? 0,
-      totalRooms: data?.totalRooms ?? 0,
-      totalFloors: data?.totalFloors ?? 0,
-      averageTemperature: devices?.averageTemperature ?? 0,
-      averageHumidity: devices?.averageHumidity ?? 0,
-      floorsWithData: devices?.floorsWithData ?? 0,
-    }
-  }, [data])
+  // ── Môi trường theo tầng: query độc lập, lỗi cục bộ ─────────────────
+  const environmentQuery = useFloorEnvironmentOverview()
+
+  // ── Cảnh báo vận hành (dùng chung query key với RecentAlertsTable) ────
+  const alertsQuery = useOperationalAlerts()
+
+  const summary = useMemo(
+    () => ({
+      totalTrays: structure.trays.total,
+      activeInUseTrays: structure.trays.occupied,
+      availableTrays: structure.trays.available,
+      maintenanceTrays: structure.trays.maintenance,
+      totalRooms: structure.totalRooms,
+      totalFloors: structure.totalFloors,
+      occupancyRate: structure.trays.occupancyRate,
+    }),
+    [structure],
+  )
 
   /**
-   * Dữ liệu biểu đồ môi trường — từ `GET /api/iot/floors/{id}/environment`.
-   * Chỉ lấy tầng có đủ nhiệt độ + độ ẩm.
+   * Nhiệt độ / độ ẩm trung bình toàn trang trại — tính từ các tầng có
+   * dữ liệu cảm biến hợp lệ.
+   */
+  const environmentAverages = useMemo(
+    () => ({
+      temperature: average(
+        environmentQuery.points.map((point) => point.temperature),
+      ),
+      humidity: average(
+        environmentQuery.points.map((point) => point.humidity),
+      ),
+    }),
+    [environmentQuery.points],
+  )
+
+  /**
+   * Dữ liệu biểu đồ môi trường — chỉ gồm tầng có đủ nhiệt độ + độ ẩm.
    */
   const environmentChartData = useMemo(
     () =>
-      (data?.floorEnvironments ?? [])
-        .filter(
-          (env): env is typeof env & { temperature: number; humidity: number } =>
-            typeof env.temperature === 'number' && typeof env.humidity === 'number',
-        )
-        .map((env) => ({
-          time: env.floorName,
-          temperature: env.temperature,
-          humidity: env.humidity,
-        })),
-    [data],
+      environmentQuery.points.map((point) => ({
+        time: point.floorName,
+        temperature: point.temperature ?? 0,
+        humidity: point.humidity ?? 0,
+      })),
+    [environmentQuery.points],
   )
 
-  if (isLoading) {
+  // ── Trạng thái tải: chờ KPI + cơ cấu trang trại ───────────────────────
+  const isInitialLoading =
+    metricsQuery.isLoading || structureQuery.isLoading
+
+  // ── Trạng thái lỗi: KPI là nguồn chính → lỗi ở đây chặn cả trang ─────
+  const isBlockingError = metricsQuery.isError
+
+  if (isInitialLoading) {
     return (
       <div className="dashboard-page">
         <PageHeader
@@ -101,7 +158,7 @@ export function DashboardPage() {
     )
   }
 
-  if (isError) {
+  if (isBlockingError) {
     return (
       <div className="dashboard-page">
         <PageHeader
@@ -110,12 +167,19 @@ export function DashboardPage() {
           actions={<TodayChip />}
         />
         <Typography.Paragraph type="danger">
-          {error?.message ?? 'Đã xảy ra lỗi không xác định.'}
+          {getApiErrorMessage(metricsQuery.error)}
         </Typography.Paragraph>
-        <Typography.Link onClick={() => void refetch()}>Thử lại</Typography.Link>
+        <Typography.Link onClick={() => void metricsQuery.refetch()}>
+          Thử lại
+        </Typography.Link>
       </div>
     )
   }
+
+  // Lỗi cơ cấu trang trại (không chặn KPI) → hiển thị chú thích, không vỡ trang.
+  const structureErrorMessage = structureQuery.isError
+    ? getApiErrorMessage(structureQuery.error)
+    : null
 
   return (
     <div className="dashboard-page">
@@ -128,11 +192,11 @@ export function DashboardPage() {
 
       {/* ── KPI Row ─────────────────────────────────────────────────────── */}
       <QuickSummaryStats
+        metrics={metrics ?? EMPTY_METRICS}
         totalTrays={summary.totalTrays}
         activeInUseTrays={summary.activeInUseTrays}
-        availableTrays={summary.availableTrays}
         maintenanceTrays={summary.maintenanceTrays}
-        activeAlerts={summary.activeAlerts}
+        activeAlerts={alertsQuery.data?.counts.total ?? 0}
       />
 
       {/* ── Cơ cấu trang trại ───────────────────────────────────────────── */}
@@ -152,20 +216,26 @@ export function DashboardPage() {
             </Typography.Text>
           </div>
           <StatusBadge
-            tone={data?.devices && data.devices.offline > 0 ? 'warning' : 'ok'}
+            tone={structure.devices.offline > 0 ? 'warning' : 'ok'}
             label={
-              data?.devices
-                ? `${data.devices.online}/${data.devices.total} Master online`
+              structure.devices.total > 0
+                ? `${structure.devices.online}/${structure.devices.total} Master online`
                 : 'Chưa có dữ liệu thiết bị'
             }
           />
         </div>
 
+        {structureErrorMessage && (
+          <Typography.Paragraph type="warning">
+            Không tải được cơ cấu trang trại: {structureErrorMessage}
+          </Typography.Paragraph>
+        )}
+
         <Row gutter={[12, 12]}>
           <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
               title="Nhiệt độ trung bình"
-              value={summary.averageTemperature}
+              value={environmentAverages.temperature ?? 0}
               unit="°C"
               precision={1}
               icon={<FireOutlined />}
@@ -179,8 +249,9 @@ export function DashboardPage() {
           <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
               title="Độ ẩm trung bình"
-              value={summary.averageHumidity}
+              value={environmentAverages.humidity ?? 0}
               unit="%"
+              precision={1}
               icon={<CloudOutlined />}
               tone="teal"
               statusTone="ok"
@@ -192,16 +263,18 @@ export function DashboardPage() {
           <Col xs={24} xl={8}>
             <EnvironmentMetricCard
               title="Tỷ lệ lấp đầy khay"
-              value={data?.trays.occupancyRate ?? 0}
+              value={summary.occupancyRate}
               unit="%"
               precision={1}
               icon={<FireOutlined />}
               tone="coral"
               statusTone="ok"
               status={
-                (data?.trays.occupancyRate ?? 0) >= 50 ? 'Đang khai thác' : 'Còn dư công suất'
+                summary.occupancyRate >= 50
+                  ? 'Đang khai thác'
+                  : 'Còn dư công suất'
               }
-              target={`${data?.trays.occupied ?? 0}/${data?.trays.total ?? 0} khay đang thuê`}
+              target={`${summary.activeInUseTrays}/${summary.totalTrays} khay đang thuê`}
             />
           </Col>
         </Row>
@@ -209,7 +282,7 @@ export function DashboardPage() {
         <div className="dashboard-chart-wrap">
           <EnvironmentChart
             data={environmentChartData}
-            floorsWithData={environmentChartData.length}
+            floorsWithData={environmentQuery.floorsWithData}
           />
         </div>
       </section>

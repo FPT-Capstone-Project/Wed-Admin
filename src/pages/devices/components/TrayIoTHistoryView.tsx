@@ -89,7 +89,7 @@ function SelectedSessionLabel({ session }: { session: RentalSession }) {
  * Nguồn dữ liệu (tất cả GET):
  *   - `GET /api/iot/floors` → danh sách tầng thật.
  *   - `GET /api/cultivation-trays` → danh sách khay thật.
- *   - `GET /api/cultivation-sessions/admin?trayId=` → các mẻ của khay.
+ *   - `GET /api/farm/sessions?trayId=` → các mẻ của khay.
  *   - `GET /api/iot/masters/.../history` → telemetry thật.
  *   - `GET /api/iot/floors/{id}/auto-control/logs` → nhật ký vận hành thật.
  */
