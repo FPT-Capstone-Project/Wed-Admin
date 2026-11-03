@@ -52,7 +52,7 @@ export const userApi = {
 
   /**
    * GET /api/users/{userId} — chi tiết tài khoản (kèm `order_count`,
-   * `rental_count` để hiển thị số liệu tổng hợp).
+   * `cultivation_session_count` để hiển thị số liệu tổng hợp).
    *
    * @throws 404 khi không tìm thấy user
    */

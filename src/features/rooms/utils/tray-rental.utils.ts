@@ -1,5 +1,5 @@
 import type { HarvestStatus, TrayRental } from '../../../types/room.types'
-import type { Rental } from '../../rentals/types/rental.types'
+import type { CultivationSession } from '../../sessions/types/session.types'
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -136,44 +136,54 @@ export function formatVnd(value: number) {
 }
 
 /**
- * Chuyển `Rental` (BE flat DTO) → `TrayRental` (UI shape cho drawer / lifecycle).
+ * Chuyển `CultivationSession` (BE flat DTO từ
+ * `GET /api/cultivation-sessions/admin`) → `TrayRental` (UI shape cho
+ * drawer / lifecycle).
  *
  * Quy tắc mapping:
  * - `start_date` → `startDate`
- * - `end_date` → `packageEndDate` và `expectedHarvestDate` (khi chưa có API riêng)
- * - `duration_days` → `weeks` (chia 7, làm tròn lên)
- * - Giá: BE chưa expose `basePrice` riêng → tạm để 0 (hiển thị "—")
- * - Status ACTIVE → GROWING; BE chưa có field harvest riêng
+ * - `expected_harvest_date` (fallback `end_date`) → `expectedHarvestDate` và
+ *   `packageEndDate`
+ * - `package_name` → `mushroomVariety` (tên gói), `mushroom_name` →
+ *   `mushroomType`
+ * - Số tuần ước tính từ khoảng ngày bắt đầu → thu hoạch (BE chưa trả
+ *   `duration_days` cho phiên)
+ * - Giá: BE chưa expose `basePrice` → để 0 (hiển thị "—")
+ *
+ * ⚠ Giai đoạn 1: thay thế `rentalToTrayRental()` đọc từ
+ *   `/api/rentals/admin` (module `features/rentals` đã bị gỡ).
  */
-export function rentalToTrayRental(rental: Rental): TrayRental {
-  const startDate = rental.start_date ?? new Date().toISOString()
-  // Nếu chưa có end_date, ước tính từ start + duration
-  const packageEndDate =
-    rental.end_date ??
-    new Date(
-      new Date(startDate).getTime() + rental.duration_days * 24 * 60 * 60 * 1000,
-    ).toISOString()
+export function sessionToTrayRental(session: CultivationSession): TrayRental {
+  const startDate = session.start_date ?? new Date().toISOString()
+  const harvestDate =
+    session.expected_harvest_date ?? session.end_date ?? startDate
+  const packageEndDate = harvestDate
 
-  // expectedHarvestDate = packageEndDate (BE chưa tách riêng)
-  const expectedHarvestDate = packageEndDate
-
-  const weeks = Math.ceil(rental.duration_days / 7)
+  const durationDays = Math.max(
+    1,
+    differenceInCalendarDays(packageEndDate, startDate),
+  )
+  const weeks = Math.max(1, Math.ceil(durationDays / 7))
 
   const harvestStatus: HarvestStatus =
-    rental.status === 'COMPLETED' ? 'AUTO_HARVESTED' : 'GROWING'
+    session.status === 'COMPLETED'
+      ? 'AUTO_HARVESTED'
+      : session.status === 'HARVESTING'
+        ? 'READY_TO_HARVEST'
+        : 'GROWING'
 
   return {
-    tenantName: rental.customer_name,
-    tenantPhone: rental.customer_phone ?? '—',
-    tenantAddress: rental.customer_email, // BE chưa expose địa chỉ → dùng email tạm
-    mushroomType: rental.mushroom_name,
-    mushroomVariety: rental.package_name,
+    tenantName: session.customer_name ?? '—',
+    tenantPhone: session.customer_phone ?? '—',
+    tenantAddress: session.customer_email ?? '—',
+    mushroomType: session.mushroom_name ?? '—',
+    mushroomVariety: session.package_name ?? '—',
     weeks,
     startDate,
-    expectedHarvestDate,
+    expectedHarvestDate: harvestDate,
     packageEndDate,
-    basePrice: 0,        // BE list endpoint chưa expose giá → 0
-    dailyOverdueFee: 0,  // Tương tự
+    basePrice: 0, // BE list endpoint chưa expose giá → 0
+    dailyOverdueFee: 0, // Tương tự
     harvestStatus,
     customerContactStatus: 'NOT_CONTACTED',
     careLogs: [],

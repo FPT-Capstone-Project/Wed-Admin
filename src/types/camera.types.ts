@@ -4,10 +4,8 @@
  * Nguồn: OpenAPI spec sống của BE (`swagger-ui-init.js`, tag `Cameras`).
  * Mọi endpoint đều yêu cầu `bearerAuth`.
  *
- * ⚠ Lưu ý về `POST /api/cameras/live-streams/stop`: body chỉ nhận `liveToken`,
- *   nhưng response của `GET /api/cameras/live-streams` **không** trả token về
- *   ("live tokens are never returned"). Nghĩa là không tự dựng được request
- *   stop hợp lệ từ client. Xem `LIVE_STREAM_STOP_TOKEN_GAP` ở `camera.api.ts`.
+ * ⚠ Giai đoạn 5 (read-only): Web admin chỉ XEM danh sách camera và xem
+ *   live stream Imou. Không có thao tác Thêm / Sửa / Xoá.
  */
 
 export const CAMERA_STATUSES = ['ACTIVE', 'INACTIVE', 'OFFLINE'] as const
@@ -59,11 +57,6 @@ export interface CreateCameraRequest {
 
 /** Body của `PUT /api/cameras/{cameraId}` — mọi field đều tuỳ chọn. */
 export type UpdateCameraRequest = Partial<CreateCameraRequest>
-
-/** Body của `POST /api/cameras/live-streams/stop`. */
-export interface StopLiveSessionRequest {
-  liveToken: string
-}
 
 /**
  * Thông tin phiên live của một kênh camera.

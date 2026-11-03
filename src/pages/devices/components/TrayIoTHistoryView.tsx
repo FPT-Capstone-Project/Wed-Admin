@@ -8,7 +8,7 @@ import {
   LineChartOutlined,
   RightOutlined,
 } from '@ant-design/icons'
-import { Empty, Segmented, Select, Tabs, Tag } from 'antd'
+import { Empty, Segmented, Select, Spin, Tabs, Tag } from 'antd'
 import { useMemo, useRef, useState } from 'react'
 import type {
   HistoryGranularity,
@@ -17,14 +17,9 @@ import type {
   RentalSession,
   RentalSessionStatus,
 } from '../../../types/iot-history'
-import type { TierId, TrayPosition } from '../../../types/room.types'
-import { TIER_IDS, TRAY_POSITIONS } from '../../../types/room.types'
-import {
-  countIrrigationEvents,
-  getLongTermTelemetryForTray,
-  getRentalSessionsForTray,
-  getTelemetryForSession,
-} from '../data/iot-history.mock'
+import { useFloorList } from '../../../features/devices/hooks/useIoT'
+import { useTrayHistory } from '../../../features/devices/hooks/useTrayHistory'
+import { useCultivationTrays } from '../../../features/rooms/hooks/useCultivation'
 import {
   aggregateLongTermTelemetry,
   buildYearComparison,
@@ -40,7 +35,7 @@ import { TrayIoTHistoryApiView } from './TrayIoTHistoryApiView'
 
 const RANGE_OPTIONS: Array<{ value: HistoryRangePreset; label: string }> = [
   { value: 'LAST_12_MONTHS', label: '1 năm qua' },
-  { value: 'COMPARE_2025_2026', label: 'So sánh 2025 vs 2026' },
+  { value: 'COMPARE_2025_2026', label: 'So sánh 2 năm gần nhất' },
   { value: 'ALL', label: 'Toàn bộ dữ liệu' },
 ]
 
@@ -51,15 +46,6 @@ const SESSION_STATUS_CONFIG: Record<
   ACTIVE: { color: 'success', label: 'Đang trồng' },
   COMPLETED: { color: 'default', label: 'Hoàn thành' },
   OVERDUE: { color: 'error', label: 'Quá hạn' },
-}
-
-function getPreferredSessionId(trayId: string) {
-  const sessions = getRentalSessionsForTray(trayId)
-  return (
-    sessions.find((session) => session.status === 'ACTIVE')?.id ??
-    sessions[0]?.id ??
-    ''
-  )
 }
 
 function SessionDropdownOption({ session }: { session: RentalSession }) {
@@ -95,23 +81,64 @@ function SelectedSessionLabel({ session }: { session: RentalSession }) {
   )
 }
 
+/**
+ * Lịch sử telemetry IoT theo khay — **100% dữ liệu thật**.
+ *
+ * ⚠ Đã bỏ hoàn toàn `pages/devices/data/iot-history.mock.ts`.
+ *
+ * Nguồn dữ liệu (tất cả GET):
+ *   - `GET /api/iot/floors` → danh sách tầng thật.
+ *   - `GET /api/cultivation-trays` → danh sách khay thật.
+ *   - `GET /api/cultivation-sessions/admin?trayId=` → các mẻ của khay.
+ *   - `GET /api/iot/masters/.../history` → telemetry thật.
+ *   - `GET /api/iot/floors/{id}/auto-control/logs` → nhật ký vận hành thật.
+ */
 export function TrayIoTHistoryView() {
-  const [tierId, setTierId] = useState<TierId>(4)
-  const [trayPosition, setTrayPosition] = useState<TrayPosition>(1)
+  const [floorId, setFloorId] = useState<number | null>(null)
+  const [trayId, setTrayId] = useState<number | null>(null)
   const [activeView, setActiveView] = useState<HistoryViewMode>('sessions')
   const [rangePreset, setRangePreset] =
     useState<HistoryRangePreset>('COMPARE_2025_2026')
   const [granularity, setGranularity] =
     useState<HistoryGranularity>('MONTH')
-  const [selectedSessionId, setSelectedSessionId] = useState(() => {
-    return getPreferredSessionId('T4-K1')
-  })
+  const [selectedSessionId, setSelectedSessionId] = useState<string>('')
   const chartSectionRef = useRef<HTMLDivElement>(null)
-  const trayId = `T${tierId}-K${trayPosition}`
 
-  const sessions = useMemo(
-    () => getRentalSessionsForTray(trayId),
-    [trayId],
+  const { data: floors = [], isLoading: floorsLoading } = useFloorList()
+  const { data: allTrays = [], isLoading: traysLoading } =
+    useCultivationTrays()
+
+  const sortedFloors = useMemo(
+    () =>
+      [...floors].sort(
+        (left, right) => left.floor_number - right.floor_number,
+      ),
+    [floors],
+  )
+
+  // Tầng đang chọn — mặc định là tầng đầu tiên (suy ra, không dùng effect).
+  const activeFloorId = floorId ?? sortedFloors[0]?.floor_id ?? null
+
+  const trays = useMemo(
+    () => allTrays.filter((tray) => tray.floor_id === activeFloorId),
+    [allTrays, activeFloorId],
+  )
+
+  // Khay đang chọn — mặc định là khay đầu tiên của tầng đang chọn.
+  const activeTrayId = useMemo(() => {
+    if (trayId !== null && trays.some((tray) => tray.tray_id === trayId)) {
+      return trayId
+    }
+    return trays[0]?.tray_id ?? null
+  }, [trayId, trays])
+
+  const { data: history, isLoading: historyLoading } = useTrayHistory(
+    activeTrayId,
+  )
+
+  const sessions = useMemo<RentalSession[]>(
+    () => history?.sessions ?? [],
+    [history?.sessions],
   )
 
   const selectedSession =
@@ -119,18 +146,25 @@ export function TrayIoTHistoryView() {
     sessions.find((session) => session.status === 'ACTIVE') ??
     sessions[0]
   const activeSessionId = selectedSession?.id ?? ''
+
   const sessionTelemetry = useMemo(
-    () => getTelemetryForSession(activeSessionId),
-    [activeSessionId],
+    () => history?.telemetryBySessionId?.[activeSessionId] ?? [],
+    [activeSessionId, history?.telemetryBySessionId],
   )
+
   const irrigationCount = useMemo(
-    () => countIrrigationEvents(sessionTelemetry),
-    [sessionTelemetry],
+    () =>
+      (selectedSession?.statusLogs ?? []).filter(
+        (log) => log.type === 'IRRIGATION',
+      ).length,
+    [selectedSession?.statusLogs],
   )
+
   const longTermTelemetry = useMemo(
-    () => getLongTermTelemetryForTray(trayId),
-    [trayId],
+    () => history?.longTermTelemetry ?? [],
+    [history?.longTermTelemetry],
   )
+
   const aggregatedLongTermData = useMemo(
     () =>
       aggregateLongTermTelemetry(
@@ -140,10 +174,12 @@ export function TrayIoTHistoryView() {
       ),
     [granularity, longTermTelemetry, rangePreset],
   )
-  const comparisonData = useMemo(
+
+  const comparison = useMemo(
     () => buildYearComparison(aggregatedLongTermData, granularity),
     [aggregatedLongTermData, granularity],
   )
+
   const longTermSummary = useMemo(() => {
     if (aggregatedLongTermData.length === 0) {
       return { temperature: 0, humidity: 0 }
@@ -180,18 +216,13 @@ export function TrayIoTHistoryView() {
     })
   }
 
-  const handleTierChange = (nextTierId: TierId) => {
-    setTierId(nextTierId)
-    setSelectedSessionId(
-      getPreferredSessionId(`T${nextTierId}-K${trayPosition}`),
-    )
+  const handleFloorChange = (nextFloorId: number) => {
+    setFloorId(nextFloorId)
+    setTrayId(null)
   }
 
-  const handleTrayChange = (nextTrayPosition: TrayPosition) => {
-    setTrayPosition(nextTrayPosition)
-    setSelectedSessionId(
-      getPreferredSessionId(`T${tierId}-K${nextTrayPosition}`),
-    )
+  const handleTrayChange = (nextTrayId: number) => {
+    setTrayId(nextTrayId)
   }
 
   const sessionContent = selectedSession ? (
@@ -221,7 +252,11 @@ export function TrayIoTHistoryView() {
     </div>
   ) : (
     <div className="iot-history-tab-content iot-empty-history">
-      <Empty description="Khay chưa có lịch sử thuê" />
+      {historyLoading ? (
+        <Spin />
+      ) : (
+        <Empty description="Khay này chưa có lịch sử canh tác trên hệ thống" />
+      )}
     </div>
   )
 
@@ -270,14 +305,22 @@ export function TrayIoTHistoryView() {
         </span>
       </div>
 
-      <LongTermTrendChart
-        key={`${trayId}-${rangePreset}-${granularity}`}
-        aggregatedData={aggregatedLongTermData}
-        comparisonData={comparisonData}
-        granularity={granularity}
-        isComparison={rangePreset === 'COMPARE_2025_2026'}
-        trayId={trayId}
-      />
+      {aggregatedLongTermData.length === 0 ? (
+        <Empty description="Chưa có dữ liệu telemetry dài hạn cho khay này" />
+      ) : (
+        <LongTermTrendChart
+          key={`${activeTrayId}-${rangePreset}-${granularity}`}
+          aggregatedData={aggregatedLongTermData}
+          comparisonData={comparison.data}
+          comparisonYears={comparison.years}
+          granularity={granularity}
+          isComparison={rangePreset === 'COMPARE_2025_2026'}
+          trayId={
+            allTrays.find((tray) => tray.tray_id === activeTrayId)?.tray_code ??
+            `Khay #${activeTrayId ?? '-'}`
+          }
+        />
+      )}
     </div>
   )
 
@@ -291,47 +334,54 @@ export function TrayIoTHistoryView() {
           <div>
             <strong>Phạm vi giám sát</strong>
             <span>
-              Chọn vị trí khay vật lý để tra cứu các đợt trồng của từng khách
-              hàng qua các năm.
+              Chọn tầng và khay thật để tra cứu lịch sử canh tác cùng chuỗi
+              telemetry do thiết bị ghi nhận.
             </span>
           </div>
         </div>
         <div className="iot-filter-controls iot-cascade-controls">
           <div className="iot-filter-field iot-filter-field--tier">
-            <label htmlFor="history-tier-select">Tầng</label>
-            <Select<TierId>
-              id="history-tier-select"
-              value={tierId}
-              onChange={handleTierChange}
-              options={TIER_IDS.map((value) => ({
-                value,
-                label: `Tầng ${value}`,
+            <label htmlFor="history-floor-select">Tầng</label>
+            <Select<number>
+              id="history-floor-select"
+              value={activeFloorId ?? undefined}
+              loading={floorsLoading}
+              placeholder="Chọn tầng"
+              onChange={handleFloorChange}
+              options={sortedFloors.map((floor) => ({
+                value: floor.floor_id,
+                label: floor.floor_name || `Tầng ${floor.floor_number}`,
               }))}
             />
           </div>
           <RightOutlined className="cascade-separator" aria-hidden="true" />
           <div className="iot-filter-field iot-filter-field--tray">
             <label htmlFor="history-tray-select">Khay</label>
-            <Select<TrayPosition>
+            <Select<number>
               id="history-tray-select"
-              value={trayPosition}
+              value={activeTrayId ?? undefined}
+              loading={traysLoading}
+              placeholder="Chọn khay"
+              disabled={trays.length === 0}
               onChange={handleTrayChange}
-              options={TRAY_POSITIONS.map((value) => ({
-                value,
-                label: `K${value}`,
+              options={trays.map((tray) => ({
+                value: tray.tray_id,
+                label: tray.tray_name
+                  ? `${tray.tray_code} · ${tray.tray_name}`
+                  : tray.tray_code,
               }))}
             />
           </div>
           <RightOutlined className="cascade-separator" aria-hidden="true" />
           <div className="iot-filter-field iot-filter-field--session">
             <label htmlFor="rental-session-select">
-              Order / Mẻ của khay này
+              Mẻ canh tác của khay này
             </label>
             <Select
               id="rental-session-select"
               className="iot-session-select"
               value={activeSessionId || undefined}
-              placeholder="Khay chưa có lịch sử thuê"
+              placeholder="Khay chưa có mẻ canh tác"
               disabled={sessions.length === 0}
               showSearch
               optionFilterProp="label"
@@ -383,7 +433,7 @@ export function TrayIoTHistoryView() {
             label: (
               <span>
                 <LineChartOutlined aria-hidden="true" />
-                Xu hướng Dài hạn (2025 – 2026)
+                Xu hướng Dài hạn
               </span>
             ),
             children: longTermContent,

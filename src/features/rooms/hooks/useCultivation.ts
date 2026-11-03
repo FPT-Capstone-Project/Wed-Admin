@@ -1,43 +1,28 @@
-import {
-  useMutation,
-  useQuery,
-  useQueryClient,
-  type UseMutationOptions,
-  type UseQueryOptions,
-} from '@tanstack/react-query'
+import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { cultivationRoomApi } from '../api/cultivation-room.api'
 import { cultivationTrayApi } from '../api/cultivation-tray.api'
-import {
-  toUiTiers,
-  toUiTray,
-  filterAvailableTrays,
-} from '../../../types/cultivation'
+import { toUiTiers, toUiTray } from '../../../types/cultivation'
 import { DEFAULT_TELEMETRY } from './cultivation.defaults'
 import type {
-  CreateCultivationRoomRequest,
-  CreateCultivationTrayRequest,
   CultivationRoom,
   CultivationTray,
   CultivationRoomListQuery,
   CultivationTrayListQuery,
-  UpdateCultivationRoomRequest,
-  UpdateCultivationTrayRequest,
 } from '../../../types/cultivation'
 import type { Tier, Tray } from '../../../types/room.types'
 
-// ─── Query Keys ──────────────────────────────────────────────────────────
+// --- Query Keys -----------------------------------------------------------
 export const cultivationKeys = {
   all: ['cultivation'] as const,
   rooms: () => [...cultivationKeys.all, 'rooms'] as const,
   room: (id: number) => [...cultivationKeys.rooms(), id] as const,
   trays: () => [...cultivationKeys.all, 'trays'] as const,
   tray: (id: number) => [...cultivationKeys.trays(), id] as const,
-  availableTrays: () => [...cultivationKeys.trays(), 'available'] as const,
-  /** Tier[] computed từ rooms + trays — key chung để invalidate cùng lúc */
+  /** Tier[] computed from rooms + trays - shared key for bulk invalidation */
   tiers: () => [...cultivationKeys.all, 'tiers'] as const,
 }
 
-// ─── Rooms ────────────────────────────────────────────────────────────────
+// --- Rooms ----------------------------------------------------------------
 export function useCultivationRooms(
   query: CultivationRoomListQuery = {},
   options?: Partial<UseQueryOptions<CultivationRoom[], Error>>,
@@ -57,7 +42,7 @@ export function useCultivationRoom(
     queryKey: cultivationKeys.room(id ?? -1),
     queryFn: async () => {
       const result = await cultivationRoomApi.getById(id as number)
-      if (!result) throw new Error(`Không tìm thấy phòng nuôi trồng ID ${id}`)
+      if (!result) throw new Error(`Cultivation room not found (id=${id})`)
       return result
     },
     enabled: id !== null && id > 0,
@@ -65,7 +50,7 @@ export function useCultivationRoom(
   })
 }
 
-// ─── Trays ───────────────────────────────────────────────────────────────
+// --- Trays ----------------------------------------------------------------
 export function useCultivationTrays(
   query: CultivationTrayListQuery = {},
   options?: Partial<UseQueryOptions<CultivationTray[], Error>>,
@@ -85,7 +70,7 @@ export function useCultivationTray(
     queryKey: cultivationKeys.tray(id ?? -1),
     queryFn: async () => {
       const result = await cultivationTrayApi.getById(id as number)
-      if (!result) throw new Error(`Không tìm thấy khay ID ${id}`)
+      if (!result) throw new Error(`Cultivation tray not found (id=${id})`)
       return result
     },
     enabled: id !== null && id > 0,
@@ -93,24 +78,10 @@ export function useCultivationTray(
   })
 }
 
-/** Lọc trays trống (AVAILABLE) cho TrayAssignmentModal */
-export function useAvailableTrays(
-  options?: Partial<UseQueryOptions<CultivationTray[], Error>>,
-) {
-  return useQuery<CultivationTray[], Error>({
-    queryKey: cultivationKeys.availableTrays(),
-    queryFn: async () => {
-      const all = await cultivationTrayApi.list({})
-      return filterAvailableTrays(all)
-    },
-    ...options,
-  })
-}
-
-// ─── Tier[] (computed from rooms + trays) ─────────────────────────────────
+// --- Tier[] (computed from rooms + trays) ---------------------------------
 /**
- * Hook tổng hợp: gọi rooms + trays song song, ghép thành Tier[].
- * Telemetry + Relays dùng default (sau này replace bằng WS real-time data).
+ * Aggregates rooms + trays in parallel and merges them into Tier[].
+ * Telemetry + Relays use defaults for now (to be replaced by WS real-time data).
  */
 export function useCultivationTiers(
   options?: Partial<UseQueryOptions<Tier[], Error>>,
@@ -130,8 +101,7 @@ export function useCultivationTiers(
 }
 
 /**
- * Tray[] phẳng cho TrayDetailDrawer lookup.
- * Khi user click 1 tray → trayId → tìm tray từ list này → compute tier.
+ * Flat Tray[] list used by TrayDetailDrawer lookup.
  */
 export function useAllUiTrays(
   options?: Partial<UseQueryOptions<Tray[], Error>>,
@@ -147,89 +117,5 @@ export function useAllUiTrays(
   })
 }
 
-// ─── Mutations ────────────────────────────────────────────────────────────
-function useMutationBase<TData, TVariables>(
-  mutationFn: (v: TVariables) => Promise<TData>,
-  options?: UseMutationOptions<TData, Error, TVariables>,
-) {
-  const queryClient = useQueryClient()
-  return useMutation<TData, Error, TVariables>({
-    mutationFn,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: cultivationKeys.all })
-    },
-    ...options,
-  })
-}
-
-export function useCreateCultivationRoom(
-  options?: UseMutationOptions<CultivationRoom, Error, CreateCultivationRoomRequest>,
-) {
-  return useMutationBase<CultivationRoom, CreateCultivationRoomRequest>(
-    async (payload) => {
-      const result = await cultivationRoomApi.create(payload)
-      if (!result) throw new Error('Không thể tạo phòng nuôi trồng mới')
-      return result
-    },
-    options,
-  )
-}
-
-export function useUpdateCultivationRoom(
-  options?: UseMutationOptions<
-    CultivationRoom,
-    Error,
-    { id: number; payload: UpdateCultivationRoomRequest }
-  >,
-) {
-  return useMutationBase<
-    CultivationRoom,
-    { id: number; payload: UpdateCultivationRoomRequest }
-  >(async ({ id, payload }) => {
-    const result = await cultivationRoomApi.update(id, payload)
-    if (!result) throw new Error(`Không thể cập nhật phòng ID ${id}`)
-    return result
-  }, options)
-}
-
-export function useDeleteCultivationRoom(
-  options?: UseMutationOptions<void, Error, number>,
-) {
-  return useMutationBase<void, number>((id) => cultivationRoomApi.remove(id), options)
-}
-
-export function useCreateCultivationTray(
-  options?: UseMutationOptions<CultivationTray, Error, CreateCultivationTrayRequest>,
-) {
-  return useMutationBase<CultivationTray, CreateCultivationTrayRequest>(
-    async (payload) => {
-      const result = await cultivationTrayApi.create(payload)
-      if (!result) throw new Error('Không thể tạo khay mới')
-      return result
-    },
-    options,
-  )
-}
-
-export function useUpdateCultivationTray(
-  options?: UseMutationOptions<
-    CultivationTray,
-    Error,
-    { id: number; payload: UpdateCultivationTrayRequest }
-  >,
-) {
-  return useMutationBase<
-    CultivationTray,
-    { id: number; payload: UpdateCultivationTrayRequest }
-  >(async ({ id, payload }) => {
-    const result = await cultivationTrayApi.update(id, payload)
-    if (!result) throw new Error(`Không thể cập nhật khay ID ${id}`)
-    return result
-  }, options)
-}
-
-export function useDeleteCultivationTray(
-  options?: UseMutationOptions<void, Error, number>,
-) {
-  return useMutationBase<void, number>((id) => cultivationTrayApi.remove(id), options)
-}
+// NOTE: no useMutation hooks here. Web Admin is read-only: it only observes
+// rooms and trays. Infrastructure writes are done by staff on the mobile app.

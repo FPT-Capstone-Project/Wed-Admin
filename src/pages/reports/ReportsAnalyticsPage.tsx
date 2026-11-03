@@ -1,13 +1,14 @@
 import '../../styles/reports-users-industrial.css'
 import { useMemo, useState } from 'react'
 import {
+  AppstoreOutlined,
   BarChartOutlined,
   DatabaseOutlined,
   DollarOutlined,
   DownloadOutlined,
   ExperimentOutlined,
-  HomeOutlined,
   PercentageOutlined,
+  TeamOutlined,
 } from '@ant-design/icons'
 import {
   Card,
@@ -15,128 +16,84 @@ import {
   Flex,
   Row,
   Segmented,
-  Select,
+  Skeleton,
   Space,
   Typography,
   message,
 } from 'antd'
 import dayjs from 'dayjs'
-import { useAuthStore } from '../../features/auth/store/auth.store'
+import { useFarmAnalytics } from '../../features/analytics/hooks/useFarmAnalytics'
 import {
-  MOCK_ENVIRONMENT_HISTORY,
-  MOCK_REVENUE_SUMMARIES,
-  MOCK_YIELD_SUMMARIES,
-} from '../../stores/alert.store'
-import { useRoomStore, getAllTrays } from '../../stores/room.store'
-import {
-  buildQuarterComparison,
+  buildMonthlyComparison,
+  buildQuarterlyRevenue,
+  buildStageDistribution,
   buildVarietyPerformance,
-  buildYearlyComparison,
   computeExecutiveKpis,
-  type QuarterRevenuePoint,
-  type YearlyRevenuePoint,
-} from './utils/executive-report.utils'
+} from '../../features/analytics/utils/executive-report.utils'
 import { KpiVarianceCard } from './components/KpiVarianceCard'
 import { ComparativeRevenueChart } from './components/ComparativeRevenueChart'
 import { VarietyPerformanceTable } from './components/VarietyPerformanceTable'
 import { ExportReportModal } from './components/ExportReportModal'
 import {
   ActionButton,
+  MetadataBadge,
   PageHeader,
   StatCard,
   StatusBadge,
 } from '../../shared/ui'
 import { tones } from '../../app/theme/tokens'
 
-type ComparisonMode = 'YoY' | 'MoM' | 'QoQ'
-type ScopeFilter = 'ALL' | 'T1' | 'T2' | 'T3' | 'T4'
+type ComparisonMode = 'MONTHLY' | 'QUARTERLY'
 
 const COMPARISON_LABELS: Record<ComparisonMode, { label: string; subtitle: string }> = {
-  YoY: {
-    label: 'Cùng kỳ năm trước (YoY: 2026 vs 2025)',
-    subtitle: 'So sánh năm 2026 với năm 2025',
+  MONTHLY: {
+    label: 'Theo tháng',
+    subtitle: 'Doanh thu ước tính từng tháng trong năm',
   },
-  MoM: {
-    label: 'Tháng trước (MoM: T09/2026 vs T08/2026)',
-    subtitle: 'So sánh tháng 9/2026 với tháng 8/2026',
-  },
-  QoQ: {
-    label: 'Theo quý (QoQ: Q3 vs Q2)',
-    subtitle: 'So sánh quý 3 với quý 2',
+  QUARTERLY: {
+    label: 'Theo quý',
+    subtitle: 'Doanh thu ước tính theo từng quý',
   },
 }
 
-function canManageReports(role: string | undefined) {
-  const normalizedRole = role?.toUpperCase()
-  return (
-    normalizedRole === 'ADMIN' ||
-    normalizedRole === 'OPERATOR' ||
-    normalizedRole === 'FARM_MANAGER'
-  )
-}
-
+/**
+ * Trang Báo cáo & Phân tích — **100% READ-ONLY**.
+ *
+ * ⚠ Đã bỏ hoàn toàn `useRoomStore` / `useAlertStore` / `useOrderStore` (mock).
+ *   Toàn bộ số liệu đến từ `useFarmAnalytics` (8 endpoint GET):
+ *   - `/api/cultivation-rooms`, `/api/iot/floors`, `/api/cultivation-trays`
+ *   - `/api/cultivation-sessions/admin`, `/api/rental-packages`
+ *   - `/api/iot/masters`, `/api/iot/floors/{id}/environment`
+ *   - `/api/farm/sessions/{id}/spawn-inspections`, `/api/notifications`
+ */
 export function ReportsAnalyticsPage() {
-  const authRole = useAuthStore((state) => state.user?.role)
-  const canManage = canManageReports(authRole)
-
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('YoY')
-  const [scope, setScope] = useState<ScopeFilter>('ALL')
+  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('MONTHLY')
   const [exportOpen, setExportOpen] = useState(false)
 
-  const yearlyData = useMemo<YearlyRevenuePoint[]>(
-    () => buildYearlyComparison(MOCK_REVENUE_SUMMARIES),
-    [],
-  )
+  const { data, isLoading, isError, error, refetch } = useFarmAnalytics()
 
-  const quarterlyData = useMemo<QuarterRevenuePoint[]>(
-    () => buildQuarterComparison(MOCK_REVENUE_SUMMARIES),
-    [],
-  )
-
-  // ── Selector trả về mảng tiers trực tiếp (tham chiếu ổn định từ Zustand)
-  //    tránh tạo object literal mới mỗi render gây re-render loop.
-  const tiers = useRoomStore((s) => s.tiers)
-
-  // ── Tính occupancy tỪ dữ liệu room.store thực tế (H2 fix) ────────
-  const activeTrayCount = useMemo(() => {
-    const trays = getAllTrays(tiers)
-    return trays.filter(
-      (t) => t.status === 'rented' || t.status === 'harvesting',
-    ).length
-  }, [tiers])
+  const analytics = data
 
   const kpis = useMemo(
-    () =>
-      computeExecutiveKpis(
-        MOCK_REVENUE_SUMMARIES,
-        MOCK_YIELD_SUMMARIES,
-        activeTrayCount,
-      ),
-    [activeTrayCount],
+    () => (analytics ? computeExecutiveKpis(analytics) : null),
+    [analytics],
   )
 
   const varietyPerformance = useMemo(
-    () => buildVarietyPerformance(MOCK_YIELD_SUMMARIES),
-    [],
+    () =>
+      analytics
+        ? buildVarietyPerformance(
+            analytics.speciesBreakdown,
+            analytics.spawnQuality.successRate,
+          )
+        : [],
+    [analytics],
   )
 
-  const revenueDelta =
-    kpis.previousTotalRevenue > 0
-      ? ((kpis.totalRevenue - kpis.previousTotalRevenue) /
-          kpis.previousTotalRevenue) *
-        100
-      : 0
-
-  const occupancyDelta = kpis.occupancyRate - kpis.previousOccupancyRate
-
-  const yieldDelta =
-    kpis.previousHarvestedGradeAKg > 0
-      ? ((kpis.harvestedGradeAKg - kpis.previousHarvestedGradeAKg) /
-          kpis.previousHarvestedGradeAKg) *
-        100
-      : 0
-
-  const spoilageDelta = kpis.spoilageRate - kpis.previousSpoilageRate
+  const stageDistribution = useMemo(
+    () => (analytics ? buildStageDistribution(analytics) : []),
+    [analytics],
+  )
 
   /**
    * Memoize dataset cho ComparativeRevenueChart.
@@ -144,69 +101,78 @@ export function ReportsAnalyticsPage() {
    * QUAN TRỌNG: Tính trực tiếp trong render sẽ tạo array literal mới mỗi lần
    * → Recharts nhận diện data thay đổi → re-mount BarChart → setState nội bộ
    * → setState kích hoạt re-render parent → loop vô tận.
-   *
-   * useMemo đảm bảo tham chiếu array ổn định khi comparisonMode
-   * chưa đổi → chart nhận cùng data → không re-mount.
    */
-  const chartData = useMemo<
-    Array<{ month: string; current: number; previous: number }>
-  >(() => {
-    if (comparisonMode === 'QoQ') {
-      return quarterlyData.map((q) => ({
-        month: q.quarter,
-        current: Math.round(q.current),
-        previous: Math.round(q.previous),
-      }))
-    }
-    return yearlyData.map((y) => ({
-      month: y.month,
-      current: y.currentYearRevenue,
-      previous: y.previousYearRevenue,
-    }))
-  }, [comparisonMode, yearlyData, quarterlyData])
+  const chartData = useMemo(() => {
+    if (!analytics) return []
+    return comparisonMode === 'QUARTERLY'
+      ? buildQuarterlyRevenue(analytics.monthlyRevenue)
+      : buildMonthlyComparison(analytics.monthlyRevenue)
+  }, [analytics, comparisonMode])
 
   const currentLabel =
-    comparisonMode === 'YoY'
-      ? 'Năm 2026'
-      : comparisonMode === 'MoM'
-        ? 'Tháng 9/2026'
-        : 'Q3/2026'
+    comparisonMode === 'MONTHLY' ? 'Kỳ này' : 'Kỳ này (theo quý)'
 
-  const previousLabel =
-    comparisonMode === 'YoY'
-      ? 'Năm 2025'
-      : comparisonMode === 'MoM'
-        ? 'Tháng 8/2026'
-        : 'Q2/2026'
+  const revenueDelta =
+    kpis && kpis.previousTotalRevenue > 0
+      ? ((kpis.totalRevenue - kpis.previousTotalRevenue) /
+          kpis.previousTotalRevenue) *
+        100
+      : 0
+
+  const occupancyDelta = kpis
+    ? kpis.occupancyRate - kpis.previousOccupancyRate
+    : 0
+
+  const yieldDelta =
+    kpis && kpis.previousHarvestedGradeAKg > 0
+      ? ((kpis.harvestedGradeAKg - kpis.previousHarvestedGradeAKg) /
+          kpis.previousHarvestedGradeAKg) *
+        100
+      : 0
+
+  const spoilageDelta = kpis
+    ? kpis.spoilageRate - kpis.previousSpoilageRate
+    : 0
 
   const handleExportCsv = () => {
+    if (!analytics || !kpis) return
+
     const lines: string[][] = [
       ['BÁO CÁO EXECUTIVE - MCMS'],
-      [`Chế độ so sánh: ${comparisonMode}`],
-      [`Phạm vi: ${scope}`],
+      [`Chế độ: ${COMPARISON_LABELS[comparisonMode].label}`],
       [`Xuất lúc: ${dayjs().format('DD/MM/YYYY HH:mm')}`],
       [],
       ['KPI'],
-      ['Chỉ số', 'Kỳ này', 'Kỳ trước', 'Chênh lệch %'],
-      ['Doanh thu', String(kpis.totalRevenue), String(kpis.previousTotalRevenue), revenueDelta.toFixed(2)],
-      ['Occupancy', `${kpis.occupancyRate.toFixed(1)}%`, `${kpis.previousOccupancyRate.toFixed(1)}%`, occupancyDelta.toFixed(2)],
-      ['Sản lượng Grade A (kg)', String(kpis.harvestedGradeAKg), String(kpis.previousHarvestedGradeAKg), yieldDelta.toFixed(2)],
-      ['Hao hụt (%)', kpis.spoilageRate.toFixed(2), kpis.previousSpoilageRate.toFixed(2), spoilageDelta.toFixed(2)],
+      ['Chỉ số', 'Giá trị'],
+      ['Doanh thu ước tính (VND)', String(kpis.totalRevenue)],
+      ['Occupancy (%)', kpis.occupancyRate.toFixed(2)],
+      ['Số khay', String(kpis.totalTrays)],
+      ['Khay đang thuê', String(kpis.rentedTrays)],
+      ['Phôi đạt chuẩn', String(kpis.harvestedGradeAKg)],
+      ['Tỷ lệ phôi bất thường (%)', kpis.spoilageRate.toFixed(2)],
+      ['Tổng phòng', String(analytics.totalRooms)],
+      ['Tổng tầng', String(analytics.totalFloors)],
+      ['Master online', `${analytics.devices.online}/${analytics.devices.total}`],
+      ['Tổng phiên canh tác', String(analytics.totalSessions)],
+      [],
+      ['PHÂN BỔ PHIÊN THEO GIAI ĐOẠN'],
+      ['Giai đoạn', 'Số phiên'],
+      ...stageDistribution.map((row) => [row.stage, String(row.count)]),
       [],
       ['HIỆU SUẤT THEO GIỐNG NẤM'],
-      ['Giống', 'Số khay', 'Success %', 'Doanh thu kỳ này', 'Cùng kỳ', 'Tăng trưởng %'],
+      ['Giống nấm', 'Số phiên', 'Tỷ lệ đạt chuẩn %', 'Doanh thu ước tính'],
       ...varietyPerformance.map((v) => [
         v.varietyName,
         String(v.traysRented),
         v.successRate.toFixed(1),
         String(v.currentRevenue),
-        String(v.previousRevenue),
-        v.growthPercent.toFixed(2),
       ]),
     ]
 
     const csv = `\uFEFF${lines
-      .map((line) => line.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))
+      .map((line) =>
+        line.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','),
+      )
       .join('\n')}`
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
@@ -214,18 +180,37 @@ export function ReportsAnalyticsPage() {
     const link = document.createElement('a')
 
     link.href = url
-    link.download = `mcms-executive-${comparisonMode.toLowerCase()}-${dayjs().format('YYYYMMDD-HHmm')}.csv`
+    link.download = `mcms-executive-${dayjs().format('YYYYMMDD-HHmm')}.csv`
     link.click()
     URL.revokeObjectURL(url)
     message.success('Đã xuất báo cáo Executive CSV.')
   }
 
-  const handleQuickExport = () => {
-    if (canManage) {
-      setExportOpen(true)
-    } else {
-      handleExportCsv()
-    }
+  if (isLoading) {
+    return (
+      <div>
+        <PageHeader
+          title="Báo cáo & Phân tích Điều hành"
+          description="Đang tải số liệu thực tế từ hệ thống…"
+        />
+        <Skeleton active paragraph={{ rows: 14 }} />
+      </div>
+    )
+  }
+
+  if (isError || !analytics || !kpis) {
+    return (
+      <div>
+        <PageHeader
+          title="Báo cáo & Phân tích Điều hành"
+          description="Không tải được số liệu báo cáo."
+        />
+        <Typography.Paragraph type="danger">
+          {error?.message ?? 'Đã xảy ra lỗi không xác định.'}
+        </Typography.Paragraph>
+        <Typography.Link onClick={() => void refetch()}>Thử lại</Typography.Link>
+      </div>
+    )
   }
 
   return (
@@ -237,16 +222,13 @@ export function ReportsAnalyticsPage() {
             Báo cáo & Phân tích Điều hành
           </Flex>
         }
-        description="Dashboard Executive — so sánh chu kỳ, đo lường hiệu suất vận hành và tăng trưởng kinh doanh."
+        description="Số liệu vận hành và doanh thu ước tính, tổng hợp trực tiếp từ hệ thống (chế độ chỉ đọc)."
         actions={
           <Space wrap>
-            <StatusBadge
-              tone={canManage ? 'ok' : 'muted'}
-              label={canManage ? 'Toàn hệ thống' : 'Khay đang thuê'}
-            />
+            <StatusBadge tone="info" label="Chế độ chỉ đọc" />
             <StatusBadge
               tone="info"
-              label={`${MOCK_ENVIRONMENT_HISTORY.length} điểm dữ liệu IoT`}
+              label={`${analytics.totalSessions} phiên canh tác`}
             />
             <ActionButton
               icon={<DownloadOutlined />}
@@ -254,7 +236,7 @@ export function ReportsAnalyticsPage() {
               description="Tải báo cáo Executive dưới dạng CSV hoặc PDF."
               variant="primary"
               size="middle"
-              onClick={handleQuickExport}
+              onClick={() => setExportOpen(true)}
             />
           </Space>
         }
@@ -268,7 +250,7 @@ export function ReportsAnalyticsPage() {
             tone="ok"
             highlightValue
             icon={<DollarOutlined />}
-            description="Tổng doanh thu các đơn hoàn tất"
+            description="Ước tính = giá gói thuê × số phiên"
             extra={
               <StatusBadge
                 tone={revenueDelta >= 0 ? 'ok' : 'danger'}
@@ -283,7 +265,7 @@ export function ReportsAnalyticsPage() {
             value={`${kpis.occupancyRate.toFixed(1)}%`}
             tone="info"
             highlightValue
-            icon={<HomeOutlined />}
+            icon={<AppstoreOutlined />}
             description={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
             extra={
               <StatusBadge
@@ -295,12 +277,12 @@ export function ReportsAnalyticsPage() {
         </Col>
         <Col xs={12} lg={6}>
           <StatCard
-            title="Tổng sản lượng thu hoạch"
-            value={`${kpis.harvestedGradeAKg.toFixed(0)} kg`}
+            title="Phôi đạt chuẩn"
+            value={`${kpis.harvestedGradeAKg.toLocaleString('vi-VN')} đơn vị`}
             tone="warning"
             highlightValue
             icon={<ExperimentOutlined />}
-            description="Grade A (đạt chuẩn xuất khẩu)"
+            description="Từ lịch sử kiểm tra phôi của nhân viên"
             extra={
               <StatusBadge
                 tone={yieldDelta >= 0 ? 'ok' : 'danger'}
@@ -311,7 +293,7 @@ export function ReportsAnalyticsPage() {
         </Col>
         <Col xs={12} lg={6}>
           <StatCard
-            title="Tỷ lệ hao hụt / Mẻ hỏng"
+            title="Tỷ lệ phôi bất thường"
             value={`${kpis.spoilageRate.toFixed(1)}%`}
             tone="danger"
             highlightValue
@@ -323,6 +305,46 @@ export function ReportsAnalyticsPage() {
                 label={`${spoilageDelta >= 0 ? '+' : ''}${spoilageDelta.toFixed(1)} điểm % so với kỳ trước`}
               />
             }
+          />
+        </Col>
+      </Row>
+
+      {/* Cơ cấu trang trại — số liệu thật */}
+      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Tổng số phòng"
+            value={analytics.totalRooms}
+            tone="neutral"
+            icon={<DatabaseOutlined />}
+            description={`${analytics.activeRooms} phòng đang hoạt động`}
+          />
+        </Col>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Tổng số tầng"
+            value={analytics.totalFloors}
+            tone="neutral"
+            icon={<AppstoreOutlined />}
+            description="Từ /api/iot/floors"
+          />
+        </Col>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Master đang online"
+            value={`${analytics.devices.online}/${analytics.devices.total}`}
+            tone={analytics.devices.offline > 0 ? 'warning' : 'ok'}
+            icon={<TeamOutlined />}
+            description={`${analytics.devices.unhealthyFloors} tầng cảm biến bất thường`}
+          />
+        </Col>
+        <Col xs={12} lg={6}>
+          <StatCard
+            title="Khay theo trạng thái"
+            value={`${analytics.trays.available}/${analytics.trays.total}`}
+            tone="info"
+            icon={<AppstoreOutlined />}
+            description={`${analytics.trays.occupied} đang thuê · ${analytics.trays.maintenance} bảo trì`}
           />
         </Col>
       </Row>
@@ -340,15 +362,14 @@ export function ReportsAnalyticsPage() {
         <Flex align="center" justify="space-between" gap={16} wrap>
           <Flex align="center" gap={12} wrap>
             <Typography.Text strong style={{ fontSize: 13 }}>
-              Chế độ so sánh:
+              Cách trình bày:
             </Typography.Text>
             <Segmented<ComparisonMode>
               value={comparisonMode}
               onChange={setComparisonMode}
               options={[
-                { label: 'YoY', value: 'YoY' },
-                { label: 'MoM', value: 'MoM' },
-                { label: 'QoQ', value: 'QoQ' },
+                { label: 'Theo tháng', value: 'MONTHLY' },
+                { label: 'Theo quý', value: 'QUARTERLY' },
               ]}
             />
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -357,58 +378,9 @@ export function ReportsAnalyticsPage() {
           </Flex>
 
           <Space wrap>
-            <div>
-              <Typography.Text type="secondary" style={{ fontSize: 11, display: 'block' }}>
-                Phạm vi
-              </Typography.Text>
-              <Select<ScopeFilter>
-                value={scope}
-                onChange={setScope}
-                style={{ width: 200 }}
-                options={[
-                  {
-                    value: 'ALL',
-                    label: (
-                      <Space>
-                        <DatabaseOutlined /> Toàn bộ trang trại
-                      </Space>
-                    ),
-                  },
-                  {
-                    value: 'T1',
-                    label: (
-                      <Space>
-                        <HomeOutlined /> Tầng 1
-                      </Space>
-                    ),
-                  },
-                  {
-                    value: 'T2',
-                    label: (
-                      <Space>
-                        <HomeOutlined /> Tầng 2
-                      </Space>
-                    ),
-                  },
-                  {
-                    value: 'T3',
-                    label: (
-                      <Space>
-                        <HomeOutlined /> Tầng 3
-                      </Space>
-                    ),
-                  },
-                  {
-                    value: 'T4',
-                    label: (
-                      <Space>
-                        <HomeOutlined /> Tầng 4
-                      </Space>
-                    ),
-                  },
-                ]}
-              />
-            </div>
+            <MetadataBadge
+              label={`${analytics.floorEnvironments.length} tầng có dữ liệu cảm biến`}
+            />
           </Space>
         </Flex>
       </Card>
@@ -427,13 +399,13 @@ export function ReportsAnalyticsPage() {
             previousValue={formatCompactVND(kpis.previousTotalRevenue)}
             deltaPercent={revenueDelta}
             higherIsBetter
-            subtitle="Tổng doanh thu các đơn hoàn tất"
+            subtitle="Ước tính từ giá gói thuê × số phiên"
           />
         </Col>
 
         <Col xs={24} md={12} xl={6}>
           <KpiVarianceCard
-            icon={<HomeOutlined />}
+            icon={<AppstoreOutlined />}
             iconBg={tones.info.bg}
             iconColor={tones.info.solid}
             title="Tỷ lệ lấp đầy khay"
@@ -452,14 +424,14 @@ export function ReportsAnalyticsPage() {
             icon={<ExperimentOutlined />}
             iconBg={tones.warning.bg}
             iconColor={tones.warning.solid}
-            title="Tổng sản lượng thu hoạch"
+            title="Phôi đạt chuẩn"
             currentLabel="Kỳ này"
-            currentValue={`${kpis.harvestedGradeAKg.toFixed(0)} kg`}
+            currentValue={kpis.harvestedGradeAKg.toLocaleString('vi-VN')}
             previousLabel="Kỳ trước"
-            previousValue={`${kpis.previousHarvestedGradeAKg.toFixed(0)} kg`}
+            previousValue={kpis.previousHarvestedGradeAKg.toLocaleString('vi-VN')}
             deltaPercent={yieldDelta}
             higherIsBetter
-            subtitle="Grade A (đạt chuẩn xuất khẩu)"
+            subtitle="Tổng số phôi đạt chuẩn đã kiểm tra"
           />
         </Col>
 
@@ -468,9 +440,9 @@ export function ReportsAnalyticsPage() {
             icon={<PercentageOutlined />}
             iconBg={tones.danger.bg}
             iconColor={tones.danger.solid}
-            title="Tỷ lệ hao hụt / Mẻ hỏng"
+            title="Tỷ lệ phôi bất thường"
             currentLabel="Kỳ này"
-            currentValue={`${kpis.spoilageRate.toFixed(1)}%`}
+            currentValue={`${kpis.spoilageRate.toFixed(2)}%`}
             previousLabel="Kỳ trước"
             previousValue={`${kpis.previousSpoilageRate.toFixed(2)}%`}
             deltaPercent={spoilageDelta}
@@ -489,48 +461,64 @@ export function ReportsAnalyticsPage() {
         }}
         styles={{ body: { padding: 20 } }}
       >
-        <Flex align="center" justify="space-between" wrap gap={12} style={{ marginBottom: 8 }}>
+        <Flex
+          align="center"
+          justify="space-between"
+          wrap
+          gap={12}
+          style={{ marginBottom: 8 }}
+        >
           <div>
             <Typography.Title level={5} style={{ margin: 0 }}>
-              Biểu đồ cột đôi — Doanh thu {comparisonMode}
+              Biểu đồ doanh thu ước tính
             </Typography.Title>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {comparisonMode === 'YoY'
-                ? 'Doanh thu từng tháng của năm 2026 so với năm 2025'
-                : comparisonMode === 'MoM'
-                  ? 'Doanh thu tháng 9/2026 vs tháng 8/2026'
-                  : 'Doanh thu theo quý Q3 vs Q2'}
+              {comparisonMode === 'MONTHLY'
+                ? 'Doanh thu ước tính từng tháng (giá gói thuê × số phiên bắt đầu trong tháng)'
+                : 'Doanh thu ước tính theo quý'}
             </Typography.Text>
           </div>
           <Space size={8} wrap>
             <LegendChip color={tones.ok.solid} label={currentLabel} />
-            <LegendChip color="var(--mcms-border-strong)" label={previousLabel} />
           </Space>
         </Flex>
 
-        <ComparativeRevenueChart
-          data={chartData}
-          currentLabel={currentLabel}
-          previousLabel={previousLabel}
-          height={340}
-        />
+        {chartData.length > 0 ? (
+          <ComparativeRevenueChart
+            data={chartData}
+            currentLabel={currentLabel}
+            previousLabel="Kỳ trước"
+            height={340}
+          />
+        ) : (
+          <Typography.Text type="secondary">
+            Chưa có phiên canh tác nào để tính doanh thu ước tính.
+          </Typography.Text>
+        )}
       </Card>
 
       {/* VARIETY PERFORMANCE TABLE */}
       <Card
         style={{
           borderRadius: 'var(--mcms-radius-xl)',
+          marginBottom: 'var(--mcms-space-5)',
           borderColor: 'var(--mcms-border)',
         }}
         styles={{ body: { padding: 20 } }}
       >
-        <Flex align="center" justify="space-between" wrap gap={12} style={{ marginBottom: 12 }}>
+        <Flex
+          align="center"
+          justify="space-between"
+          wrap
+          gap={12}
+          style={{ marginBottom: 12 }}
+        >
           <div>
             <Typography.Title level={5} style={{ margin: 0 }}>
-              Bảng phân tích hiệu suất theo giống nấm
+              Cơ cấu giống nấm được thuê nhiều nhất
             </Typography.Title>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Đánh giá đóng góp doanh thu và mức tăng trưởng so với cùng kỳ.
+              Số phiên canh tác và doanh thu ước tính theo từng giống nấm.
             </Typography.Text>
           </div>
         </Flex>
@@ -541,8 +529,20 @@ export function ReportsAnalyticsPage() {
       <ExportReportModal
         open={exportOpen}
         onCancel={() => setExportOpen(false)}
-        reportTitle={`Báo cáo Executive ${comparisonMode} (${COMPARISON_LABELS[comparisonMode].label})`}
+        reportTitle={`Báo cáo Executive (${COMPARISON_LABELS[comparisonMode].label})`}
       />
+
+      {/* Nút xuất CSV nhanh — dùng dữ liệu thật */}
+      <Flex justify="flex-end">
+        <ActionButton
+          icon={<DownloadOutlined />}
+          label="Tải CSV từ dữ liệu hiện tại"
+          description="Xuất trực tiếp các chỉ số đang hiển thị ra file CSV."
+          variant="default"
+          size="middle"
+          onClick={handleExportCsv}
+        />
+      </Flex>
     </div>
   )
 }

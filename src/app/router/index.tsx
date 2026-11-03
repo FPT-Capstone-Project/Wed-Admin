@@ -16,13 +16,14 @@ import {
   IoTHistoryPage,
   OrderManagementPage,
   PackageManagementPage,
-  RentalListPage,
   ReportsAnalyticsPage,
   ReportsErrorBoundary,
   RoomListPage,
+  SessionListPage,
   SettingsPage,
   StyleGuidePage,
   UserManagementPage,
+  NotificationsPage,
 } from './lazy-pages'
 
 /** Bọc một element với Suspense fallback (full-screen PageFallback). */
@@ -88,14 +89,20 @@ export const router = createBrowserRouter([
         element: withSuspense(<OrderManagementPage />),
       },
       {
-        // Vụ thuê: BE yêu cầu role_id 1 (Admin) hoặc 2 (Farm Operator).
+        // Phiên canh tác: BE yêu cầu role_id 1 (Admin) hoặc 2 (Farm Operator).
         // Customer không được truy cập — RoleGuard chặn trước khi gọi API.
-        path: 'rentals',
+        path: 'sessions',
         element: (
           <RoleGuard allowedRoles={['ADMIN', 'OPERATOR']}>
-            {withSuspense(<RentalListPage />)}
+            {withSuspense(<SessionListPage />)}
           </RoleGuard>
         ),
+      },
+      {
+        // Redirect cũ: `/rentals` → `/sessions` (đổi tên luồng "vụ thuê" →
+        // "phiên canh tác").
+        path: 'rentals',
+        element: <Navigate to="/sessions" replace />,
       },
       {
         path: 'cultivation',
@@ -104,6 +111,11 @@ export const router = createBrowserRouter([
       {
         path: 'alerts',
         element: withSuspense(<AlertManagementPage />),
+      },
+      {
+        // Thông báo — đọc `GET /api/notifications` (chỉ đọc).
+        path: 'notifications',
+        element: withSuspense(<NotificationsPage />),
       },
       {
         path: 'reports',

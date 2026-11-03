@@ -3,8 +3,8 @@ import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons'
 import { Tooltip, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { EmptyState, StatusBadge, DataTable } from '../../../shared/ui'
-import { formatCurrency } from '../utils/executive-report.utils'
-import type { VarietyPerformance } from '../utils/executive-report.utils'
+import { formatCurrency } from '../../../features/analytics/utils/executive-report.utils'
+import type { VarietyPerformance } from '../../../features/analytics/utils/executive-report.utils'
 import type { SemanticTone } from '../../../app/theme/tokens'
 
 interface VarietyPerformanceTableProps {

@@ -3,15 +3,17 @@
  *
  * ⚠ **Nguồn duy nhất: Database.**
  *   - Tên giống nấm  → `mushroom_types.name` (nguyên bản, KHÔNG dịch).
- *   - Dải ngưỡng     → `mushroom_conditions` (temperature / humidity / co2).
+ *   - Dải ngưỡng     → `mushroom_conditions` (chỉ **nhiệt độ + độ ẩm**).
  *   - Chu kỳ         → suy ra từ `mushroom_types.growing_days`.
  *
  *   Bảng `mushroom_conditions` được JOIN với `mushroom_types` theo
  *   `mushroom_type_id` — xem `features/settings/hooks/useThresholdProfiles.ts`.
  *
- * ⚠ Ngưỡng **ẩm giá thể** đã bị gỡ khỏi DB (migration
- *   `010_drop_condition_substrate_moisture.sql`) → cột này được thay bằng
- *   dải **CO₂**, vẫn là dữ liệu thật trong `mushroom_conditions`.
+ * ⚠ **Giai đoạn 0 — đã gỡ CO₂ và độ ẩm giá thể.**
+ *   - CO₂ (`co2_min` / `co2_max`) không còn trong BE / DB.
+ *   - Độ ẩm giá thể (`substrate_moisture_*`) đã bị gỡ khỏi DB
+ *     (migration `010_drop_condition_substrate_moisture.sql`).
+ *   → Hồ sơ chỉ còn 2 dải: nhiệt độ & độ ẩm.
  */
 
 /** Một hồ sơ vi khí hậu của một giống nấm. */
@@ -30,9 +32,6 @@ export interface MushroomThresholdProfile {
   /** Dải độ ẩm không khí (%RH) — `null` = chưa đặt ngưỡng. */
   humidityMin: number | null
   humidityMax: number | null
-  /** Dải CO₂ (ppm) — `null` = chưa đặt ngưỡng. */
-  co2Min: number | null
-  co2Max: number | null
   /** Thời điểm cập nhật gần nhất (`mushroom_conditions.updated_at`). */
   updatedAt: string
 }

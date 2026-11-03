@@ -104,6 +104,9 @@ function formatTimestamp(timestamp: string | number | null) {
  *  - GET /api/iot/floors/{id}/environment
  *  - GET /api/iot/floors/{id}/auto-control
  *  - GET /api/iot/floors/{id}/auto-control/logs
+ *
+ * ⚠ Không còn gọi `GET /api/iot/masters/{id}/ssr` — phần "Trạng thái rơ-le
+ *   (SSR)" đã được gỡ khỏi giao diện.
  */
 export function DeviceControlPanel() {
   const navigate = useNavigate()
@@ -411,8 +414,11 @@ export function DeviceControlPanel() {
       dataIndex: 'misting_ssr_channel',
       key: 'misting_ssr_channel',
       className: 'mcms-iot-mono',
-      width: 130,
+      width: 140,
       align: 'center',
+      // ⚠ Chỉ hiển thị **số kênh** cấu hình của tầng. Trạng thái ON/OFF
+      //   thật của rơ-le đã được gỡ khỏi trang (không gọi
+      //   `GET /api/iot/masters/{id}/ssr` nữa).
       render: (ch: number) => (
         <MetadataBadge style={{ fontSize: 12 }} label={<>
           <ThunderboltOutlined /> Kênh {ch}

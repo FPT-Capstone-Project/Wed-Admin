@@ -41,10 +41,14 @@ export interface UserWithRole {
   updated_at: string
 }
 
-/** Schema `UserAccountDetail` — UserWithRole + số đơn / số vụ thuê. */
+/** Schema `UserAccountDetail` — UserWithRole + số đơn / số phiên canh tác.
+ *
+ * ⚠ Tên field theo đúng BE (`cultivation_session_count`) — trước đây FE đọc
+ * `rental_count` nên luôn hiển thị 0. Xem `Backend/src/models/user.model.js`.
+ */
 export interface UserAccountDetail extends UserWithRole {
   order_count: number
-  rental_count: number
+  cultivation_session_count: number
 }
 
 /** Body của POST /api/users. */

@@ -305,6 +305,29 @@ export interface AutoControlSsrState {
   reported_state: 'ON' | 'OFF'
 }
 
+/**
+ * Quyết định / sự kiện gần nhất của tầng.
+ *
+ * ⚠ BE (`service.status`) trả `lastDecision` = **hàng log gần nhất** trong
+ * `iot_auto_control_logs` (`event_type`, `reason`, `created_at`, ...) — KHÔNG
+ * phải shape quyết định thuật toán của `/evaluate` (`action`, `state`).
+ *
+ * → Kiểu ở đây cố ý **lỏng** (mọi field optional) để UI đọc được cả hai
+ *   shape mà không phải ép kiểu.
+ */
+export interface AutoControlLastDecision {
+  /** Shape quyết định thuật toán (nếu BE trả). */
+  action?: 'ON' | 'OFF' | 'FAULT' | 'NONE' | string
+  state?: string
+  reason?: string | null
+  /** Shape hàng log `iot_auto_control_logs` (BE trả cho `/status`). */
+  event_type?: string
+  created_at?: string
+  average_humidity?: number | null
+  average_temperature?: number | null
+  [key: string]: unknown
+}
+
 export interface AutoControlState {
   mode: AutoControlMode
   config?: AutoMistingConfiguration | null
@@ -313,7 +336,7 @@ export interface AutoControlState {
   environment?: unknown
   ssr?: AutoControlSsrState | null
   cooldownRemainingMs?: number | null
-  lastDecision?: AutoControlDecision | null
+  lastDecision?: AutoControlLastDecision | null
 }
 
 /**

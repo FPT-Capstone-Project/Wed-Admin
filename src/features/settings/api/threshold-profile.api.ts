@@ -10,7 +10,7 @@ import type { MushroomThresholdProfile } from '../../../types/setting.types'
  *   `/api/settings/threshold-profiles` (đã kiểm tra `Backend/src/routes`).
  *   Dữ liệu thật nằm ở 2 bảng:
  *     - `mushroom_types`     → tên + `growing_days` (chu kỳ) + mô tả
- *     - `mushroom_conditions` → dải nhiệt độ / độ ẩm / CO₂
+ *     - `mushroom_conditions` → dải nhiệt độ / độ ẩm
  *
  *   → FE ghép 2 nguồn này lại (join theo `mushroom_type_id`) để dựng
  *   hồ sơ hoàn chỉnh. Cả 2 endpoint đều yêu cầu `authenticate` → mọi
@@ -49,8 +49,6 @@ export const thresholdProfileApi = {
       temperature_max?: number | null
       humidity_min?: number | null
       humidity_max?: number | null
-      co2_min?: number | null
-      co2_max?: number | null
       updated_at?: string | null
     }>(conditionsResponse.data)
 
@@ -85,8 +83,6 @@ export const thresholdProfileApi = {
         tempMax: toNumber(condition?.temperature_max),
         humidityMin: toNumber(condition?.humidity_min),
         humidityMax: toNumber(condition?.humidity_max),
-        co2Min: toNumber(condition?.co2_min),
-        co2Max: toNumber(condition?.co2_max),
         updatedAt:
           condition?.updated_at ?? type.created_at ?? new Date().toISOString(),
       }

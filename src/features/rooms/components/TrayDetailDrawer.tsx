@@ -2,16 +2,13 @@ import '../rooms-industrial.css'
 import { MetadataBadge } from '../../../shared/ui'
 import {
   ApiOutlined,
-  BookOutlined,
   CalendarOutlined,
+  ExperimentOutlined,
   InfoCircleOutlined,
   LoadingOutlined,
-  ScissorOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import {
-  App as AntdApp,
-  Button,
   Descriptions,
   Drawer,
   Empty,
@@ -19,44 +16,26 @@ import {
   Spin,
   Typography,
 } from 'antd'
-import { useMemo, useState } from 'react'
-import type { Tier } from '../../../types/room.types'
+import { useMemo } from 'react'
 import { tokens } from '../../../app/theme/tokens'
 import { StatusBadge } from '../../../shared/ui/StatusBadge'
 import { useAllUiTrays } from '../hooks/useCultivation'
-import { useRentalByTray } from '../../rentals/hooks/useRentals'
-import { calculateRentalLifecycle, rentalToTrayRental } from '../utils/tray-rental.utils'
+import { useSessions } from '../../sessions/hooks/useSessions'
+import {
+  calculateRentalLifecycle,
+  sessionToTrayRental,
+} from '../utils/tray-rental.utils'
 import { RentalLifecycleSection } from './RentalLifecycleSection'
-import type { ClosureDialogAction } from './TrayClosureReasonModal'
-import { TrayClosureReasonModal } from './TrayClosureReasonModal'
-import type { InvoiceMode } from './TrayInvoiceModal'
-import { TrayInvoiceModal } from './TrayInvoiceModal'
-import { TrayStaffActionWorkflow } from './TrayStaffActionWorkflow'
+import { SessionStatusTag } from '../../sessions/components/SessionStatusTag'
+import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
+import { useSpawnInspections } from '../../farm/hooks/useFarm'
+import { ACTIVE_SESSION_STATUSES } from '../../sessions/types/session.types'
 import { TrayStatusTag } from './TrayStatusTag'
-import { useRoomStore } from '../../../stores/room.store'
 
 interface TrayDetailDrawerProps {
   trayId: string | null
   onClose: () => void
   currentDate?: Date
-}
-
-interface InvoiceRequest {
-  mode: InvoiceMode
-  reason: string
-}
-
-function joinReason(reason: string, note: string) {
-  return note ? `${reason}: ${note}` : reason
-}
-
-function findTrayDetail(tiers: Tier[], trayId: string | null) {
-  if (!trayId) return null
-  for (const tier of tiers) {
-    const tray = tier.trays.find((item) => item.id === trayId)
-    if (tray) return { tier, tray }
-  }
-  return null
 }
 
 const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
@@ -68,14 +47,6 @@ function fmtDate(v: string | null | undefined) {
   if (!v) return '—'
   const d = new Date(v)
   return Number.isNaN(d.getTime()) ? v : DATE_FMT.format(d)
-}
-
-const RENTAL_STATUS_MAP: Record<string, { tone: 'ok' | 'info' | 'warning' | 'danger' | 'muted' | 'neutral'; label: string }> = {
-  CONFIRMED: { tone: 'neutral', label: 'Chờ xác nhận' },
-  PREPARING: { tone: 'info',    label: 'Đang chuẩn bị' },
-  ACTIVE:    { tone: 'ok',      label: 'Đang canh tác' },
-  COMPLETED: { tone: 'muted',   label: 'Đã hoàn tất' },
-  CANCELLED: { tone: 'danger',  label: 'Đã huỷ' },
 }
 
 // ── Info Card helper ─────────────────────────────────────────────────────────
@@ -142,91 +113,20 @@ function InfoCard({ icon, title, subtitle, children }: InfoCardProps) {
   )
 }
 
-// ── Drawer Footer (sticky action bar) ────────────────────────────────────────
-interface DrawerFooterProps {
-  onLogNote: () => void
-  onEarlyHarvest: () => void
-  disabled?: boolean
-}
-function DrawerFooter({ onLogNote, onEarlyHarvest, disabled }: DrawerFooterProps) {
-  return (
-    <div
-      style={{
-        position: 'sticky',
-        bottom: 0,
-        zIndex: 10,
-        backgroundColor: tokens.color.surface,
-        borderTop: `1px solid ${tokens.color.border}`,
-        padding: `${tokens.space['3']} ${tokens.space['4']}`,
-        boxShadow: 'none',
-      }}
-    >
-      <Typography.Text
-        style={{
-          display: 'block',
-          fontSize: 11,
-          color: tokens.color.textMuted,
-          marginBottom: tokens.space['2'],
-          fontWeight: tokens.typography.weightMedium,
-          textTransform: 'uppercase',
-          letterSpacing: '0.04em',
-        }}
-      >
-        Thao tác vận hành
-      </Typography.Text>
-      <Flex gap={8} wrap>
-        <Button
-          id="btn-log-note"
-          type="text"
-          icon={<BookOutlined />}
-          onClick={onLogNote}
-          disabled={disabled}
-          style={{
-            minHeight: tokens.targetSize.comfortable,
-            flex: 1,
-            fontWeight: tokens.typography.weightSemibold,
-          }}
-        >
-          Ghi chú nhật ký
-        </Button>
-        <Button
-          id="btn-early-harvest"
-          type="text"
-          icon={<ScissorOutlined />}
-          onClick={onEarlyHarvest}
-          disabled={disabled}
-          style={{
-            minHeight: tokens.targetSize.comfortable,
-            flex: 1,
-            fontWeight: tokens.typography.weightSemibold,
-            color: tokens.color.text,
-            borderColor: tokens.color.border,
-            backgroundColor: tokens.color.surface,
-          }}
-        >
-          Thu hoạch sớm
-        </Button>
-      </Flex>
-    </div>
-  )
-}
-
-// ── Main Component ────────────────────────────────────────────────────────────
+/**
+ * Drawer chi tiết khay — **100% READ-ONLY**.
+ *
+ * ⚠ Giai đoạn 1: chuyển từ nguồn `/api/rentals/admin` (module `features/rentals`
+ *   đã bị gỡ) sang `GET /api/cultivation-sessions/admin`.
+ *
+ * ⚠ KHÔNG có thao tác ghi: ghi nhật nhật ký chăm sóc, thu hoạch sớm, tiêu hủy
+ *   mẻ, xuất hóa đơn… đều do **nhân viên (staff)** thực hiện trên app.
+ */
 export function TrayDetailDrawer({
   trayId,
   onClose,
   currentDate,
 }: TrayDetailDrawerProps) {
-  const { message } = AntdApp.useApp()
-  const [dialogAction, setDialogAction] = useState<ClosureDialogAction | null>(null)
-  const [invoiceRequest, setInvoiceRequest] = useState<InvoiceRequest | null>(null)
-
-  // Mock store fallback
-  const tiers = useRoomStore((state) => state.tiers)
-  const closeTraySession = useRoomStore((state) => state.closeTraySession)
-  const confirmTrayCustomerContact = useRoomStore((state) => state.confirmTrayCustomerContact)
-  const addTrayCareLog = useRoomStore((state) => state.addTrayCareLog)
-
   // API lookup
   const { data: apiTrays = [], isLoading: traysLoading } = useAllUiTrays()
   const apiTray = useMemo(
@@ -239,11 +139,24 @@ export function TrayDetailDrawer({
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null
   }, [trayId])
 
-  const { data: beRental, isLoading: rentalLoading, isError: rentalError } =
-    useRentalByTray(trayNumericId, { enabled: trayNumericId !== null })
+  // Phiên canh tác đang gán cho khay — nguồn duy nhất.
+  const { data: sessionsData, isLoading: sessionsLoading } = useSessions(
+    { trayId: trayNumericId ?? undefined, pageSize: 10 },
+    { enabled: trayNumericId !== null },
+  )
+
+  const session = useMemo(() => {
+    const items = sessionsData?.items ?? []
+    return (
+      items.find((s) => ACTIVE_SESSION_STATUSES.has(s.status)) ?? items[0] ?? null
+    )
+  }, [sessionsData])
+
+  const { data: inspections, isLoading: inspectionsLoading } =
+    useSpawnInspections(session?.session_id ?? null)
 
   /**
-   * Ngày dùng để tính vòng đời rental.
+   * Ngày dùng để tính vòng đời canh tác.
    *
    * Bọc trong `useMemo` để identity ổn định giữa các render — nếu không,
    * `useMemo` bên dưới sẽ tính lại mỗi lần render (cảnh báo
@@ -254,283 +167,49 @@ export function TrayDetailDrawer({
     [currentDate],
   )
 
-  const trayRental = useMemo(() => (beRental ? rentalToTrayRental(beRental) : null), [beRental])
+  const trayRental = useMemo(
+    () => (session ? sessionToTrayRental(session) : null),
+    [session],
+  )
   const lifecycle = useMemo(
-    () => (trayRental ? calculateRentalLifecycle(trayRental, effectiveCurrentDate) : null),
+    () =>
+      trayRental
+        ? calculateRentalLifecycle(trayRental, effectiveCurrentDate)
+        : null,
     [trayRental, effectiveCurrentDate],
   )
 
-  const mockDetail = findTrayDetail(tiers, trayId)
-  const mockRental = mockDetail?.tray.rental ?? null
-  const mockLifecycle = mockRental
-    ? calculateRentalLifecycle(mockRental, effectiveCurrentDate)
-    : null
-
   const drawerTitle = useMemo(() => {
     if (apiTray) return `${apiTray.code} · Tầng ${apiTray.tierId}`
-    if (mockDetail) return `${mockDetail.tray.code} · ${mockDetail.tier.name}`
+    if (trayId) return `Khay ${trayId}`
     return 'Thông tin vận hành'
-  }, [apiTray, mockDetail])
+  }, [apiTray, trayId])
 
-  const isOpen = Boolean(trayId && (apiTray || mockDetail))
-
-  const handleClose = () => {
-    setDialogAction(null)
-    setInvoiceRequest(null)
-    onClose()
-  }
-
-  const handleReasonConfirmation = async (values: { reason: string; note: string }) => {
-    if (!mockDetail || !mockRental || !mockLifecycle || !dialogAction) return
-    await new Promise((resolve) => window.setTimeout(resolve, 350))
-    const reason = joinReason(values.reason, values.note)
-    if (dialogAction === 'EARLY_HARVEST') {
-      setDialogAction(null)
-      setInvoiceRequest({ mode: 'EARLY_HARVEST', reason })
-      message.success('Đã ghi nhận yêu cầu thu hoạch sớm. Hãy nhập cân nặng thực tế.')
-      return
-    }
-    closeTraySession({ trayId: mockDetail.tray.id, outcome: 'FORCED_CANCEL', reason })
-    setDialogAction(null)
-    onClose()
-    message.success('Đã đóng mẻ, ghi nhận tiêu hủy và giải phóng khay.')
-  }
-
-  const handleOpenInvoice = (mode: InvoiceMode, reason: string) => {
-    setInvoiceRequest({ mode, reason })
-  }
-
-  const handleCompleteInvoice = async (actualHarvestWeightKg: number) => {
-    if (!mockDetail || !mockRental || !invoiceRequest) return
-    await new Promise((resolve) => window.setTimeout(resolve, 450))
-    closeTraySession({
-      trayId: mockDetail.tray.id,
-      outcome: invoiceRequest.mode,
-      reason: invoiceRequest.reason,
-      actualHarvestWeightKg,
-    })
-    setInvoiceRequest(null)
-    onClose()
-    message.success(`Đã ghi nhận ${actualHarvestWeightKg} kg, hoàn tất bàn giao và giải phóng khay.`)
-  }
+  const isOpen = Boolean(trayId && apiTray)
 
   // ── Render content ──────────────────────────────────────────────────────
   const renderContent = () => {
-    // ── Mock với rental đầy đủ ──────────────────────────────────────────
-    if (mockDetail && mockRental && mockLifecycle) {
+    if (!apiTray) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['4'], padding: tokens.space['4'] }}>
-          {/* Context card */}
-          <InfoCard
-            icon={<ApiOutlined />}
-            title="Thông tin khay"
-            subtitle={`Tầng: ${mockDetail.tier.name}`}
-          >
-            <Flex align="center" gap={8} wrap>
-              <TrayStatusTag status={mockDetail.tray.status} />
-              {mockDetail.tray.batchId && (
-                <MetadataBadge  label={<>{mockDetail.tray.batchId}</>} />
-              )}
-              <Typography.Text style={{ fontSize: 12, color: tokens.color.textMuted }}>
-                Node: {mockDetail.tier.nodeId}
-              </Typography.Text>
-            </Flex>
-          </InfoCard>
-
-          {/* Lifecycle */}
-          <InfoCard
-            icon={<CalendarOutlined />}
-            title="Thông tin mẻ & khách hàng"
-            subtitle={`Chu kỳ mẻ trồng ${mockDetail.tray.batchId ?? 'chưa định danh'}`}
-          >
-            <RentalLifecycleSection
-              batchId={mockDetail.tray.batchId}
-              rental={mockRental}
-              lifecycle={mockLifecycle}
-            />
-          </InfoCard>
-
-          {/* Workflow (thao tác nâng cao — không phải footer) */}
-          <TrayStaffActionWorkflow
-            rental={mockRental}
-            lifecycle={mockLifecycle}
-            contactConfirmed={mockRental.customerContactStatus === 'DELIVERY_CONFIRMED'}
-            latestCareLog={mockRental.careLogs[0]}
-            onContactConfirmed={() => {
-              confirmTrayCustomerContact(mockDetail.tray.id)
-              message.success('Đã xác nhận hẹn ngày 7 giao với khách hàng.')
-            }}
-            onEarlyHarvest={() => setDialogAction('EARLY_HARVEST')}
-            onHarvest={() => handleOpenInvoice('ON_TIME_HARVEST', 'Thu hoạch đúng hạn theo lịch của mẻ trồng.')}
-            onDestroy={() => setDialogAction('FORCED_CANCEL')}
-            onSaveLog={(note) => {
-              addTrayCareLog(mockDetail.tray.id, note)
-              message.success('Đã lưu ghi chú vào nhật ký chăm sóc của mẻ.')
-            }}
-          />
-
-          {/* Footer CTA */}
-          <DrawerFooter
-            onLogNote={() => message.info('Dùng nút Ghi chú trong khung Thao tác vận hành.')}
-            onEarlyHarvest={() => setDialogAction('EARLY_HARVEST')}
-          />
-        </div>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description="Không tìm thấy thông tin khay."
+        />
       )
     }
 
-    // ── API tray ────────────────────────────────────────────────────────
-    if (apiTray) {
-      const isLoadingAny = traysLoading || rentalLoading
+    const isLoadingAny = traysLoading || sessionsLoading
 
-      if (isLoadingAny) {
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['4'], padding: tokens.space['4'] }}>
-            <InfoCard icon={<ApiOutlined />} title="Thông tin khay" subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}>
-              <Flex align="center" gap={8}>
-                <TrayStatusTag status={apiTray.status} />
-              </Flex>
-            </InfoCard>
-            <div style={{ display: 'flex', justifyContent: 'center', padding: tokens.space['7'] }}>
-              <Spin indicator={<LoadingOutlined style={{ fontSize: 32 }} />} tip="Đang tải thông tin vụ thuê..." />
-            </div>
-          </div>
-        )
-      }
-
-      if (rentalError) {
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['4'], padding: tokens.space['4'] }}>
-            <InfoCard icon={<ApiOutlined />} title="Thông tin khay" subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}>
-              <Flex align="center" gap={8}>
-                <TrayStatusTag status={apiTray.status} />
-              </Flex>
-            </InfoCard>
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Không thể tải thông tin vụ thuê từ máy chủ." />
-          </div>
-        )
-      }
-
-      // ── Có rental từ BE ─────────────────────────────────────────────
-      if (beRental && trayRental && lifecycle) {
-        const statusCfg = RENTAL_STATUS_MAP[beRental.status] ?? { tone: 'neutral' as const, label: beRental.status }
-
-        return (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['4'], padding: tokens.space['4'] }}>
-
-            {/* Khay + trạng thái */}
-            <InfoCard
-              icon={<ApiOutlined />}
-              title="Thông tin khay"
-              subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}
-            >
-              <Flex align="center" gap={8} wrap>
-                <TrayStatusTag status={apiTray.status} />
-                <StatusBadge tone={statusCfg.tone} label={statusCfg.label} />
-              </Flex>
-            </InfoCard>
-
-            {/* Lifecycle */}
-            <InfoCard
-              icon={<CalendarOutlined />}
-              title="Thông tin mẻ & khách hàng"
-              subtitle={`Vụ #${beRental.rental_id}`}
-            >
-              <RentalLifecycleSection
-                batchId={`Vụ #${beRental.rental_id}`}
-                rental={trayRental}
-                lifecycle={lifecycle}
-              />
-            </InfoCard>
-
-            {/* Chi tiết vụ thuê từ BE */}
-            <InfoCard
-              icon={<InfoCircleOutlined />}
-              title={`Chi tiết vụ thuê #${beRental.rental_id}`}
-              subtitle="Dữ liệu đồng bộ từ hệ thống quản lý"
-            >
-              <Descriptions
-                size="small"
-                column={{ xs: 1, sm: 2 }}
-                styles={{ label: { fontWeight: 500, color: tokens.color.textMuted } }}
-              >
-                <Descriptions.Item
-                  label={<><UserOutlined /> Khách thuê</>}
-                  span={2}
-                >
-                  <strong>{beRental.customer_name}</strong>
-                  {beRental.customer_phone && (
-                    <span style={{ marginLeft: 8, color: tokens.color.textMuted }}>
-                      · {beRental.customer_phone}
-                    </span>
-                  )}
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Email">
-                  {beRental.customer_email}
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Loại nấm">
-                  <strong>{beRental.mushroom_name}</strong>
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Gói thuê">
-                  {beRental.package_name}
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Thời hạn">
-                  {beRental.duration_days} ngày
-                  &nbsp;({Math.ceil(beRental.duration_days / 7)} tuần)
-                </Descriptions.Item>
-
-                <Descriptions.Item label={<><CalendarOutlined /> Bắt đầu</>}>
-                  {fmtDate(beRental.start_date)}
-                </Descriptions.Item>
-
-                <Descriptions.Item label="Kết thúc">
-                  {fmtDate(beRental.end_date)}
-                </Descriptions.Item>
-
-                {beRental.room_name && (
-                  <Descriptions.Item label="Phòng" span={2}>
-                    {beRental.room_name}
-                    {beRental.floor_name && ` · ${beRental.floor_name}`}
-                  </Descriptions.Item>
-                )}
-
-                <Descriptions.Item label="Thanh toán">
-                  <StatusBadge
-                    tone={beRental.payment_status === 'PAID' ? 'ok' : 'warning'}
-                    label={beRental.payment_status === 'PAID' ? 'Đã thanh toán' : beRental.payment_status}
-                  />
-                </Descriptions.Item>
-              </Descriptions>
-            </InfoCard>
-
-            {/* Workflow */}
-            <TrayStaffActionWorkflow
-              rental={trayRental}
-              lifecycle={lifecycle}
-              contactConfirmed={false}
-              latestCareLog={undefined}
-              onContactConfirmed={() => message.info('Tính năng xác nhận liên hệ đang tích hợp với BE.')}
-              onEarlyHarvest={() => message.info('Tính năng thu hoạch sớm đang tích hợp với BE.')}
-              onHarvest={() => message.info('Tính năng thu hoạch đang tích hợp với BE.')}
-              onDestroy={() => message.info('Tính năng tiêu hủy đang tích hợp với BE.')}
-              onSaveLog={() => message.info('Tính năng nhật ký đang tích hợp với BE.')}
-            />
-
-            {/* Fixed footer */}
-            <DrawerFooter
-              onLogNote={() => message.info('Tính năng nhật ký đang tích hợp với BE.')}
-              onEarlyHarvest={() => message.info('Tính năng thu hoạch sớm đang tích hợp với BE.')}
-            />
-          </div>
-        )
-      }
-
-      // ── Không có rental ─────────────────────────────────────────────
+    if (isLoadingAny) {
       return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['4'], padding: tokens.space['4'] }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: tokens.space['4'],
+            padding: tokens.space['4'],
+          }}
+        >
           <InfoCard
             icon={<ApiOutlined />}
             title="Thông tin khay"
@@ -540,83 +219,224 @@ export function TrayDetailDrawer({
               <TrayStatusTag status={apiTray.status} />
             </Flex>
           </InfoCard>
-          <Empty
-            image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={
-              apiTray.status === 'rented'
-                ? 'Khay đang sử dụng nhưng chưa tìm thấy vụ thuê đang hoạt động.'
-                : 'Khay chưa có vụ thuê nào đang chạy.'
-            }
-          />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'center',
+              padding: tokens.space['7'],
+            }}
+          >
+            <Spin
+              indicator={<LoadingOutlined style={{ fontSize: 32 }} />}
+              tip="Đang tải thông tin phiên canh tác..."
+            />
+          </div>
         </div>
       )
     }
 
-    return null
+    // ── Có phiên canh tác ─────────────────────────────────────────────
+    if (session && trayRental && lifecycle) {
+      return (
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            gap: tokens.space['4'],
+            padding: tokens.space['4'],
+          }}
+        >
+          {/* Khay + trạng thái */}
+          <InfoCard
+            icon={<ApiOutlined />}
+            title="Thông tin khay"
+            subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}
+          >
+            <Flex align="center" gap={8} wrap>
+              <TrayStatusTag status={apiTray.status} />
+              <SessionStatusTag status={session.status} />
+              {session.payment_status && (
+                <StatusBadge
+                  tone={session.payment_status === 'PAID' ? 'ok' : 'warning'}
+                  label={session.payment_status}
+                />
+              )}
+            </Flex>
+          </InfoCard>
+
+          {/* Vòng đời canh tác */}
+          <InfoCard
+            icon={<CalendarOutlined />}
+            title="Thông tin mẻ & khách hàng"
+            subtitle={`Phiên canh tác #${session.session_id}`}
+          >
+            <RentalLifecycleSection
+              batchId={`Phiên #${session.session_id}`}
+              rental={trayRental}
+              lifecycle={lifecycle}
+            />
+          </InfoCard>
+
+          {/* Chi tiết phiên từ BE */}
+          <InfoCard
+            icon={<InfoCircleOutlined />}
+            title={`Chi tiết phiên canh tác #${session.session_id}`}
+            subtitle="Dữ liệu đồng bộ từ hệ thống quản lý"
+          >
+            <Descriptions
+              size="small"
+              column={{ xs: 1, sm: 2 }}
+              styles={{ label: { fontWeight: 500, color: tokens.color.textMuted } }}
+            >
+              <Descriptions.Item
+                label={
+                  <>
+                    <UserOutlined /> Khách thuê
+                  </>
+                }
+                span={2}
+              >
+                <strong>{session.customer_name ?? '—'}</strong>
+                {session.customer_phone && (
+                  <span style={{ marginLeft: 8, color: tokens.color.textMuted }}>
+                    · {session.customer_phone}
+                  </span>
+                )}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Email">
+                {session.customer_email ?? '—'}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Loại nấm">
+                <strong>{session.mushroom_name ?? '—'}</strong>
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Gói thuê">
+                {session.package_name ?? '—'}
+              </Descriptions.Item>
+
+              <Descriptions.Item label={<><ExperimentOutlined /> Phôi đã cấp</>}>
+                {session.trays.some((t) => (t.spawn_quantity ?? 0) > 0)
+                  ? `${session.trays.reduce((sum, t) => sum + (t.spawn_quantity ?? 0), 0)} đơn vị`
+                  : '—'}
+              </Descriptions.Item>
+
+              <Descriptions.Item label={<><CalendarOutlined /> Bắt đầu</>}>
+                {fmtDate(session.start_date)}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Kết thúc">
+                {fmtDate(session.expected_harvest_date ?? session.end_date)}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Phòng / Tầng" span={2}>
+                {session.trays[0]?.room_name ?? session.trays[0]?.room_code ?? '—'}
+                {session.trays[0]?.floor_name &&
+                  ` · ${session.trays[0].floor_name}`}
+              </Descriptions.Item>
+
+              <Descriptions.Item label="Mã đơn" span={2}>
+                {session.order_id ? (
+                  <MetadataBadge
+                    className="mcms-rental-mono"
+                    label={`#${session.order_id}`}
+                  />
+                ) : (
+                  '—'
+                )}
+              </Descriptions.Item>
+            </Descriptions>
+          </InfoCard>
+
+          {/* Lịch sử kiểm tra phôi */}
+          <InfoCard
+            icon={<ExperimentOutlined />}
+            title="Lịch sử kiểm tra phôi"
+            subtitle="Chỉ xem — ghi nhận do nhân viên thực hiện trên app"
+          >
+            {inspectionsLoading ? (
+              <Spin tip="Đang tải lịch sử kiểm tra phôi..." />
+            ) : (
+              <SpawnInspectionList inspections={inspections?.inspections ?? []} />
+            )}
+          </InfoCard>
+        </div>
+      )
+    }
+
+    // ── Không có phiên ─────────────────────────────────────────────
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: tokens.space['4'],
+          padding: tokens.space['4'],
+        }}
+      >
+        <InfoCard
+          icon={<ApiOutlined />}
+          title="Thông tin khay"
+          subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}
+        >
+          <Flex align="center" gap={8}>
+            <TrayStatusTag status={apiTray.status} />
+          </Flex>
+        </InfoCard>
+        <Empty
+          image={Empty.PRESENTED_IMAGE_SIMPLE}
+          description={
+            apiTray.status === 'rented'
+              ? 'Khay đang sử dụng nhưng chưa tìm thấy phiên canh tác đang chạy.'
+              : 'Khay chưa có phiên canh tác nào đang chạy.'
+          }
+        />
+      </div>
+    )
   }
 
   return (
-    <>
-      <Drawer
-        rootClassName="tray-detail-drawer"
-        title={
-          <Flex align="center" gap={8}>
-            <span style={{ fontWeight: tokens.typography.weightBold, color: tokens.color.text }}>
-              Chi tiết khay nấm
-            </span>
-            <span
-              style={{
-                fontSize: 12,
-                color: tokens.color.textMuted,
-                fontWeight: tokens.typography.weightMedium,
-                backgroundColor: tokens.color.surfaceMuted,
-                border: `1px solid ${tokens.color.border}`,
-                borderRadius: tokens.radius.md,
-                padding: '1px 8px',
-              }}
-            >
-              {drawerTitle}
-            </span>
-          </Flex>
-        }
-        size={680}
-        open={isOpen}
-        onClose={handleClose}
-        destroyOnHidden
-        styles={{
-          body: { padding: 0, backgroundColor: tokens.color.surface },
-          header: {
-            borderBottom: `1px solid ${tokens.color.border}`,
-            backgroundColor: tokens.color.surface,
-          },
-        }}
-      >
-        {renderContent()}
-      </Drawer>
-
-      {dialogAction && mockDetail && (
-        <TrayClosureReasonModal
-          key={dialogAction}
-          action={dialogAction}
-          batchLabel={`${mockDetail.tray.batchId ?? mockDetail.tray.code} · ${mockDetail.tray.code}`}
-          onCancel={() => setDialogAction(null)}
-          onConfirm={handleReasonConfirmation}
-        />
-      )}
-
-      {invoiceRequest && mockDetail && mockRental && mockLifecycle && (
-        <TrayInvoiceModal
-          key={invoiceRequest.mode}
-          batchId={mockDetail.tray.batchId ?? mockDetail.tray.code}
-          trayId={mockDetail.tray.code}
-          rental={mockRental}
-          harvestDate={effectiveCurrentDate}
-          mode={invoiceRequest.mode}
-          reason={invoiceRequest.reason}
-          onCancel={() => setInvoiceRequest(null)}
-          onComplete={handleCompleteInvoice}
-        />
-      )}
-    </>
+    <Drawer
+      rootClassName="tray-detail-drawer"
+      title={
+        <Flex align="center" gap={8}>
+          <span
+            style={{
+              fontWeight: tokens.typography.weightBold,
+              color: tokens.color.text,
+            }}
+          >
+            Chi tiết khay nấm
+          </span>
+          <span
+            style={{
+              fontSize: 12,
+              color: tokens.color.textMuted,
+              fontWeight: tokens.typography.weightMedium,
+              backgroundColor: tokens.color.surfaceMuted,
+              border: `1px solid ${tokens.color.border}`,
+              borderRadius: tokens.radius.md,
+              padding: '1px 8px',
+            }}
+          >
+            {drawerTitle}
+          </span>
+        </Flex>
+      }
+      size={680}
+      open={isOpen}
+      onClose={onClose}
+      destroyOnHidden
+      styles={{
+        body: { padding: 0, backgroundColor: tokens.color.surface },
+        header: {
+          borderBottom: `1px solid ${tokens.color.border}`,
+          backgroundColor: tokens.color.surface,
+        },
+      }}
+    >
+      {renderContent()}
+    </Drawer>
   )
 }

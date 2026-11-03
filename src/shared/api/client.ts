@@ -13,15 +13,15 @@ import { normalizeResponse } from './response-adapter'
  *   - Prod : **origin** của backend để client gọi thẳng (HTTPS, không CORS).
  *
  * ⚠ `VITE_API_BASE_URL` có thể được khai báo 2 kiểu:
- *     https://backend-75e1.onrender.com        (origin — chuẩn, nên dùng)
- *     https://backend-75e1.onrender.com/api    (kèm hậu tố /api)
+ *     https://mcms-h5g5dtdzajf0bebm.eastasia-01.azurewebsites.net        (origin — chuẩn, nên dùng)
+ *     https://mcms-h5g5dtdzajf0bebm.eastasia-01.azurewebsites.net/api    (kèm hậu tố /api)
  *   Endpoint trong `*.api.ts` đã chứa sẵn `/api/...` và axios cộng chuỗi,
  *   nên giữ hậu tố `/api` sẽ tạo ra `/api/api/users` → 404. Vì vậy hàm này
  *   luôn chuẩn hoá về origin (bỏ dấu `/` cuối và hậu tố `/api`).
  */
 function resolveApiBaseUrl(): string {
   // Trong dev: luôn trả '' → axios dùng window.location.origin,
-  // request /api/* sẽ được Vite proxy forward sang backend Render (xem vite.config.ts).
+  // request /api/* sẽ được Vite proxy forward sang backend Azure (xem vite.config.ts).
   // Lý do dùng DEV làm primary: lệch mode chỉ xảy ra khi build static, lúc đó
   // import.meta.env.VITE_API_BASE_URL trong .env mới là giá trị production thật.
   if (import.meta.env.DEV) return ''
@@ -59,8 +59,8 @@ function notifyAuthExpired(error: AxiosError) {
 /**
  * Timeout cho mọi request (ms).
  *
- * ⚠ Backend deploy trên Render (free tier) **ngủ (sleep) khi không có
- * traffic** → request đầu tiên sau khi ngủ phải chờ Render "đánh thức"
+ * ⚠ Backend deploy trên Azure (App Service) **ngủ (sleep) khi không có
+ * traffic** → request đầu tiên sau khi ngủ phải chờ server "đánh thức"
  * instance, thường mất 30–50s. Timeout 30s khiến request đó bị abort
  * dù server vẫn đang xử lý.
  *

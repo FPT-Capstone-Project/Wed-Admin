@@ -21,6 +21,8 @@ import type {
 interface LongTermTrendChartProps {
   aggregatedData: AggregatedTelemetryPoint[]
   comparisonData: ComparisonTelemetryPoint[]
+  /** Cặp năm được so sánh (cũ → mới). */
+  comparisonYears: [number, number] | null
   granularity: HistoryGranularity
   isComparison: boolean
   trayId: string
@@ -39,10 +41,10 @@ interface LongTermChartDatum {
   period: number
   temperature?: number
   humidity?: number
-  temperature2025?: number
-  temperature2026?: number
-  humidity2025?: number
-  humidity2026?: number
+  temperatureYearA?: number
+  temperatureYearB?: number
+  humidityYearA?: number
+  humidityYearB?: number
 }
 
 const STANDARD_LINES: TrendLineDefinition[] = [
@@ -61,43 +63,56 @@ const STANDARD_LINES: TrendLineDefinition[] = [
   },
 ]
 
-const COMPARISON_LINES: TrendLineDefinition[] = [
-  {
-    key: 'temperature2025',
-    label: 'Nhiệt độ 2025',
-    color: 'var(--mcms-coral)',
-    yAxisId: 'temperature',
-    dash: '7 4',
-  },
-  {
-    key: 'temperature2026',
-    label: 'Nhiệt độ 2026',
-    color: 'var(--mcms-coral)',
-    yAxisId: 'temperature',
-  },
-  {
-    key: 'humidity2025',
-    label: 'Độ ẩm 2025',
-    color: 'var(--mcms-teal)',
-    yAxisId: 'humidity',
-    dash: '2 5',
-  },
-  {
-    key: 'humidity2026',
-    label: 'Độ ẩm 2026',
-    color: 'var(--mcms-teal)',
-    yAxisId: 'humidity',
-  },
-]
+/**
+ * Dựng 4 chuỗi so sánh (nhiệt độ / độ ẩm của 2 năm) theo cặp năm thực tế.
+ */
+function buildComparisonLines(
+  years: [number, number] | null,
+): TrendLineDefinition[] {
+  if (!years) return []
+  const [yearA, yearB] = years
+
+  return [
+    {
+      key: 'temperatureYearA',
+      label: `Nhiệt độ ${yearA}`,
+      color: 'var(--mcms-coral)',
+      yAxisId: 'temperature',
+      dash: '7 4',
+    },
+    {
+      key: 'temperatureYearB',
+      label: `Nhiệt độ ${yearB}`,
+      color: 'var(--mcms-coral)',
+      yAxisId: 'temperature',
+    },
+    {
+      key: 'humidityYearA',
+      label: `Độ ẩm ${yearA}`,
+      color: 'var(--mcms-teal)',
+      yAxisId: 'humidity',
+      dash: '2 5',
+    },
+    {
+      key: 'humidityYearB',
+      label: `Độ ẩm ${yearB}`,
+      color: 'var(--mcms-teal)',
+      yAxisId: 'humidity',
+    },
+  ]
+}
 
 export function LongTermTrendChart({
   aggregatedData,
   comparisonData,
+  comparisonYears,
   granularity,
   isComparison,
   trayId,
 }: LongTermTrendChartProps) {
-  const lines = isComparison ? COMPARISON_LINES : STANDARD_LINES
+  const lines = isComparison
+    ? buildComparisonLines(comparisonYears)
+    : STANDARD_LINES
   const data: LongTermChartDatum[] = isComparison
     ? comparisonData
     : aggregatedData

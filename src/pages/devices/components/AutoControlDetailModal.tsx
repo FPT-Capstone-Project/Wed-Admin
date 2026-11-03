@@ -22,6 +22,7 @@ import { StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
 import {
   useAutoControlConfiguration,
   useAutoControlLogs,
+  useAutoControlStatus,
 } from '../../../features/devices/hooks/useIoT'
 import { useConfiguratorNames } from '../../../features/devices/hooks/useConfigurators'
 import type {
@@ -81,6 +82,15 @@ export function AutoControlDetailModal({
     data: logsData,
     isLoading: logsLoading,
   } = useAutoControlLogs(floorId, { limit: 100 })
+
+  /**
+   * Trạng thái chạy thực tế — `GET /api/iot/floors/{floorId}/auto-control/status`.
+   *
+   * ⚠ Endpoint read-only ⇒ Admin web đọc được để hiển thị `mode`, `run`,
+   * `runtime`, `ssr`, `cooldownRemainingMs`, `lastDecision`.
+   */
+  const { data: status, isLoading: statusLoading } =
+    useAutoControlStatus(floorId)
 
   /**
    * Bản ghi cấu hình của tầng đang xem.
@@ -428,8 +438,204 @@ export function AutoControlDetailModal({
     </Flex>
   )
 
-  const logsTab = (
-    <DataTable<AutoControlLogEntry>
+  /**
+   * Tab "Trạng thái chạy" — dữ liệu runtime thực tế từ
+   * `GET /api/iot/floors/{floorId}/auto-control/status`.
+   *
+   * Hiển thị đầy đủ: `mode`, `run`, `runtime`, `ssr`,
+   * `cooldownRemainingMs`, `lastDecision`.
+   */
+  const runtimeTab = (
+    <Flex vertical gap={16}>
+      {statusLoading ? (
+        <Flex justify="center" style={{ padding: 32 }}>
+          <Typography.Text type="secondary">
+            Đang tải trạng thái chạy…
+          </Typography.Text>
+        </Flex>
+      ) : (
+        <Descriptions
+          column={{ xs: 1, sm: 1, md: 2 }}
+          bordered
+          size="small"
+          items={[
+            {
+              key: 'mode',
+              label: 'Chế độ',
+              children:
+                status?.mode === 'AUTO' ? (
+                  <StatusBadge tone="ok" label="AUTO — đang tự động" />
+                ) : (
+                  <StatusBadge tone="muted" label="MANUAL — thủ công" />
+                ),
+            },
+            {
+              key: 'run',
+              label: 'Phiên chạy',
+              children: status?.run ? (
+                <Flex vertical gap={2}>
+                  <StatusBadge
+                    tone={
+                      status.run.status === 'RUNNING'
+                        ? 'ok'
+                        : status.run.status === 'FAULT'
+                          ? 'danger'
+                          : 'muted'
+                    }
+                    label={status.run.status}
+                  />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    {status.run.dry_run
+                      ? 'Chạy thử (không gửi lệnh thật)'
+                      : 'Gửi lệnh thật'}
+                  </Typography.Text>
+                  {status.run.started_at && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Bắt đầu: {formatDateTime(status.run.started_at)}
+                    </Typography.Text>
+                  )}
+                  {status.run.stopped_at && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Kết thúc: {formatDateTime(status.run.stopped_at)}
+                    </Typography.Text>
+                  )}
+                  {status.run.stop_reason && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Lý do: {status.run.stop_reason}
+                    </Typography.Text>
+                  )}
+                </Flex>
+              ) : (
+                <Typography.Text type="secondary">Không có phiên chạy</Typography.Text>
+              ),
+            },
+            {
+              key: 'runtimeState',
+              label: 'Trạng thái runtime',
+              children: status?.runtime ? (
+                <Flex vertical gap={2}>
+                  <StatusBadge
+                    tone={
+                      status.runtime.control_state === 'MISTING'
+                        ? 'ok'
+                        : status.runtime.control_state === 'SENSOR_FAULT' ||
+                            status.runtime.control_state === 'FAULT'
+                          ? 'danger'
+                          : status.runtime.control_state === 'OFF_PENDING'
+                            ? 'warning'
+                            : 'muted'
+                    }
+                    label={status.runtime.control_state}
+                  />
+                  {status.runtime.last_evaluated_at && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Đánh giá gần nhất:{' '}
+                      {formatDateTime(status.runtime.last_evaluated_at)}
+                    </Typography.Text>
+                  )}
+                  {status.runtime.last_average_humidity != null && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Độ ẩm TB lúc đánh giá:{' '}
+                      {status.runtime.last_average_humidity.toFixed(1)}%RH
+                    </Typography.Text>
+                  )}
+                  {status.runtime.last_reason && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {status.runtime.last_reason}
+                    </Typography.Text>
+                  )}
+                  {status.runtime.last_error && (
+                    <Typography.Text type="danger" style={{ fontSize: 12 }}>
+                      {status.runtime.last_error}
+                    </Typography.Text>
+                  )}
+                </Flex>
+              ) : (
+                <Typography.Text type="secondary">—</Typography.Text>
+              ),
+            },
+            {
+              key: 'ssr',
+              label: 'Trạng thái rơ-le',
+              children: status?.ssr ? (
+                <Flex vertical gap={2}>
+                  <StatusBadge
+                    tone={
+                      status.ssr.reported_state === 'ON' ? 'ok' : 'muted'
+                    }
+                    label={`Rơ-le: ${status.ssr.reported_state}`}
+                  />
+                  <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                    Trạng thái mong muốn: {status.ssr.desired_state}
+                  </Typography.Text>
+                </Flex>
+              ) : (
+                <Typography.Text type="secondary">
+                  Chưa có trạng thái rơ-le
+                </Typography.Text>
+              ),
+            },
+            {
+              key: 'cooldown',
+              label: 'Thời gian nghỉ còn lại',
+              children:
+                status?.cooldownRemainingMs != null &&
+                status.cooldownRemainingMs > 0 ? (
+                  <Typography.Text strong>
+                    {formatDurationMs(status.cooldownRemainingMs)}
+                  </Typography.Text>
+                ) : (
+                  <Typography.Text type="secondary">Không — sẵn sàng phun</Typography.Text>
+                ),
+            },
+            {
+              key: 'lastDecision',
+              label: 'Quyết định gần nhất',
+              children: status?.lastDecision ? (
+                <Flex vertical gap={2}>
+                  <StatusBadge
+                    tone={
+                      status.lastDecision.action === 'ON'
+                        ? 'ok'
+                        : status.lastDecision.action === 'FAULT'
+                          ? 'danger'
+                          : 'muted'
+                    }
+                    label={
+                      status.lastDecision.action
+                        ? `Hành động: ${status.lastDecision.action}`
+                        : formatEventType(
+                            status.lastDecision.event_type ?? '',
+                          )
+                    }
+                  />
+                  {status.lastDecision.state && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Trạng thái: {status.lastDecision.state}
+                    </Typography.Text>
+                  )}
+                  {status.lastDecision.created_at && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Thời điểm: {formatDateTime(status.lastDecision.created_at)}
+                    </Typography.Text>
+                  )}
+                  {status.lastDecision.reason && (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {status.lastDecision.reason}
+                    </Typography.Text>
+                  )}
+                </Flex>
+              ) : (
+                <Typography.Text type="secondary">Chưa có quyết định</Typography.Text>
+              ),
+            },
+          ]}
+        />
+      )}
+    </Flex>
+  )
+
+  const logsTab = (    <DataTable<AutoControlLogEntry>
       rowKey={(row) => String(row.id ?? row.created_at ?? row.event_type)}
       columns={logColumns}
       dataSource={logs}
@@ -484,6 +690,16 @@ export function AutoControlDetailModal({
             ) : (
               configTab
             ),
+          },
+          {
+            key: 'runtime',
+            label: (
+              <Space size={6}>
+                <ThunderboltOutlined />
+                <span>Trạng thái chạy</span>
+              </Space>
+            ),
+            children: runtimeTab,
           },
           {
             key: 'logs',

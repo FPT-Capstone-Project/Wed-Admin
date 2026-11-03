@@ -21,6 +21,7 @@ import type {
   AutoControlConfigurationResponse,
   AutoControlLogsQuery,
   AutoControlLogsResponse,
+  AutoControlRuntimeStatus,
   CultivationFloorMapping,
   FloorEnvironmentResponse,
   IotHistoryQuery,
@@ -40,7 +41,6 @@ export const iotKeys = {
     nodeId: number,
     sensorId: number,
   ) => [...iotKeys.all, 'history', masterId, nodeId, sensorId] as const,
-  ssr: (masterId: string) => [...iotKeys.all, 'ssr', masterId] as const,
   floors: () => [...iotKeys.all, 'floors'] as const,
   floor: (floorId: number) => [...iotKeys.all, 'floors', floorId] as const,
   autoControlSuggestions: (floorId: number) =>
@@ -435,6 +435,33 @@ export function useAutoControlConfig(
   const query = useAutoControlConfiguration(floorId, options)
   const config = query.data?.config ?? null
   return { ...query, data: config }
+}
+
+/**
+ * Trạng thái chạy thực tế của auto-control cho một tầng — **read-only**.
+ *
+ * `GET /api/iot/floors/{floorId}/auto-control/status` →
+ * `{ mode, run, runtime, environment, ssr, cooldownRemainingMs, lastDecision }`.
+ *
+ * ⚠ Endpoint **không** yêu cầu `iot.automation.manage` ⇒ Admin web đọc được
+ * để hiển thị chế độ (AUTO/MANUAL), trạng thái runtime, trạng thái rơ-le,
+ * thời gian nghỉ còn lại và quyết định gần nhất.
+ */
+export function useAutoControlStatus(
+  floorId: number | null,
+  options?: Partial<UseQueryOptions<AutoControlRuntimeStatus, Error>>,
+) {
+  return useQuery<AutoControlRuntimeStatus, Error>({
+    queryKey: iotKeys.autoControlStatus(floorId ?? -1),
+    queryFn: async () => {
+      const result = await autoMistingApi.getAutoControlStatus(floorId as number)
+      return result ?? { mode: 'MANUAL' }
+    },
+    enabled: floorId !== null && floorId > 0,
+    staleTime: TELEMETRY_POLL_INTERVAL_MS,
+    refetchInterval: TELEMETRY_POLL_INTERVAL_MS,
+    ...options,
+  })
 }
 
 /**

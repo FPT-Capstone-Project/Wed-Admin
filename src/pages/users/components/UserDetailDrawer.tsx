@@ -3,20 +3,17 @@ import { StatusBadge, MetadataBadge } from '../../../shared/ui'
 import {
   CloseCircleOutlined,
   ExperimentOutlined,
-  LockOutlined,
+  EyeOutlined,
   MailOutlined,
   PhoneOutlined,
   ShoppingCartOutlined,
-  UnlockOutlined,
 } from '@ant-design/icons'
 import {
   Alert,
-  App,
   Button,
   Descriptions,
   Drawer,
   Flex,
-  Popconfirm,
   Skeleton,
   Space,
   Statistic,
@@ -24,16 +21,11 @@ import {
 } from 'antd'
 import { useState } from 'react'
 import { useAuthStore } from '../../../features/auth/store/auth.store'
-import {
-  useUser,
-  useUpdateUserStatus,
-} from '../../../features/users/hooks/useUsers'
+import { useUser } from '../../../features/users/hooks/useUsers'
 import {
   getRoleLabel,
-  nextToggleStatus,
   USER_STATUS_CONFIG,
 } from '../../../features/users/user-status.config'
-import { getApiErrorMessage } from '../../../shared/api/error'
 import type { UserWithRole } from '../../../types/user.types'
 import { SendResetOtpModal } from './SendResetOtpModal'
 
@@ -56,45 +48,28 @@ function formatDateTime(value: string | null | undefined): string {
 }
 
 /**
- * Drawer chi tiết tài khoản.
+ * Drawer chi tiết tài khoản — **CHỈ XEM**.
  *
- * Nạp `GET /api/users/{userId}` để có `order_count` / `rental_count` — hai số
- * này chỉ có ở schema `UserAccountDetail`, endpoint list không trả về.
+ * Nạp `GET /api/users/{userId}` để có `order_count` / `cultivation_session_count`
+ * — hai số này chỉ có ở schema `UserAccountDetail`, endpoint list không trả về.
+ *
+ * ⚠ Chế độ chỉ xem: không có nút khoá / mở khoá tài khoản, không có nút tạo
+ * mới. Mọi thao tác ghi về tài khoản do **nhân viên (staff)** thực hiện
+ * trên mobile app — web admin chỉ theo dõi.
  */
 export function UserDetailDrawer({
   userId,
   user,
   onClose,
 }: UserDetailDrawerProps) {
-  const { message: messageApi } = App.useApp()
   const currentUserId = useAuthStore((state) => state.user?.id)
   const { data: detail, isLoading, isError } = useUser(userId)
   const [isResetOtpOpen, setIsResetOtpOpen] = useState(false)
-
-  const statusMutation = useUpdateUserStatus({
-    onSuccess: () => messageApi.success('Đã cập nhật trạng thái tài khoản.'),
-    onError: (error) => messageApi.error(getApiErrorMessage(error)),
-  })
 
   // Ưu tiên detail (đầy đủ hơn), fallback về row của bảng để UI không nháy trắng.
   const profile = detail ?? user
   const status = profile?.status
   const isSelf = currentUserId !== undefined && currentUserId === profile?.user_id
-  const isActive = status === 'ACTIVE'
-  const targetStatus = status ? nextToggleStatus(status) : null
-
-  const isToggling =
-    statusMutation.isPending &&
-    statusMutation.variables?.userId === profile?.user_id
-
-  const handleToggleStatus = () => {
-    if (!profile || !targetStatus) return
-
-    statusMutation.mutate({
-      userId: profile.user_id,
-      payload: { status: targetStatus },
-    })
-  }
 
   return (
     <>
@@ -116,28 +91,10 @@ export function UserDetailDrawer({
         onClose={onClose}
         destroyOnHidden
         extra={
-          profile && targetStatus && !isSelf ? (
-            <Popconfirm
-              title={isActive ? 'Khoá tài khoản?' : 'Kích hoạt lại tài khoản?'}
-              description={
-                isActive
-                  ? `${profile.full_name} sẽ không đăng nhập được tới khi được mở khoá.`
-                  : `${profile.full_name} sẽ đăng nhập lại được ngay.`
-              }
-              okText="Xác nhận"
-              cancelText="Hủy"
-              okButtonProps={{ danger: isActive }}
-              onConfirm={handleToggleStatus}
-            >
-              <Button
-                danger={isActive}
-                icon={isActive ? <LockOutlined /> : <UnlockOutlined />}
-                loading={isToggling}
-              >
-                {isActive ? 'Khoá' : 'Mở khoá'}
-              </Button>
-            </Popconfirm>
-          ) : null
+          <MetadataBadge
+            icon={<EyeOutlined />}
+            label="Chỉ xem"
+          />
         }
       >
         {isLoading && !detail ? (
@@ -169,8 +126,8 @@ export function UserDetailDrawer({
                 valueStyle={{ fontSize: 24 }}
               />
               <Statistic
-                title="Số vụ thuê"
-                value={detail?.rental_count ?? 0}
+                title="Số phiên canh tác"
+                value={detail?.cultivation_session_count ?? 0}
                 prefix={<ExperimentOutlined />}
                 valueStyle={{ fontSize: 24 }}
               />

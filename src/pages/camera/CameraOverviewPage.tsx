@@ -1,24 +1,15 @@
 import '../../styles/media-industrial.css'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   CameraOutlined,
-  DeleteOutlined,
-  DisconnectOutlined,
-  EditOutlined,
+  EyeOutlined,
   PlayCircleOutlined,
-  PlusOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
-import { App, Flex, Popconfirm, Space, Typography } from 'antd'
+import { Flex, Space, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
-import { CameraFormModal } from '../../features/cameras/components/CameraFormModal'
 import { CameraStreamModal } from '../../features/cameras/components/CameraStreamModal'
-import {
-  useCameras,
-  useDeleteCamera,
-  useStopLiveStream,
-} from '../../features/cameras/hooks/useCameras'
-import { extractApiError, getApiErrorMessage } from '../../shared/api/error'
+import { useCameras } from '../../features/cameras/hooks/useCameras'
 import {
   CAMERA_STATUSES,
   type Camera,
@@ -27,6 +18,7 @@ import {
 import {
   ActionButton,
   DataTable,
+  MetadataBadge,
   PageHeader,
   StatCard,
   StatusBadge,
@@ -46,46 +38,18 @@ const STATUS_META: Record<
  * Camera toàn cảnh — dữ liệu thật từ `GET /api/cameras`.
  *
  * Live dùng ImouPlayer + KitToken (`GET /api/cameras/{id}/imou-player-token`).
- * Trang này hiển thị danh sách và cho phép dừng phiên live đang chạy.
+ *
+ * ⚠ **CHỈ XEM (Giai đoạn 5)**: Admin web chỉ xem danh sách camera và xem
+ * live stream Imou. Đã gỡ toàn bộ nút Thêm / Sửa / Xoá camera (và modal
+ * `CameraFormModal`) — việc đăng ký / cấu hình camera thuộc nhân viên (staff).
  */
 export function CameraOverviewPage() {
-  const { message } = App.useApp()
-
   const [statusFilter, setStatusFilter] = useState<CameraStatus | undefined>()
-  const [isModalOpen, setModalOpen] = useState(false)
-  const [editingCamera, setEditingCamera] = useState<Camera | null>(null)
   const [streamingCamera, setStreamingCamera] = useState<Camera | null>(null)
-
-  const openCreateModal = useCallback(() => {
-    setEditingCamera(null)
-    setModalOpen(true)
-  }, [])
-
-  const openEditModal = useCallback((camera: Camera) => {
-    setEditingCamera(camera)
-    setModalOpen(true)
-  }, [])
 
   const camerasQuery = useCameras(
     statusFilter ? { status: statusFilter } : {},
   )
-  const stopLiveStream = useStopLiveStream({
-    onSuccess: () => message.success('Đã dừng phiên live stream.'),
-    onError: (error) => message.error(getApiErrorMessage(error)),
-  })
-
-  const deleteCamera = useDeleteCamera({
-    onSuccess: () => message.success('Đã xoá camera.'),
-    onError: (error) => {
-      // 409 = camera đang được tham chiếu → giải thích rõ thay vì báo lỗi chung.
-      const status = extractApiError(error).status
-      message.error(
-        status === 409
-          ? 'Không thể xoá: camera đang được tham chiếu ở nơi khác.'
-          : getApiErrorMessage(error),
-      )
-    },
-  })
 
   const { data: cameras = [], isLoading, isFetching, isError, error, refetch } =
     camerasQuery
@@ -146,17 +110,23 @@ export function CameraOverviewPage() {
         key: 'status',
         width: 130,
         render: (status: CameraStatus) => {
-          const meta = STATUS_META[status] ?? { tone: 'neutral' as const, label: status }
+          const meta = STATUS_META[status] ?? {
+            tone: 'neutral' as const,
+            label: status,
+          }
 
           return <StatusBadge tone={meta.tone} label={meta.label} />
         },
       },
       {
+        // ⚠ Cột hành động CHỈ có nút xem live stream — không có
+        // Thêm / Sửa / Xoá (chế độ chỉ xem của Admin).
         title: 'Hành động',
         key: 'actions',
-        width: 200,
+        width: 150,
         align: 'right',
-        render: (_: unknown, camera: Camera) => (          <Space size={0}>
+        render: (_: unknown, camera: Camera) => (
+          <Space size={0}>
             <ActionButton
               icon={<PlayCircleOutlined />}
               label="Xem live stream"
@@ -164,52 +134,11 @@ export function CameraOverviewPage() {
               variant="text"
               onClick={() => setStreamingCamera(camera)}
             />
-            <ActionButton
-              icon={<EditOutlined />}
-              label="Chỉnh sửa camera"
-              description={`Chỉnh sửa ${camera.cameraName || camera.cameraCode}`}
-              variant="text"
-              onClick={() => openEditModal(camera)}
-            />
-            <ActionButton
-              icon={<DisconnectOutlined />}
-              label="Dừng live stream"
-              description={`Dừng phiên live của ${camera.cameraName || camera.cameraCode}`}
-              variant="text"
-              loading={
-                stopLiveStream.isPending &&
-                stopLiveStream.variables === camera.id
-              }
-              onClick={() => stopLiveStream.mutate(camera.id)}
-            />
-            <Popconfirm
-              title="Bạn có chắc chắn muốn xóa camera này?"
-              description={`${camera.cameraName || camera.cameraCode} — hành động này không thể hoàn tác.`}
-              okText="Xóa"
-              cancelText="Hủy"
-              okButtonProps={{ danger: true }}
-              onConfirm={() => deleteCamera.mutate(camera.id)}
-            >
-              <ActionButton
-                icon={<DeleteOutlined />}
-                label="Xóa camera"
-                description={`Xóa ${camera.cameraName || camera.cameraCode}`}
-                variant="dangerText"
-                loading={
-                  deleteCamera.isPending &&
-                  deleteCamera.variables === camera.id
-                }
-              />
-            </Popconfirm>
           </Space>
         ),
       },
     ],
-    [
-      deleteCamera,
-      openEditModal,
-      stopLiveStream,
-    ],
+    [],
   )
 
   const statusCounts = useMemo(() => {
@@ -230,9 +159,10 @@ export function CameraOverviewPage() {
     <div>
       <PageHeader
         title="Camera toàn cảnh"
-        description="Góc nhìn chính diện bao quát toàn bộ bốn tầng kệ"
+        description="Góc nhìn chính diện bao quét toàn bộ bốn tầng kệ"
         actions={
           <Space size={8} wrap>
+            <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
             <ActionButton
               icon={<ReloadOutlined />}
               label="Tải lại"
@@ -241,14 +171,6 @@ export function CameraOverviewPage() {
               size="small"
               loading={isFetching && !isLoading}
               onClick={() => void refetch()}
-            />
-            <ActionButton
-              icon={<PlusOutlined />}
-              label="Thêm camera mới"
-              description="Đăng ký một camera Imou mới."
-              variant="primary"
-              size="middle"
-              onClick={openCreateModal}
             />
           </Space>
         }
@@ -330,22 +252,8 @@ export function CameraOverviewPage() {
         emptyDescription={
           statusFilter
             ? 'Thử chọn trạng thái khác hoặc tải lại danh sách camera.'
-            : 'Đăng ký camera Imou để theo dõi toàn cảnh nhà trồng.'
+            : 'Nhân viên vận hành đăng ký camera Imou để theo dõi toàn cảnh nhà trồng.'
         }
-        emptyAction={
-          <ActionButton
-            icon={<PlusOutlined />}
-            label="Thêm camera mới"
-            variant="primary"
-            onClick={openCreateModal}
-          />
-        }
-      />
-
-      <CameraFormModal
-        open={isModalOpen}
-        camera={editingCamera}
-        onCancel={() => setModalOpen(false)}
       />
 
       <CameraStreamModal

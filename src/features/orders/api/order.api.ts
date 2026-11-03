@@ -1,12 +1,13 @@
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
+import { isNotFoundError } from '../../../shared/api/safe-fetch'
 import type { Order } from '../../../types/order'
 
 /**
  * Order API — **read-only cho admin web**.
  *
  * Luồng tạo / hủy / thanh toán đơn do **app người dùng** thực hiện
- * (POST /api/orders/rentals, PATCH /api/orders/{id}/cancel,
+ * (POST /api/orders/cultivation, PATCH /api/orders/{id}/cancel,
  * POST /api/payments/orders/{id}/payos).
  *
  * Admin web chỉ cần đọc để theo dõi vận hành, nên các mutation cố ý
@@ -30,7 +31,13 @@ export const orderApi = {
    *  Unwrap về Order | null an toàn.
    */
   async getById(orderId: number): Promise<Order | null> {
-    const response = await apiClient.get<unknown>(`/api/orders/${orderId}`)
-    return ensureObject<Order>(response.data)
+    try {
+      const response = await apiClient.get<unknown>(`/api/orders/${orderId}`)
+      return ensureObject<Order>(response.data)
+    } catch (error) {
+      // 404 → đơn không tồn tại (hoặc không thuộc user đang đăng nhập).
+      if (isNotFoundError(error)) return null
+      throw error
+    }
   },
 }

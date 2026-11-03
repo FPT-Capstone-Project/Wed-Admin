@@ -1,24 +1,20 @@
 import '../../styles/reports-users-industrial.css'
-import { useCallback, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   CheckCircleOutlined,
   EyeOutlined,
   LockOutlined,
-  PlusOutlined,
   ReloadOutlined,
   SearchOutlined,
-  UnlockOutlined,
   UserOutlined,
 } from '@ant-design/icons'
 import {
-  App,
   Avatar,
   Button,
   Col,
   Empty,
   Flex,
   Input,
-  Popconfirm,
   Row,
   Select,
   Space,
@@ -27,17 +23,10 @@ import {
 import type { ColumnsType } from 'antd/es/table'
 import {
   ROLE_OPTIONS,
-  USER_STATUS_CONFIG,
   USER_STATUS_OPTIONS,
   getRoleLabel,
-  nextToggleStatus,
 } from '../../features/users/user-status.config'
-import {
-  useUpdateUserStatus,
-  useUsers,
-} from '../../features/users/hooks/useUsers'
-import { useAuthStore } from '../../features/auth/store/auth.store'
-import { getApiErrorMessage } from '../../shared/api/error'
+import { useUsers } from '../../features/users/hooks/useUsers'
 import type {
   UserListQuery,
   UserStatus,
@@ -46,7 +35,6 @@ import type {
 import type { SemanticTone } from '../../app/theme/tokens'
 import { ActionButton, MetadataBadge, StatCard, StatusBadge, DataTable } from '../../shared/ui'
 import { UserDetailDrawer } from './components/UserDetailDrawer'
-import { UserFormModal } from './components/UserFormModal'
 
 const PAGE_SIZE = 20
 
@@ -63,14 +51,10 @@ const USER_STATUS_BADGE_CONFIG: Record<UserStatus, { tone: SemanticTone; label: 
 }
 
 export function UserManagementPage() {
-  const { message: messageApi } = App.useApp()
-  const currentUserId = useAuthStore((state) => state.user?.id)
-
   const [searchText, setSearchText] = useState('')
   const [roleFilter, setRoleFilter] = useState<number | undefined>()
   const [statusFilter, setStatusFilter] = useState<UserStatus | undefined>()
   const [currentPage, setCurrentPage] = useState(1)
-  const [isFormOpen, setIsFormOpen] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null)
 
   // ── Query params ───────────────────────────────────────────────────────
@@ -87,16 +71,6 @@ export function UserManagementPage() {
     error,
     refetch,
   } = useUsers(listQuery)
-
-  const statusMutation = useUpdateUserStatus({
-    onSuccess: (updated) =>
-      messageApi.success(
-        `Đã chuyển "${updated.full_name}" sang trạng thái "${
-          USER_STATUS_CONFIG[updated.status]?.label ?? updated.status
-        }".`,
-      ),
-    onError: (err) => messageApi.error(getApiErrorMessage(err)),
-  })
 
   // BE chỉ hỗ trợ lọc theo roleId → tìm kiếm + lọc status làm phía client.
   const filteredUsers = useMemo(() => {
@@ -130,16 +104,6 @@ export function UserManagementPage() {
 
   const maxPage = Math.max(1, Math.ceil(filteredUsers.length / PAGE_SIZE))
   const visiblePage = Math.min(currentPage, maxPage)
-
-  const handleToggleStatus = useCallback(
-    (user: UserWithRole) => {
-      statusMutation.mutate({
-        userId: user.user_id,
-        payload: { status: nextToggleStatus(user.status) },
-      })
-    },
-    [statusMutation],
-  )
 
   const columns = useMemo<ColumnsType<UserWithRole>>(
     () => [
@@ -264,70 +228,26 @@ export function UserManagementPage() {
         },
       },
       {
+        // ⚠ Cột hành động CHỈ có nút "Xem" — web admin ở chế độ chỉ xem:
+        // không tạo tài khoản, không khoá / mở khoá (việc này thuộc staff).
         title: 'Hành động',
         key: 'actions',
         width: 110,
         align: 'right',
         fixed: 'right',
-        render: (_, user) => {
-          const isSelf = currentUserId === user.user_id
-          const isActive = user.status === 'ACTIVE'
-          const actionLabel = isActive
-            ? 'Khoá tài khoản'
-            : 'Kích hoạt lại tài khoản'
-          const isToggling =
-            statusMutation.isPending &&
-            statusMutation.variables?.userId === user.user_id
-
-          return (
-            <Space size={4}>
-              <ActionButton
-                icon={<EyeOutlined />}
-                label="Xem"
-                description={`Xem chi tiết ${user.full_name}`}
-                variant="text"
-                hideLabel
-                onClick={() => setSelectedUserId(user.user_id)}
-              />
-
-              {isSelf ? (
-                <ActionButton
-                  icon={<LockOutlined />}
-                  label="Khoá"
-                  description="Không thể tự khoá tài khoản đang đăng nhập"
-                  variant="text"
-                  disabled
-                  hideLabel
-                />
-              ) : (
-                <Popconfirm
-                  title={`${actionLabel}?`}
-                  description={
-                    isActive
-                      ? `${user.full_name} sẽ không đăng nhập được tới khi được mở khoá.`
-                      : `${user.full_name} sẽ đăng nhập lại được ngay.`
-                  }
-                  okText="Xác nhận"
-                  cancelText="Hủy"
-                  okButtonProps={{ danger: isActive }}
-                  onConfirm={() => handleToggleStatus(user)}
-                >
-                  <ActionButton
-                    icon={isActive ? <LockOutlined /> : <UnlockOutlined />}
-                    label={isActive ? 'Khoá' : 'Mở khoá'}
-                    description={`${actionLabel} ${user.full_name}`}
-                    variant={isActive ? 'dangerText' : 'text'}
-                    loading={isToggling}
-                    hideLabel
-                  />
-                </Popconfirm>
-              )}
-            </Space>
-          )
-        },
+        render: (_, user) => (
+          <ActionButton
+            icon={<EyeOutlined />}
+            label="Xem"
+            description={`Xem chi tiết ${user.full_name}`}
+            variant="text"
+            hideLabel
+            onClick={() => setSelectedUserId(user.user_id)}
+          />
+        ),
       },
     ],
-    [currentUserId, handleToggleStatus, statusMutation],
+    [],
   )
 
   return (
@@ -343,13 +263,12 @@ export function UserManagementPage() {
           Quản lý tài khoản
         </Typography.Title>
 
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => setIsFormOpen(true)}
-        >
-          Thêm người dùng
-        </Button>
+        <Flex align="center" gap={8} wrap>
+          <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Việc tạo / khoá tài khoản do nhân viên thực hiện trên mobile app.
+          </Typography.Text>
+        </Flex>
       </Flex>
 
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
@@ -469,11 +388,6 @@ export function UserManagementPage() {
           scrollX={1280}
         />
       )}
-
-      <UserFormModal
-        open={isFormOpen}
-        onCancel={() => setIsFormOpen(false)}
-      />
 
       <UserDetailDrawer
         userId={selectedUserId}

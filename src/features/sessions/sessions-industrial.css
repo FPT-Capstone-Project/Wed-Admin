@@ -1,0 +1,28 @@
+/**
+ * Style chung cho trang Phiên canh tác + Drawer chi tiết.
+ *
+ * ⚠ Giai đoạn 1: thay thế `features/rentals/rentals-industrial.css`
+ *   (module `features/rentals` đã bị gỡ hoàn toàn).
+ */
+.mcms-session-drawer .ant-drawer-header {
+  background: var(--mcms-surface);
+  border-bottom: 1px solid var(--mcms-border);
+  padding-bottom: 12px;
+}
+.mcms-session-drawer .ant-drawer-footer {
+  border-top: 1px solid var(--mcms-border);
+  padding-top: 12px;
+}
+.mcms-session-drawer .ant-drawer-body {
+  background: var(--mcms-surface);
+}
+.mcms-session-drawer .ant-descriptions + .ant-descriptions {
+  padding-top: 16px;
+  border-top: 1px solid var(--mcms-border);
+}
+.mcms-session-mono,
+.mcms-session-mono .ant-typography,
+.mcms-session-mono .mcms-metadata-badge {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}

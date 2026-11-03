@@ -131,6 +131,7 @@ export function ThresholdProfileTab({
       ),
     },
     {
+      // ⚠ Giai đoạn 0: đã gỡ cột CO₂ — BE / DB không còn `co2_min|max`.
       title: 'Độ ẩm (%)',
       key: 'humidity',
       width: 150,
@@ -140,19 +141,6 @@ export function ThresholdProfileTab({
           max={profile.humidityMax}
           unit="%"
           tone="info"
-        />
-      ),
-    },
-    {
-      title: 'CO₂ (ppm)',
-      key: 'co2',
-      width: 160,
-      render: (_, profile) => (
-        <RangeCell
-          min={profile.co2Min}
-          max={profile.co2Max}
-          unit="ppm"
-          tone="ok"
         />
       ),
     },
@@ -199,8 +187,7 @@ export function ThresholdProfileTab({
             Thông số canh tác theo giống nấm
           </Typography.Title>
           <Typography.Text type="secondary">
-            Dải nhiệt độ, độ ẩm và CO₂ áp dụng cho relay AUTO và cảnh báo
-            cảm biến
+            Dải nhiệt độ và độ ẩm áp dụng cho relay AUTO và cảnh báo cảm biến
           </Typography.Text>
         </div>
 
@@ -245,7 +232,7 @@ export function ThresholdProfileTab({
           dataSource={visibleProfiles}
           loading={isLoading}
           pagination={false}
-          scrollX={1140}
+          scrollX={980}
           emptyTitle="Không có hồ sơ phù hợp"
         />
       )}

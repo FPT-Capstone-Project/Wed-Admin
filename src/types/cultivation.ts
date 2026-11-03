@@ -33,22 +33,6 @@ export interface CultivationRoom {
   updated_at: string
 }
 
-export interface CreateCultivationRoomRequest {
-  roomCode: string
-  roomName: string
-  description?: string
-  capacity?: number
-  status?: RoomStatus
-}
-
-export interface UpdateCultivationRoomRequest {
-  roomCode?: string
-  roomName?: string
-  description?: string | null
-  capacity?: number
-  status?: RoomStatus
-}
-
 export interface CultivationRoomListQuery {
   status?: RoomStatus
 }
@@ -57,25 +41,17 @@ export interface CultivationRoomListQuery {
 export interface CultivationTray {
   tray_id: number
   room_id: number
+  /** ID tầng (floor) — BE join `cultivation_floors`. Có thể `null` nếu khay chưa gán tầng. */
+  floor_id?: number | null
+  /** Số tầng (vd: 2) — từ `cultivation_floors.floor_number`. */
+  floor_number?: number | null
+  /** Tên tầng (vd: "Tầng 2") — từ `cultivation_floors.floor_name`. */
+  floor_name?: string | null
   tray_code: string
   tray_name: string | null
   status: BeTrayStatus
   created_at: string
   updated_at: string
-}
-
-export interface CreateCultivationTrayRequest {
-  roomId: number
-  trayCode: string
-  trayName?: string
-  status?: BeTrayStatus
-}
-
-export interface UpdateCultivationTrayRequest {
-  roomId?: number
-  trayCode?: string
-  trayName?: string | null
-  status?: BeTrayStatus
 }
 
 export interface CultivationTrayListQuery {
@@ -138,6 +114,9 @@ export function toUiTray(be: CultivationTray): Tray {
     id: String(be.tray_id),
     code: be.tray_code as Tray['code'],
     tierId: be.room_id as TierId,
+    floorId: be.floor_id ?? null,
+    floorNumber: be.floor_number ?? null,
+    floorName: be.floor_name ?? null,
     status: uiStatus,
     customerId: null,
     batchId: null,

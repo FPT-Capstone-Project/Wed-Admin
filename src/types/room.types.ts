@@ -81,6 +81,12 @@ export interface Tray {
   id: string
   code: TrayCode
   tierId: TierId
+  /** ID tầng (floor) mà khay thuộc về — `null` nếu BE chưa gán. */
+  floorId?: number | null
+  /** Số tầng (vd: 2). */
+  floorNumber?: number | null
+  /** Tên tầng (vd: "Tầng 2"). */
+  floorName?: string | null
   status: TrayStatus
   customerId: string | null
   batchId: string | null

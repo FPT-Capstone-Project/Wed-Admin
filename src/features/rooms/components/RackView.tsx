@@ -14,7 +14,7 @@ import {
   type ClimateReading,
   type ClimateThresholds,
 } from '../utils/tray-climate.utils'
-import type { TrayRentalSummary } from '../hooks/useTrayRentalSummaries'
+import type { TraySessionSummary } from '../hooks/useTraySessionSummaries'
 
 interface RackViewProps {
   tiers: Tier[]
@@ -23,7 +23,7 @@ interface RackViewProps {
   /** Ngưỡng canh tác theo tầng — nguồn: BE `/environment` (`thresholds`). */
   thresholdsByTier?: Map<Tier['tierId'], ClimateThresholds>
   /** Tóm tắt vụ thuê theo `tray_id` (khách + ngày thu hoạch dự kiến). */
-  rentalSummaries?: Map<number, TrayRentalSummary>
+  sessionSummaries?: Map<number, TraySessionSummary>
   /**
    * Số đo môi trường THẬT theo tầng.
    *
@@ -92,12 +92,12 @@ const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
  *
  * ⚠ `tray.rental` luôn là `null` khi dữ liệu đến từ BE
  * (`toUiTray` không map rental) → thanh tiến độ trước đây không bao giờ
- * hiện. Nay tính từ `TrayRentalSummary` (đọc `GET /api/rentals/admin`).
+ * hiện. Nay tính từ `TraySessionSummary` (đọc `GET /api/cultivation-sessions/admin`).
  *
  * @returns `{ percent, dayLabel }` hoặc `null` khi không có vụ thuê.
  */
 function growthProgress(
-  summary: TrayRentalSummary | null,
+  summary: TraySessionSummary | null,
 ): { percent: number; dayLabel: string } | null {
   if (!summary?.startDate || !summary.expectedHarvestDate) return null
 
@@ -186,7 +186,7 @@ interface TrayCardProps {
   isSelected: boolean
   onClick: () => void
   /** Tóm tắt vụ thuê (khách + ngày thu hoạch) — null nếu không có. */
-  summary: TrayRentalSummary | null
+  summary: TraySessionSummary | null
 }
 
 function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
@@ -494,7 +494,7 @@ export function RackView({
   selectedTrayId,
   onSelectTray,
   thresholdsByTier,
-  rentalSummaries,
+  sessionSummaries,
   liveReadings,
 }: RackViewProps) {
   const orderedTiers = useMemo(
@@ -536,7 +536,7 @@ export function RackView({
           if (tray.status === 'harvesting') return 1
           if (
             tray.status === 'rented' &&
-            rentalSummaries?.get(Number(tray.id))?.harvestDue
+            sessionSummaries?.get(Number(tray.id))?.harvestDue
           ) {
             return 1
           }
@@ -629,7 +629,7 @@ export function RackView({
                   tray={tray}
                   isSelected={selectedTrayId === tray.id}
                   onClick={() => onSelectTray(tray)}
-                  summary={rentalSummaries?.get(Number(tray.id)) ?? null}
+                  summary={sessionSummaries?.get(Number(tray.id)) ?? null}
                 />
               ))}
 

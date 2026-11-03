@@ -1,16 +1,13 @@
-import '../../features/rentals/rentals-industrial.css'
+import '../../features/sessions/sessions-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   CreditCardOutlined,
   EnvironmentOutlined,
   EyeOutlined,
-  HomeOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
 } from '@ant-design/icons'
 import {
-  Alert,
-  Button,
   Col,
   Descriptions,
   Drawer,
@@ -18,15 +15,21 @@ import {
   Input,
   Row,
   Segmented,
+  Skeleton,
   Space,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import type { AppOrder, OrderStatus } from '../../types/order.types'
-import { CreateRentalFromOrderModal } from '../../features/rentals/components/CreateRentalFromOrderModal'
-import { useOrders } from '../../features/orders/hooks/useOrders'
 import { useOrderPaymentStatus } from '../../features/orders/hooks/usePayments'
-import { beOrdersToUiOrders } from '../../types/order.mapper'
+import {
+  useOrderCultivationProgress,
+  useOrderCultivationStatus,
+  useOrderSpawnInspections,
+} from '../../features/orders/hooks/useCustomerOrders'
+import { useAdminOrders } from '../../features/orders/hooks/useAdminOrders'
+import { SessionStatusTag } from '../../features/sessions/components/SessionStatusTag'
+import { SpawnInspectionList } from '../../features/farm/components/SpawnInspectionList'
+import type { AdminOrderRow, AdminOrderStatus } from '../../features/orders/types/admin-order.types'
 import {
   ActionButton,
   DataTable,
@@ -39,16 +42,27 @@ import {
 } from '../../shared/ui'
 import type { SemanticTone } from '../../app/theme/tokens'
 
+/**
+ * Trang Quản lý Đơn hàng — **100% READ-ONLY**.
+ *
+ * ⚠ KHÔNG có nút "Tạo vụ thuê từ đơn", không có nút thao tác trạng thái.
+ *   Mọi hành động ghi (tạo phiên, ghi tiến độ, thu hoạch, huỷ, thông báo)
+ *   do **nhân viên (staff)** thực hiện trên app.
+ *
+ * ⚠ `GET /api/orders` của BE chỉ trả đơn của chính user đăng nhập → Admin
+ *   dùng `useAdminOrders()` để hợp nhất thêm dữ liệu từ
+ *   `GET /api/cultivation-sessions/admin` + `GET /api/farm/sessions`.
+ */
+
 const STATUS_CONFIG: Record<
-  OrderStatus,
+  AdminOrderStatus,
   { tone: SemanticTone; label: string }
 > = {
-  PENDING_TRAY_ASSIGNMENT: { tone: 'warning', label: 'Chờ gán khay' },
-  ASSIGNED: { tone: 'info', label: 'Đã gán khay' },
-  GROWING: { tone: 'ok', label: 'Đang sinh trưởng' },
-  READY_TO_HARVEST: { tone: 'danger', label: 'Chờ thu hoạch' },
+  PENDING: { tone: 'warning', label: 'Chờ xử lý' },
+  CONFIRMED: { tone: 'info', label: 'Đã xác nhận' },
+  PROCESSING: { tone: 'ok', label: 'Đang xử lý' },
   COMPLETED: { tone: 'muted', label: 'Hoàn thành' },
-  CANCELLED: { tone: 'muted', label: 'Đã hủy' },
+  CANCELLED: { tone: 'danger', label: 'Đã hủy' },
 }
 
 const PAYMENT_STATUS_CONFIG: Record<
@@ -61,12 +75,6 @@ const PAYMENT_STATUS_CONFIG: Record<
   PENDING: { tone: 'info', label: 'Đang xử lý' },
   FAILED: { tone: 'danger', label: 'Thất bại' },
   REFUND_PENDING: { tone: 'warning', label: 'Chờ hoàn tiền' },
-}
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  ONLINE_APP: 'App (MCMS)',
-  BANK_TRANSFER: 'Chuyển khoản',
-  COD: 'COD',
 }
 
 const VND = new Intl.NumberFormat('vi-VN', {
@@ -83,37 +91,40 @@ const DATE_FORMATTER = new Intl.DateTimeFormat('vi-VN', {
   minute: '2-digit',
 })
 
-type OrderTab = 'ALL' | OrderStatus
+type OrderTab = 'ALL' | AdminOrderStatus
 
+/** Bộ lọc tab khớp **đúng 5 trạng thái** của BE (`orders.status`). */
 const TAB_OPTIONS: Array<{ value: OrderTab; label: string }> = [
   { value: 'ALL', label: 'Tất cả' },
-  { value: 'PENDING_TRAY_ASSIGNMENT', label: 'Chờ gán khay' },
-  { value: 'ASSIGNED', label: 'Đã gán khay' },
-  { value: 'GROWING', label: 'Đang trồng' },
-  { value: 'READY_TO_HARVEST', label: 'Chờ thu hoạch' },
+  { value: 'PENDING', label: 'Chờ xử lý' },
+  { value: 'CONFIRMED', label: 'Đã xác nhận' },
+  { value: 'PROCESSING', label: 'Đang xử lý' },
   { value: 'COMPLETED', label: 'Đã hoàn thành' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
 ]
 
 export function OrderManagementPage() {
   // ── Data from API (read-only) ──────────────────────────────────────────
-  const {
-    data: apiOrders = [],
-    isLoading,
-    isError,
-    error,
-    refetch,
-  } = useOrders()
-
-  const orders = useMemo(() => beOrdersToUiOrders(apiOrders), [apiOrders])
+  const { orders, isLoading, isError, error, refetch } = useAdminOrders()
 
   const [searchText, setSearchText] = useState('')
   const [activeTab, setActiveTab] = useState<OrderTab>('ALL')
-  const [detailOrder, setDetailOrder] = useState<AppOrder | null>(null)
-  const [createRentalFor, setCreateRentalFor] = useState<AppOrder | null>(null)
+  const [detailOrder, setDetailOrder] = useState<AdminOrderRow | null>(null)
 
   // Payment status polling — chỉ khi đang mở drawer chi tiết
   const { data: payosStatus } = useOrderPaymentStatus(
-    detailOrder ? Number(detailOrder.id) : null,
+    detailOrder ? detailOrder.orderId : null,
+  )
+
+  // Dữ liệu theo đơn (chỉ đọc) — trạng thái, timeline, lịch sử kiểm tra phôi
+  const { data: cultivationStatus } = useOrderCultivationStatus(
+    detailOrder ? detailOrder.orderId : null,
+  )
+  const { data: cultivationProgress } = useOrderCultivationProgress(
+    detailOrder ? detailOrder.orderId : null,
+  )
+  const { data: spawnInspections } = useOrderSpawnInspections(
+    detailOrder ? detailOrder.orderId : null,
   )
 
   const filteredOrders = useMemo(() => {
@@ -122,9 +133,10 @@ export function OrderManagementPage() {
       const matchesSearch = q
         ? [
             order.orderCode,
-            order.tenantName,
-            order.tenantPhone,
-            order.items.map((i) => i.mushroomType).join(' '),
+            order.customerName,
+            order.customerEmail,
+            order.packageName,
+            order.mushroomName,
           ].some((v) => v.toLowerCase().includes(q))
         : true
 
@@ -145,20 +157,20 @@ export function OrderManagementPage() {
   const summary = useMemo(
     () => ({
       total: orders.length,
-      pendingTray: tabCounts['PENDING_TRAY_ASSIGNMENT'] ?? 0,
-      growing: tabCounts['GROWING'] ?? 0,
+      pending: tabCounts['PENDING'] ?? 0,
+      processing: tabCounts['PROCESSING'] ?? 0,
       totalAmount: orders.reduce((sum, order) => sum + order.totalAmount, 0),
     }),
     [orders, tabCounts],
   )
 
-  const columns: ColumnsType<AppOrder> = [
+  const columns: ColumnsType<AdminOrderRow> = [
     {
       title: 'Mã đơn',
       dataIndex: 'orderCode',
       key: 'orderCode',
-      className: 'mcms-rental-mono',
-      width: 200,
+      className: 'mcms-session-mono',
+      width: 150,
       render: (code: string) => (
         <Typography.Text code style={{ fontSize: 13 }}>
           {code}
@@ -168,89 +180,76 @@ export function OrderManagementPage() {
     {
       title: 'Khách hàng',
       key: 'tenant',
-      width: 220,
+      width: 230,
       render: (_, record) => (
         <Flex align="center" gap={8}>
-          <UserAvatar name={record.tenantName} size={32} />
+          <UserAvatar name={record.customerName} size={32} />
           <Flex vertical gap={0}>
-            <Typography.Text strong>{record.tenantName}</Typography.Text>
+            <Typography.Text strong>{record.customerName}</Typography.Text>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {record.tenantPhone || '—'}
+              {record.customerEmail}
             </Typography.Text>
           </Flex>
         </Flex>
       ),
     },
     {
-      title: 'Loại nấm & Thời gian',
-      key: 'items',
-      width: 260,
+      title: 'Gói / Nấm',
+      key: 'package',
+      width: 200,
       render: (_, record) => (
         <Flex vertical gap={4}>
-          {record.items.length === 0 ? (
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              (Đơn chưa có chi tiết nấm)
-            </Typography.Text>
-          ) : (
-            record.items.map((item, idx) => (
-              <Flex key={idx} vertical gap={2}>
-                <Flex gap={4} align="center" wrap>
-                  <MetadataBadge label={item.mushroomType} />
-                  <MetadataBadge label={`× ${item.weeks} tuần`} />
-                </Flex>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                  ×{item.quantity} khay · {VND.format(item.unitPrice)}/khay/tuần
-                </Typography.Text>
-              </Flex>
-            ))
-          )}
+          <Typography.Text>{record.packageName}</Typography.Text>
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            {record.mushroomName}
+            {record.spawnIssued != null
+              ? ` · ${record.spawnIssued} đơn vị phôi`
+              : ''}
+          </Typography.Text>
         </Flex>
       ),
     },
     {
-      title: 'Nhận hàng',
-      key: 'delivery',
+      title: 'Phiên canh tác',
+      key: 'session',
       width: 180,
-      render: (_, record) => {
-        if (record.deliveryMethod === 'PICKUP') {
-          return (
-            <MetadataBadge label="Tự đến hái" icon={<EnvironmentOutlined />} />
-          )
-        }
-        return (
-          <Flex vertical gap={2}>
-            <MetadataBadge label="Giao tận nhà" icon={<HomeOutlined />} />
-            <Typography.Text
-              type="secondary"
-              style={{ fontSize: 11 }}
-              ellipsis={{ tooltip: record.deliveryAddress }}
-            >
-              {record.deliveryAddress ?? record.tenantAddress}
-            </Typography.Text>
+      render: (_, record) =>
+        record.sessionStatus ? (
+          <Flex vertical gap={4}>
+            <SessionStatusTag status={record.sessionStatus} />
+            {record.sessionId != null && (
+              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                Phiên #{record.sessionId}
+              </Typography.Text>
+            )}
           </Flex>
-        )
-      },
+        ) : (
+          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            Chưa có phiên
+          </Typography.Text>
+        ),
     },
     {
-      title: 'Tổng tiền',
-      dataIndex: 'totalAmount',
-      key: 'totalAmount',
-      width: 160,
-      render: (amount: number, record) => {
-        const paymentConfig = PAYMENT_STATUS_CONFIG[record.paymentStatus]
+      title: 'Thanh toán',
+      key: 'payment',
+      width: 150,
+      render: (_, record) => {
+        const config = PAYMENT_STATUS_CONFIG[record.paymentStatus]
         return (
           <Flex vertical gap={2}>
-            <Typography.Text strong className="mcms-rental-mono">
-              {VND.format(amount)}
-            </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-              {PAYMENT_METHOD_LABELS[record.paymentMethod] ?? record.paymentMethod}
-            </Typography.Text>
-            {paymentConfig && (
-              <StatusBadge
-                tone={paymentConfig.tone}
-                label={paymentConfig.label}
-              />
+            {config ? (
+              <StatusBadge tone={config.tone} label={config.label} />
+            ) : (
+              <MetadataBadge label={record.paymentStatus} />
+            )}
+            {record.totalAmount > 0 && (
+              <Typography.Text
+                type="secondary"
+                style={{ fontSize: 11 }}
+                className="mcms-session-mono"
+              >
+                {VND.format(record.totalAmount)}
+              </Typography.Text>
             )}
           </Flex>
         )
@@ -260,26 +259,17 @@ export function OrderManagementPage() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      width: 160,
-      render: (status: OrderStatus, record) => {
+      width: 140,
+      render: (status: AdminOrderStatus) => {
         const config = STATUS_CONFIG[status]
-        return (
-          <Flex vertical gap={4}>
-            <StatusBadge tone={config.tone} label={config.label} />
-            {record.trayId && (
-              <Typography.Text code style={{ fontSize: 12 }}>
-                {record.trayId}
-              </Typography.Text>
-            )}
-          </Flex>
-        )
+        return <StatusBadge tone={config.tone} label={config.label} />
       },
     },
     {
       title: 'Ngày tạo',
       dataIndex: 'createdAt',
       key: 'createdAt',
-      className: 'mcms-rental-mono',
+      className: 'mcms-session-mono',
       width: 140,
       render: (date: string) => (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -310,12 +300,12 @@ export function OrderManagementPage() {
   return (
     <div>
       <PageHeader
-        title="Đơn đặt từ App"
-        description="Theo dõi đơn khách đặt từ ứng dụng — chế độ chỉ xem, thao tác tạo / thanh toán / hủy thực hiện trên app người dùng."
+        title="Quản lý đơn hàng"
+        description="Theo dõi đơn khách đặt từ ứng dụng — trạng thái thanh toán, tiến độ canh tác và lịch sử kiểm tra phôi. Chế độ chỉ xem."
         actions={
           <StatusBadge
             tone="warning"
-            label={`${summary.pendingTray} đơn chờ gán khay`}
+            label={`${summary.pending} đơn chờ xử lý`}
           />
         }
       />
@@ -332,20 +322,20 @@ export function OrderManagementPage() {
         </Col>
         <Col xs={12} lg={6}>
           <StatCard
-            title="Chờ gán khay"
-            value={summary.pendingTray}
+            title="Chờ xử lý"
+            value={summary.pending}
             tone="warning"
             highlightValue
-            description="Đơn đã thanh toán nhưng chưa có khay"
+            description="Đơn chờ khởi tạo phiên canh tác"
           />
         </Col>
         <Col xs={12} lg={6}>
           <StatCard
-            title="Đang trồng"
-            value={summary.growing}
+            title="Đang xử lý"
+            value={summary.processing}
             tone="ok"
             highlightValue
-            description="Khay đang sinh trưởng"
+            description="Phiên đang trong quá trình canh tác"
           />
         </Col>
         <Col xs={12} lg={6}>
@@ -363,10 +353,10 @@ export function OrderManagementPage() {
         <Input
           allowClear
           prefix={<SearchOutlined />}
-          placeholder="Tìm mã đơn, tên khách, SĐT hoặc loại nấm"
+          placeholder="Tìm mã đơn, tên khách, email, gói hoặc loại nấm"
           value={searchText}
           onChange={(e) => setSearchText(e.target.value)}
-          style={{ width: 360, maxWidth: '100%' }}
+          style={{ width: 380, maxWidth: '100%' }}
         />
       </Flex>
 
@@ -383,10 +373,10 @@ export function OrderManagementPage() {
         style={{ marginBottom: 'var(--mcms-space-5)' }}
       />
 
-      <DataTable<AppOrder>
+      <DataTable<AdminOrderRow>
         dataSource={filteredOrders}
         columns={columns}
-        rowKey="id"
+        rowKey="orderId"
         size="small"
         loading={isLoading}
         error={
@@ -406,11 +396,13 @@ export function OrderManagementPage() {
           showSizeChanger: true,
           showTotal: (total) => `${total} đơn`,
         }}
-        scrollX={1200}
+        scrollX={1250}
       />
 
       {/* ── Drawer chi tiết đơn (read-only) ───────────────────────────── */}
-      <Drawer rootClassName="mcms-rental-drawer"         title={
+      <Drawer
+        rootClassName="mcms-session-drawer"
+        title={
           detailOrder ? (
             <Space>
               <Typography.Text code>{detailOrder.orderCode}</Typography.Text>
@@ -425,11 +417,12 @@ export function OrderManagementPage() {
         }
         open={Boolean(detailOrder)}
         onClose={() => setDetailOrder(null)}
-        width={520}
+        width={620}
         destroyOnHidden
       >
         {detailOrder && (
           <Flex vertical gap={20}>
+            {/* ── Thông tin đơn ─────────────────────────────────────── */}
             <Descriptions
               column={1}
               size="small"
@@ -441,13 +434,13 @@ export function OrderManagementPage() {
                   label: 'Khách hàng',
                   children: (
                     <Flex align="center" gap={8}>
-                      <UserAvatar name={detailOrder.tenantName} size={32} />
+                      <UserAvatar name={detailOrder.customerName} size={32} />
                       <Flex vertical gap={0}>
                         <Typography.Text strong>
-                          {detailOrder.tenantName}
+                          {detailOrder.customerName}
                         </Typography.Text>
                         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                          {detailOrder.tenantPhone || '—'}
+                          {detailOrder.customerEmail}
                         </Typography.Text>
                       </Flex>
                     </Flex>
@@ -455,75 +448,46 @@ export function OrderManagementPage() {
                 },
                 {
                   key: 'createdAt',
-      className: 'mcms-rental-mono',
                   label: 'Ngày tạo',
+                  className: 'mcms-session-mono',
                   children: DATE_FORMATTER.format(
                     new Date(detailOrder.createdAt),
                   ),
                 },
                 {
-                  key: 'delivery',
-                  label: 'Nhận hàng',
-                  children:
-                    detailOrder.deliveryMethod === 'PICKUP' ? (
-                      <MetadataBadge label="Tự đến hái" icon={<EnvironmentOutlined />} />
-                    ) : (
-                      <Flex vertical gap={2}>
-                        <MetadataBadge label="Giao tận nhà" icon={<HomeOutlined />} />
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                          {detailOrder.deliveryAddress ??
-                            detailOrder.tenantAddress}
-                        </Typography.Text>
-                      </Flex>
-                    ),
+                  key: 'package',
+                  label: 'Gói thuê',
+                  children: detailOrder.packageName,
                 },
                 {
-                  key: 'tray',
-      className: 'mcms-rental-mono',
-                  label: 'Khay được gán',
-                  children: detailOrder.trayId ? (
-                    <Typography.Text code>{detailOrder.trayId}</Typography.Text>
-                  ) : (
-                    <Typography.Text type="secondary">Chưa gán</Typography.Text>
-                  ),
+                  key: 'mushroom',
+                  label: 'Loại nấm',
+                  children: detailOrder.mushroomName,
+                },
+                {
+                  key: 'session',
+                  label: 'Phiên canh tác',
+                  children:
+                    detailOrder.sessionStatus && detailOrder.sessionId != null ? (
+                      <Flex align="center" gap={8} wrap>
+                        <SessionStatusTag status={detailOrder.sessionStatus} />
+                        <Typography.Text
+                          type="secondary"
+                          style={{ fontSize: 12 }}
+                        >
+                          Phiên #{detailOrder.sessionId}
+                        </Typography.Text>
+                      </Flex>
+                    ) : (
+                      <Typography.Text type="secondary">
+                        Chưa có phiên canh tác
+                      </Typography.Text>
+                    ),
                 },
               ]}
             />
 
-            <div>
-              <Typography.Title level={5} style={{ marginTop: 0 }}>
-                Chi tiết nấm
-              </Typography.Title>
-              {detailOrder.items.length === 0 ? (
-                <EmptyState
-                  title="Đơn chưa có chi tiết nấm"
-                  description="Đơn chưa được gán loại nấm cụ thể trên ứng dụng."
-                />
-              ) : (
-                <Descriptions
-                  column={1}
-                  size="small"
-                  bordered
-                  items={detailOrder.items.map((item, idx) => ({
-                    key: `item-${idx}`,
-                    label: `${item.mushroomType} · ${item.weeks} tuần`,
-                    children: (
-                      <Flex vertical gap={2}>
-                        <Typography.Text>
-                          ×{item.quantity} khay ·{' '}
-                          {VND.format(item.unitPrice)}/khay/tuần
-                        </Typography.Text>
-                        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                          Thành tiền:{' '}
-                          {VND.format(item.unitPrice * item.quantity * item.weeks)}
-                        </Typography.Text>
-                      </Flex>
-                    ),
-                  }))}
-                />
-              )}
-            </div>
-
+            {/* ── Thanh toán ─────────────────────────────────────────── */}
             <Descriptions
               column={1}
               size="small"
@@ -531,17 +495,10 @@ export function OrderManagementPage() {
               title={
                 <Space>
                   <CreditCardOutlined />
-                  Thanh toán
+                  Thanh toán PayOS
                 </Space>
               }
               items={[
-                {
-                  key: 'method',
-                  label: 'Hình thức',
-                  children:
-                    PAYMENT_METHOD_LABELS[detailOrder.paymentMethod] ??
-                    detailOrder.paymentMethod,
-                },
                 {
                   key: 'status',
                   label: 'Trạng thái',
@@ -582,41 +539,120 @@ export function OrderManagementPage() {
               ]}
             />
 
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Đơn đặt được tạo và thanh toán trên ứng dụng khách hàng. Trang
-              quản trị chỉ theo dõi trạng thái, không thực hiện thao tác ghi.
-            </Typography.Text>
+            {/* ── Trạng thái canh tác (từ customer API) ─────────────── */}
+            <div>
+              <Typography.Title level={5} style={{ marginTop: 0 }}>
+                Trạng thái canh tác
+              </Typography.Title>
+              {cultivationStatus ? (
+                <Descriptions
+                  column={1}
+                  size="small"
+                  bordered
+                  items={[
+                    {
+                      key: 'status',
+                      label: 'Trạng thái',
+                      children:
+                        cultivationStatus.status ? (
+                          <SessionStatusTag status={cultivationStatus.status} />
+                        ) : (
+                          '—'
+                        ),
+                    },
+                    {
+                      key: 'stage',
+                      label: 'Giai đoạn',
+                      children: cultivationStatus.growth_stage ?? '—',
+                    },
+                    {
+                      key: 'progress',
+                      label: 'Tiến độ',
+                      children:
+                        cultivationStatus.progress_percent != null
+                          ? `${cultivationStatus.progress_percent}%`
+                          : '—',
+                    },
+                    {
+                      key: 'harvest',
+                      label: 'Dự kiến thu hoạch',
+                      children: cultivationStatus.expected_harvest_date
+                        ? DATE_FORMATTER.format(
+                            new Date(cultivationStatus.expected_harvest_date),
+                          )
+                        : '—',
+                    },
+                  ]}
+                />
+              ) : (
+                <EmptyState
+                  title="Chưa có dữ liệu canh tác"
+                  description="Đơn này chưa gắn với phiên canh tác nào trên hệ thống."
+                />
+              )}
+            </div>
 
-            {/* Đường khắc phục thủ công: đơn đã trả tiền nhưng webhook
-                thanh toán lỗi nên chưa sinh vụ thuê. */}
-            {detailOrder.paymentStatus === 'PAID' && (
-              <Alert
-                type="warning"
-                showIcon
-                message="Chưa thấy vụ thuê cho đơn này?"
-                description="Trong trường hợp webhook thanh toán bị lỗi, bạn có thể tạo vụ thuê thủ công. Thao tác này an toàn — hệ thống không tạo trùng."
-                action={
-                  <Button
-                    size="small"
-                    type="primary"
-                    onClick={() => setCreateRentalFor(detailOrder)}
-                  >
-                    Tạo vụ thuê từ đơn
-                  </Button>
-                }
+            {/* ── Timeline tiến độ ──────────────────────────────────── */}
+            <div>
+              <Typography.Title level={5} style={{ marginTop: 0 }}>
+                Timeline tiến độ
+              </Typography.Title>
+              {cultivationProgress?.entries?.length ? (
+                <Flex vertical gap={8}>
+                  {cultivationProgress.entries.map((entry, index) => (
+                    <Flex key={entry.progress_id ?? index} gap={10} align="start">
+                      <MetadataBadge
+                        label={entry.current_stage ?? entry.stage ?? '—'}
+                      />
+                      <Flex vertical gap={0}>
+                        <Typography.Text style={{ fontSize: 12 }}>
+                          {entry.progress_percent != null
+                            ? `${entry.progress_percent}%`
+                            : '—'}
+                          {entry.description ? ` · ${entry.description}` : ''}
+                        </Typography.Text>
+                        <Typography.Text
+                          type="secondary"
+                          style={{ fontSize: 11 }}
+                        >
+                          {entry.created_at
+                            ? DATE_FORMATTER.format(new Date(entry.created_at))
+                            : '—'}
+                        </Typography.Text>
+                      </Flex>
+                    </Flex>
+                  ))}
+                </Flex>
+              ) : (
+                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                  Chưa có mốc tiến độ nào được ghi nhận.
+                </Typography.Text>
+              )}
+            </div>
+
+            {/* ── Lịch sử kiểm tra phôi ────────────────────────────── */}
+            <div>
+              <Typography.Title level={5} style={{ marginTop: 0 }}>
+                Lịch sử kiểm tra phôi
+              </Typography.Title>
+              <SpawnInspectionList
+                inspections={spawnInspections?.inspections ?? []}
+                emptyDescription="Chưa có lần kiểm tra phôi nào cho đơn này."
               />
-            )}
+            </div>
+
+            <Flex align="center" gap={6} wrap>
+              <EnvironmentOutlined aria-hidden="true" />
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Đơn đặt được tạo và thanh toán trên ứng dụng khách hàng. Trang
+                quản trị chỉ theo dõi trạng thái, không thực hiện thao tác ghi.
+              </Typography.Text>
+            </Flex>
+
+            {isLoading && <Skeleton active paragraph={{ rows: 2 }} />}
           </Flex>
         )}
       </Drawer>
-
-      {createRentalFor && (
-        <CreateRentalFromOrderModal
-          orderId={createRentalFor.id}
-          open
-          onClose={() => setCreateRentalFor(null)}
-        />
-      )}
     </div>
   )
 }

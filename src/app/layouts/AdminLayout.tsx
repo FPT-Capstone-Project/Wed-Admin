@@ -33,7 +33,7 @@ import { useEffect, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { AUTH_EXPIRED_EVENT } from '../../shared/api/client'
-import { useAlertStore } from '../../stores/alert.store'
+import { useUnreadNotificationCount } from '../../features/notifications/hooks/useNotifications'
 
 const { Content, Header, Sider } = Layout
 
@@ -79,6 +79,11 @@ const MENU_ITEMS: MenuProps['items'] = [
         label: 'Cảnh báo vi khí hậu',
       },
       {
+        key: '/notifications',
+        icon: <BellOutlined />,
+        label: 'Thông báo',
+      },
+      {
         key: '/reports',
         icon: <BarChartOutlined />,
         label: 'Báo cáo & phân tích',
@@ -95,9 +100,9 @@ const MENU_ITEMS: MenuProps['items'] = [
         label: 'Đơn đặt từ App',
       },
       {
-        key: '/rentals',
+        key: '/sessions',
         icon: <FundOutlined />,
-        label: 'Vụ thuê',
+        label: 'Phiên canh tác',
       },
       {
         key: '/packages',
@@ -125,9 +130,10 @@ const PAGE_TITLES: Record<string, string> = {
   '/camera': 'Camera toàn cảnh',
   '/cultivation': 'Sinh trưởng & thu hoạch',
   '/alerts': 'Cảnh báo vi khí hậu',
+  '/notifications': 'Thông báo',
   '/reports': 'Báo cáo & phân tích',
   '/orders': 'Quản lý đơn đặt',
-  '/rentals': 'Quản lý vụ thuê',
+  '/sessions': 'Quản lý phiên canh tác',
   '/packages': 'Gói cước thuê',
   '/users': 'Quản lý tài khoản',
   '/settings': 'Hồ sơ Vi khí hậu',
@@ -215,9 +221,9 @@ export function AdminLayout() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
-  const pendingAlerts = useAlertStore(
-    (state) => state.alerts.filter((alert) => !alert.isAcknowledged).length,
-  )
+  // Badge chuông — số thông báo chưa đọc từ `GET /api/notifications`
+  // (`meta.unread_count`). Đọc trực tiếp API, không qua mock store.
+  const unreadNotifications = useUnreadNotificationCount()
 
   // ── Lắng nghe event "auth expired" từ axios interceptor ──────────────
   // Khi backend trả 401 ở bất kỳ request nào → axios interceptor sẽ
@@ -349,14 +355,14 @@ export function AdminLayout() {
                 <span className="status-pulse" aria-hidden="true" />
                 Hệ thống trực tuyến
               </div>
-              <Tooltip title="Xem cảnh báo">
-                <Badge count={pendingAlerts} size="small" overflowCount={99}>
+              <Tooltip title="Xem thông báo">
+                <Badge count={unreadNotifications.data ?? 0} size="small" overflowCount={99}>
                   <Button
                     type="text"
                     className="header-icon-button"
                     icon={<BellOutlined />}
-                    aria-label={`${pendingAlerts} cảnh báo đang chờ xử lý`}
-                    onClick={() => navigate('/alerts')}
+                    aria-label={`${unreadNotifications.data ?? 0} thông báo chưa đọc`}
+                    onClick={() => navigate('/notifications')}
                   />
                 </Badge>
               </Tooltip>

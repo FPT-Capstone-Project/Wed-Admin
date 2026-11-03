@@ -18,10 +18,20 @@ export interface AggregatedTelemetryPoint {
 export interface ComparisonTelemetryPoint {
   label: string
   period: number
-  temperature2025?: number
-  temperature2026?: number
-  humidity2025?: number
-  humidity2026?: number
+  /** Nhiệt độ của năm cũ hơn (`yearA`). */
+  temperatureYearA?: number
+  /** Nhiệt độ của năm mới hơn (`yearB`). */
+  temperatureYearB?: number
+  /** Độ ẩm của năm cũ hơn (`yearA`). */
+  humidityYearA?: number
+  /** Độ ẩm của năm mới hơn (`yearB`). */
+  humidityYearB?: number
+}
+
+export interface YearComparisonResult {
+  data: ComparisonTelemetryPoint[]
+  /** Cặp năm được so sánh (cũ → mới). `null` khi dữ liệu chưa đủ 2 năm. */
+  years: [number, number] | null
 }
 
 function roundToOneDecimal(value: number) {
@@ -107,35 +117,57 @@ export function aggregateLongTermTelemetry(
     }))
 }
 
+/**
+ * So sánh 2 năm có dữ liệu gần nhất trong timeline.
+ *
+ * ⚠ Trước đây hàm này hard-code 2025 vs 2026 → sai khi dữ liệu thật có năm
+ * khác. Nay chọn động 2 năm **mới nhất** có dữ liệu.
+ */
 export function buildYearComparison(
   points: AggregatedTelemetryPoint[],
   granularity: HistoryGranularity,
-): ComparisonTelemetryPoint[] {
+): YearComparisonResult {
+  const years = [...new Set(points.map((point) => point.year))].sort(
+    (left, right) => left - right,
+  )
+
+  if (years.length < 2) {
+    return { data: [], years: null }
+  }
+
+  const [yearA, yearB] = [years[years.length - 2], years[years.length - 1]]
   const periods = new Map<number, ComparisonTelemetryPoint>()
 
-  points.forEach((point) => {
-    const current = periods.get(point.period) ?? {
-      period: point.period,
-      label:
-        granularity === 'MONTH'
-          ? `Tháng ${point.period}`
-          : `Tuần ${point.period}`,
-    }
+  points
+    .filter((point) => point.year === yearA || point.year === yearB)
+    .forEach((point) => {
+      const current = periods.get(point.period) ?? {
+        period: point.period,
+        label:
+          granularity === 'MONTH'
+            ? `Tháng ${point.period}`
+            : `Tuần ${point.period}`,
+      }
 
-    if (point.year === 2025) {
-      current.temperature2025 = point.temperature
-      current.humidity2025 = point.humidity
-    }
+      if (point.year === yearA) {
+        current.temperatureYearA = point.temperature
+        current.humidityYearA = point.humidity
+      }
 
-    if (point.year === 2026) {
-      current.temperature2026 = point.temperature
-      current.humidity2026 = point.humidity
-    }
+      if (point.year === yearB) {
+        current.temperatureYearB = point.temperature
+        current.humidityYearB = point.humidity
+      }
 
-    periods.set(point.period, current)
-  })
+      periods.set(point.period, current)
+    })
 
-  return [...periods.values()].sort((left, right) => left.period - right.period)
+  return {
+    data: [...periods.values()].sort(
+      (left, right) => left.period - right.period,
+    ),
+    years: [yearA, yearB],
+  }
 }
 
 /**

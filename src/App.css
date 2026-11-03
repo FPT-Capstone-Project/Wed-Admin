@@ -6325,7 +6325,7 @@ textarea {
   letter-spacing: 0.02em;
 }
 
-/* Trạng thái lỗi (Unsplash 404 hoặc network) — đỏ nhạt để dễ nhận biết */
+/* Trạng thái lỗi (Cloudinary 404 hoặc network) — đỏ nhạt để dễ nhận biết */
 .growth-snapshot-placeholder.is-error {
   color: #b91c1c;
   background: #fef2f2;

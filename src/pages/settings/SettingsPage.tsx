@@ -65,8 +65,8 @@ export function SettingsPage() {
             <ExperimentOutlined /> Hồ sơ Vi khí hậu &amp; Ngưỡng AUTO
           </Typography.Title>
           <Typography.Text type="secondary">
-            Theo dõi dải thông số nhiệt độ, độ ẩm và CO₂ chuẩn đang áp dụng
-            cho từng giống nấm.
+            Theo dõi dải thông số nhiệt độ và độ ẩm chuẩn đang áp dụng cho
+            từng giống nấm.
           </Typography.Text>
         </div>
 

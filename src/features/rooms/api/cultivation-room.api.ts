@@ -1,12 +1,17 @@
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
 import type {
-  CreateCultivationRoomRequest,
   CultivationRoom,
   CultivationRoomListQuery,
-  UpdateCultivationRoomRequest,
 } from '../../../types/cultivation'
 
+/**
+ * Cultivation Rooms API — **100% READ-ONLY**.
+ *
+ * ⚠ TUYỆT ĐỐI KHÔNG thêm hàm POST/PUT/DELETE ở đây: Admin web chỉ quan
+ *   sát phòng & khay, mọi thao tác thêm / sửa / xoá hạ tầng do **nhân viên
+ *   (staff)** thực hiện trên mobile app.
+ */
 export const cultivationRoomApi = {
   async list(query: CultivationRoomListQuery = {}): Promise<CultivationRoom[]> {
     const response = await apiClient.get<unknown>(
@@ -21,30 +26,5 @@ export const cultivationRoomApi = {
       `/api/cultivation-rooms/${id}`,
     )
     return ensureObject<CultivationRoom>(response.data)
-  },
-
-  async create(
-    payload: CreateCultivationRoomRequest,
-  ): Promise<CultivationRoom | null> {
-    const response = await apiClient.post<unknown>(
-      '/api/cultivation-rooms',
-      payload,
-    )
-    return ensureObject<CultivationRoom>(response.data)
-  },
-
-  async update(
-    id: number,
-    payload: UpdateCultivationRoomRequest,
-  ): Promise<CultivationRoom | null> {
-    const response = await apiClient.put<unknown>(
-      `/api/cultivation-rooms/${id}`,
-      payload,
-    )
-    return ensureObject<CultivationRoom>(response.data)
-  },
-
-  async remove(id: number): Promise<void> {
-    await apiClient.delete(`/api/cultivation-rooms/${id}`)
   },
 }

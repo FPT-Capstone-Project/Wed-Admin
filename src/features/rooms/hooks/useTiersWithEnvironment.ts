@@ -12,11 +12,9 @@ import { autoMistingApi } from '../../devices/api/iot.api'
 import { useFloorList, iotKeys } from '../../devices/hooks/useIoT'
 import { useCultivationTiers } from './useCultivation'
 import { DEFAULT_TELEMETRY } from './cultivation.defaults'
-import { retryApiErrors } from '../../../shared/api/retry-policy'
 import type { Tier, TierTelemetry } from '../../../types/room.types'
 import type { CultivationFloorMapping } from '../../../types/iot'
 import type { ClimateThresholds } from '../utils/tray-climate.utils'
-import { resolveFallbackThresholds } from '../utils/tray-climate.utils'
 
 export type EnvironmentSource = 'real' | 'mock'
 
@@ -103,31 +101,6 @@ export function useTiersWithEnvironment() {
     }),
   })
 
-  /**
-   * Ngưỡng đề xuất theo tầng — fallback khi tầng chưa có cấu hình
-   * auto-control (`/environment` không trả `thresholds`).
-   *
-   * BE là nguồn duy nhất: `common` = khoảng giao của mọi profile nấm đang
-   * trồng trên tầng. Nhiều profile xung đột → BE trả `config: null` và ta
-   * KHÔNG đoán ngưỡng (UI hiển thị trung tính).
-   */
-  const suggestionQueries = useQueries({
-    queries: rooms.map((room) => {
-      const floorId = roomIdToFloorId.get(room.tierId)
-      return {
-        queryKey: [...iotKeys.autoControlSuggestions(floorId ?? -1)],
-        queryFn: async () => {
-          if (floorId == null) return null
-          const result = await autoMistingApi.getSuggestions(floorId)
-          return result
-        },
-        enabled: floorId != null && floorId > 0,
-        staleTime: 60_000,
-        retry: retryApiErrors,
-      }
-    }),
-  })
-
   const tiersWithEnv: TierWithEnvironment[] = rooms.map((room, idx) => {
     const envData = envQueries[idx]?.data
     const sensors = envData?.sensors ?? []
@@ -150,11 +123,14 @@ export function useTiersWithEnvironment() {
       updatedAt: new Date().toISOString(),
     }
 
-    // Ngưỡng: ưu tiên cấu hình auto-control đang chạy, sau đó mới tới
-    // ngưỡng đề xuất của BE. Không có nguồn nào → `null` (UI trung tính).
-    const thresholds =
-      toClimateThresholds(envData?.thresholds) ??
-      resolveFallbackThresholds(suggestionQueries[idx]?.data)
+    // Ngưỡng: lấy từ `thresholds` BE trả kèm trong `/environment`
+    // (chính là cấu hình auto-control đang áp dụng cho tầng).
+    //
+    // ⚠ KHÔNG gọi `/auto-control/suggestions` nữa: endpoint đó yêu cầu quyền
+    // `iot.automation.manage` ⇒ Admin web nhận 403. `/environment` là
+    // nguồn ngưỡng chính, read-only và luôn trả về cho tầng có cấu hình.
+    // Tầng chưa có cấu hình → `null` (UI hiển thị trung tính, không đoán).
+    const thresholds = toClimateThresholds(envData?.thresholds)
 
     return {
       tier: { ...room, telemetry },
@@ -175,7 +151,6 @@ export function useTiersWithEnvironment() {
       void tiersQuery.refetch()
       void floorsQuery.refetch()
       envQueries.forEach((q) => void q.refetch())
-      suggestionQueries.forEach((q) => void q.refetch())
     },
   }
 }

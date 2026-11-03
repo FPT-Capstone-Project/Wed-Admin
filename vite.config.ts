@@ -13,6 +13,9 @@ import { defineConfig, loadEnv } from 'vite'
 //   Client dev dùng baseURL = '' → axios gọi `localhost:5173/api/users`.
 //   Nếu target chứa sẵn `/api` mà `rewrite` giữ nguyên path, request ra
 //   `https://backend.../api/api/users` → 404. Xem `stripApiSuffix()` bên dưới.
+//
+// ⚠ Server hiện tại: Azure (`mcms-h5g5dtdzajf0bebm.eastasia-01.azurewebsites.net`).
+//   `.env` khai báo `VITE_API_BASE_URL` — file này chỉ là FALLBACK khi thiếu env.
 // ─────────────────────────────────────────────────────────────────────────
 
 /**
@@ -31,7 +34,8 @@ export default defineConfig(({ mode }) => {
   // loadEnv chạy ở Node context (vite.config.ts) nên an toàn.
   const env = loadEnv(mode, process.cwd(), '')
   const apiOrigin = stripApiSuffix(
-    env.VITE_API_BASE_URL || 'https://backend-75e1.onrender.com',
+    env.VITE_API_BASE_URL ||
+      'https://mcms-h5g5dtdzajf0bebm.eastasia-01.azurewebsites.net',
   )
 
   return {

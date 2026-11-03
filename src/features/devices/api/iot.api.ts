@@ -4,7 +4,7 @@ import type {
   AutoControlConfigurationResponse,
   AutoControlLogsQuery,
   AutoControlLogsResponse,
-  AutoControlSuggestions,
+  AutoControlRuntimeStatus,
   AutoMistingConfiguration,
   CultivationFloorMapping,
   FloorEnvironmentResponse,
@@ -15,7 +15,7 @@ import type {
   IotSensorsResponse,
 } from '../../../types/iot'
 
-// ─── IoT Masters / Sensors / History / SSR ────────────────────────────────
+// ─── IoT Masters / Sensors / History ──────────────────────────────────────
 export const iotApi = {
   async listMasters(): Promise<IotMaster[]> {
     const response = await apiClient.get<unknown>('/api/iot/masters')
@@ -90,26 +90,6 @@ export const autoMistingApi = {
   },
 
   /**
-   * GET /api/iot/floors/{floorId}/auto-control/suggestions — ngưỡng đề xuất.
-   *
-   * Swagger: *"Uses ACTIVE tray sessions linked to ACTIVE rentals on the same
-   * tray; returns sourceProfiles, common, issues, warnings, config. Config is
-   * null for missing, conflicting or too narrow conditions. No database writes
-   * or device commands. Review preset, set profile_approved=true and PUT config
-   * to auto-control."*
-   *
-   * Đây là nguồn ngưỡng **chính thức** từ BE — FE không tự tính toán.
-   */
-  async getSuggestions(
-    floorId: number,
-  ): Promise<AutoControlSuggestions | null> {
-    const response = await apiClient.get<unknown>(
-      `/api/iot/floors/${floorId}/auto-control/suggestions`,
-    )
-    return ensureObject<AutoControlSuggestions>(response.data)
-  },
-
-  /**
    * GET /api/iot/floors/{floorId}/auto-control — cấu hình tự động hiện tại.
    *
    * ⚠ Endpoint này **KHÔNG** yêu cầu `iot.automation.manage` (chỉ cần đăng
@@ -132,14 +112,29 @@ export const autoMistingApi = {
    *
    * BE trả `{ mode, run, runtime, environment, ssr, cooldownRemainingMs,
    * lastDecision }` — dùng để biết tầng đang AUTO hay MANUAL.
+   *
+   * ⚠ Endpoint **read-only** (không cần `iot.automation.manage`).
    */
   async getAutoControlStatus(
     floorId: number,
-  ): Promise<AutoControlConfigurationResponse | null> {
+  ): Promise<AutoControlRuntimeStatus | null> {
     const response = await apiClient.get<unknown>(
       `/api/iot/floors/${floorId}/auto-control/status`,
     )
-    return ensureObject<AutoControlConfigurationResponse>(response.data)
+    const obj = ensureObject<AutoControlRuntimeStatus>(response.data)
+    if (!obj) return null
+    return {
+      ...obj,
+      mode: obj.mode ?? 'MANUAL',
+      run: obj.run ?? null,
+      runtime: obj.runtime ?? null,
+      ssr: obj.ssr ?? null,
+      cooldownRemainingMs:
+        typeof obj.cooldownRemainingMs === 'number'
+          ? obj.cooldownRemainingMs
+          : null,
+      lastDecision: obj.lastDecision ?? null,
+    }
   },
 
   /**

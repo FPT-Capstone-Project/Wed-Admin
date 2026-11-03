@@ -51,9 +51,9 @@ export const OrderManagementPage = lazy(() =>
     default: m.OrderManagementPage,
   })),
 )
-export const RentalListPage = lazy(() =>
-  import('../../features/rentals/pages/RentalListPage').then((m) => ({
-    default: m.RentalListPage,
+export const SessionListPage = lazy(() =>
+  import('../../features/sessions/pages/SessionListPage').then((m) => ({
+    default: m.SessionListPage,
   })),
 )
 export const PackageManagementPage = lazy(() =>
@@ -62,13 +62,18 @@ export const PackageManagementPage = lazy(() =>
   })),
 )
 export const CultivationManagementPage = lazy(() =>
-  import('../../pages/cultivation/CultivationManagementPage').then((m) => ({
+  import('../../features/cultivation/pages/CultivationManagementPage').then((m) => ({
     default: m.CultivationManagementPage,
   })),
 )
 export const AlertManagementPage = lazy(() =>
-  import('../../pages/alerts/AlertManagementPage').then((m) => ({
+  import('../../features/alerts/pages/AlertManagementPage').then((m) => ({
     default: m.AlertManagementPage,
+  })),
+)
+export const NotificationsPage = lazy(() =>
+  import('../../features/notifications/pages/NotificationsPage').then((m) => ({
+    default: m.NotificationsPage,
   })),
 )
 export const ReportsAnalyticsPage = lazy(() =>

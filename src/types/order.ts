@@ -1,7 +1,7 @@
 /**
  * Orders — DTOs khớp Swagger.
  * Endpoint: /api/orders, /api/orders/{id}, /api/orders/{id}/cancel,
- *          /api/orders/rentals (POST tạo đơn mới).
+ *          /api/orders/cultivation (POST tạo đơn canh tác mới).
  *
  * Lưu ý: endpoint list/get trả về order của CUSTOMER đang đăng nhập,
  * không phải tất cả orders. Để admin xem toàn bộ cần BE mở rộng scope.
@@ -11,6 +11,12 @@
  * `beOrderToUiOrder()` bên dưới.
  */
 
+/**
+ * Trạng thái đơn hàng — **đồng bộ đúng 5 trạng thái của BE**.
+ *
+ * Nguồn: `Backend/database.sql` → `orders.status`
+ * `CHECK (status IN ('PENDING','CONFIRMED','PROCESSING','COMPLETED','CANCELLED'))`.
+ */
 export type OrderStatus =
   | 'PENDING'
   | 'CONFIRMED'
@@ -64,10 +70,20 @@ export interface Order {
   updated_at?: string
 }
 
-/** POST /api/orders/rentals */
-export interface CreateRentalOrderRequest {
+/**
+ * POST /api/orders/cultivation — tạo đơn canh tác.
+ *
+ * Swagger (`CreateCultivationOrderRequest`):
+ *   - `packageId`      — gói thuê đang ACTIVE, thời lượng phải đủ cho
+ *                        `growing_days` của giống nấm.
+ *   - `mushroomTypeId` — giống nấm đang ACTIVE.
+ *   - `quantity`       — số khay canh tác (mỗi khay cần 3 đơn vị phôi).
+ */
+export interface CreateCultivationOrderRequest {
   packageId: number
   mushroomTypeId: number
+  /** Số khay canh tác được yêu cầu (>= 1). */
+  quantity: number
 }
 
 /** PATCH /api/orders/{orderId}/cancel */

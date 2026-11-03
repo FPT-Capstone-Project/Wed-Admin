@@ -1,89 +1,54 @@
 /**
  * RecentAlertsTable — widget cảnh báo gần đây trên Dashboard.
  *
- * Cải thiện:
- *   - Chuyển đổi các mã phần cứng kỹ thuật (vd: "node-stm32-01", "node-stm32-04")
- *     thành nhãn vị trí thân thiện với chủ trang trại ("Cụm cảm biến Tầng 1", "Cụm cảm biến Tầng 4").
- *   - Bảng compact và nút icon-only dùng DataTable / ActionButton chung.
- *   - Sử dụng StatusBadge cho mức độ cảnh báo.
+ * ⚠ Dữ liệu đến từ API thật:
+ *   - `GET /api/iot/floors/{floorId}/auto-control/logs` (sự kiện lỗi/bất thường)
+ *   - `GET /api/notifications` (thông báo nghiệp vụ)
+ *
+ * → KHÔNG dùng `useAlertStore` (mock) nữa.
  */
-import {
-  ArrowRightOutlined,
-  CheckOutlined,
-  ClockCircleOutlined,
-  ClusterOutlined,
-  EnvironmentOutlined,
-} from '@ant-design/icons'
-import { Card, Flex, Tooltip, Typography } from 'antd'
+import { ArrowRightOutlined, ClockCircleOutlined } from '@ant-design/icons'
+import { Card, Flex, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAlertStore } from '../../../stores/alert.store'
-import type { AlertSeverity, SystemAlert } from '../../../types/alert.types'
-import type { SemanticTone } from '../../../app/theme/tokens'
+import { useOperationalAlerts } from '../../alerts/hooks/useOperationalAlerts'
+import {
+  ALERT_CATEGORY_LABELS,
+  ALERT_SEVERITY_CONFIG,
+} from '../../alerts/components/alert-status.config'
+import type { OperationalAlert } from '../../alerts/types/alert.types'
 import { ActionButton, DataTable, StatusBadge } from '../../../shared/ui'
-import { formatFriendlyDeviceLocation } from '../../../shared/i18n/terms'
-
-interface SeverityConfig {
-  label: string
-  tone: SemanticTone
-}
-
-/**
- * Cấu hình mức độ cảnh báo dùng tokens thay vì hardcode hex.
- * CRITICAL → danger, WARNING → warning, INFO → xám trung tính.
- */
-const SEVERITY_CONFIG: Record<AlertSeverity, SeverityConfig> = {
-  CRITICAL: {
-    label: 'Nghiêm trọng',
-    tone: 'danger',
-  },
-  WARNING: {
-    label: 'Cảnh báo',
-    tone: 'warning',
-  },
-  INFO: {
-    label: 'Thông tin',
-    tone: 'info',
-  },
-}
 
 /** Số cảnh báo hiển thị tối đa trong widget trên Dashboard. */
-const MAX_VISIBLE_ALERTS = 3
+const MAX_VISIBLE_ALERTS = 5
 
 export function RecentAlertsTable() {
   const navigate = useNavigate()
-  const alerts = useAlertStore((state) => state.alerts)
+  const { data, isLoading } = useOperationalAlerts()
 
-  const recentAlerts = useMemo<SystemAlert[]>(
+  const alerts = useMemo(() => data?.alerts ?? [], [data])
+
+  const recentAlerts = useMemo<OperationalAlert[]>(
     () =>
       [...alerts]
-        .filter((alert) => !alert.isAcknowledged)
         .sort(
           (left, right) =>
-            dayjs(right.timestamp).valueOf() - dayjs(left.timestamp).valueOf(),
+            new Date(right.timestamp ?? 0).getTime() -
+            new Date(left.timestamp ?? 0).getTime(),
         )
         .slice(0, MAX_VISIBLE_ALERTS),
     [alerts],
   )
 
-  /**
-   * Tổng unacknowledged (toàn hệ thống) — dùng cho mô tả tiêu đề,
-   * đảm bảo luôn khớp với thẻ KPI "Cảnh báo chờ xử lý".
-   */
-  const totalUnacknowledged = useMemo(
-    () => alerts.filter((alert) => !alert.isAcknowledged).length,
-    [alerts],
-  )
-
-  const columns: ColumnsType<SystemAlert> = [
+  const columns: ColumnsType<OperationalAlert> = [
     {
       title: 'Mức độ',
       key: 'severity',
       width: 150,
       render: (_, alert) => {
-        const config = SEVERITY_CONFIG[alert.severity]
+        const config = ALERT_SEVERITY_CONFIG[alert.severity]
         return <StatusBadge tone={config.tone} label={config.label} />
       },
     },
@@ -92,12 +57,23 @@ export function RecentAlertsTable() {
       key: 'message',
       render: (_, alert) => (
         <Flex vertical gap={4}>
-          <Typography.Text strong>{alert.message}</Typography.Text>
-          <Flex gap={8} wrap style={{ color: 'var(--mcms-text-muted)', fontSize: 12 }}>
-            <span><EnvironmentOutlined aria-hidden="true" /> {alert.trayName}</span>
-            <Tooltip title={`Mã kỹ thuật: ${alert.deviceId}`}>
-              <span><ClusterOutlined aria-hidden="true" /> {formatFriendlyDeviceLocation(alert.deviceId)}</span>
-            </Tooltip>
+          <Typography.Text strong>{alert.title}</Typography.Text>
+          <Typography.Text
+            type="secondary"
+            style={{ fontSize: 12 }}
+            ellipsis={{ tooltip: alert.message }}
+          >
+            {alert.message}
+          </Typography.Text>
+          <Flex
+            gap={8}
+            wrap
+            style={{ color: 'var(--mcms-text-muted)', fontSize: 12 }}
+          >
+            <span>
+              {ALERT_CATEGORY_LABELS[alert.category] ?? alert.category}
+            </span>
+            {alert.floorName && <span>· {alert.floorName}</span>}
           </Flex>
         </Flex>
       ),
@@ -107,37 +83,26 @@ export function RecentAlertsTable() {
       key: 'timestamp',
       width: 150,
       render: (_, alert) => (
-        <Tooltip title={dayjs(alert.timestamp).format('DD/MM/YYYY HH:mm:ss')}>
-          <span style={{ color: 'var(--mcms-text-muted)', fontSize: 12 }}>
-            <ClockCircleOutlined aria-hidden="true" /> {formatRelativeTime(alert.timestamp)}
-          </span>
-        </Tooltip>
+        <span style={{ color: 'var(--mcms-text-muted)', fontSize: 12 }}>
+          <ClockCircleOutlined aria-hidden="true" />{' '}
+          {formatRelativeTime(alert.timestamp)}
+        </span>
       ),
     },
     {
-      title: 'Thao tác',
+      title: '',
       key: 'actions',
       className: 'ant-table-cell-action',
       width: 96,
-      render: (_, alert) => (
-        <Flex gap={4}>
-          <ActionButton
-            variant="text"
-            icon={<CheckOutlined />}
-            label="Xác nhận"
-            description={`Xác nhận cảnh báo: ${alert.message}`}
-            hideLabel
-            onClick={() => navigate('/alerts')}
-          />
-          <ActionButton
-            variant="text"
-            icon={<ArrowRightOutlined />}
-            label="Xem"
-            description="Xem chi tiết tại trang Quản lý cảnh báo"
-            hideLabel
-            onClick={() => navigate('/alerts')}
-          />
-        </Flex>
+      render: () => (
+        <ActionButton
+          variant="text"
+          icon={<ArrowRightOutlined />}
+          label="Xem"
+          description="Xem chi tiết tại trang Cảnh báo vận hành"
+          hideLabel
+          onClick={() => navigate('/alerts')}
+        />
       ),
     },
   ]
@@ -146,11 +111,13 @@ export function RecentAlertsTable() {
     <Card className="recent-alerts-card" size="small">
       <div className="recent-alerts-header">
         <div>
-          <Typography.Title level={2} style={{ fontSize: 15 }}>Cảnh báo gần đây</Typography.Title>
+          <Typography.Title level={2} style={{ fontSize: 15 }}>
+            Cảnh báo gần đây
+          </Typography.Title>
           <Typography.Text type="secondary">
-            {totalUnacknowledged > 0
-              ? `${totalUnacknowledged} sự cố chưa được xác nhận`
-              : 'Không có sự cố đang chờ'}
+            {alerts.length > 0
+              ? `${alerts.length} sự kiện bất thường được ghi nhận`
+              : 'Không có sự kiện bất thường'}
           </Typography.Text>
         </div>
         <ActionButton
@@ -160,10 +127,11 @@ export function RecentAlertsTable() {
           onClick={() => navigate('/alerts')}
         />
       </div>
-      <DataTable<SystemAlert>
+      <DataTable<OperationalAlert>
         columns={columns}
         dataSource={recentAlerts}
         rowKey="id"
+        loading={isLoading}
         pagination={false}
         scrollX={720}
         emptyTitle="Không có cảnh báo đang chờ xử lý"
@@ -172,7 +140,8 @@ export function RecentAlertsTable() {
   )
 }
 
-function formatRelativeTime(timestamp: string): string {
+function formatRelativeTime(timestamp: string | null | undefined): string {
+  if (!timestamp) return '—'
   const minutes = Math.floor(
     (Date.now() - dayjs(timestamp).valueOf()) / 60000,
   )

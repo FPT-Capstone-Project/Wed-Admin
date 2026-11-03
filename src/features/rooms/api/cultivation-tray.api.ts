@@ -1,12 +1,17 @@
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
 import type {
-  CreateCultivationTrayRequest,
   CultivationTray,
   CultivationTrayListQuery,
-  UpdateCultivationTrayRequest,
 } from '../../../types/cultivation'
 
+/**
+ * Cultivation Trays API — **100% READ-ONLY**.
+ *
+ * ⚠ TUYỆT ĐỐI KHÔNG thêm hàm POST/PUT/DELETE ở đây: Admin web chỉ quan
+ *   sát khay, mọi thao tác thêm / sửa / xoá hạ tầng do **nhân viên (staff)**
+ *   thực hiện trên mobile app.
+ */
 export const cultivationTrayApi = {
   async list(query: CultivationTrayListQuery = {}): Promise<CultivationTray[]> {
     const response = await apiClient.get<unknown>(
@@ -21,30 +26,5 @@ export const cultivationTrayApi = {
       `/api/cultivation-trays/${id}`,
     )
     return ensureObject<CultivationTray>(response.data)
-  },
-
-  async create(
-    payload: CreateCultivationTrayRequest,
-  ): Promise<CultivationTray | null> {
-    const response = await apiClient.post<unknown>(
-      '/api/cultivation-trays',
-      payload,
-    )
-    return ensureObject<CultivationTray>(response.data)
-  },
-
-  async update(
-    id: number,
-    payload: UpdateCultivationTrayRequest,
-  ): Promise<CultivationTray | null> {
-    const response = await apiClient.put<unknown>(
-      `/api/cultivation-trays/${id}`,
-      payload,
-    )
-    return ensureObject<CultivationTray>(response.data)
-  },
-
-  async remove(id: number): Promise<void> {
-    await apiClient.delete(`/api/cultivation-trays/${id}`)
   },
 }

@@ -1,8 +1,8 @@
 /**
- * EnvironmentChart — Biểu đồ nhiệt độ và độ ẩm trong 24 giờ.
+ * EnvironmentChart — biểu đồ nhiệt độ và độ ẩm theo tầng.
  *
- * Cải thiện: màu đường biểu đồ dùng CSS variable từ tokens thay vì hardcode hex.
- * Dữ liệu mẫu giữ nguyên (chờ API thực).
+ * ⚠ Dữ liệu THẬT: `GET /api/iot/floors/{floorId}/environment` cho từng tầng
+ *   (đọc qua hook `useTiersWithEnvironment`). Không còn dataset mock.
  */
 import { Card, Typography } from 'antd'
 import {
@@ -24,48 +24,40 @@ export interface EnvironmentDataPoint {
   humidity: number
 }
 
-const ENVIRONMENT_DATA: EnvironmentDataPoint[] = [
-  { time: '00:00', temperature: 23.8, humidity: 90 },
-  { time: '02:00', temperature: 23.3, humidity: 92 },
-  { time: '04:00', temperature: 22.9, humidity: 93 },
-  { time: '06:00', temperature: 23.5, humidity: 91 },
-  { time: '08:00', temperature: 24.6, humidity: 88 },
-  { time: '10:00', temperature: 25.4, humidity: 85 },
-  { time: '12:00', temperature: 26.2, humidity: 82 },
-  { time: '14:00', temperature: 26.8, humidity: 80 },
-  { time: '16:00', temperature: 26.1, humidity: 83 },
-  { time: '18:00', temperature: 25.2, humidity: 86 },
-  { time: '20:00', temperature: 24.7, humidity: 88 },
-  { time: '22:00', temperature: 24.2, humidity: 89 },
-  { time: 'Hiện tại', temperature: 25.6, humidity: 87 },
-]
-
 /** Màu axis/tick — dùng token muted text */
 const AXIS_TICK_COLOR = navigation.itemIcon
 
 interface EnvironmentChartProps {
   data?: EnvironmentDataPoint[]
+  /** Số tầng có dữ liệu — hiển thị trong mô tả. */
+  floorsWithData?: number
 }
 
 export function EnvironmentChart({
-  data = ENVIRONMENT_DATA,
+  data = [],
+  floorsWithData = 0,
 }: EnvironmentChartProps) {
   return (
     <Card className="environment-chart-card" size="small">
       <div className="chart-card-header">
         <div>
-          <Typography.Title level={3} style={{ fontSize: 14 }}>Biến động trong ngày</Typography.Title>
+          <Typography.Title level={3} style={{ fontSize: 14 }}>
+            Môi trường theo tầng
+          </Typography.Title>
           <Typography.Text type="secondary">
-            Nhiệt độ và độ ẩm trong 24 giờ gần nhất
+            Nhiệt độ và độ ẩm trung bình tại {floorsWithData} tầng có dữ liệu
           </Typography.Text>
         </div>
-        <StatusBadge tone="ok" label="Dữ liệu ổn định" />
+        <StatusBadge
+          tone={floorsWithData > 0 ? 'ok' : 'muted'}
+          label={floorsWithData > 0 ? 'Dữ liệu cảm biến' : 'Chưa có dữ liệu'}
+        />
       </div>
 
       <div
         className="environment-chart"
         role="img"
-        aria-label="Biểu đồ nhiệt độ và độ ẩm trong 24 giờ. Hiện tại nhiệt độ 25,6 độ C và độ ẩm 87 phần trăm."
+        aria-label={`Biểu đồ nhiệt độ và độ ẩm của ${floorsWithData} tầng nuôi nấm.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
@@ -87,7 +79,7 @@ export function EnvironmentChart({
             />
             <YAxis
               yAxisId="temperature"
-              domain={[20, 30]}
+              domain={[15, 40]}
               unit="°"
               width={40}
               axisLine={false}
@@ -97,7 +89,7 @@ export function EnvironmentChart({
             <YAxis
               yAxisId="humidity"
               orientation="right"
-              domain={[70, 100]}
+              domain={[40, 100]}
               unit="%"
               width={42}
               axisLine={false}

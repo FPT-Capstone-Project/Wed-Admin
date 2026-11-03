@@ -11,7 +11,6 @@ import type {
   LiveSessionListQuery,
   LiveStreamQuery,
   LiveStreamResponse,
-  StopLiveSessionRequest,
   UpdateCameraRequest,
 } from '../../../types/camera.types'
 import { CAMERA_STATUSES } from '../../../types/camera.types'
@@ -333,27 +332,4 @@ export const cameraApi = {
       { params: { channelId: query.channelId ?? '0' } },
     )
   },
-
-  /**
-   * POST /api/cameras/live-streams/stop — dừng phiên bằng liveToken.
-   *
-   * ⚠ `LIVE_STREAM_STOP_TOKEN_GAP`
-   * BE yêu cầu `liveToken` trong body, nhưng lại **không** trả token về ở
-   * `GET /api/cameras/live-streams` ("live tokens are never returned").
-   * Client không có đường nào để lấy giá trị này một cách hợp lệ, nên hàm
-   * này chỉ dùng được khi BE đổi chính sách (trả token, hoặc bỏ hẳn endpoint
-   * này và chỉ dùng `/live-stream/stop` theo cameraId + channelId).
-   *
-   * Giữ lại để sẵn sàng cho BE; xem `stopLiveStreamByCamera` ở trên cho
-   * luồng dùng được ngay.
-   */
-  async stopLiveSessionByToken(
-    payload: StopLiveSessionRequest,
-  ): Promise<void> {
-    await apiClient.post('/api/cameras/live-streams/stop', payload)
-  },
 }
-
-/** Endpoint này chưa dùng được end-to-end — xem `LIVE_STREAM_STOP_TOKEN_GAP`. */
-export const LIVE_STREAM_STOP_TOKEN_GAP =
-  'POST /api/cameras/live-streams/stop yêu cầu liveToken nhưng BE không trả liveToken cho client.'
