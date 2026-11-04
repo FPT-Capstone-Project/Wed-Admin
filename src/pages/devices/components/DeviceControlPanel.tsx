@@ -1,6 +1,7 @@
 import { climateThresholdsFromConfig } from '../../../features/rooms/utils/farm-climate.utils'
 import { evaluateTemperature, evaluateHumidity, type ClimateReading } from '../../../features/rooms/utils/tray-climate.utils'
 import { tones } from '../../../app/theme/tokens'
+import { formatMeasurement } from '../../../shared/utils/measurement-format'
 import '../device-industrial.css'
 import { Suspense, useMemo, useState } from 'react'
 import {
@@ -644,7 +645,7 @@ export function DeviceControlPanel() {
                   label: 'Nhiệt độ trung bình',
                   children:
                     floorEnv.data.avgTemperature != null
-                      ? `${floorEnv.data.avgTemperature.toFixed(1)}°C`
+                      ? `${formatMeasurement(floorEnv.data.avgTemperature)}°C`
                       : '—',
                 },
                 {
@@ -652,7 +653,7 @@ export function DeviceControlPanel() {
                   label: 'Độ ẩm trung bình',
                   children:
                     floorEnv.data.avgHumidity != null
-                      ? `${floorEnv.data.avgHumidity.toFixed(1)}%RH`
+                      ? `${formatMeasurement(floorEnv.data.avgHumidity)}%RH`
                       : '—',
                 },
                 {
@@ -748,7 +749,7 @@ export function DeviceControlPanel() {
                 label: 'Nhiệt độ',
                 children:
                   selectedSensor.temperature != null
-                    ? `${selectedSensor.temperature.toFixed(2)} °C`
+                    ? `${formatMeasurement(selectedSensor.temperature)} °C`
                     : '—',
               },
               {
@@ -757,7 +758,7 @@ export function DeviceControlPanel() {
                 label: 'Độ ẩm',
                 children:
                   selectedSensor.humidity != null
-                    ? `${selectedSensor.humidity.toFixed(2)} %RH`
+                    ? `${formatMeasurement(selectedSensor.humidity)} %RH`
                     : '—',
               },
               {
@@ -839,11 +840,21 @@ export function DeviceControlPanel() {
 
 function ClimateMeasurement({ reading, unit }: { reading: ClimateReading; unit: string }) {
   const tone = reading.level === 'neutral' ? 'muted' : reading.level
-  return <Flex vertical gap={4}>
-    <Typography.Text strong style={{ color: tones[tone].text, fontVariantNumeric: 'tabular-nums' }}>
-      {reading.value == null ? '—' : reading.value.toFixed(1) + unit}
-    </Typography.Text>
-    <StatusBadge tone={tone} label={reading.statusLabel} />
-    {reading.targetLabel && <Typography.Text type="secondary">Mục tiêu {reading.targetLabel}</Typography.Text>}
-  </Flex>
+  const outside = reading.level === 'warning' || reading.level === 'danger'
+  const below = reading.value != null && reading.min != null && reading.value < reading.min
+  const target = reading.min != null && reading.max != null
+    ? `${formatMeasurement(reading.min)}–${formatMeasurement(reading.max)}${unit}`
+    : reading.min != null ? `≥ ${formatMeasurement(reading.min)}${unit}`
+      : reading.max != null ? `≤ ${formatMeasurement(reading.max)}${unit}` : 'chưa có mục tiêu'
+  const label = reading.value == null ? 'Chưa có dữ liệu'
+    : `${formatMeasurement(reading.value)}${unit}, ${outside
+      ? `${below ? 'thấp' : 'cao'} hơn ngưỡng ${formatMeasurement(reading.deviation)}${unit}`
+      : reading.level === 'ok' ? 'trong ngưỡng' : 'chưa đủ thông tin'}, mục tiêu ${target}`
+  return <Tooltip title={label} trigger={['hover', 'focus']}>
+    <span tabIndex={0} aria-label={label} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, color: tones[tone].text }}>
+      <strong style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>{formatMeasurement(reading.value)}</strong>
+      {reading.value != null && <small>{unit}</small>}
+      {outside && <span aria-hidden="true" style={{ fontSize: 11 }}>{below ? '▼' : '▲'}</span>}
+    </span>
+  </Tooltip>
 }

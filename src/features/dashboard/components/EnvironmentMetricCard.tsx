@@ -8,7 +8,8 @@
  * vận hành độc lập với loại chỉ số (nhiệt độ, độ ẩm, CO₂, ánh sáng).
  */
 import type { ReactNode } from 'react'
-import { Flex } from 'antd'
+import { Tooltip } from 'antd'
+import { formatMeasurement, formatMeasurementDetails } from '../../../shared/utils/measurement-format'
 import { StatCard, StatusBadge } from '../../../shared/ui'
 import type { SemanticTone } from '../../../app/theme/tokens'
 
@@ -38,30 +39,27 @@ export function EnvironmentMetricCard({
   statusTone = 'neutral',
   status,
   target,
-  precision = 0,
   details = [],
 }: EnvironmentMetricCardProps) {
-  const formattedValue = value == null ? '—' : value.toLocaleString('vi-VN', {
-    minimumFractionDigits: precision,
-    maximumFractionDigits: precision,
-  })
+  const formattedValue = formatMeasurement(value)
+  const explanation = [title, `${formattedValue}${value == null ? '' : unit}`, status,
+    target, ...details.map(formatMeasurementDetails)].join('. ')
 
   return (
+    <Tooltip title={explanation} trigger={['hover', 'focus']}>
+    <div tabIndex={0} aria-label={explanation} style={{ height: '100%' }}>
     <StatCard
       title={title}
       value={formattedValue}
       suffix={unit}
       icon={icon}
       tone={statusTone}
+      highlightValue
       description={
-        <Flex vertical gap={4}>
-          {/* Badge trạng thái — dùng StatusBadge, không hardcode màu */}
           <StatusBadge tone={statusTone} label={status} />
-          {/* Ngưỡng mục tiêu */}
-          <span>{target}</span>
-          {details.map(detail => <span key={detail}>{detail}</span>)}
-        </Flex>
       }
     />
+    </div>
+    </Tooltip>
   )
 }

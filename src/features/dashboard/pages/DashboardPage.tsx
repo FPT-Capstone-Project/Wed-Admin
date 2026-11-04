@@ -114,6 +114,7 @@ export function DashboardPage() {
         time: point.floorName,
         temperature: point.temperature,
         humidity: point.humidity,
+        thresholds: point.thresholds,
       })),
     [environmentQuery.points],
   )
