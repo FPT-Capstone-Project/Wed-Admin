@@ -72,6 +72,12 @@ for (const [name, tone] of Object.entries(tones)) {
 }
 
 /* --- Điều hướng (sidebar) ---------------------------------------------- */
+for (const bg of [navigation.sidebarBg, navigation.sidebarHoverBg]) {
+  check(`Sidebar text / ${bg}`, navigation.sidebarText, bg, 4.5)
+  check(`Sidebar muted / ${bg}`, navigation.sidebarMuted, bg, 4.5)
+  check(`Sidebar focus / ${bg}`, navigation.sidebarFocus, bg, 3)
+}
+check('Primary link / nền trang', palette.primaryStrong, surface.background, 4.5)
 
 check('Nav / chữ item / trắng', navigation.itemText, surface.surface, 4.5)
 check('Nav / chữ item / nền hover', navigation.itemText, navigation.itemHoverBg, 4.5)

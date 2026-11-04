@@ -128,7 +128,7 @@ export const palette = {
 
 export const surface = {
   /** Nền ứng dụng (phía sau card) — Slate/Neutral nhạt. */
-  background: primitives.slate50,
+  background: '#f4f6f3',
   /** Nền card / panel / bảng — trắng tinh. */
   surface: primitives.white,
   /** Nền lạch (header bảng, ô thống kê phụ) — xám xanh rất nhạt. */
@@ -172,6 +172,11 @@ export const border = {
  *   sát mép trái (không phải chữ, không phải viền bo tròn).
  */
 export const navigation = {
+  sidebarBg: '#0f2a24',
+  sidebarText: '#e6f0e8',
+  sidebarMuted: '#b8cbbf',
+  sidebarHoverBg: '#1c4035',
+  sidebarFocus: '#d9e9df',
   /** Chữ item không chọn — Gray-600 (7.56:1 trên trắng). */
   itemText: '#4b5563',
   /** Icon item không chọn — Slate-500 (4.76:1 trên trắng). */
@@ -179,11 +184,11 @@ export const navigation = {
   /** Nền item khi hover — Slate-50. */
   itemHoverBg: primitives.slate50,
   /** Nền item đang chọn — Slate-100. */
-  itemSelectedBg: primitives.slate100,
+  itemSelectedBg: '#eaf7ee',
   /** Chữ item đang chọn — Slate-900. */
   itemSelectedText: '#0f172a',
   /** Vạch nhấn 3px sát mép trái item đang chọn — Primary (3.30:1). */
-  activeBar: primitives.green600,
+  activeBar: palette.primaryStrong,
 } as const
 
 /* ─── Màu ngữ nghĩa ───────────────────────────────────────────────────── */
@@ -311,16 +316,16 @@ export const radius = {
   /** 3px — chip nhỏ, tag nhỏ, thanh tiến trình. */
   sm: '4px',
   /** 4px — input, button, badge, table row. */
-  md: '6px',
+  md: '8px',
   /** 6px — card, panel, modal, dropdown. */
-  lg: '6px',
+  lg: '10px',
   /**
    * 6px — hộp thoại / khối nổi bật.
    *
    * ⚠ Vẫn **6px**, không phải 8px: yêu cầu là "4px - 6px" cho toàn bộ.
    *   `xl` chỉ là tên tương thích ngược để không phải sửa hàng loạt chỗ gọi.
    */
-  xl: '6px',
+  xl: '12px',
 } as const
 
 /* ─── Đổ bóng ─────────────────────────────────────────────────────────── */
@@ -333,11 +338,11 @@ export const radius = {
  */
 export const shadow = {
   /** Card — rất mảnh, gần như chỉ viền. */
-  xs: '0 1px 2px rgb(15 23 42 / 4%)',
+  xs: '0 1px 3px rgb(15 42 36 / 6%)',
   /** Popover / dropdown. */
-  sm: '0 1px 2px rgb(15 23 42 / 6%)',
+  sm: '0 4px 12px rgb(15 42 36 / 8%)',
   /** Modal / drawer. */
-  md: '0 2px 4px rgb(15 23 42 / 8%)',
+  md: '0 8px 24px rgb(15 42 36 / 10%)',
   /** Focus ring — dùng kèm outline, không thay thế outline. */
   focus: '0 0 0 2px rgb(124 139 158 / 24%)',
 } as const
@@ -551,6 +556,11 @@ export function buildCssVariables(): string {
 
   // Điều hướng (sidebar).
   lines.push(`  --mcms-nav-item-text: ${navigation.itemText};`)
+  lines.push(`  --mcms-sidebar-bg: ${navigation.sidebarBg};`)
+  lines.push(`  --mcms-sidebar-text: ${navigation.sidebarText};`)
+  lines.push(`  --mcms-sidebar-muted: ${navigation.sidebarMuted};`)
+  lines.push(`  --mcms-sidebar-hover-bg: ${navigation.sidebarHoverBg};`)
+  lines.push(`  --mcms-sidebar-focus: ${navigation.sidebarFocus};`)
   lines.push(`  --mcms-nav-item-icon: ${navigation.itemIcon};`)
   lines.push(`  --mcms-nav-item-hover-bg: ${navigation.itemHoverBg};`)
   lines.push(`  --mcms-nav-item-selected-bg: ${navigation.itemSelectedBg};`)
