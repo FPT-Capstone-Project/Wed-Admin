@@ -34,7 +34,7 @@ body {
 .mcms-brand-mark,
 .mcms-brand-copy strong,
 .mcms-brand-copy span {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: var(--mcms-font-mono);
 }
 
 button,
@@ -189,7 +189,7 @@ select {
   top: -24px;
   width: 100%;
   color: var(--mcms-text-muted);
-  font-size: 11px;
+  font-size: var(--mcms-font-small);
   font-weight: 700;
   text-align: center;
 }
@@ -273,7 +273,7 @@ select {
   border: 1px solid #7b8d81;
   border-top: 8px solid #486052;
   color: #e9f2ec;
-  font-size: 11px;
+  font-size: var(--mcms-font-small);
   background: #33483b;
   box-shadow: var(--mcms-shadow-xs);
 }
@@ -354,11 +354,11 @@ select {
   .camera-tier-label {
     width: 54px;
     padding: 4px;
-    font-size: 10px;
+    font-size: var(--mcms-font-small);
   }
 
   .camera-hud-bottom {
-    font-size: 11px;
+    font-size: var(--mcms-font-small);
   }
 }
 

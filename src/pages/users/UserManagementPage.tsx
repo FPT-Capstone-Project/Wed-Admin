@@ -133,7 +133,7 @@ export function UserManagementPage() {
                   backgroundColor: 'var(--mcms-surface-muted)',
                   color: 'var(--mcms-text-muted)',
                   border: '1px solid var(--mcms-border)',
-                  fontWeight: 650,
+                  fontWeight: 'var(--mcms-weight-semibold)',
                   fontSize: 15,
                   flexShrink: 0,
                 }}

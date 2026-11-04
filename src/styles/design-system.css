@@ -27,6 +27,13 @@
     max-width: 100%;
   }
 
+  .mcms-page-header-actions .ant-space-item,
+  .mcms-page-header-actions .ant-input-affix-wrapper,
+  .mcms-page-header-actions .ant-select {
+    min-width: 0;
+    max-width: 100%;
+  }
+
   .mcms-page-header-actions .ant-btn {
     height: auto;
     min-height: 32px;
@@ -77,15 +84,15 @@
   max-width: 100%;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 1px 8px;
+  gap: var(--mcms-badge-gap);
+  padding: var(--mcms-badge-padding-block) var(--mcms-badge-padding-inline);
   border: none;
   border-radius: var(--mcms-radius-sm);
   color: var(--mcms-text-muted);
   background: var(--mcms-surface-muted);
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 20px;
+  font-size: var(--mcms-font-small);
+  font-weight: var(--mcms-weight-medium);
+  line-height: var(--mcms-badge-line-height);
   white-space: normal;
 }
 

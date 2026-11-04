@@ -167,14 +167,14 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
           display: 'inline-flex',
           alignItems: 'center',
           gap: 4,
-          fontSize: 12,
+          fontSize: 'var(--mcms-font-small)',
           fontWeight: tokens.typography.weightSemibold,
           color: palette.text,
           backgroundColor: palette.bg,
           border: `1px solid ${palette.border}`,
           borderRadius: tokens.radius.md,
           padding: '2px 10px',
-          fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+          fontFamily: 'var(--mcms-font-mono)',
           cursor: 'help',
         }}
       >
@@ -239,10 +239,11 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
       >
         <span
           style={{
-            fontSize: 11,
+            minWidth: 0,
+            fontSize: 'var(--mcms-font-small)',
             fontWeight: tokens.typography.weightSemibold,
             color: vis.textColor,
-            fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+            fontFamily: 'var(--mcms-font-mono)',
           }}
         >
           <TrayCodeText code={tray.code} focusable={false} />
@@ -284,14 +285,16 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
       }}
     >
       {/* ── Dòng 1: mã khay + badge trạng thái ── */}
-      <Flex align="center" justify="space-between" gap={4}>
+      <Flex align="center" justify="space-between" gap={4} wrap>
         <span
           style={{
-            fontSize: 11,
+            minWidth: 0,
+            maxWidth: '100%',
+            fontSize: 'var(--mcms-font-small)',
             fontWeight: tokens.typography.weightSemibold,
             letterSpacing: '0.04em',
             color: vis.textColor,
-            fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+            fontFamily: 'var(--mcms-font-mono)',
           }}
         >
           <TrayCodeText code={tray.code} focusable={false} />
@@ -301,7 +304,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
           label={TRAY_STATUS_CONFIG[effectiveStatus].shortLabel}
           title={TRAY_STATUS_CONFIG[effectiveStatus].label}
           style={{
-            fontSize: 10,
+            fontSize: 'var(--mcms-font-small)',
             lineHeight: '16px',
             margin: 0,
           }}
@@ -312,7 +315,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
       {mushroomName && (
         <span
           style={{
-            fontSize: 12,
+            fontSize: 'var(--mcms-font-small)',
             fontWeight: tokens.typography.weightSemibold,
             color: vis.textColor,
             lineHeight: 1.3,
@@ -333,9 +336,9 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: 6,
-            fontSize: 11,
+            fontSize: 'var(--mcms-font-small)',
             color: vis.textColor,
-            opacity: 0.85,
+            opacity: 15,
           }}
         >
           <span
@@ -351,7 +354,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
             <span
               style={{
                 flexShrink: 0,
-                fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+                fontFamily: 'var(--mcms-font-mono)',
               }}
             >
               {harvestDate}
@@ -363,10 +366,10 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
       {progress !== null && (
         <div style={{ marginTop: 2 }}>
           <Flex align="center" justify="space-between" gap={4}>
-            <span style={{ fontSize: 10, color: vis.textColor, opacity: 0.7 }}>
+            <span style={{ fontSize: 'var(--mcms-font-small)', color: vis.textColor, opacity: 1 }}>
               {progress.dayLabel}
             </span>
-            <span style={{ fontSize: 10, color: vis.textColor, opacity: 0.7 }}>
+            <span style={{ fontSize: 'var(--mcms-font-small)', color: vis.textColor, opacity: 1 }}>
               {Math.round(progress.percent)}%
             </span>
           </Flex>
@@ -393,7 +396,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
       )}
 
       {!tray.rental && tray.batchId && (
-        <span style={{ fontSize: 11, color: vis.textColor, opacity: 0.7 }}>
+        <span style={{ fontSize: 'var(--mcms-font-small)', color: vis.textColor, opacity: 1 }}>
           Mẻ: {tray.batchId}
         </span>
       )}
@@ -437,8 +440,8 @@ function EmptyTrayGroup({
           border: `1px dashed ${tokens.color.border}`,
           backgroundColor: tokens.color.surfaceMuted,
           color: tokens.color.textMuted,
-          fontSize: 12,
-          fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+          fontSize: 'var(--mcms-font-small)',
+          fontFamily: 'var(--mcms-font-mono)',
           cursor: 'pointer',
           transition: `background-color ${tokens.motion.fast}`,
           WebkitTapHighlightColor: 'transparent',
@@ -446,7 +449,7 @@ function EmptyTrayGroup({
       >
         <span aria-hidden="true">▸</span>
         {trays.length} khay trống
-        <span style={{ fontSize: 11, opacity: 0.8 }}>· bấm để xem</span>
+        <span style={{ fontSize: 'var(--mcms-font-small)', opacity: 1 }}>· bấm để xem</span>
       </button>
     )
   }
@@ -471,8 +474,8 @@ function EmptyTrayGroup({
           border: `1px solid ${tokens.color.border}`,
           backgroundColor: tokens.color.surfaceMuted,
           color: tokens.color.textMuted,
-          fontSize: 12,
-          fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+          fontSize: 'var(--mcms-font-small)',
+          fontFamily: 'var(--mcms-font-mono)',
           cursor: 'pointer',
           WebkitTapHighlightColor: 'transparent',
         }}
@@ -598,7 +601,7 @@ export function RackView({
                 >
                   {formatRoomLabel(tier.name, tier.roomCode, tier.tierId)}
                 </Typography.Title>
-                <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 'var(--mcms-font-small)' }}>
                   {activeTrays.length} khay đang dùng · {emptyTrays.length} khay
                   trống
                 </Typography.Text>

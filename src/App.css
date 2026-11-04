@@ -9,6 +9,21 @@
  */
 :root {
   --mcms-font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mcms-font-small: 12px;
+  --mcms-weight-medium: 500;
+  --mcms-weight-semibold: 600;
+  --mcms-weight-bold: 700;
+  --mcms-breakpoint-xs: 320px;
+  --mcms-breakpoint-desktop: 1280px;
+  --mcms-breakpoint-sm: 375px;
+  --mcms-breakpoint-md: 768px;
+  --mcms-breakpoint-lg: 1024px;
+  --mcms-breakpoint-xl: 1440px;
+  --mcms-badge-gap: 6px;
+  --mcms-badge-padding-block: 1px;
+  --mcms-badge-padding-inline: 8px;
+  --mcms-badge-line-height: 20px;
+  --mcms-badge-dot-size: 6px;
   --mcms-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --mcms-motion-fast: 160ms ease;
   --mcms-chart-temperature: #7c3aed;
@@ -167,7 +182,7 @@ textarea {
 
 .ant-table-wrapper .ant-table-thead > tr > th {
   font-size: var(--mcms-font-body);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .ant-table-wrapper .ant-table-tbody > tr > td {
@@ -270,7 +285,7 @@ textarea {
   border-radius: 2px;
   color: #2dd4bf;
   background: #0f172a;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: var(--mcms-font-mono);
   font-size: 18px;
   font-weight: 700;
   line-height: 32px;
@@ -286,7 +301,7 @@ textarea {
 
 .mcms-brand-copy strong {
   color: #0f172a;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: var(--mcms-font-mono);
   font-size: 16px;
   letter-spacing: 0.14em;
   line-height: 1.2;
@@ -295,7 +310,7 @@ textarea {
 .mcms-brand-copy span {
   margin-top: 3px;
   color: #64748b;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-family: var(--mcms-font-mono);
   font-size: 10px;
   letter-spacing: 0.08em;
   line-height: 1.2;
@@ -473,7 +488,7 @@ textarea {
 .header-title-block > span {
   color: var(--mcms-primary-strong);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: var(--mcms-weight-bold);
   line-height: 1.25;
   letter-spacing: 0;
 }
@@ -601,7 +616,7 @@ textarea {
   display: block;
   color: var(--mcms-primary-strong);
   font-size: 12px;
-  font-weight: 750;
+  font-weight: var(--mcms-weight-bold);
   line-height: 1.4;
   letter-spacing: 0;
 }
@@ -638,7 +653,7 @@ textarea {
 .dashboard-date strong {
   color: var(--mcms-text);
   font-size: var(--mcms-font-body);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 /* .summary-card, .summary-card--* đã bỏ — dùng StatCard từ shared/ui.
@@ -1077,7 +1092,7 @@ textarea {
 .login-card-desc {
   margin-bottom: 26px !important;
   color: var(--mcms-text-muted);
-  font-size: 14.5px !important;
+  font-size: var(--mcms-font-title) !important;
   line-height: 1.6;
 }
 
@@ -1092,7 +1107,7 @@ textarea {
 
 .login-form .ant-form-item-label > label {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .login-form .ant-input-affix-wrapper-lg,
@@ -1108,7 +1123,7 @@ textarea {
 .login-form .ant-btn-lg {
   min-height: 50px;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .login-form .ant-form-item-explain-error {
@@ -1129,7 +1144,7 @@ textarea {
 
 .login-forgot {
   color: var(--mcms-text-muted);
-  font-size: 13.5px;
+  font-size: var(--mcms-font-title);
   font-weight: 600;
 }
 
@@ -1143,12 +1158,12 @@ textarea {
   border-top: 1px solid var(--mcms-border-soft);
   text-align: center;
   color: var(--mcms-text-muted);
-  font-size: 13.5px;
+  font-size: var(--mcms-font-title);
 }
 
 .login-alt a {
   color: var(--mcms-primary-strong);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
@@ -1215,7 +1230,7 @@ textarea {
   padding: 0 12px 0 8px;
   border-radius: var(--mcms-radius-md);
   color: var(--mcms-text-muted);
-  font-size: 13.5px;
+  font-size: var(--mcms-font-title);
   font-weight: 600;
   transition: background-color 180ms ease, color 180ms ease;
 }
@@ -1284,7 +1299,7 @@ textarea {
   padding: 0 8px;
   border-radius: var(--mcms-radius-md);
   color: var(--mcms-text-muted);
-  font-size: 12.5px;
+  font-size: var(--mcms-font-body);
   font-weight: 600;
   white-space: nowrap;
   transition: background-color 200ms ease, color 200ms ease;
@@ -1344,7 +1359,7 @@ textarea {
   display: block;
   margin-bottom: 6px;
   color: var(--mcms-primary-strong);
-  font-size: 11.5px;
+  font-size: var(--mcms-font-small);
   font-weight: 700;
   letter-spacing: 0.9px;
   text-transform: uppercase;
@@ -1362,7 +1377,7 @@ textarea {
 .auth-v2-desc {
   margin: 0 0 24px !important;
   color: var(--mcms-text-muted);
-  font-size: 13.5px;
+  font-size: var(--mcms-font-title);
   line-height: 1.6;
 }
 
@@ -1375,7 +1390,7 @@ textarea {
 .auth-v2-form .ant-form-item-label > label {
   height: auto;
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .auth-v2-form .ant-input-affix-wrapper-lg,
@@ -1395,7 +1410,7 @@ textarea {
 .auth-v2-form .ant-btn-lg {
   min-height: 50px;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .auth-v2-form .ant-form-item-explain-error {
@@ -1484,7 +1499,7 @@ textarea {
 .auth-v2-otp-head span,
 .auth-v2-otp-head > div {
   color: #2f4a38;
-  font-size: 13.5px;
+  font-size: var(--mcms-font-title);
   line-height: 1.6;
 }
 
@@ -1535,7 +1550,7 @@ textarea {
   height: auto;
   padding: 0 4px;
   font-size: var(--mcms-font-body);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   vertical-align: baseline;
 }
 
@@ -1550,7 +1565,7 @@ textarea {
 
 .auth-v2-alt a {
   color: var(--mcms-primary-strong);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .auth-v2-note {
@@ -1559,7 +1574,7 @@ textarea {
   border-radius: var(--mcms-radius-md);
   color: var(--mcms-text-muted);
   background: var(--mcms-primary-faint);
-  font-size: 12.5px;
+  font-size: var(--mcms-font-body);
   line-height: 1.55;
 }
 
@@ -1648,7 +1663,7 @@ textarea {
 
   .auth-v2-step {
     gap: 5px;
-    font-size: 11.5px;
+    font-size: var(--mcms-font-small);
   }
 
   .auth-v2-top-spacer {
@@ -1689,7 +1704,7 @@ textarea {
 .admin-panel-section .ant-table-thead > tr > th {
   background: var(--mcms-surface-muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   letter-spacing: 0.2px;
 }
 
@@ -1703,7 +1718,7 @@ textarea {
 
 .iot-api-label {
   color: var(--mcms-text-muted);
-  font-size: 11.5px;
+  font-size: var(--mcms-font-small);
   font-weight: 600;
   letter-spacing: 0.2px;
   text-transform: uppercase;
@@ -1821,7 +1836,7 @@ textarea {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .device-metric-tone--normal {
@@ -2088,7 +2103,7 @@ textarea {
 
 .floor-climate-config-modal .ant-form-item-label > label {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   font-size: var(--mcms-font-body);
 }
 
@@ -2272,7 +2287,7 @@ textarea {
 .floor-camera-control-label {
   color: var(--mcms-text-muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .floor-camera-mode-control .ant-segmented {
@@ -2303,7 +2318,7 @@ textarea {
   gap: 6px;
   margin: 0;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .floor-camera-live-dot {
@@ -2702,7 +2717,7 @@ textarea {
 .growth-stage-timeline .ant-steps-item-title {
   color: var(--mcms-text);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .growth-stage-timeline .ant-steps-item-description {
@@ -3676,7 +3691,7 @@ textarea {
 .iot-filter-label {
   color: var(--mcms-text-muted);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .iot-filter-field .ant-select {
@@ -3763,7 +3778,7 @@ textarea {
   flex: 0 0 auto;
   color: var(--mcms-primary-dark) !important;
   font-size: 11px !important;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .iot-empty-history {
@@ -4134,7 +4149,7 @@ textarea {
 
 .telemetry-relay-state > span.is-active {
   color: var(--mcms-primary-strong);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .rental-history-table-panel {
@@ -4378,7 +4393,7 @@ textarea {
   color: var(--mcms-primary-strong);
   background: var(--mcms-primary-soft);
   font-size: 12px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 /* ── Chart event markers ─────────────────────────── */
@@ -5168,7 +5183,7 @@ textarea {
 
 .rental-cost-breakdown dd {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
@@ -5192,7 +5207,7 @@ textarea {
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: start;
   gap: 0 6px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .overdue-fee-row dt small {
@@ -5213,7 +5228,7 @@ textarea {
 
 .rental-total-row dt {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .rental-total-row dd {
@@ -5387,7 +5402,7 @@ textarea {
 
 .staff-contact-call {
   color: var(--mcms-primary-dark) !important;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .tray-staff-actions {
@@ -5403,7 +5418,7 @@ textarea {
   height: auto;
   justify-content: center;
   padding: 11px 16px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   line-height: 1.35;
   white-space: normal;
 }
@@ -5802,7 +5817,7 @@ textarea {
 
 .tray-closure-reason-modal .ant-form-item-label > label {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .tray-closure-reason-modal .ant-input-textarea textarea {
@@ -5813,7 +5828,7 @@ textarea {
 .tray-log-note-modal .ant-form-item-label > label,
 .tray-invoice-modal .ant-form-item-label > label {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .tray-invoice-modal .ant-modal-content {
@@ -5920,7 +5935,7 @@ textarea {
 .invoice-brand {
   color: var(--mcms-primary-strong);
   font-size: 11px;
-  font-weight: 750;
+  font-weight: var(--mcms-weight-bold);
 }
 
 .invoice-customer-info {
@@ -5970,7 +5985,7 @@ textarea {
 
 .invoice-charge-table > div > span:last-child {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   text-align: right;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;

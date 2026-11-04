@@ -53,7 +53,7 @@ function RangeCell({
       display: 'grid', gap: 4, padding: '6px 8px',
       border: '1px solid var(--mcms-border)', borderRadius: 6,
       background: 'var(--mcms-surface)',
-      fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+      fontFamily: 'var(--mcms-font-mono)',
       fontVariantNumeric: 'tabular-nums', fontSize: 12,
     }}>
       <span><span style={{ color: 'var(--mcms-text-muted)' }}>Min </span>{min ?? '—'} {unit}</span>

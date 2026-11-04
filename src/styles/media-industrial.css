@@ -16,7 +16,7 @@
 .media-mono,
 .batch-daily-thumb-label,
 .batch-playback-current-meta {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--mcms-font-mono);
   font-variant-numeric: tabular-nums;
 }
 .mcms-growth-snapshot,

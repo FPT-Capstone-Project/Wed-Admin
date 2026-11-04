@@ -69,11 +69,11 @@ export function StatCard({
         overflow: 'hidden',
         ...style,
       }}
-      styles={{ body: { padding: 16 } }}
+      styles={{ body: { padding: 'var(--mcms-space-4)' } }}
     >
-      <Flex justify="space-between" align="flex-start" gap={8}>
-        <Flex vertical gap={6} style={{ minWidth: 0 }}>
-          <Flex align="center" gap={6}>
+      <Flex justify="space-between" align="flex-start" gap="var(--mcms-space-2)">
+        <Flex vertical gap="var(--mcms-badge-gap)" style={{ minWidth: 0 }}>
+          <Flex align="center" gap="var(--mcms-badge-gap)">
             {palette && (
               <span
                 aria-hidden="true"
@@ -92,7 +92,7 @@ export function StatCard({
             </Typography.Text>
           </Flex>
 
-          <Flex align="baseline" gap={4}>
+          <Flex align="baseline" gap="var(--mcms-space-1)">
             <Typography.Text
               strong
               style={{
@@ -121,7 +121,7 @@ export function StatCard({
           )}
 
           {extra && (
-            <div style={{ marginTop: 6 }}>{extra}</div>
+            <div style={{ marginTop: 'var(--mcms-badge-gap)' }}>{extra}</div>
           )}
         </Flex>
 
@@ -144,7 +144,7 @@ export function StatCard({
         <Tooltip title={hint}>
           <Typography.Text
             type="secondary"
-            style={{ fontSize: 12, display: 'block', marginTop: 4 }}
+            style={{ fontSize: 12, display: 'block', marginTop: 'var(--mcms-space-1)' }}
           >
             {hint}
           </Typography.Text>

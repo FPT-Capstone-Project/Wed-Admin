@@ -178,6 +178,8 @@ export function LongTermTrendChart({
               tickLine={false}
             />
             <Tooltip
+              itemStyle={{ color: chartTooltipStyle.color }}
+              labelStyle={{ color: chartTooltipStyle.color }}
               contentStyle={chartTooltipStyle}
               formatter={(value, name) => [
                 `${formatMeasurement(value == null ? null : Number(value))} ${String(name).includes('Nhiệt') ? '°C' : '%RH'}`,

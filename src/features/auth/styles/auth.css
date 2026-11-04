@@ -183,7 +183,7 @@
 .mcms-login-brand-feature-text strong {
   color: var(--mcms-text);
   font-size: 14px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
 }
 
 .mcms-login-brand-feature-text span {
@@ -241,7 +241,7 @@
 
 .login-form.mcms-login-form .ant-form-item-label > label {
   color: var(--mcms-text);
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   font-size: 14px;
 }
 
@@ -291,7 +291,7 @@
   min-height: 44px;
   height: 44px;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: var(--mcms-weight-semibold);
   border-radius: var(--mcms-radius-md);
   background: var(--mcms-primary-strong);
   border-color: var(--mcms-primary-strong);
@@ -309,7 +309,7 @@
   padding-top: var(--mcms-space-4);
   border-top: 1px solid var(--mcms-border-soft);
   color: var(--mcms-text-muted);
-  font-size: 12.5px;
+  font-size: var(--mcms-font-body);
   text-align: center;
 }
 

@@ -75,7 +75,7 @@ export function TrayAttentionBanner({
         />
         <Typography.Text
           type="secondary"
-          style={{ fontSize: 12 }}
+          style={{ fontSize: 'var(--mcms-font-small)' }}
         >
           Không có khay nào cần chú ý
         </Typography.Text>
@@ -117,7 +117,7 @@ export function TrayAttentionBanner({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
-                fontSize: 12,
+                fontSize: 'var(--mcms-font-small)',
                 color: tokens.color.text,
               }}
             >
@@ -132,7 +132,7 @@ export function TrayAttentionBanner({
                 display: 'inline-flex',
                 alignItems: 'center',
                 gap: 4,
-                fontSize: 12,
+                fontSize: 'var(--mcms-font-small)',
                 color: tokens.color.textMuted,
               }}
             >
@@ -163,7 +163,7 @@ export function TrayAttentionBanner({
                   size="small"
                   onClick={() => onSelectTray(tray.id)}
                   style={{
-                    fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
+                    fontFamily: 'var(--mcms-font-mono)',
                     fontWeight: tokens.typography.weightSemibold,
                     color: tokens.color.text,
                     borderColor: tokens.color.border,

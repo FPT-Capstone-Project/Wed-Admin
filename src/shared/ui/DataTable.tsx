@@ -102,8 +102,8 @@ export function DataTable<T extends object>({
           style={{
             display: 'flex',
             flexDirection: 'column',
-            gap: 8,
-            marginBottom: 12,
+            gap: 'var(--mcms-space-2)',
+            marginBottom: 'var(--mcms-space-3)',
           }}
         >
           {(title || description) && (
@@ -130,7 +130,7 @@ export function DataTable<T extends object>({
             <div
               style={{
                 display: 'flex',
-                gap: 8,
+                gap: 'var(--mcms-space-2)',
                 flexWrap: 'wrap',
                 alignItems: 'center',
               }}

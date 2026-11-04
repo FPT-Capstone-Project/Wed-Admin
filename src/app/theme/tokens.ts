@@ -406,6 +406,8 @@ export const targetSize = {
 /* ─── Breakpoint ───────────────────────────────────────────────────────── */
 
 export const breakpoint = {
+  xs: 320,
+  desktop: 1280,
   /** Điện thoại nhỏ. */
   sm: 375,
   /** Tablet dọc. */
@@ -417,6 +419,8 @@ export const breakpoint = {
 } as const
 
 /* ─── Token tổng hợp ──────────────────────────────────────────────────── */
+/** AntD grid boundaries: preserve the existing responsive behavior. */
+export const gridBreakpoint = { xs: 480, sm: 576, md: 768, lg: 992, xl: 1200, xxl: 1600 } as const
 
 /**
  * Token gốc — dùng khi import trong TS.
@@ -431,6 +435,7 @@ export const chartSeries = {
 } as const
 
 export const componentTokens = {
+  badge: { gap: 6, paddingBlock: 1, paddingInline: 8, lineHeight: 20, dotSize: 6 },
   chart: { height: 280, borderWidth: 1, lineWidth: 2, markerSize: 8 },
   button: { background: palette.primaryStrong },
   card: { background: surface.surface, border: border.base },
@@ -443,6 +448,7 @@ export const componentTokens = {
 } as const
 
 export const tokens = {
+  gridBreakpoint,
   chartSeries,
   primitives,
   components: componentTokens,
@@ -490,6 +496,15 @@ export type Tokens = typeof tokens
 export function buildCssVariables(): string {
   const lines: string[] = []
   lines.push(`  --mcms-font-family: ${typography.fontFamily};`)
+  lines.push(`  --mcms-font-small: ${typography.sizeSmall}px;`)
+  lines.push(`  --mcms-weight-medium: ${typography.weightMedium};`)
+  lines.push(`  --mcms-weight-semibold: ${typography.weightSemibold};`)
+  lines.push(`  --mcms-weight-bold: ${typography.weightBold};`)
+  for (const [name, value] of Object.entries(breakpoint)) lines.push(`  --mcms-breakpoint-${name}: ${value}px;`)
+  for (const [name, value] of Object.entries(componentTokens.badge)) {
+    const cssName = name.replace(/[A-Z]/g, letter => `-${letter.toLowerCase()}`)
+    lines.push(`  --mcms-badge-${cssName}: ${value}px;`)
+  }
   lines.push(`  --mcms-font-mono: ${typography.fontMono};`)
   lines.push(`  --mcms-motion-fast: ${motion.fast};`)
   lines.push(`  --mcms-chart-temperature: ${chartSeries.temperature};`)

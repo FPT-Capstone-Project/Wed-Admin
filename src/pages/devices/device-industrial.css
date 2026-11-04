@@ -39,7 +39,7 @@
 .mcms-iot-mono .mcms-metadata-badge,
 .mcms-iot-chart .telemetry-tooltip-values,
 .mcms-iot-chart .telemetry-tooltip > strong {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--mcms-font-mono);
   font-variant-numeric: tabular-nums;
 }
 

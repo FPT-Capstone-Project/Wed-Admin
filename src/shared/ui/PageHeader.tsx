@@ -29,17 +29,17 @@ export function PageHeader({
   return (
     <Flex
       vertical
-      gap={12}
-      style={{ marginBottom: 16 }}
+      gap="var(--mcms-space-3)"
+      style={{ marginBottom: 'var(--mcms-space-4)' }}
       className="mcms-page-header"
     >
       <Flex
         justify="space-between"
         align="flex-start"
-        gap={16}
+        gap="var(--mcms-space-4)"
         wrap
       >
-        <Flex vertical gap={4} className="mcms-page-header-copy" style={{ minWidth: 0 }}>
+        <Flex vertical gap="var(--mcms-space-1)" className="mcms-page-header-copy" style={{ minWidth: 0 }}>
           <Typography.Title level={1} style={{ margin: 0, fontSize: 'var(--mcms-font-heading)', lineHeight: 1.4 }}>
             {title}
           </Typography.Title>
@@ -51,14 +51,14 @@ export function PageHeader({
         </Flex>
 
         {actions && (
-          <Flex gap={8} wrap align="center" className="mcms-page-header-actions">
+          <Flex gap="var(--mcms-space-2)" wrap align="center" className="mcms-page-header-actions">
             {actions}
           </Flex>
         )}
       </Flex>
 
       {extra && (
-        <Flex gap={12} wrap align="center">
+        <Flex gap="var(--mcms-space-3)" wrap align="center">
           {extra}
         </Flex>
       )}

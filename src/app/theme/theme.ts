@@ -9,6 +9,7 @@ import {
   text,
   tones,
   typography,
+  gridBreakpoint,
 } from './tokens'
 
 /**
@@ -38,6 +39,23 @@ export type McmsThemeConfig = Omit<ThemeConfig, 'token'> & {
  */
 export const mcmsTheme: McmsThemeConfig = {
   token: {
+    screenXS: gridBreakpoint.xs,
+    screenXSMin: gridBreakpoint.xs,
+    screenXSMax: gridBreakpoint.sm - 1,
+    screenSM: gridBreakpoint.sm,
+    screenSMMin: gridBreakpoint.sm,
+    screenSMMax: gridBreakpoint.md - 1,
+    screenMD: gridBreakpoint.md,
+    screenMDMin: gridBreakpoint.md,
+    screenMDMax: gridBreakpoint.lg - 1,
+    screenLG: gridBreakpoint.lg,
+    screenLGMin: gridBreakpoint.lg,
+    screenLGMax: gridBreakpoint.xl - 1,
+    screenXL: gridBreakpoint.xl,
+    screenXLMin: gridBreakpoint.xl,
+    screenXLMax: gridBreakpoint.xxl - 1,
+    screenXXL: gridBreakpoint.xxl,
+    screenXXLMin: gridBreakpoint.xxl,
     colorPrimary: palette.primary,
     colorLink: text.base,
     colorLinkHover: text.muted,

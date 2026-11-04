@@ -44,7 +44,7 @@ export function PasswordStrength({ value }: PasswordStrengthProps) {
 /** Gợi ý yêu cầu mật khẩu — hiển thị dưới form đăng ký. */
 export function PasswordHint() {
   return (
-    <Typography.Text type="secondary" style={{ fontSize: 12.5 }}>
+    <Typography.Text type="secondary" style={{ fontSize: 'var(--mcms-font-body)' }}>
       Nên có ít nhất 8 ký tự, kết hợp chữ hoa, chữ thường và số để tăng độ an toàn.
     </Typography.Text>
   )

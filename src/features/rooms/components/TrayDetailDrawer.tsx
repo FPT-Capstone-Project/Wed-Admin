@@ -101,7 +101,7 @@ function InfoCard({ icon, title, subtitle, children }: InfoCardProps) {
             {title}
           </Typography.Title>
           {subtitle && (
-            <Typography.Text style={{ fontSize: 11, color: tokens.color.textMuted }}>
+            <Typography.Text style={{ fontSize: 'var(--mcms-font-small)', color: tokens.color.textMuted }}>
               {subtitle}
             </Typography.Text>
           )}
@@ -412,7 +412,7 @@ export function TrayDetailDrawer({
           </span>
           <span
             style={{
-              fontSize: 12,
+              fontSize: 'var(--mcms-font-small)',
               color: tokens.color.textMuted,
               fontWeight: tokens.typography.weightMedium,
               backgroundColor: tokens.color.surfaceMuted,

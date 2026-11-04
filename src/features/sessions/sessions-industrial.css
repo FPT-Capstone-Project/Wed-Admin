@@ -23,6 +23,6 @@
 .mcms-session-mono,
 .mcms-session-mono .ant-typography,
 .mcms-session-mono .mcms-metadata-badge {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family: var(--mcms-font-mono);
   font-variant-numeric: tabular-nums;
 }

@@ -61,7 +61,7 @@ export function TrayStatusLegend() {
       wrap
       role="list"
       aria-label="Chú thích trạng thái khay"
-      style={{ fontSize: 12 }}
+      style={{ fontSize: 'var(--mcms-font-small)' }}
     >
       {TRAY_LEGEND_ENTRIES.map((entry) => {
         // Nhãn + tone lấy từ config chung → legend và ô khay luôn khớp.
@@ -83,7 +83,7 @@ export function TrayStatusLegend() {
                   alignItems: 'center',
                   gap: 4,
                   color: palette.text,
-                  fontSize: 11,
+                  fontSize: 'var(--mcms-font-small)',
                 }}
               >
                 {entry.icon}
@@ -99,7 +99,7 @@ export function TrayStatusLegend() {
               </span>
               <Typography.Text
                 type="secondary"
-                style={{ fontSize: 12, lineHeight: 1.4 }}
+                style={{ fontSize: 'var(--mcms-font-small)', lineHeight: 1.4 }}
               >
                 {config.label}
               </Typography.Text>

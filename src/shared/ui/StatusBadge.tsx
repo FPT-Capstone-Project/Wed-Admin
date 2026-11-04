@@ -63,8 +63,8 @@ export function StatusBadge({
           tabIndex={0}
           style={{
             display: 'inline-block',
-            width: 6,
-            height: 6,
+            width: 'var(--mcms-badge-dot-size)',
+            height: 'var(--mcms-badge-dot-size)',
             borderRadius: '50%',
             backgroundColor: dotColor,
             ...style,
@@ -82,14 +82,14 @@ export function StatusBadge({
       style={{
         display: 'inline-flex',
         alignItems: 'center',
-        gap: 6,
-        padding: '1px 8px',
+        gap: 'var(--mcms-badge-gap)',
+        padding: 'var(--mcms-badge-padding-block) var(--mcms-badge-padding-inline)',
         borderRadius: 'var(--mcms-radius-sm)',
         color: palette.text,
         backgroundColor: palette.badgeBg,
-        fontSize: 12,
+        fontSize: 'var(--mcms-font-small)',
         fontWeight: 600,
-        lineHeight: '20px',
+        lineHeight: 'var(--mcms-badge-line-height)',
         minWidth: 0,
         maxWidth: '100%',
         whiteSpace: 'normal',
@@ -100,8 +100,8 @@ export function StatusBadge({
         aria-hidden="true"
         style={{
           display: 'inline-block',
-          width: 6,
-          height: 6,
+          width: 'var(--mcms-badge-dot-size)',
+          height: 'var(--mcms-badge-dot-size)',
           flexShrink: 0,
           borderRadius: '50%',
           backgroundColor: dotColor,
