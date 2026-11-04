@@ -1,6 +1,7 @@
 import type { ClimateReading } from './tray-climate.utils'
 
 export type ClimateMetric = 'temperature' | 'humidity'
+export type ClimateTone = 'ok' | 'danger' | 'muted'
 export type ClimateDirection = 'high' | 'low' | 'within' | 'unknown'
 
 export function getClimateDirection(reading: ClimateReading): ClimateDirection {
@@ -10,7 +11,7 @@ export function getClimateDirection(reading: ClimateReading): ClimateDirection {
   return 'within'
 }
 
-export function getClimateTone(metric: ClimateMetric, direction: ClimateDirection) {
+export function getClimateTone(metric: ClimateMetric, direction: ClimateDirection): ClimateTone {
   if (direction === 'unknown') return 'muted'
   return (metric === 'temperature' && direction === 'high') ||
     (metric === 'humidity' && direction === 'low') ? 'danger' : 'ok'

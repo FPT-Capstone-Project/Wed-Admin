@@ -9,6 +9,7 @@ import { useMasterList } from '../../devices/hooks/useIoT'
 import type { FloorEnvironmentPoint } from '../hooks/useFloorEnvironmentOverview'
 import { useFloorHistory } from '../hooks/useFloorHistory'
 import type { FloorHistoryPoint } from '../utils/floor-history.utils'
+import { climateAxis } from '../utils/climate-axis.utils'
 
 const REFRESH_MS = 5 * 60_000
 const WINDOW_MS = 24 * 60 * 60_000
@@ -58,6 +59,8 @@ function FloorChart({ floor, masterId, from, to }: { floor: FloorEnvironmentPoin
   const history = useFloorHistory(masterId, floor.nodeId, floor.sensorIds, from, to)
   const points = history.data?.points ?? []
   const hasData = points.some(point => point.temperature != null || point.humidity != null)
+  const temperatureAxis = climateAxis(points.map(point => point.temperature))
+  const humidityAxis = climateAxis(points.map(point => point.humidity))
   return <Card size="small" className="environment-chart-card" style={{ height: '100%' }}>
     <Typography.Title level={3} style={{ fontSize: 14 }}>{floor.floorName}</Typography.Title>
     {history.isFetching && <Spin size="small" />}
@@ -68,12 +71,12 @@ function FloorChart({ floor, masterId, from, to }: { floor: FloorEnvironmentPoin
           <LineChart data={points} margin={{ top: 12, right: 4, bottom: 4, left: 0 }}>
             <CartesianGrid stroke="var(--mcms-border)" strokeDasharray="3 3" />
             <XAxis dataKey="timestamp" type="number" domain={[from, to]} tickFormatter={timeLabel} minTickGap={45} tick={{ fontSize: 11 }} />
-            <YAxis yAxisId="temperature" width={48} tickFormatter={formatMeasurement} unit="°C" tick={{ fontSize: 11 }} />
-            <YAxis yAxisId="humidity" orientation="right" width={55} tickFormatter={formatMeasurement} unit="%" tick={{ fontSize: 11 }} />
+            <YAxis yAxisId="temperature" {...temperatureAxis} width={48} tickFormatter={formatMeasurement} unit="°C" tick={{ fontSize: 11 }} />
+            <YAxis yAxisId="humidity" {...humidityAxis} orientation="right" width={64} tickFormatter={formatMeasurement} unit="%RH" tick={{ fontSize: 11 }} />
             <Tooltip content={props => <ClimateHistoryTooltip active={props.active} payload={props.payload} floor={floor} />} />
             <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Line yAxisId="temperature" dataKey="temperature" name="Nhiệt độ (°C)" stroke={chartSeries.temperature} type="linear" dot={false} connectNulls={false} isAnimationActive={false} />
-            <Line yAxisId="humidity" dataKey="humidity" name="Độ ẩm (%RH)" stroke={chartSeries.humidity} strokeDasharray="7 4" type="linear" dot={false} connectNulls={false} isAnimationActive={false} />
+            <Line yAxisId="temperature" dataKey="temperature" name="Nhiệt độ (°C)" stroke={chartSeries.temperature} type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={false} />
+            <Line yAxisId="humidity" dataKey="humidity" name="Độ ẩm (%RH)" stroke={chartSeries.humidity} strokeDasharray="7 4" type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>}

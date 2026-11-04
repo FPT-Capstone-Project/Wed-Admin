@@ -1,5 +1,4 @@
-import type { SemanticTone } from '../../../app/theme/tokens'
-import { getClimateTone, getClimateDirection } from './climate-tone.utils.ts'
+import { getClimateTone, getClimateDirection, type ClimateTone } from './climate-tone.utils.ts'
 import {
   evaluateTemperature, evaluateHumidity,
   type ClimateThresholds,
@@ -30,7 +29,7 @@ export function climateThresholdsFromConfig(config: {
 
 export interface FarmClimateSummary {
   value: number | null
-  tone: SemanticTone
+  tone: ClimateTone
   label: string
   missingCount: number
   coverageNote: string

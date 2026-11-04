@@ -158,7 +158,7 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
     tone !== 'muted' ? `${formatMeasurement(reading.value)}${unit}` : '—'
 
   return (
-    <Tooltip title={tooltip} trigger={['hover', 'focus']}>
+    <Tooltip title={`${ariaLabel}: ${valueText}, ${tooltip}`} trigger={['hover', 'focus']}>
       <span
         tabIndex={0}
         aria-label={`${ariaLabel}: ${valueText}, ${tooltip}`}
