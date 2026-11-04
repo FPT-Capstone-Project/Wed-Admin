@@ -1,5 +1,9 @@
+import { ChartFrame, ChartLegend } from '../../../shared/ui/charts/ChartPrimitives'
+import { useChartMotion } from '../../../shared/ui/charts/useChartMotion'
+import { chartTickStyle } from '../../../shared/ui/charts/chart-styles'
+import { chartTooltipStyle } from '../../../shared/ui/charts/chart-styles'
+import { formatMeasurement } from '../../../shared/utils/measurement-format'
 import '../device-industrial.css'
-import { CloudOutlined, FireOutlined } from '@ant-design/icons'
 import { Typography } from 'antd'
 import { useState } from 'react'
 import {
@@ -110,6 +114,7 @@ export function LongTermTrendChart({
   isComparison,
   trayId,
 }: LongTermTrendChartProps) {
+  const animate = useChartMotion()
   const lines = isComparison
     ? buildComparisonLines(comparisonYears)
     : STANDARD_LINES
@@ -132,41 +137,12 @@ export function LongTermTrendChart({
         <span className="long-term-chart-count">{data.length} mốc dữ liệu</span>
       </div>
 
-      <div className="chart-toggle-legend" aria-label="Ẩn hoặc hiện chuỗi dữ liệu">
-        {lines.map((line) => (
-          <button
-            key={line.key}
-            type="button"
-            className={!hiddenLines[line.key] ? 'is-visible' : ''}
-            aria-pressed={!hiddenLines[line.key]}
-            onClick={() =>
-              setHiddenLines((current) => ({
-                ...current,
-                [line.key]: !current[line.key],
-              }))
-            }
-          >
-            <span
-              style={{
-                borderColor: line.color,
-                borderTopStyle: line.dash ? 'dashed' : 'solid',
-              }}
-              aria-hidden="true"
-            />
-            {line.yAxisId === 'temperature' ? (
-              <FireOutlined aria-hidden="true" />
-            ) : (
-              <CloudOutlined aria-hidden="true" />
-            )}
-            {line.label}
-          </button>
-        ))}
-      </div>
+      <ChartLegend items={lines.map(line => ({ key: line.key, label: line.label, color: line.color, dashed: !!line.dash, visible: !hiddenLines[line.key] }))} onToggle={key => setHiddenLines(current => ({ ...current, [key]: !current[key] }))} />
 
-      <div
+      <ChartFrame
         className="iot-long-term-chart"
-        role="img"
-        aria-label={`Biểu đồ xu hướng nhiệt độ và độ ẩm dài hạn của ${trayId}.`}
+        empty={!data.some(point => lines.some(line => typeof point[line.key as keyof LongTermChartDatum] === 'number'))}
+        label={`Biểu đồ xu hướng nhiệt độ và độ ẩm dài hạn của ${trayId}.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={data} margin={{ top: 16, right: 10, left: 0, bottom: 8 }}>
@@ -178,7 +154,7 @@ export function LongTermTrendChart({
             <XAxis
               dataKey="label"
               minTickGap={32}
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={false}
               tickLine={false}
             />
@@ -187,7 +163,7 @@ export function LongTermTrendChart({
               domain={[18, 32]}
               unit="°"
               width={38}
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={false}
               tickLine={false}
             />
@@ -197,20 +173,14 @@ export function LongTermTrendChart({
               domain={[60, 100]}
               unit="%"
               width={42}
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={false}
               tickLine={false}
             />
             <Tooltip
-              contentStyle={{
-                border: '1px solid var(--mcms-border)',
-                borderRadius: 6,
-                background: 'var(--mcms-surface)',
-                boxShadow: 'none',
-                fontSize: 12,
-              }}
+              contentStyle={chartTooltipStyle}
               formatter={(value, name) => [
-                `${Number(value).toLocaleString('vi-VN')} ${String(name).includes('Nhiệt') ? '°C' : '%RH'}`,
+                `${formatMeasurement(value == null ? null : Number(value))} ${String(name).includes('Nhiệt') ? '°C' : '%RH'}`,
                 name,
               ]}
             />
@@ -227,7 +197,7 @@ export function LongTermTrendChart({
                 connectNulls={false}
                 dot={false}
                 hide={Boolean(hiddenLines[line.key])}
-                isAnimationActive={false}
+                isAnimationActive={animate}
               />
             ))}
             <Brush
@@ -239,7 +209,7 @@ export function LongTermTrendChart({
             />
           </LineChart>
         </ResponsiveContainer>
-      </div>
+      </ChartFrame>
     </section>
   )
 }

@@ -1,3 +1,6 @@
+import { ChartFrame, ChartLegend, ChartTooltipSurface } from '../../../shared/ui/charts/ChartPrimitives'
+import { useChartMotion } from '../../../shared/ui/charts/useChartMotion'
+import { chartTickStyle } from '../../../shared/ui/charts/chart-styles'
 import { useEffect, useState } from 'react'
 import { Alert, Card, Col, Empty, Row, Spin, Typography } from 'antd'
 import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -37,7 +40,7 @@ function ClimateHistoryTooltip({ active, payload, floor }: {
 }) {
   const point = payload?.[0]?.payload
   if (!active || !point) return null
-  return <div style={{ background: 'var(--mcms-surface)', padding: 12, border: '1px solid var(--mcms-border)' }}>
+  return <ChartTooltipSurface>
     <strong>{timeLabel(point.timestamp)}</strong>
     {(['temperature', 'humidity'] as const).map(metric => {
       const reading = (metric === 'temperature' ? evaluateTemperature : evaluateHumidity)(point[metric], floor.thresholds)
@@ -52,10 +55,11 @@ function ClimateHistoryTooltip({ active, payload, floor }: {
         {(direction === 'high' || direction === 'low') && <div>{direction === 'high' ? 'Cao' : 'Thấp'} hơn ngưỡng {formatMeasurement(reading.deviation)}{unit}</div>}
       </div>
     })}
-  </div>
+  </ChartTooltipSurface>
 }
 
 function FloorChart({ floor, masterId, from, to }: { floor: FloorEnvironmentPoint; masterId: string | null; from: number; to: number }) {
+  const animate = useChartMotion()
   const history = useFloorHistory(masterId, floor.nodeId, floor.sensorIds, from, to)
   const points = history.data?.points ?? []
   const hasData = points.some(point => point.temperature != null || point.humidity != null)
@@ -65,20 +69,22 @@ function FloorChart({ floor, masterId, from, to }: { floor: FloorEnvironmentPoin
     <Typography.Title level={3} style={{ fontSize: 14 }}>{floor.floorName}</Typography.Title>
     {history.isFetching && <Spin size="small" />}
     {!!history.data?.failedSensors && <Alert type="warning" title={`${history.data.failedSensors} cảm biến không tải được lịch sử`} />}
-    {!hasData ? <Empty description="Chưa có dữ liệu" /> :
-      <div role="img" aria-label={`${floor.floorName}: nhiệt độ và độ ẩm trong 24 giờ, trung bình mỗi 15 phút; đường đứt là độ ẩm, khoảng trống là thiếu dữ liệu.`} style={{ height: 280 }}>
+    {<ChartFrame empty={!hasData} label={`${floor.floorName}: nhiệt độ và độ ẩm trong 24 giờ, trung bình mỗi 15 phút; đường đứt là độ ẩm, khoảng trống là thiếu dữ liệu.`}>
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={points} margin={{ top: 12, right: 4, bottom: 4, left: 0 }}>
             <CartesianGrid stroke="var(--mcms-border)" strokeDasharray="3 3" />
-            <XAxis dataKey="timestamp" type="number" domain={[from, to]} tickFormatter={timeLabel} minTickGap={45} tick={{ fontSize: 11 }} />
-            <YAxis yAxisId="temperature" {...temperatureAxis} width={48} tickFormatter={formatMeasurement} unit="°C" tick={{ fontSize: 11 }} />
-            <YAxis yAxisId="humidity" {...humidityAxis} orientation="right" width={64} tickFormatter={formatMeasurement} unit="%RH" tick={{ fontSize: 11 }} />
+            <XAxis dataKey="timestamp" type="number" domain={[from, to]} tickFormatter={timeLabel} minTickGap={45} tick={chartTickStyle} />
+            <YAxis yAxisId="temperature" {...temperatureAxis} width={48} tickFormatter={formatMeasurement} unit="°C" tick={chartTickStyle} />
+            <YAxis yAxisId="humidity" {...humidityAxis} orientation="right" width={64} tickFormatter={formatMeasurement} unit="%RH" tick={chartTickStyle} />
             <Tooltip content={props => <ClimateHistoryTooltip active={props.active} payload={props.payload} floor={floor} />} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Line yAxisId="temperature" dataKey="temperature" name="Nhiệt độ (°C)" stroke={chartSeries.temperature} type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={false} />
-            <Line yAxisId="humidity" dataKey="humidity" name="Độ ẩm (%RH)" stroke={chartSeries.humidity} strokeDasharray="7 4" type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={false} />
+            <Legend content={() => <ChartLegend items={[
+                { key: 'temperature', label: 'Nhiệt độ (°C)', color: chartSeries.temperature },
+                { key: 'humidity', label: 'Độ ẩm (%RH)', color: chartSeries.humidity, dashed: true },
+              ]} />} />
+            <Line yAxisId="temperature" dataKey="temperature" name="Nhiệt độ (°C)" stroke={chartSeries.temperature} type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={animate} />
+            <Line yAxisId="humidity" dataKey="humidity" name="Độ ẩm (%RH)" stroke={chartSeries.humidity} strokeDasharray="7 4" type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={animate} />
           </LineChart>
         </ResponsiveContainer>
-      </div>}
+      </ChartFrame>}
   </Card>
 }

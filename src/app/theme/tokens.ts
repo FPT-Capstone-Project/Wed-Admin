@@ -431,6 +431,7 @@ export const chartSeries = {
 } as const
 
 export const componentTokens = {
+  chart: { height: 280, borderWidth: 1, lineWidth: 2, markerSize: 8 },
   button: { background: palette.primaryStrong },
   card: { background: surface.surface, border: border.base },
   table: { header: surface.surfaceMuted, border: border.base },

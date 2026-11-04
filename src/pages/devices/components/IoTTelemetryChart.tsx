@@ -1,9 +1,12 @@
+import { ChartFrame, ChartLegend, ChartTooltipSurface } from '../../../shared/ui/charts/ChartPrimitives'
+import { useChartMotion } from '../../../shared/ui/charts/useChartMotion'
+import { chartTickStyle } from '../../../shared/ui/charts/chart-styles'
+import { formatMeasurement } from '../../../shared/utils/measurement-format'
 import '../device-industrial.css'
 import {
   CloudOutlined,
   CompressOutlined,
   ExpandOutlined,
-  FireOutlined,
   NodeIndexOutlined,
   PlayCircleOutlined,
   ReloadOutlined,
@@ -154,7 +157,7 @@ function TelemetryTooltip({
   const point = payload[0]?.payload as TelemetryPoint | undefined
 
   return (
-    <div className="telemetry-tooltip">
+    <ChartTooltipSurface className="telemetry-tooltip">
       <strong>{formatTelemetryTimestamp(String(label))}</strong>
       {point && (
         <span className="telemetry-tooltip-stage">
@@ -167,7 +170,7 @@ function TelemetryTooltip({
           return (
             <span key={String(entry.dataKey)}>
               <i style={{ background: entry.color }} aria-hidden="true" />
-              {entry.name}: {entry.value} {metric?.unit}
+              {entry.name}: {formatMeasurement(entry.value == null ? null : Number(entry.value))} {metric?.unit}
             </span>
           )
         })}
@@ -182,7 +185,7 @@ function TelemetryTooltip({
           Quạt: {point?.fanActive ? 'Bật' : 'Tắt'}
         </span>
       </div>
-    </div>
+    </ChartTooltipSurface>
   )
 }
 
@@ -190,6 +193,7 @@ export function IoTTelemetryChart({
   session,
   data,
 }: IoTTelemetryChartProps) {
+  const animate = useChartMotion()
   const [visibleMetrics, setVisibleMetrics] = useState<
     Record<TelemetryMetric, boolean>
   >({ temperature: true, humidity: true })
@@ -269,28 +273,7 @@ export function IoTTelemetryChart({
         </div>
       </div>
 
-      <div className="chart-toggle-legend" aria-label="Ẩn hoặc hiện chỉ số">
-        {METRICS.map((metric) => (
-          <button
-            key={metric.key}
-            type="button"
-            className={visibleMetrics[metric.key] ? 'is-visible' : ''}
-            aria-pressed={visibleMetrics[metric.key]}
-            onClick={() => toggleMetric(metric.key)}
-          >
-            <span
-              style={{
-                borderColor: metric.color,
-                borderTopStyle: metric.dash ? 'dashed' : 'solid',
-              }}
-              aria-hidden="true"
-            />
-            {metric.key === 'temperature' && <FireOutlined aria-hidden="true" />}
-            {metric.key === 'humidity' && <CloudOutlined aria-hidden="true" />}
-            {metric.label}
-          </button>
-        ))}
-      </div>
+      <ChartLegend items={METRICS.map(metric => ({ key: metric.key, label: metric.label, color: metric.color, dashed: !!metric.dash, visible: visibleMetrics[metric.key] }))} onToggle={key => toggleMetric(key as TelemetryMetric)} />
 
       <div className="growth-stage-band-legend" aria-label="Các giai đoạn sinh trưởng của mẻ">
         {session.stagesTimeline.map((stage) => (
@@ -310,10 +293,10 @@ export function IoTTelemetryChart({
         ))}
       </div>
 
-      <div
+      <ChartFrame
         className="iot-session-chart"
-        role="img"
-        aria-label={`Biểu đồ nhiệt độ và độ ẩm của ${session.tenantName} trong mẻ ${session.id}.`}
+        empty={!data.some(point => point.temperature != null || point.humidity != null)}
+        label={`Biểu đồ nhiệt độ và độ ẩm của ${session.tenantName} trong mẻ ${session.id}.`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
@@ -341,7 +324,7 @@ export function IoTTelemetryChart({
               dataKey="timestamp"
               minTickGap={36}
               tickFormatter={formatAxisTimestamp}
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={false}
               tickLine={false}
             />
@@ -350,7 +333,7 @@ export function IoTTelemetryChart({
               domain={[18, 32]}
               unit="°"
               width={38}
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={false}
               tickLine={false}
             />
@@ -360,7 +343,7 @@ export function IoTTelemetryChart({
               domain={[60, 100]}
               unit="%"
               width={42}
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={false}
               tickLine={false}
             />
@@ -374,7 +357,7 @@ export function IoTTelemetryChart({
               strokeWidth={2}
               dot={false}
               hide={!visibleMetrics.temperature}
-              isAnimationActive={false}
+              isAnimationActive={animate}
             />
             <Line
               yAxisId="humidity"
@@ -386,7 +369,7 @@ export function IoTTelemetryChart({
               strokeDasharray="7 4"
               dot={false}
               hide={!visibleMetrics.humidity}
-              isAnimationActive={false}
+              isAnimationActive={animate}
             />
             {chartEventPoints.map((event) => {
               const config = EVENT_MARKER_CONFIG[event.log.type]
@@ -444,7 +427,7 @@ export function IoTTelemetryChart({
             />
           </LineChart>
         </ResponsiveContainer>
-      </div>
+      </ChartFrame>
 
       {chartEventPoints.length > 0 && (
         <div className="chart-event-legend" aria-label="Chú thích marker sự kiện">

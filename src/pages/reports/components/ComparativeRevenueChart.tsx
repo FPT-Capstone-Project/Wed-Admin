@@ -1,3 +1,6 @@
+import { ChartFrame, ChartLegend, ChartTooltipSurface } from '../../../shared/ui/charts/ChartPrimitives'
+import { useChartMotion } from '../../../shared/ui/charts/useChartMotion'
+import { chartTickStyle } from '../../../shared/ui/charts/chart-styles'
 import '../../../styles/reports-users-industrial.css'
 import { memo, useMemo } from 'react'
 import {
@@ -58,16 +61,7 @@ function CustomTooltip({
   const isImprovement = difference >= 0
 
   return (
-    <div
-      style={{
-        background: 'var(--mcms-surface)',
-        border: '1px solid var(--mcms-border)',
-        borderRadius: 'var(--mcms-radius-lg)',
-        padding: 12,
-        boxShadow: 'none',
-        minWidth: 220,
-      }}
-    >
+    <ChartTooltipSurface>
       <TypographyMonth label={label} />
       <TooltipRow
         color={CURRENT_COLOR}
@@ -119,7 +113,7 @@ function CustomTooltip({
           {deltaPercent.toFixed(1)}%
         </span>
       </div>
-    </div>
+    </ChartTooltipSurface>
   )
 }
 
@@ -179,6 +173,7 @@ function ComparativeRevenueChartInner({
   previousLabel,
   height = 320,
 }: ComparativeRevenueChartProps) {
+  const animate = useChartMotion()
   const totals = useMemo(() => {
     return data.reduce(
       (acc, point) => {
@@ -240,7 +235,7 @@ function ComparativeRevenueChartInner({
         Width/height bằng pixel (không %) để Recharts tính đúng layout
         ngay từ mount đầu tiên — tránh height=0 hoặc resize loop trong Flex.
       */}
-      <div style={{ width: '100%', height, minHeight: height }}>
+      <ChartFrame height={height} label="So sánh doanh thu theo kỳ" empty={data.length === 0}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
@@ -250,13 +245,13 @@ function ComparativeRevenueChartInner({
             <CartesianGrid strokeDasharray="3 3" stroke="var(--mcms-border)" vertical={false} />
             <XAxis
               dataKey="month"
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}
             />
             <YAxis
               tickFormatter={(v: number) => `${VND_COMPACT.format(v)}`}
-              tick={{ fill: 'var(--mcms-nav-item-icon)', fontSize: 12 }}
+              tick={chartTickStyle}
               axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}
             />
@@ -264,15 +259,12 @@ function ComparativeRevenueChartInner({
               content={<CustomTooltip />}
               cursor={{ fill: 'var(--mcms-surface-hover)' }}
             />
-            <Legend
-              wrapperStyle={{ fontSize: 12, paddingTop: 8 }}
-              iconType="circle"
-              iconSize={8}
-              formatter={(value) =>
-                <span style={{ color: 'var(--mcms-nav-item-icon)' }}>{value === 'current' ? currentLabel : previousLabel}</span>
-              }
-            />
+            <Legend content={() => <ChartLegend items={[
+              { key: 'previous', label: previousLabel, color: PREVIOUS_COLOR },
+              { key: 'current', label: currentLabel, color: CURRENT_COLOR },
+            ]} />} />
             <Bar
+              isAnimationActive={animate}
               dataKey="previous"
               name="previous"
               fill={PREVIOUS_COLOR}
@@ -280,6 +272,7 @@ function ComparativeRevenueChartInner({
               maxBarSize={28}
             />
             <Bar
+              isAnimationActive={animate}
               dataKey="current"
               name="current"
               fill={CURRENT_COLOR}
@@ -288,7 +281,7 @@ function ComparativeRevenueChartInner({
             />
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </ChartFrame>
     </div>
   )
 }
