@@ -1,4 +1,5 @@
 import type { SemanticTone } from '../../../app/theme/tokens'
+import { getClimateTone, getClimateDirection } from './climate-tone.utils.ts'
 import {
   evaluateTemperature, evaluateHumidity,
   type ClimateThresholds,
@@ -46,9 +47,8 @@ export function summarizeFarmClimate(
   }))
   const assessed = readings.filter(({ reading }) => reading.level !== 'neutral')
   const missingCount = points.length - assessed.length
-  const tone = assessed.some(({ reading }) => reading.level === 'danger') ? 'danger'
-    : assessed.some(({ reading }) => reading.level === 'warning') ? 'warning'
-      : assessed.length ? 'ok' : 'muted'
+  const tone = assessed.some(({ reading }) => getClimateTone(metric, getClimateDirection(reading)) === 'danger')
+    ? 'danger' : assessed.length ? 'ok' : 'muted'
   // Average and severity are independent; include every finite measurement.
   const values = readings.flatMap(({ reading }) => reading.value == null ? [] : [reading.value])
   const value = assessed.length && values.length
@@ -58,15 +58,14 @@ export function summarizeFarmClimate(
   return {
     value, tone, missingCount,
     label: tone === 'danger' ? 'Có tầng vượt ngưỡng'
-      : tone === 'warning' ? 'Có tầng lệch ngưỡng'
         : tone === 'ok' ? metric === 'temperature' ? 'Ổn định' : 'Tối ưu'
           : 'Chưa đủ thông tin',
     coverageNote: missingCount ? `${missingCount}/${points.length} tầng chưa đủ dữ liệu hoặc ngưỡng`
       : points.length ? `Đã đánh giá ${points.length}/${points.length} tầng` : 'Chưa có dữ liệu tầng',
-    details: readings.filter(({ reading }) => reading.level === tone && tone !== 'ok')
+    details: readings.filter(({ reading }) => ['high', 'low'].includes(getClimateDirection(reading)))
       .map(({ name, reading }) => {
         const below = reading.min != null && reading.value! < reading.min
-        return `${name}: ${reading.value}${unit} ${below ? '<' : '>'} ${below ? reading.min : reading.max}${unit}`
+        return `${name}: ${reading.value}${unit} ${below ? '<' : '>'} ${below ? reading.min : reading.max}${unit}; ${below ? 'thấp' : 'cao'} hơn ngưỡng ${reading.deviation}${unit}; mục tiêu ${reading.targetLabel}`
       }),
   }
 }

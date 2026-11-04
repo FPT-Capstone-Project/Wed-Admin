@@ -50,7 +50,7 @@ export function EnvironmentMetricCard({
     <div tabIndex={0} aria-label={explanation} style={{ height: '100%' }}>
     <StatCard
       title={title}
-      value={formattedValue}
+      value={<>{formattedValue}{details.some(detail => detail.includes('>')) && <small aria-hidden="true"> ▲</small>}{details.some(detail => detail.includes('<')) && <small aria-hidden="true"> ▼</small>}</>}
       suffix={unit}
       icon={icon}
       tone={statusTone}

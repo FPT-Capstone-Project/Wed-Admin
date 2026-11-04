@@ -1,3 +1,5 @@
+import { getClimateTone, getClimateDirection } from '../utils/climate-tone.utils'
+import { formatMeasurement, formatMeasurementDetails } from '../../../shared/utils/measurement-format'
 import '../rooms-industrial.css'
 import { CloudOutlined, FireOutlined } from '@ant-design/icons'
 import { Flex, Tooltip, Typography } from 'antd'
@@ -8,7 +10,6 @@ import { formatRoomLabel, formatTrayCode } from '../../../shared/i18n/terms'
 import { StatusBadge } from '../../../shared/ui/StatusBadge'
 import { TRAY_STATUS_CONFIG } from './tray-status.config'
 import {
-  CLIMATE_TONE,
   evaluateHumidity,
   evaluateTemperature,
   type ClimateReading,
@@ -141,7 +142,8 @@ interface ClimateChipProps {
 }
 
 function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
-  const tone = CLIMATE_TONE[reading.level]
+  const direction = getClimateDirection(reading)
+  const tone = getClimateTone(unit === '°C' ? 'temperature' : 'humidity', direction)
   const palette = tokens.tone[tone]
 
   const tooltip = [
@@ -149,15 +151,17 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
     reading.targetLabel ? `Mục tiêu ${reading.targetLabel}` : null,
   ]
     .filter(Boolean)
+    .map(text => formatMeasurementDetails(text!))
     .join(' · ')
 
   const valueText =
-    reading.value != null ? `${reading.value.toFixed(1)}${unit}` : `—`
+    tone !== 'muted' ? `${formatMeasurement(reading.value)}${unit}` : '—'
 
   return (
-    <Tooltip title={tooltip}>
+    <Tooltip title={tooltip} trigger={['hover', 'focus']}>
       <span
-        aria-label={`${ariaLabel}: ${valueText}${reading.targetLabel ? `, mục tiêu ${reading.targetLabel}` : ''}`}
+        tabIndex={0}
+        aria-label={`${ariaLabel}: ${valueText}, ${tooltip}`}
         style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -175,6 +179,7 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
       >
         <span aria-hidden="true">{icon}</span>
         {valueText}
+        {direction === 'high' || direction === 'low' ? <span aria-hidden="true">{direction === 'high' ? '▲' : '▼'}</span> : null}
       </span>
     </Tooltip>
   )

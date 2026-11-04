@@ -39,6 +39,9 @@ import { retryApiErrors } from '../../../shared/api/retry-policy'
 /** Một điểm môi trường của một tầng. */
 export interface FloorEnvironmentPoint {
   floorId: number
+  masterDbId: number
+  nodeId: number
+  sensorIds: number[]
   /** Tên tầng hiển thị trên trục X. */
   floorName: string
   temperature: number | null
@@ -72,6 +75,9 @@ export function useFloorEnvironmentOverview() {
           const env = queries[index]?.data
           return {
             floorId: floor.floor_id,
+            masterDbId: floor.master_id,
+            nodeId: floor.node_address,
+            sensorIds: [...new Set((env?.sensors ?? []).map(sensor => sensor.sensorId))].sort((a, b) => a - b),
             floorName:
               floor.floor_name || `Tầng ${floor.floor_number ?? floor.floor_id}`,
             temperature: env?.avgTemperature ?? null,

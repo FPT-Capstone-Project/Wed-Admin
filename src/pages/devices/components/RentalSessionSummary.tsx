@@ -6,6 +6,8 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import type { RentalSession } from '../../../types/iot-history'
+import { getClimateTone } from '../../../features/rooms/utils/climate-tone.utils'
+import { tones } from '../../../app/theme/tokens'
 import {
   formatHistoryDate,
   formatRentalDurationLabel,
@@ -48,18 +50,18 @@ export function RentalSessionSummary({
     {
       key: 'temperature',
       label: 'Nhiệt độ TB',
-      value: `${session.avgTemp.toLocaleString('vi-VN')}°C`,
-      detail: 'Toàn bộ chu kỳ',
+      value: '—',
+      detail: 'Chưa có ngưỡng lịch sử',
       icon: <FireOutlined />,
-      tone: 'coral',
+      tone: 'muted',
     },
     {
       key: 'humidity',
       label: 'Độ ẩm TB',
-      value: `${session.avgHumidity.toLocaleString('vi-VN')}%RH`,
-      detail: 'Toàn bộ chu kỳ',
+      value: '—',
+      detail: 'Chưa có ngưỡng lịch sử',
       icon: <CloudOutlined />,
-      tone: 'teal',
+      tone: 'muted',
     },
     {
       key: 'irrigation',
@@ -82,7 +84,7 @@ export function RentalSessionSummary({
             {metric.icon}
           </span>
           <span className="session-summary-label">{metric.label}</span>
-          <strong>{metric.value}</strong>
+          <strong style={metric.key === 'temperature' || metric.key === 'humidity' ? { color: tones[getClimateTone(metric.key, 'unknown')].text } : undefined}>{metric.value}</strong>
           <small>{metric.detail}</small>
         </article>
       ))}

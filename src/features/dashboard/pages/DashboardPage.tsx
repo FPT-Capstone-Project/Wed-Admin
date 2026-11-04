@@ -108,16 +108,6 @@ export function DashboardPage() {
   /**
    * Giữ tầng thiếu số đo để biểu đồ không che giấu khoảng trống dữ liệu.
    */
-  const environmentChartData = useMemo(
-    () =>
-      environmentQuery.points.map((point) => ({
-        time: point.floorName,
-        temperature: point.temperature,
-        humidity: point.humidity,
-        thresholds: point.thresholds,
-      })),
-    [environmentQuery.points],
-  )
 
   // ── Trạng thái tải: chờ KPI + cơ cấu trang trại ───────────────────────
   const isInitialLoading =
@@ -264,8 +254,7 @@ export function DashboardPage() {
 
         <div className="dashboard-chart-wrap">
           <EnvironmentChart
-            data={environmentChartData}
-            floorsWithData={environmentQuery.floorsWithData}
+            data={environmentQuery.points}
           />
         </div>
       </section>

@@ -83,6 +83,8 @@ export interface IotHistoryResponse {
 }
 
 export interface IotHistoryQuery {
+  from?: string
+  to?: string
   limit?: number
   offset?: number
 }

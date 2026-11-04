@@ -1,3 +1,4 @@
+import { getClimateTone, getClimateDirection } from '../../../features/rooms/utils/climate-tone.utils'
 import { climateThresholdsFromConfig } from '../../../features/rooms/utils/farm-climate.utils'
 import { evaluateTemperature, evaluateHumidity, type ClimateReading } from '../../../features/rooms/utils/tray-climate.utils'
 import { tones } from '../../../app/theme/tokens'
@@ -10,7 +11,6 @@ import {
   ControlOutlined,
   ExperimentOutlined,
   EyeOutlined,
-  NodeIndexOutlined,
   SyncOutlined,
   ThunderboltOutlined,
   VideoCameraOutlined,
@@ -234,19 +234,6 @@ export function DeviceControlPanel() {
 
   // ── Tables ──────────────────────────────────────────────────────────
   const sensorColumns: ColumnsType<IotSensor> = [
-    {
-      title: 'Cụm cảm biến',
-      key: 'nodeId',
-      width: 150,
-      render: (_, row) => (
-        <Flex align="center" gap={6}>
-          <NodeIndexOutlined style={{ color: 'var(--mcms-text-muted)' }} />
-          <Typography.Text strong>
-            Cụm cảm biến Tầng {row.nodeId}
-          </Typography.Text>
-        </Flex>
-      ),
-    },
     {
       title: 'Cảm biến',
       key: 'sensorId',
@@ -584,16 +571,28 @@ export function DeviceControlPanel() {
         styles={{ body: { padding: 12 } }}
       >
         {isRealtimeTab ? (
+          <Flex vertical gap={16}>
+            {floors.filter(floor => floor.master_id === masters[0]?.id).map(floor => (
+              <section key={floor.floor_id} aria-label={floor.floor_name || `Tầng ${floor.floor_number}`}>
+                <Typography.Title level={4}>{floor.floor_name || `Tầng ${floor.floor_number}`}</Typography.Title>
           <DataTable<IotSensor>
             rowKey={(row) => `${row.nodeId}-${row.sensorId}`}
             columns={sensorColumns}
-            dataSource={sensors}
-            loading={masters.length === 0}
+            dataSource={sensors.filter(sensor => sensor.nodeId === floor.node_address)}
+            loading={sensorsLoading}
             size="small"
             pagination={{ pageSize: 10, showSizeChanger: false }}
             scrollX={800}
             emptyTitle="Chưa nhận dữ liệu từ cảm biến nào."
           />
+              </section>
+            ))}
+            {sensors.some(sensor => !floors.some(floor => floor.master_id === masters[0]?.id && floor.node_address === sensor.nodeId)) && (
+              <DataTable<IotSensor> title="Cảm biến chưa gán tầng" rowKey={row => `${row.nodeId}-${row.sensorId}`}
+                columns={sensorColumns} dataSource={sensors.filter(sensor => !floors.some(floor => floor.master_id === masters[0]?.id && floor.node_address === sensor.nodeId))} />
+            )}
+            {!floors.some(floor => floor.master_id === masters[0]?.id) && !sensors.length && <Empty description="Chưa có dữ liệu tầng" />}
+          </Flex>
         ) : (
           /*
             Tab "Lịch sử" — polling đã TẮT (refetchInterval: false) nên không
@@ -643,18 +642,12 @@ export function DeviceControlPanel() {
                 {
                   key: 'avgTemperature',
                   label: 'Nhiệt độ trung bình',
-                  children:
-                    floorEnv.data.avgTemperature != null
-                      ? `${formatMeasurement(floorEnv.data.avgTemperature)}°C`
-                      : '—',
+                  children: <ClimateMeasurement reading={evaluateTemperature(floorEnv.data.avgTemperature, climateThresholdsFromConfig(configByFloorId.get(selectedFloor.floor_id)))} unit="°C" />,
                 },
                 {
                   key: 'avgHumidity',
                   label: 'Độ ẩm trung bình',
-                  children:
-                    floorEnv.data.avgHumidity != null
-                      ? `${formatMeasurement(floorEnv.data.avgHumidity)}%RH`
-                      : '—',
+                  children: <ClimateMeasurement reading={evaluateHumidity(floorEnv.data.avgHumidity, climateThresholdsFromConfig(configByFloorId.get(selectedFloor.floor_id)))} unit="%RH" />,
                 },
                 {
                   key: 'validSensors',
@@ -747,19 +740,13 @@ export function DeviceControlPanel() {
                 key: 'temperature',
       className: 'mcms-iot-mono',
                 label: 'Nhiệt độ',
-                children:
-                  selectedSensor.temperature != null
-                    ? `${formatMeasurement(selectedSensor.temperature)} °C`
-                    : '—',
+                children: <ClimateMeasurement reading={evaluateTemperature(selectedSensor.temperature, sensorThresholds(selectedSensor))} unit="°C" />,
               },
               {
                 key: 'humidity',
       className: 'mcms-iot-mono',
                 label: 'Độ ẩm',
-                children:
-                  selectedSensor.humidity != null
-                    ? `${formatMeasurement(selectedSensor.humidity)} %RH`
-                    : '—',
+                children: <ClimateMeasurement reading={evaluateHumidity(selectedSensor.humidity, sensorThresholds(selectedSensor))} unit="%RH" />,
               },
               {
                 key: 'ok',
@@ -839,7 +826,7 @@ export function DeviceControlPanel() {
 }
 
 function ClimateMeasurement({ reading, unit }: { reading: ClimateReading; unit: string }) {
-  const tone = reading.level === 'neutral' ? 'muted' : reading.level
+  const tone = getClimateTone(unit === '°C' ? 'temperature' : 'humidity', getClimateDirection(reading))
   const outside = reading.level === 'warning' || reading.level === 'danger'
   const below = reading.value != null && reading.min != null && reading.value < reading.min
   const target = reading.min != null && reading.max != null
@@ -852,8 +839,8 @@ function ClimateMeasurement({ reading, unit }: { reading: ClimateReading; unit: 
       : reading.level === 'ok' ? 'trong ngưỡng' : 'chưa đủ thông tin'}, mục tiêu ${target}`
   return <Tooltip title={label} trigger={['hover', 'focus']}>
     <span tabIndex={0} aria-label={label} style={{ display: 'inline-flex', alignItems: 'baseline', gap: 4, color: tones[tone].text }}>
-      <strong style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>{formatMeasurement(reading.value)}</strong>
-      {reading.value != null && <small>{unit}</small>}
+      <strong style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>{formatMeasurement(tone === 'muted' ? null : reading.value)}</strong>
+      {tone !== 'muted' && <small>{unit}</small>}
       {outside && <span aria-hidden="true" style={{ fontSize: 11 }}>{below ? '▼' : '▲'}</span>}
     </span>
   </Tooltip>

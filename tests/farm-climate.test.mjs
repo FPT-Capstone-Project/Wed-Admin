@@ -9,25 +9,25 @@ const floor = (temperature = 25, humidity = 85, limits = thresholds, floorName =
 for (const metric of ['temperature', 'humidity']) {
   const point = value => metric === 'temperature' ? floor(value) : floor(25, value)
   const normal = metric === 'temperature' ? 25 : 85
-  const warning = metric === 'temperature' ? 29 : 94
-  const danger = metric === 'temperature' ? 35 : 99
+  const warning = metric === 'temperature' ? 29 : 79
+  const danger = metric === 'temperature' ? 35 : 70
   test(`${metric}: all within each floor's own thresholds`, () => {
     const result = summarizeFarmClimate([point(normal), floor(35, 60, { tempMin: 30, tempMax: 40, humidityMin: 50, humidityMax: 70 }, 'Tầng 2')], metric)
     assert.equal(result.tone, 'ok')
     assert.equal(result.label, metric === 'temperature' ? 'Ổn định' : 'Tối ưu')
     assert.equal(result.missingCount, 0)
   })
-  test(`${metric}: warning`, () => {
+  test(`${metric}: even a slight harmful deviation is danger`, () => {
     const result = summarizeFarmClimate([point(normal), point(warning)], metric)
-    assert.equal(result.tone, 'warning')
-    assert.equal(result.label, 'Có tầng lệch ngưỡng')
+    assert.equal(result.tone, 'danger')
+    assert.equal(result.label, 'Có tầng vượt ngưỡng')
     assert.equal(result.details.length, 1)
   })
-  test(`${metric}: danger outranks warning and average`, () => {
+  test(`${metric}: harmful direction overrides farm average`, () => {
     const result = summarizeFarmClimate([point(normal), point(warning), point(danger)], metric)
     assert.equal(result.tone, 'danger')
-    assert.equal(result.details.length, 1)
-    assert.match(result.details[0], />/)
+    assert.equal(result.details.length, 2)
+    assert.match(result.details[0], metric === 'temperature' ? />/ : /</)
   })
   test(`${metric}: danger plus missing data`, () => {
     const result = summarizeFarmClimate([point(danger), point(null)], metric)
@@ -59,7 +59,7 @@ for (const metric of ['temperature', 'humidity']) {
   test(`${metric}: finite zero is data; NaN is missing`, () => {
     const result = summarizeFarmClimate([point(0), point(NaN)], metric)
     assert.equal(result.value, 0)
-    assert.equal(result.tone, 'danger')
+    assert.equal(result.tone, metric === 'temperature' ? 'ok' : 'danger')
     assert.equal(result.missingCount, 1)
     assert.match(result.details[0], /</)
   })
