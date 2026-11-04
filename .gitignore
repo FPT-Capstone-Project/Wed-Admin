@@ -12,8 +12,6 @@ dist-ssr/
 # Environment Variables (Chống lộ key bảo mật)
 .env
 .env.*
-!.env.example
-!.env.production.sample
 
 # Server & Vite dev logs
 *.log
