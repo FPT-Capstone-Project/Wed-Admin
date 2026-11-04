@@ -78,6 +78,7 @@ export function StatusBadge({
   const badge = (
     <span
       className={className ? `mcms-status-badge ${className}` : 'mcms-status-badge'}
+      tabIndex={title ? 0 : undefined}
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -89,7 +90,9 @@ export function StatusBadge({
         fontSize: 12,
         fontWeight: 600,
         lineHeight: '20px',
-        whiteSpace: 'nowrap',
+        minWidth: 0,
+        maxWidth: '100%',
+        whiteSpace: 'normal',
         ...style,
       }}
     >
@@ -105,13 +108,13 @@ export function StatusBadge({
         }}
       />
       {icon && <span aria-hidden="true">{icon}</span>}
-      {label}
+      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{label}</span>
     </span>
   )
 
   if (!title) return badge
 
-  return <Tooltip title={title}>{badge}</Tooltip>
+  return <Tooltip title={title} trigger={['hover', 'focus']}>{badge}</Tooltip>
 }
 
 /** Metadata describes a role/category; it must not imply operational health. */
@@ -121,12 +124,13 @@ export function MetadataBadge({ label, icon, title, className, style }: Metadata
   const badge = (
     <span
       className={['mcms-metadata-badge', className].filter(Boolean).join(' ')}
+      tabIndex={title ? 0 : undefined}
       style={style}
     >
       {icon && <span aria-hidden="true">{icon}</span>}
-      {label}
+      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{label}</span>
     </span>
   )
 
-  return title ? <Tooltip title={title}>{badge}</Tooltip> : badge
+  return title ? <Tooltip title={title} trigger={['hover', 'focus']}>{badge}</Tooltip> : badge
 }

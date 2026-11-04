@@ -7,6 +7,8 @@ import {
 } from '@ant-design/icons'
 import { Card, Flex, Progress, Tooltip, Typography } from 'antd'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
+import { Popover, Button } from 'antd'
+import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
 import {
   GROWTH_STAGE_META,
   type CultivationBatch,
@@ -120,9 +122,15 @@ export function CultivationBatchCard({
           <Flex vertical gap={6}>
             <Flex align="center" gap={8} wrap>
               {batch.trays.length > 0 ? (
-                <MetadataBadge
-                  label={batch.trays.map((tray) => tray.code).join(', ')}
-                />
+                <Popover trigger={['click']} title="Danh sách khay" content={
+                  <div style={{ maxWidth: '80vw', overflowWrap: 'anywhere' }}>
+                    {batch.trays.map((tray, index) => <div key={tray.trayId ?? index}>{tray.code}{tray.name ? ` · ${tray.name}` : ''}</div>)}
+                  </div>
+                }>
+                  <Button type="link" aria-label={`Xem danh sách ${batch.trays.length} khay`}>
+                    {batch.trays.length > 1 ? `${batch.trays.length} khay` : <TrayCodeText code={batch.trays[0].code} focusable={false} />}
+                  </Button>
+                </Popover>
               ) : (
                 <MetadataBadge label="Chưa gán khay" />
               )}

@@ -1,4 +1,5 @@
 import { getClimateTone, getClimateDirection } from '../utils/climate-tone.utils'
+import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
 import { formatMeasurement, formatMeasurementDetails } from '../../../shared/utils/measurement-format'
 import '../rooms-industrial.css'
 import { CloudOutlined, FireOutlined } from '@ant-design/icons'
@@ -244,7 +245,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
             fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
           }}
         >
-          {trayCode}
+          <TrayCodeText code={tray.code} focusable={false} />
         </span>
         <StatusBadge tone={TRAY_STATUS_CONFIG.empty.tone} label={TRAY_STATUS_CONFIG.empty.shortLabel} />
       </button>
@@ -293,7 +294,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
             fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
           }}
         >
-          {trayCode}
+          <TrayCodeText code={tray.code} focusable={false} />
         </span>
         <StatusBadge
           tone={TRAY_STATUS_CONFIG[effectiveStatus].tone}

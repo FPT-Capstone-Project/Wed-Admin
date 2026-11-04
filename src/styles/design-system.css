@@ -73,6 +73,8 @@
 }
 
 .mcms-metadata-badge {
+  min-width: 0;
+  max-width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -84,7 +86,7 @@
   font-size: 12px;
   font-weight: 500;
   line-height: 20px;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .mcms-status-badge .anticon {
