@@ -1,7 +1,8 @@
+import { PageHeader } from '../../shared/ui/PageHeader'
 import './device-industrial.css'
 import { MetadataBadge } from '../../shared/ui'
 import { HistoryOutlined, EyeOutlined } from '@ant-design/icons'
-import { App, Button, Flex, Typography } from 'antd'
+import { App, Button, Flex } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useMasterList } from '../../features/devices/hooks/useIoT'
 import { DeviceControlPanel } from './components/DeviceControlPanel'
@@ -24,25 +25,7 @@ export function DeviceManagementPage() {
 
   return (
     <div className="mcms-iot-view">
-      <Flex
-        align="flex-start"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 16 }}
-      >
-        <div>
-          <Typography.Title level={1} style={{ margin: 0, fontSize: 18 }}>
-            Giám sát thiết bị IoT
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            {masters.length > 0
-              ? `${masters.length} bộ điều khiển trung tâm đã đăng ký`
-              : 'Đang tải dữ liệu thiết bị IoT...'}
-          </Typography.Text>
-        </div>
-
-        <Flex align="center" gap={16} wrap>
+      <PageHeader title="Giám sát thiết bị IoT" description={masters.length > 0 ? `${masters.length} bộ điều khiển trung tâm đã đăng ký` : 'Đang tải dữ liệu thiết bị IoT...'} actions={<Flex align="center" gap={16} wrap>
           <MetadataBadge icon={<EyeOutlined />} label={<>
             Chỉ giám sát
           </>} />
@@ -52,8 +35,7 @@ export function DeviceManagementPage() {
           >
             Lịch sử Telemetry
           </Button>
-        </Flex>
-      </Flex>
+        </Flex>} />
 
       <DeviceControlPanel />
     </div>

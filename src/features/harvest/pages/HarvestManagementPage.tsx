@@ -1,8 +1,8 @@
 import { HARVEST_STATUS_PRESENTATION, HARVEST_METHOD_PRESENTATION, displayPresentation } from '../../../shared/i18n/terms'
 import { calculateHarvestMetrics } from '../api/harvest-metrics'
 import { Suspense, useState } from 'react'
-import { Button, Card, Col, DatePicker, Flex, InputNumber, Row, Select, Statistic, Table, Typography } from 'antd'
-import { PageHeader, StatusBadge } from '../../../shared/ui'
+import { Button, Col, DatePicker, Flex, InputNumber, Row, Select, Table, Typography } from 'antd'
+import { PageHeader, StatusBadge, StatCard } from '../../../shared/ui'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { auditDate, auditWeight } from '../../../shared/ui/audit-format'
 import { useMushroomTypes } from '../../packages/hooks/useMushroomTypes'
@@ -26,9 +26,9 @@ export function HarvestManagementPage() {
     {mushrooms.isError && <QueryFeedback query={mushrooms} />}
     <QueryFeedback query={query} />
     {!query.isError && <><Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-      <Col xs={24} md={8}><Card size="small" loading={query.isLoading}><Statistic title="Tổng sản lượng thu hoạch (kg)" value={metrics?.totalWeightKg ?? '—'} precision={2} /></Card></Col>
-      <Col xs={24} md={8}><Card size="small" loading={query.isLoading}><Statistic title="Tỷ lệ thương phẩm A/B (%)" value={metrics?.gradeABPercent ?? '—'} precision={2} /></Card></Col>
-      <Col xs={24} md={8}><Card size="small" loading={query.isLoading}><Statistic title="Đợt thu hoạch đang chờ giao" value={metrics?.pendingHandover ?? '—'} /></Card></Col>
+      <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Tổng sản lượng thu hoạch (kg)" value={metrics?.totalWeightKg == null ? '—' : metrics.totalWeightKg.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /></Col>
+      <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Tỷ lệ thương phẩm A/B (%)" value={metrics?.gradeABPercent == null ? '—' : metrics.gradeABPercent.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /></Col>
+      <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Đợt thu hoạch đang chờ giao" value={metrics?.pendingHandover ?? '—'} /></Col>
     </Row>
     <Table<Harvest> size="small" rowKey="harvest_id" dataSource={rows} loading={query.isLoading} scroll={{ x: 1550 }} pagination={{ pageSize: 20, showSizeChanger: true }} locale={{ emptyText: 'Chưa có đợt thu hoạch phù hợp' }} columns={[
       { title: 'Đợt / Phiên', render: (_, h) => <code>#{h.harvest_id} / #{h.session_id}</code> },

@@ -1,3 +1,4 @@
+import { PageHeader } from '../../../shared/ui/PageHeader'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import '../sessions-industrial.css'
 import {
@@ -292,24 +293,7 @@ export function SessionListPage() {
 
   return (
     <div>
-      <Flex
-        align="flex-start"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            Quản lý phiên canh tác
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Theo dõi các phiên đã thanh toán trong luồng farm, khay và lịch sử kiểm tra phôi
-            — chỉ đọc.
-          </Typography.Text>
-        </div>
-
-        <Space wrap>
+      <PageHeader title="Quản lý phiên canh tác" description="Theo dõi các phiên đã thanh toán trong luồng farm, khay và lịch sử kiểm tra phôi — chỉ đọc." actions={<Space wrap>
           <Input
             allowClear
             prefix={<SearchOutlined />}
@@ -326,8 +310,7 @@ export function SessionListPage() {
             options={STATUS_OPTIONS}
             onChange={handleStatusChange}
           />
-        </Space>
-      </Flex>
+        </Space>} />
 
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         <Col xs={12} lg={6}>

@@ -1,8 +1,4 @@
 import type { SemanticTone } from '../../../app/theme/tokens'
-import type {
-  SessionGrowthStage,
-  SessionHarvestStatus,
-} from '../types/admin-session.types'
 
 /**
  * Nhãn + màu cho **4 giai đoạn sinh trưởng** (WF-03).
@@ -10,10 +6,7 @@ import type {
  * ⚠ Thứ tự khớp với vòng đời thật:
  *   FRUITING_INITIATION → PINNING → YOUNG_FRUITING → MATURATION
  */
-export const SESSION_GROWTH_STAGE_CONFIG: Record<
-  SessionGrowthStage,
-  { tone: SemanticTone; label: string; shortLabel: string }
-> = {
+export const SESSION_GROWTH_STAGE_CONFIG = {
   FRUITING_INITIATION: {
     tone: 'info',
     label: 'Khởi động ra hoa',
@@ -34,17 +27,14 @@ export const SESSION_GROWTH_STAGE_CONFIG: Record<
     label: 'Chín kho',
     shortLabel: 'Chín kho',
   },
-}
+} satisfies Record<string, { tone: SemanticTone; label: string; shortLabel: string }>
 
 /**
  * Nhãn + màu cho trạng thái thu hoạch.
  *
  * ⚠ BE chỉ dùng 2 giá trị: `NOT_READY` và `HARVEST_READY`.
  */
-export const SESSION_HARVEST_STATUS_CONFIG: Record<
-  SessionHarvestStatus,
-  { tone: SemanticTone; label: string }
-> = {
+export const SESSION_HARVEST_STATUS_CONFIG = {
   NOT_READY: { tone: 'muted', label: 'Chưa sẵn sàng' },
   HARVEST_READY: { tone: 'warning', label: 'Sẵn sàng thu hoạch' },
-}
+} satisfies Record<string, { tone: SemanticTone; label: string }>

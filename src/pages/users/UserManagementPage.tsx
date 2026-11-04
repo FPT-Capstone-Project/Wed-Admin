@@ -1,3 +1,4 @@
+import { PageHeader } from '../../shared/ui/PageHeader'
 import '../../styles/reports-users-industrial.css'
 import { Suspense, useMemo, useState } from 'react'
 import {
@@ -252,24 +253,12 @@ export function UserManagementPage() {
 
   return (
     <div>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
-        <Typography.Title level={3} style={{ margin: 0 }}>
-          Quản lý tài khoản
-        </Typography.Title>
-
-        <Flex align="center" gap={8} wrap>
+      <PageHeader title="Quản lý tài khoản"  actions={<Flex align="center" gap={8} wrap>
           <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             Việc tạo / khoá tài khoản do nhân viên thực hiện trên mobile app.
           </Typography.Text>
-        </Flex>
-      </Flex>
+        </Flex>} />
 
       <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
         <Col xs={24} sm={8}>

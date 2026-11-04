@@ -1,3 +1,4 @@
+import { PageHeader } from '../../../shared/ui/PageHeader'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import { Suspense, useMemo, useState } from 'react'
 import { FilterOutlined, SearchOutlined } from '@ant-design/icons'
@@ -9,7 +10,6 @@ import {
   Pagination,
   Select,
   Skeleton,
-  Typography,
 } from 'antd'
 import { MetadataBadge, StatCard } from '../../../shared/ui'
 import { CultivationBatchCard } from '../components/CultivationBatchCard'
@@ -122,27 +122,10 @@ export function CultivationManagementPage() {
 
   return (
     <div>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            Sinh trưởng & thu hoạch
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Tiến độ mẻ nấm, giai đoạn sinh trưởng và lịch sử kiểm tra phôi (chỉ đọc)
-          </Typography.Text>
-        </div>
-
-        <MetadataBadge
+      <PageHeader title="Sinh trưởng & thu hoạch" description="Tiến độ mẻ nấm, giai đoạn sinh trưởng và lịch sử kiểm tra phôi (chỉ đọc)" actions={<MetadataBadge
           icon={<FilterOutlined />}
           label="Chế độ chỉ đọc — dữ liệu từ API thật"
-        />
-      </Flex>
+        />} />
 
       <Flex gap={12} wrap style={{ marginBottom: 20 }}>
         <StatCard

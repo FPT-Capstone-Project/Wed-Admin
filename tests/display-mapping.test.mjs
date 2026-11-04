@@ -81,11 +81,7 @@ test('session list propagates the original HTTP 404 to React Query', async () =>
   await assert.rejects(sessionApi.list(), error => error === notFound)
 })
 test('cultivation aggregator does not swallow failed session requests', async () => {
-  const progress = loadApi('../src/features/sessions/utils/session-progress.utils.ts', {
-    '../../../shared/utils/date': loadApi('../src/shared/utils/date.ts', {}),
-  })
   const { fetchCultivationBatches } = loadApi('../src/features/cultivation/api/cultivation.api.ts', {
-    '../../sessions/utils/session-progress.utils': progress,
     '../../farm/api/farm.api': { farmApi: { list: async () => [] } },
     '../../sessions/api/session.api': { sessionApi: { list: reject404 } },
     '../types/cultivation.types': { GROWTH_STAGE_META: {} },

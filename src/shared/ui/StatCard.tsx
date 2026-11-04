@@ -4,6 +4,7 @@ import { tones, type SemanticTone } from '../../app/theme/tokens'
 
 export interface StatCardProps {
   /** Nhãn chỉ số. */
+  loading?: boolean
   title: ReactNode
   /** Giá trị chính — hiển thị bằng số tabular để không nhảy layout. */
   value: ReactNode
@@ -43,6 +44,7 @@ export interface StatCardProps {
  * `#52c41a` — chỉ đạt 2.27:1 trên nền trắng).
  */
 export function StatCard({
+  loading = false,
   title,
   value,
   suffix,
@@ -59,6 +61,7 @@ export function StatCard({
 
   return (
     <Card
+      loading={loading}
       className={['mcms-stat-card', className].filter(Boolean).join(' ')}
       size="small"
       style={{

@@ -1,10 +1,10 @@
+import { PageHeader } from '../../shared/ui/PageHeader'
 import { useMemo } from 'react'
 import {
-  ExperimentOutlined,
   EyeOutlined,
   SafetyCertificateOutlined,
 } from '@ant-design/icons'
-import { Card, Flex, Space, Typography } from 'antd'
+import { Card, Space } from 'antd'
 import { MetadataBadge } from '../../shared/ui'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useCustomerMushroomTypeIds } from '../../features/settings/hooks/useCustomerMushroomTypeIds'
@@ -53,24 +53,7 @@ export function SettingsPage() {
 
   return (
     <div>
-      <Flex
-        align="center"
-        justify="space-between"
-        gap={16}
-        wrap
-        style={{ marginBottom: 20 }}
-      >
-        <div>
-          <Typography.Title level={3} style={{ margin: 0 }}>
-            <ExperimentOutlined /> Hồ sơ Vi khí hậu &amp; Ngưỡng AUTO
-          </Typography.Title>
-          <Typography.Text type="secondary">
-            Theo dõi dải thông số nhiệt độ và độ ẩm chuẩn đang áp dụng cho
-            từng giống nấm.
-          </Typography.Text>
-        </div>
-
-        <Space wrap>
+      <PageHeader title="Hồ sơ Vi khí hậu & Ngưỡng AUTO" description="Theo dõi dải thông số nhiệt độ và độ ẩm chuẩn đang áp dụng cho từng giống nấm." actions={<Space wrap>
           <MetadataBadge
             icon={<SafetyCertificateOutlined />}
             label={isAdmin
@@ -80,8 +63,7 @@ export function SettingsPage() {
                 : 'CUSTOMER · Chỉ xem'}
           />
           <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
-        </Space>
-      </Flex>
+        </Space>} />
 
       <Card
         style={{
