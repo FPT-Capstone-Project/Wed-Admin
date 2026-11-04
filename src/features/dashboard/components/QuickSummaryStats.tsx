@@ -21,7 +21,8 @@ import {
   ExperimentOutlined,
   InboxOutlined,
 } from '@ant-design/icons'
-import { Col, Row } from 'antd'
+import { Col, Row, Typography } from 'antd'
+import { tokens } from '../../../app/theme/tokens'
 import { StatCard, StatusBadge } from '../../../shared/ui'
 import {
   formatDashboardCurrency,
@@ -59,25 +60,20 @@ export function QuickSummaryStats({
   const harvest = metrics.harvest_quality
 
   return (
-    <Row
-      gutter={[12, 12]}
-      wrap
-      aria-label="Thống kê nhanh trang trại"
-    >
-      {/* KPI 1 — Doanh thu */}
-      <Col flex="1 1 220px">
+    <Row gutter={[Number.parseInt(tokens.space['4'], 10), Number.parseInt(tokens.space['6'], 10)]} aria-label="Thống kê nhanh trang trại">
+      <Col xs={24} xl={6}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Doanh thu</Typography.Title>
         <StatCard
           title="Doanh thu"
           value={formatDashboardCurrency(revenue.value, revenue.currency)}
           icon={<DollarOutlined />}
-          tone="ok"
+          tone="info"
           highlightValue
-          description="Tổng đơn đã thanh toán (mọi thời điểm)"
+          description="Đã thanh toán · mọi thời điểm"
         />
       </Col>
-
-      {/* KPI 2 — Số khay hoạt động */}
-      <Col flex="1 1 220px">
+      <Col xs={24} xl={12}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Khay</Typography.Title>
+        <Row gutter={[Number.parseInt(tokens.space['3'], 10), Number.parseInt(tokens.space['3'], 10)]}>
+          <Col xs={24} sm={8}>
         <StatCard
           title="Khay đã sử dụng"
           value={metrics.trays_used.toLocaleString('vi-VN')}
@@ -88,9 +84,7 @@ export function QuickSummaryStats({
           description={`${occupancyPct}% công suất (${activeInUseTrays}/${totalTrays} khay)`}
         />
       </Col>
-
-      {/* KPI 3 — Tỷ lệ đạt */}
-      <Col flex="1 1 220px">
+<Col xs={24} sm={8}>
         <StatCard
           title="Tỷ lệ đạt"
           value={formatDashboardPercent(harvest.usable_rate)}
@@ -109,9 +103,7 @@ export function QuickSummaryStats({
           }
         />
       </Col>
-
-      {/* KPI 4 — Tỷ lệ hao hụt */}
-      <Col flex="1 1 220px">
+<Col xs={24} sm={8}>
         <StatCard
           title="Tỷ lệ hao hụt"
           value={formatDashboardPercent(harvest.waste_rate)}
@@ -125,9 +117,9 @@ export function QuickSummaryStats({
           }
         />
       </Col>
-
-      {/* KPI 5 — Cảnh báo chờ xử lý */}
-      <Col flex="1 1 220px">
+        </Row>
+      </Col>
+      <Col xs={24} xl={6}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Cảnh báo</Typography.Title>
         <StatCard
           title="Cảnh báo chờ xử lý"
           value={activeAlerts.toLocaleString('vi-VN')}

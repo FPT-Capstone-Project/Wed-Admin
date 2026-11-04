@@ -440,6 +440,7 @@ export const chartSeries = {
 } as const
 
 export const componentTokens = {
+  kpi: { valueSize: 32, iconSize: 40, borderWidth: 1 },
   badge: { gap: 6, paddingBlock: 1, paddingInline: 8, lineHeight: 20, dotSize: 6 },
   chart: { height: 280, borderWidth: 1, lineWidth: 2, markerSize: 8 },
   button: { background: palette.primaryStrong },

@@ -179,7 +179,7 @@ export function DashboardPage() {
               level={2}
               style={{ fontSize: 15 }}
             >
-              Cơ cấu trang trại
+              Môi trường
             </Typography.Title>
             <Typography.Text type="secondary">
               {summary.totalRooms} phòng · {summary.totalFloors} tầng ·{' '}

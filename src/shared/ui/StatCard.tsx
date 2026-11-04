@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from 'react'
 import { Card, Flex, Tooltip, Typography } from 'antd'
-import { tones, type SemanticTone } from '../../app/theme/tokens'
+import { tones, tokens, type SemanticTone } from '../../app/theme/tokens'
 
 export interface StatCardProps {
   /** Nhãn chỉ số. */
@@ -67,6 +67,9 @@ export function StatCard({
       style={{
         position: 'relative',
         overflow: 'hidden',
+        borderRadius: tokens.radius.lg,
+        boxShadow: tokens.shadow.xs,
+        background: tokens.color.surface,
         ...style,
       }}
       styles={{ body: { padding: 'var(--mcms-space-4)' } }}
@@ -96,7 +99,7 @@ export function StatCard({
             <Typography.Text
               strong
               style={{
-                fontSize: 28,
+                fontSize: tokens.components.kpi.valueSize,
                 fontWeight: 700,
                 lineHeight: 1.2,
                 color:
@@ -131,7 +134,15 @@ export function StatCard({
             style={{
               fontSize: 18,
               lineHeight: 1,
-              color: 'var(--mcms-text-muted)',
+              color: palette?.text ?? tokens.color.textMuted,
+              background: palette?.bg ?? tokens.color.surfaceMuted,
+              border: `${tokens.components.kpi.borderWidth}px solid ${palette?.border ?? tokens.color.border}`,
+              borderRadius: tokens.radius.md,
+              width: tokens.components.kpi.iconSize,
+              height: tokens.components.kpi.iconSize,
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
               flexShrink: 0,
             }}
           >
