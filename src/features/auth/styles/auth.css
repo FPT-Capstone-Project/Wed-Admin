@@ -396,3 +396,33 @@
   color: var(--mcms-text);
   background: var(--mcms-surface);
 }
+
+/* Tonal brand panel and elevated authentication card. */
+.login-page.mcms-login .mcms-login-brand {
+  background: var(--mcms-sidebar-bg);
+  color: var(--mcms-sidebar-text);
+}
+.mcms-login-brand .mcms-login-brand-title,
+.mcms-login-brand .mcms-login-brand-mark,
+.mcms-login-brand .mcms-login-brand-feature strong {
+  color: var(--mcms-sidebar-text);
+}
+.mcms-login-brand .mcms-login-brand-title em,
+.mcms-login-brand .mcms-login-brand-desc,
+.mcms-login-brand .mcms-login-brand-eyebrow,
+.mcms-login-brand .mcms-login-brand-feature span,
+.mcms-login-brand .mcms-login-brand-feature > .anticon {
+  color: var(--mcms-sidebar-muted);
+}
+.mcms-login-brand .mcms-login-brand-mark,
+.mcms-login-brand .mcms-login-brand-feature,
+.mcms-login-brand .mcms-login-telemetry-chip {
+  background: var(--mcms-sidebar-hover-bg);
+  border-color: var(--mcms-sidebar-hover-bg);
+  color: var(--mcms-sidebar-text);
+}
+.login-card.mcms-login-card,
+.auth-v2.mcms-auth-shell .auth-v2-card {
+  border-radius: var(--mcms-radius-xl);
+  box-shadow: var(--mcms-shadow-sm);
+}

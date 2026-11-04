@@ -1,6 +1,7 @@
 ﻿import '../../../styles/media-industrial.css'
 import { useState } from 'react'
 import { PictureOutlined } from '@ant-design/icons'
+import { tokens } from '../../../app/theme/tokens'
 
 interface GrowthSnapshotThumbnailProps {
   /** URL ảnh thực tế trên Cloudinary hoặc rỗng (khi chưa tới ngày chụp) */
@@ -37,9 +38,10 @@ export function GrowthSnapshotThumbnail({
   // Ảnh rỗng (chưa tới ngày) → render placeholder, không cần <img>
   if (!src) {
     return (
-      <div className="growth-snapshot-placeholder" role="img" aria-label={alt}>
+      <div className="growth-snapshot-placeholder" role="img" aria-label={`${alt} — Chưa có ảnh phôi`}
+        style={{ color: tokens.color.textMuted, background: tokens.color.surfaceMuted }}>
         <PictureOutlined aria-hidden="true" />
-        <span className="growth-snapshot-placeholder-label">Chưa có ảnh</span>
+        <span className="growth-snapshot-placeholder-label">Chưa có ảnh phôi</span>
       </div>
     )
   }
@@ -53,6 +55,7 @@ export function GrowthSnapshotThumbnail({
           .join(' ')}
         role="img"
         aria-label={`${alt} (không tải được ảnh)`}
+        style={{ color: tokens.tone.danger.text, background: tokens.tone.danger.bg }}
       >
         <PictureOutlined aria-hidden="true" />
         <span className="growth-snapshot-placeholder-label">Ảnh lỗi tải</span>

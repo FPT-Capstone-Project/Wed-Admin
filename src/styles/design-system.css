@@ -162,3 +162,47 @@
   bottom: 8px;
   left: 8px;
 }
+
+/* Phase 4 surfaces shared by operational views; no layout or data changes. */
+.mcms-app-shell .mcms-content .ant-card,
+.mcms-content .iot-chart-panel.mcms-iot-chart,
+.mcms-content .mcms-sensor-history {
+  background: var(--mcms-surface);
+  border-color: var(--mcms-border);
+  border-radius: var(--mcms-radius-lg);
+  box-shadow: var(--mcms-shadow-xs);
+}
+.mcms-content .mcms-data-table .ant-table-wrapper {
+  background: var(--mcms-surface);
+  border-radius: var(--mcms-radius-lg);
+  border-color: var(--mcms-border);
+  box-shadow: var(--mcms-shadow-xs);
+}
+.mcms-content .mcms-data-table .ant-table-thead > tr > th {
+  background: var(--mcms-surface-muted);
+  color: var(--mcms-text);
+}
+.mcms-content .mcms-data-table .ant-table-tbody > tr.ant-table-row:hover > td {
+  background: var(--mcms-surface-hover);
+}
+.mcms-content .mcms-status-badge {
+  border-radius: var(--mcms-radius-sm);
+}
+.mcms-content .cultivation-batch-card .growth-snapshot-placeholder {
+  color: var(--mcms-text-muted);
+  background: var(--mcms-surface-muted);
+}
+.mcms-content .cultivation-batch-card .growth-snapshot-placeholder.is-error {
+  color: var(--mcms-tone-danger-text);
+  background: var(--mcms-tone-danger-bg);
+}
+.mcms-content .cultivation-batch-card .cultivation-batch-card-cta {
+  color: var(--mcms-tone-info-text);
+  background: var(--mcms-tone-info-bg);
+  border-color: var(--mcms-tone-info-border);
+  border-radius: var(--mcms-radius-md);
+}
+.mcms-content .cultivation-batch-card .cultivation-batch-card-cta:hover {
+  color: var(--mcms-text);
+  background: var(--mcms-surface-muted);
+}

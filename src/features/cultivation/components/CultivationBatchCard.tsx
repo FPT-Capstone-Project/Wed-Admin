@@ -14,6 +14,8 @@ import {
   type CultivationBatch,
 } from '../types/cultivation.types'
 import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
+import { GrowthStageMilestones } from './GrowthStageMilestones'
+import { tokens } from '../../../app/theme/tokens'
 
 interface CultivationBatchCardProps {
   batch: CultivationBatch
@@ -198,8 +200,9 @@ export function CultivationBatchCard({
               percent={batch.progressPercent}
               showInfo={false}
               status={isAbnormal ? 'exception' : isCompleted ? 'normal' : 'active'}
-              strokeColor={isAbnormal ? undefined : '#16a34a'}
+              strokeColor={isAbnormal ? tokens.tone.danger.solid : tokens.tone.info.solid}
             />
+            <GrowthStageMilestones />
           </div>
 
           {/* Dải ảnh kiểm tra phôi (thực tế từ Cloudinary) */}
