@@ -1,3 +1,4 @@
+import { buildTrayLayout } from '../utils/tray-layout.utils'
 import { getClimateTone, getClimateDirection } from '../utils/climate-tone.utils'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
 import { formatMeasurement, formatMeasurementDetails } from '../../../shared/utils/measurement-format'
@@ -8,7 +9,6 @@ import { useMemo, useState } from 'react'
 import type { Tier, Tray, TrayStatus } from '../../../types/room.types'
 import { tokens } from '../../../app/theme/tokens'
 import { formatRoomLabel, formatTrayCode } from '../../../shared/i18n/terms'
-import { StatusBadge } from '../../../shared/ui/StatusBadge'
 import { TRAY_STATUS_CONFIG } from './tray-status.config'
 import {
   evaluateHumidity,
@@ -59,32 +59,32 @@ interface TrayVisualConfig {
 
 const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
   maintenance: {
-    borderColor: tokens.color.border,
-    bgColor: tokens.color.surface,
-    textColor: tokens.color.text,
+    borderColor: tokens.tone.danger.border,
+    bgColor: tokens.tone.danger.bg,
+    textColor: tokens.tone.danger.text,
     progressColor: tokens.tone.danger.solid,
     borderStyle: 'solid',
   },
   harvesting: {
-    borderColor: tokens.color.border,
-    bgColor: tokens.color.surface,
-    textColor: tokens.color.text,
+    borderColor: tokens.tone.warning.border,
+    bgColor: tokens.tone.warning.bg,
+    textColor: tokens.tone.warning.text,
     progressColor: tokens.tone.warning.solid,
     borderStyle: 'solid',
   },
   rented: {
-    borderColor: tokens.color.border,
-    bgColor: tokens.color.surface,
-    textColor: tokens.color.text,
+    borderColor: tokens.tone.ok.border,
+    bgColor: tokens.tone.ok.bg,
+    textColor: tokens.tone.ok.text,
     progressColor: tokens.tone.ok.solid,
     borderStyle: 'solid',
   },
   empty: {
-    borderColor: tokens.color.border,
-    bgColor: tokens.color.surface,
-    textColor: tokens.color.textMuted,
-    progressColor: tokens.color.border,
-    borderStyle: 'solid',
+    borderColor: tokens.tone.muted.border,
+    bgColor: tokens.tone.muted.bg,
+    textColor: tokens.tone.muted.text,
+    progressColor: tokens.tone.muted.solid,
+    borderStyle: 'dashed',
   },
 }
 
@@ -205,203 +205,40 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
 
   const vis = TRAY_VISUAL[effectiveStatus]
   const progress = growthProgress(summary)
-  const isEmpty = tray.status === 'empty'
   const trayCode = formatTrayCode(tray.code)
+  const customerName = summary?.customerName ?? tray.rental?.tenantName ?? 'Chưa có khách'
+  const harvestDate = formatShortDate(summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
+  const mushroomName = summary?.mushroomName ?? tray.rental?.mushroomType ?? 'Chưa rõ loại nấm'
+  const detail = [
+    tray.code, TRAY_STATUS_CONFIG[effectiveStatus].label, mushroomName, customerName,
+    harvestDate ? `Dự kiến thu hoạch ${harvestDate}` : null,
+    progress ? `${progress.dayLabel}, ${Math.round(progress.percent)}%` : null,
+  ].filter(Boolean).join(' · ')
 
-  const baseShadow = 'none'
-
-  // Ô khay trống — gọn, chữ nhạt, KHÔNG lặp lại "Sẵn sàng vào vụ".
-  if (isEmpty) {
-    return (
-      <button
-        type="button"
-        onClick={onClick}
-        aria-label={`Mở chi tiết ${trayCode}`}
-        aria-current={isSelected ? 'true' : undefined}
-        className="rack-tray-btn"
-        style={{
-          appearance: 'none',
-          textAlign: 'left',
-          font: 'inherit',
-          display: 'flex',
-          alignItems: 'center',
-          gap: 6,
-          padding: '6px 10px',
-          minHeight: 36,
-          borderRadius: tokens.radius.md,
-          border: `1px ${vis.borderStyle} ${isSelected ? tokens.color.borderStrong : vis.borderColor}`,
-          backgroundColor: isSelected ? tokens.color.surfaceMuted : vis.bgColor,
-          cursor: 'pointer',
-          transition: `box-shadow ${tokens.motion.fast}`,
-          boxShadow: baseShadow,
-          WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        <span
-          style={{
-            minWidth: 0,
-            fontSize: 'var(--mcms-font-small)',
-            fontWeight: tokens.typography.weightSemibold,
-            color: vis.textColor,
-            fontFamily: 'var(--mcms-font-mono)',
-          }}
-        >
-          <TrayCodeText code={tray.code} focusable={false} />
-        </span>
-        <StatusBadge tone={TRAY_STATUS_CONFIG.empty.tone} label={TRAY_STATUS_CONFIG.empty.shortLabel} />
-      </button>
-    )
-  }
-
-  const customerName = summary?.customerName ?? tray.rental?.tenantName ?? null
-  const harvestDate = formatShortDate(
-    summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate,
-  )
-  const mushroomName = summary?.mushroomName ?? tray.rental?.mushroomType ?? null
-
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={`Mở chi tiết ${trayCode}`}
-      aria-current={isSelected ? 'true' : undefined}
-      className="tray-card-btn"
+  return <Tooltip title={detail} trigger={['hover', 'focus']}>
+    <button type="button" onClick={onClick} aria-label={`Mở chi tiết ${trayCode}: ${detail}`}
+      aria-current={isSelected ? 'true' : undefined} className="tray-card-btn"
       style={{
-        appearance: 'none',
-          textAlign: 'left',
-          font: 'inherit',
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '6px',
-        padding: '10px 12px',
-        borderRadius: tokens.radius.lg,
-        border: `1px ${vis.borderStyle} ${isSelected ? tokens.color.borderStrong : vis.borderColor}`,
-        backgroundColor: isSelected ? tokens.color.surfaceMuted : vis.bgColor,
-        cursor: 'pointer',
-        transition: `box-shadow ${tokens.motion.fast}, transform ${tokens.motion.fast}`,
-        boxShadow: baseShadow,
-        minHeight: 92,
-        WebkitTapHighlightColor: 'transparent',
-      }}
-    >
-      {/* ── Dòng 1: mã khay + badge trạng thái ── */}
-      <Flex align="center" justify="space-between" gap={4} wrap>
-        <span
-          style={{
-            minWidth: 0,
-            maxWidth: '100%',
-            fontSize: 'var(--mcms-font-small)',
-            fontWeight: tokens.typography.weightSemibold,
-            letterSpacing: '0.04em',
-            color: vis.textColor,
-            fontFamily: 'var(--mcms-font-mono)',
-          }}
-        >
-          <TrayCodeText code={tray.code} focusable={false} />
-        </span>
-        <StatusBadge
-          tone={TRAY_STATUS_CONFIG[effectiveStatus].tone}
-          label={TRAY_STATUS_CONFIG[effectiveStatus].shortLabel}
-          title={TRAY_STATUS_CONFIG[effectiveStatus].label}
-          style={{
-            fontSize: 'var(--mcms-font-small)',
-            lineHeight: '16px',
-            margin: 0,
-          }}
-        />
-      </Flex>
-
-      {/* ── Loại nấm ── */}
-      {mushroomName && (
-        <span
-          style={{
-            fontSize: 'var(--mcms-font-small)',
-            fontWeight: tokens.typography.weightSemibold,
-            color: vis.textColor,
-            lineHeight: 1.3,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-          }}
-        >
-          {mushroomName}
-        </span>
-      )}
-
-      {/* ── Thông tin hữu ích: khách thuê + ngày thu hoạch dự kiến ── */}
-      {(customerName || harvestDate) && (
-        <span
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            gap: 6,
-            fontSize: 'var(--mcms-font-small)',
-            color: vis.textColor,
-            opacity: 15,
-          }}
-        >
-          <span
-            style={{
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            {customerName ?? ''}
-          </span>
-          {harvestDate && (
-            <span
-              style={{
-                flexShrink: 0,
-                fontFamily: 'var(--mcms-font-mono)',
-              }}
-            >
-              {harvestDate}
-            </span>
-          )}
-        </span>
-      )}
-
-      {progress !== null && (
-        <div style={{ marginTop: 2 }}>
-          <Flex align="center" justify="space-between" gap={4}>
-            <span style={{ fontSize: 'var(--mcms-font-small)', color: vis.textColor, opacity: 1 }}>
-              {progress.dayLabel}
-            </span>
-            <span style={{ fontSize: 'var(--mcms-font-small)', color: vis.textColor, opacity: 1 }}>
-              {Math.round(progress.percent)}%
-            </span>
-          </Flex>
-          <div
-            style={{
-              height: 4,
-              borderRadius: tokens.radius.sm,
-              backgroundColor: `${vis.progressColor}28`,
-              overflow: 'hidden',
-              marginTop: 2,
-            }}
-          >
-            <div
-              style={{
-                height: '100%',
-                width: `${progress.percent}%`,
-                borderRadius: tokens.radius.sm,
-                backgroundColor: vis.progressColor,
-                transition: `width ${tokens.motion.slow}`,
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {!tray.rental && tray.batchId && (
-        <span style={{ fontSize: 'var(--mcms-font-small)', color: vis.textColor, opacity: 1 }}>
-          Mẻ: {tray.batchId}
-        </span>
-      )}
+        appearance: 'none', font: 'inherit', width: '100%', height: '100%', minWidth: 0,
+        minHeight: tokens.components.tray.minHeight, padding: tokens.space['3'],
+        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: tokens.space['2'],
+        textAlign: 'left', borderRadius: tokens.radius.md, cursor: 'pointer',
+        border: `${isSelected ? tokens.components.tray.selectedBorderWidth : tokens.components.tray.borderWidth}px ${vis.borderStyle} ${isSelected ? tokens.color.text : vis.borderColor}`,
+        color: vis.textColor, background: vis.bgColor, boxShadow: tokens.shadow.xs,
+      }}>
+      <span style={{ display: 'flex', gap: tokens.space['2'], alignItems: 'center', minWidth: 0 }}>
+        <TrayCodeText code={tray.code} focusable={false} />
+        {tray.status !== 'empty' && <svg aria-hidden="true" width={tokens.components.tray.iconSize} height={tokens.components.tray.iconSize} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+          <path d="M3 13a9 9 0 0 1 18 0H3Zm6 0v7h6v-7" fill="none" stroke="currentColor" strokeWidth={tokens.components.tray.borderWidth} />
+        </svg>}
+      </span>
+      <span aria-hidden="true" style={{ display: 'block', height: tokens.components.tray.progressHeight,
+        width: '100%', borderRadius: tokens.radius.sm, background: tokens.color.surface }}>
+        {progress && <span style={{ display: 'block', height: '100%', width: `${progress.percent}%`,
+          borderRadius: tokens.radius.sm, background: vis.progressColor }} />}
+      </span>
     </button>
-  )
+  </Tooltip>
 }
 
 // ── Nút gộp khay trống ──────────────────────────────────────────────────────
@@ -559,6 +396,8 @@ export function RackView({
         const activeTrays = sortedTrays.filter((t) => t.status !== 'empty')
         const emptyTrays = sortedTrays.filter((t) => t.status === 'empty')
         const isEmptyExpanded = expandedEmptyTiers.has(tier.tierId)
+        const layout = buildTrayLayout(tier.trays)
+        const unplacedIds = new Set(layout.unplaced.map(tray => tray.id))
 
         const temperature = evaluateTemperature(
           liveReadings?.get(tier.tierId)?.temperature ?? null,
@@ -623,16 +462,29 @@ export function RackView({
               </Flex>
             </Flex>
 
+            {layout.grids.map(grid => (
+              <section key={grid.floorId} aria-label={grid.label} style={{ padding: tokens.space['4'] }}>
+                <Typography.Title level={4} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>{grid.label}</Typography.Title>
+                <div style={{ overflowX: 'auto', padding: tokens.space['1'] }}>
+                  <div style={{ display: 'grid', gridAutoRows: tokens.components.tray.minHeight, gridTemplateColumns: `repeat(${grid.columns}, minmax(${tokens.components.tray.minWidth}px, 1fr))`, gap: tokens.space['2'] }}>
+                    {grid.cells.map(({ tray, row, column }) => <div key={tray.id} style={{ gridRow: row, gridColumn: column, minWidth: 0 }}>
+                      <TrayCard tray={tray} isSelected={selectedTrayId === tray.id} onClick={() => onSelectTray(tray)} summary={sessionSummaries?.get(Number(tray.id)) ?? null} />
+                    </div>)}
+                  </div>
+                </div>
+              </section>
+            ))}
+            {layout.unplaced.length > 0 && <Typography.Text type="secondary" style={{ paddingInline: tokens.space['4'] }}>Khay chưa xác định vị trí</Typography.Text>}
             {/* ── Tray grid ── */}
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fill, minmax(158px, 1fr))',
+                gridTemplateColumns: `repeat(auto-fill, minmax(${tokens.components.tray.fallbackWidth}px, 1fr))`,
                 gap: tokens.space['3'],
                 padding: tokens.space['4'],
               }}
             >
-              {activeTrays.map((tray) => (
+              {activeTrays.filter(tray => unplacedIds.has(tray.id)).map((tray) => (
                 <TrayCard
                   key={tray.id}
                   tray={tray}
@@ -642,7 +494,7 @@ export function RackView({
                 />
               ))}
 
-              {emptyTrays.length > 0 && (
+              {emptyTrays.some(tray => unplacedIds.has(tray.id)) && (
                 <div
                   style={{
                     gridColumn: '1 / -1',
@@ -651,7 +503,7 @@ export function RackView({
                   }}
                 >
                   <EmptyTrayGroup
-                    trays={emptyTrays}
+                    trays={emptyTrays.filter(tray => unplacedIds.has(tray.id))}
                     selectedTrayId={selectedTrayId}
                     onSelectTray={onSelectTray}
                     onToggle={() => toggleEmptyTier(tier.tierId)}
