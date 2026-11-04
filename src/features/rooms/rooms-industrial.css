@@ -76,8 +76,8 @@
 
 .tray-admin-section .mcms-action-button.ant-btn-primary,
 .tray-staff-workflow .mcms-action-button.ant-btn-primary {
-  background: var(--mcms-primary);
-  border-color: var(--mcms-primary);
+  background: var(--mcms-primary-strong);
+  border-color: var(--mcms-primary-strong);
   color: var(--mcms-text-inverse);
 }
 

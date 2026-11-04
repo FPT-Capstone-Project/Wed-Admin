@@ -10,7 +10,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { tones } from '../../../app/theme/tokens'
+import { tones, chartSeries } from '../../../app/theme/tokens'
 
 interface ComparativeChartPoint {
   month: string
@@ -37,8 +37,8 @@ const VND_FULL = new Intl.NumberFormat('vi-VN', {
   maximumFractionDigits: 0,
 })
 
-const CURRENT_COLOR = tones.ok.solid
-const PREVIOUS_COLOR = tones.muted.border
+const CURRENT_COLOR = chartSeries.revenue
+const PREVIOUS_COLOR = chartSeries.revenuePrevious
 
 function CustomTooltip({
   active,

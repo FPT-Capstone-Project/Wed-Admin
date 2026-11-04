@@ -9,7 +9,7 @@
  * Mục tiêu: bảo đảm không ai vô tình đổi token làm hỏng WCAG AA.
  */
 
-import { border, navigation, palette, surface, text, tones } from './tokens.ts'
+import { border, navigation, palette, surface, text, tones, chartSeries } from './tokens.ts'
 
 /** WCAG 2.x relative luminance. */
 function luminance(hex: string): number {
@@ -55,6 +55,12 @@ check('Chữ phụ / trắng', text.muted, surface.surface, 4.5)
 check('Chữ phụ / nền app', text.muted, surface.background, 4.5)
 check('Chữ phụ / nền lạch', text.muted, surface.surfaceMuted, 4.5)
 check('Nút chính / trắng trên primary (nền CTA)', text.inverse, palette.primaryStrong, 4.5)
+check('Blue / chữ trên nền mềm', palette.blue, palette.blueSoft, 4.5)
+check('Teal / chữ trên nền mềm', palette.teal, palette.tealSoft, 4.5)
+for (const [name, color] of Object.entries(chartSeries)) {
+  check(`Chart ${name} / nền trắng`, color, surface.surface, 3)
+  check(`Chart ${name} / nền app`, color, surface.background, 3)
+}
 
 /* --- Trạng thái ngữ nghĩa (AA = 4.5:1) -------------------------------- */
 

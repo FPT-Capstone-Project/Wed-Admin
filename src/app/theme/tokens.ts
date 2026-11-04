@@ -24,8 +24,24 @@
 
 /* ─── Kiểu dữ liệu ─────────────────────────────────────────────────────── */
 
-/** 4 trạng thái ngữ nghĩa dùng xuyên suốt app. */
-export type SemanticTone = 'ok' | 'info' | 'warning' | 'danger' | 'muted' | 'neutral'
+/**
+ * 5 trạng thái ngữ nghĩa dùng xuyên suốt app.
+ *
+ * ⚠ `success` (xanh dương) là tone **riêng**, khác `ok` (xanh lá):
+ *   - `ok`      → đang hoạt động / bình thường (xanh lá #16a34a).
+ *   - `success` → đã **hoàn thành** một vòng đời (xanh dương #1d4ed8).
+ *
+ *   Khoảng cách màu giữa `ok` và `success` đủ rõ để phân biệt "đang chạy"
+ *   với "đã xong" trong cùng 1 bảng (vd bảng phiên canh tác).
+ */
+export type SemanticTone =
+  | 'ok'
+  | 'success'
+  | 'info'
+  | 'warning'
+  | 'danger'
+  | 'muted'
+  | 'neutral'
 
 /** Bảng màu chữ + nền + viền cho một trạng thái ngữ nghĩa. */
 export interface TonePalette {
@@ -34,12 +50,12 @@ export interface TonePalette {
   /** Nền mềm (chip, banner) — dùng cho khối lớn, KHÔNG dùng cho badge. */
   readonly bg: string
   /**
-   * Nền badge — luôn là **xám/xanh rất nhạt**, không viền.
+   * Nền badge nhạt theo tone; chữ và chấm được kiểm tra tương phản riêng.
    *
    * ⚠ Vì sao tách khỏi `bg`?
    *   `bg` là nền *mềm theo sắc thái* (amber cho cảnh báo, coral cho lỗi) —
-   *   dùng cho banner/dải màu lớn. Badge "Status Dot" cần nền **trung tính**
-   *   để chấm tròn + chữ đậm là thứ duy nhất thu hút sự chú ý.
+   *   dùng cho banner/dải màu lớn. Badge có token riêng để kiểm soát
+   *   tương phản khi điều chỉnh nền mà không ảnh hưởng banner.
    */
   readonly badgeBg: string
   /** Viền — đạt ≥ 3:1 trên cả nền mềm lẫn nền trắng. */
@@ -92,8 +108,8 @@ export const palette = {
   primaryFaint: '#f0fdf4',
 
   /* Teal — thông tin, trạng thái trung tính đang diễn ra */
-  teal: primitives.slate600,
-  tealSoft: primitives.slate100,
+  teal: '#0f766e',
+  tealSoft: '#f0fdfa',
 
   /* Amber — cần chú ý, chờ thao tác */
   amber: '#a16207',
@@ -104,8 +120,8 @@ export const palette = {
   coralSoft: '#fff0ee',
 
   /* Blue — thông tin bổ sung, liên kết */
-  blue: primitives.slate600,
-  blueSoft: primitives.slate100,
+  blue: '#2563eb',
+  blueSoft: '#eff6ff',
 } as const
 
 /* ─── Nền & chữ ───────────────────────────────────────────────────────── */
@@ -178,8 +194,7 @@ export const navigation = {
  *
  * ⚠ Theo chuẩn B2B Industrial IoT:
  *   - Xanh lá chỉ dùng cho `ok` (Healthy/Online) + CTA.
- *   - `info` dùng **Slate trung tính** (không phải teal) để trạng thái
- *     "đang diễn ra" không cạnh tranh sự chú ý với cảnh báo.
+ *   - `info` dùng xanh dương, phân biệt với cảnh báo vàng và nguy hiểm đỏ.
  *   - Viền badge luôn mảnh & trung tính, không viền đậm màu sặc sỡ.
  */
 export const tones: Record<SemanticTone, TonePalette> = {
@@ -192,20 +207,34 @@ export const tones: Record<SemanticTone, TonePalette> = {
     solid: primitives.green600,
     dot: '#15803d',
   },
+  /**
+   * Hoàn thành — đã xong một vòng đời (phiên đã thu hoạch, đơn đã đóng).
+   *
+   * ⚠ Màu **xanh dương** (`#1d4ed8`) — chữ trên nền `#eff6ff` đạt 6.29:1 ✅,
+   *   chấm tròn `#1d4ed8` trên nền badge đạt ≥ 3:1 ✅ (WCAG 1.4.11).
+   */
+  success: {
+    text: '#1d4ed8',
+    bg: '#eff6ff',
+    badgeBg: '#eff6ff',
+    border: '#1d4ed8',
+    solid: '#1d4ed8',
+    dot: '#1d4ed8',
+  },
   /** Thông tin — đang diễn ra, không cảnh báo. */
   info: {
-    text: '#334155',
-    bg: primitives.slate100,
-    badgeBg: primitives.slate100,
-    border: '#7c8b9e',
-    solid: '#475569',
-    dot: '#475569',
+    text: '#1d4ed8',
+    bg: '#eff6ff',
+    badgeBg: '#eff6ff',
+    border: '#2563eb',
+    solid: '#2563eb',
+    dot: '#2563eb',
   },
   /** Cần chú ý — chờ xử lý, sắp hết hạn, vượt ngưỡng nhẹ. */
   warning: {
     text: '#92400e',
     bg: '#fff7e2',
-    badgeBg: primitives.slate100,
+    badgeBg: '#fff7e2',
     border: '#b45309',
     solid: '#d97706',
     dot: '#b45309',
@@ -214,7 +243,7 @@ export const tones: Record<SemanticTone, TonePalette> = {
   danger: {
     text: '#b91c1c',
     bg: '#fff0ee',
-    badgeBg: primitives.slate100,
+    badgeBg: '#fff0ee',
     border: '#dc2626',
     solid: '#dc2626',
     dot: '#dc2626',
@@ -242,6 +271,7 @@ export const tones: Record<SemanticTone, TonePalette> = {
 /** Nhãn tiếng Việt mặc định cho từng trạng thái ngữ nghĩa. */
 export const toneLabels: Record<SemanticTone, string> = {
   ok: 'Bình thường',
+  success: 'Hoàn thành',
   info: 'Thông tin',
   warning: 'Cần chú ý',
   danger: 'Nguy hiểm',
@@ -322,6 +352,7 @@ export const shadow = {
  *   cách, không phải trên cỡ chữ to.
  */
 export const typography = {
+  fontMono: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace',
   /** Font chính — Inter (Minimal Swiss, tối ưu cho admin panel). */
   fontFamily:
     'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
@@ -391,6 +422,14 @@ export const breakpoint = {
  * Token gốc — dùng khi import trong TS.
  * Cấu trúc phẳng để truy cập nhanh: `tokens.color.primary`.
  */
+/** Data series colors are independent of operational severity. */
+export const chartSeries = {
+  temperature: '#7c3aed',
+  humidity: '#0d9488',
+  revenue: '#2563eb',
+  revenuePrevious: '#64748b',
+} as const
+
 export const componentTokens = {
   button: { background: palette.primaryStrong },
   card: { background: surface.surface, border: border.base },
@@ -403,6 +442,7 @@ export const componentTokens = {
 } as const
 
 export const tokens = {
+  chartSeries,
   primitives,
   components: componentTokens,
   color: {
@@ -449,6 +489,12 @@ export type Tokens = typeof tokens
 export function buildCssVariables(): string {
   const lines: string[] = []
   lines.push(`  --mcms-font-family: ${typography.fontFamily};`)
+  lines.push(`  --mcms-font-mono: ${typography.fontMono};`)
+  lines.push(`  --mcms-motion-fast: ${motion.fast};`)
+  lines.push(`  --mcms-chart-temperature: ${chartSeries.temperature};`)
+  lines.push(`  --mcms-chart-humidity: ${chartSeries.humidity};`)
+  lines.push(`  --mcms-chart-revenue: ${chartSeries.revenue};`)
+  lines.push(`  --mcms-chart-revenue-previous: ${chartSeries.revenuePrevious};`)
   lines.push(`  --mcms-font-body: ${typography.sizeBody}px;`)
   lines.push(`  --mcms-font-title: ${typography.sizeTitle}px;`)
   lines.push(`  --mcms-font-heading: ${typography.sizeHeading}px;`)

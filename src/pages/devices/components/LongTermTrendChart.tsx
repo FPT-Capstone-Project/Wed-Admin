@@ -51,13 +51,13 @@ const STANDARD_LINES: TrendLineDefinition[] = [
   {
     key: 'temperature',
     label: 'Nhiệt độ TB',
-    color: 'var(--mcms-coral)',
+    color: 'var(--mcms-chart-temperature)',
     yAxisId: 'temperature',
   },
   {
     key: 'humidity',
     label: 'Độ ẩm TB',
-    color: 'var(--mcms-teal)',
+    color: 'var(--mcms-chart-humidity)',
     yAxisId: 'humidity',
     dash: '7 4',
   },
@@ -76,27 +76,27 @@ function buildComparisonLines(
     {
       key: 'temperatureYearA',
       label: `Nhiệt độ ${yearA}`,
-      color: 'var(--mcms-coral)',
+      color: 'var(--mcms-chart-temperature)',
       yAxisId: 'temperature',
       dash: '7 4',
     },
     {
       key: 'temperatureYearB',
       label: `Nhiệt độ ${yearB}`,
-      color: 'var(--mcms-coral)',
+      color: 'var(--mcms-chart-temperature)',
       yAxisId: 'temperature',
     },
     {
       key: 'humidityYearA',
       label: `Độ ẩm ${yearA}`,
-      color: 'var(--mcms-teal)',
+      color: 'var(--mcms-chart-humidity)',
       yAxisId: 'humidity',
       dash: '2 5',
     },
     {
       key: 'humidityYearB',
       label: `Độ ẩm ${yearB}`,
-      color: 'var(--mcms-teal)',
+      color: 'var(--mcms-chart-humidity)',
       yAxisId: 'humidity',
     },
   ]

@@ -23,22 +23,17 @@ export interface StatusBadgeProps {
 /**
  * Badge trạng thái dùng chung cho toàn app — dạng **"Status Dot"**.
  *
- * Vì sao không dùng `<Tag color="success">` của antd?
- *   Badge preset của antd **FAIL WCAG AA**:
- *     success  3.37:1 (cần ≥ 4.5)
- *     warning  2.76:1
- *     default  3.22:1
- *   → chữ trên badge khó đọc, đúng complaint "badge tương phản yếu".
+ * Dùng palette riêng để kiểm tra chính xác cặp chữ/nền/chấm của MCMS.
  *
  * ⚠ Chuẩn Enterprise IoT — **Status Dot**:
  *   - **Chấm tròn 6px**: xanh = ổn định, đỏ = cảnh báo/mất kết nối,
  *     vàng = chờ xử lý.
- *   - Chữ trung tính, medium ngay sau chấm.
- *   - Nền xám rất nhạt, KHÔNG viền, bo góc 4px.
+ *   - Chữ semibold cùng tông trên nền nhạt theo trạng thái.
+ *   - Không viền, bo góc 4px.
  *   - KHÔNG viền màu sặc sỡ, KHÔNG bo tròn pill.
  *
  * Component này dùng palette đã verify trong `tokens.ts`:
- *   ok 4.55 · info 9.45 · warning 6.47 · danger 5.91 · muted 4.97
+ *   Mọi cặp chữ/nền badge đạt AA qua verify-tokens.ts.
  *
  * Quy tắc bắt buộc (WCAG 1.4.1 — không dùng màu đơn độc để truyền đạt):
  *   - Luôn có `label` dạng chữ.
@@ -54,7 +49,7 @@ export function StatusBadge({
   style,
 }: StatusBadgeProps) {
   const palette = tones[tone]
-  const dotColor = tone === 'ok' ? palette.solid : palette.dot
+  const dotColor = palette.dot
   const accessibleLabel = typeof label === 'string' ? label : toneLabels[tone]
 
   // Dạng điểm tròn — luôn bọc Tooltip vì không có chữ bên cạnh.
@@ -89,10 +84,10 @@ export function StatusBadge({
         gap: 6,
         padding: '1px 8px',
         borderRadius: 'var(--mcms-radius-sm)',
-        color: 'var(--mcms-text-muted)',
-        backgroundColor: 'var(--mcms-surface-muted)',
+        color: palette.text,
+        backgroundColor: palette.badgeBg,
         fontSize: 12,
-        fontWeight: 500,
+        fontWeight: 600,
         lineHeight: '20px',
         whiteSpace: 'nowrap',
         ...style,

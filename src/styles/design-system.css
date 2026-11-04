@@ -61,8 +61,8 @@
 
 /*
  * Badge trạng thái dạng **Status Dot** (chuẩn Enterprise IoT):
- *   - chấm tròn 6px + chữ trung tính, medium
- *   - nền xám/xanh rất nhạt, **KHÔNG viền**
+ *   - chấm tròn 6px + chữ đậm cùng tông trạng thái
+ *   - nền nhạt theo tone, **KHÔNG viền**
  *   - KHÔNG viền màu sặc sỡ, KHÔNG pill
  *   - bo góc 4px
  *

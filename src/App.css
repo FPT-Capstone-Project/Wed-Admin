@@ -9,6 +9,12 @@
  */
 :root {
   --mcms-font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --mcms-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  --mcms-motion-fast: 160ms ease;
+  --mcms-chart-temperature: #7c3aed;
+  --mcms-chart-humidity: #0d9488;
+  --mcms-chart-revenue: #2563eb;
+  --mcms-chart-revenue-previous: #64748b;
   --mcms-font-body: 13px;
   --mcms-font-title: 14px;
   --mcms-font-heading: 18px;
@@ -18,14 +24,14 @@
   --mcms-primary-dark: #166534;
   --mcms-primary-soft: #eaf7ee;
   --mcms-primary-faint: #f0fdf4;
-  --mcms-teal: #475569;
-  --mcms-teal-soft: #f1f5f9;
+  --mcms-teal: #0f766e;
+  --mcms-teal-soft: #f0fdfa;
   --mcms-amber: #a16207;
   --mcms-amber-soft: #fff7e2;
   --mcms-coral: #c2413b;
   --mcms-coral-soft: #fff0ee;
-  --mcms-blue: #475569;
-  --mcms-blue-soft: #f1f5f9;
+  --mcms-blue: #2563eb;
+  --mcms-blue-soft: #eff6ff;
   --mcms-background: #f8fafc;
   --mcms-surface: #ffffff;
   --mcms-surface-muted: #f1f5f9;
@@ -66,21 +72,27 @@
   --mcms-tone-ok-border: #15803d;
   --mcms-tone-ok-solid: #16a34a;
   --mcms-tone-ok-dot: #15803d;
-  --mcms-tone-info-text: #334155;
-  --mcms-tone-info-bg: #f1f5f9;
-  --mcms-tone-info-badge-bg: #f1f5f9;
-  --mcms-tone-info-border: #7c8b9e;
-  --mcms-tone-info-solid: #475569;
-  --mcms-tone-info-dot: #475569;
+  --mcms-tone-success-text: #1d4ed8;
+  --mcms-tone-success-bg: #eff6ff;
+  --mcms-tone-success-badge-bg: #eff6ff;
+  --mcms-tone-success-border: #1d4ed8;
+  --mcms-tone-success-solid: #1d4ed8;
+  --mcms-tone-success-dot: #1d4ed8;
+  --mcms-tone-info-text: #1d4ed8;
+  --mcms-tone-info-bg: #eff6ff;
+  --mcms-tone-info-badge-bg: #eff6ff;
+  --mcms-tone-info-border: #2563eb;
+  --mcms-tone-info-solid: #2563eb;
+  --mcms-tone-info-dot: #2563eb;
   --mcms-tone-warning-text: #92400e;
   --mcms-tone-warning-bg: #fff7e2;
-  --mcms-tone-warning-badge-bg: #f1f5f9;
+  --mcms-tone-warning-badge-bg: #fff7e2;
   --mcms-tone-warning-border: #b45309;
   --mcms-tone-warning-solid: #d97706;
   --mcms-tone-warning-dot: #b45309;
   --mcms-tone-danger-text: #b91c1c;
   --mcms-tone-danger-bg: #fff0ee;
-  --mcms-tone-danger-badge-bg: #f1f5f9;
+  --mcms-tone-danger-badge-bg: #fff0ee;
   --mcms-tone-danger-border: #dc2626;
   --mcms-tone-danger-solid: #dc2626;
   --mcms-tone-danger-dot: #dc2626;
@@ -339,7 +351,7 @@ textarea {
  */
 .mcms-menu .ant-menu-item-selected {
   border: 0 !important;
-  border-left: 3px solid #059669 !important;
+  border-left: 3px solid var(--mcms-nav-active-bar) !important;
   border-radius: 0 !important;
   box-shadow: none;
   font-weight: 600;
@@ -412,7 +424,7 @@ textarea {
   height: 6px;
   border: 0;
   border-radius: 50%;
-  background: #22a447;
+  background: var(--mcms-tone-ok-dot);
   box-shadow: none;
 }
 

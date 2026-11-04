@@ -44,13 +44,13 @@ const METRICS: Array<{
   {
     key: 'temperature',
     label: 'Nhiệt độ',
-    color: 'var(--mcms-coral)',
+    color: 'var(--mcms-chart-temperature)',
     unit: '°C',
   },
   {
     key: 'humidity',
     label: 'Độ ẩm',
-    color: 'var(--mcms-teal)',
+    color: 'var(--mcms-chart-humidity)',
     unit: '%RH',
     dash: '7 4',
   },
@@ -370,7 +370,7 @@ export function IoTTelemetryChart({
               dataKey="temperature"
               name="Nhiệt độ"
               type="monotone"
-              stroke="var(--mcms-coral)"
+              stroke="var(--mcms-chart-temperature)"
               strokeWidth={2}
               dot={false}
               hide={!visibleMetrics.temperature}
@@ -381,7 +381,7 @@ export function IoTTelemetryChart({
               dataKey="humidity"
               name="Độ ẩm"
               type="monotone"
-              stroke="var(--mcms-teal)"
+              stroke="var(--mcms-chart-humidity)"
               strokeWidth={2}
               strokeDasharray="7 4"
               dot={false}

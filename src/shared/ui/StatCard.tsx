@@ -99,7 +99,7 @@ export function StatCard({
                 color:
                   highlightValue && palette ? palette.text : 'var(--mcms-text)',
                 fontVariantNumeric: 'tabular-nums',
-                fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+                fontFamily: 'var(--mcms-font-mono)',
               }}
             >
               {value}

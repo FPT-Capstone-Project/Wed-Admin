@@ -15,7 +15,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { palette, border, navigation, surface } from '../../../app/theme/tokens'
+import { chartSeries, border, navigation, surface } from '../../../app/theme/tokens'
 import { StatusBadge } from '../../../shared/ui'
 
 export interface EnvironmentDataPoint {
@@ -109,26 +109,25 @@ export function EnvironmentChart({
               wrapperStyle={{ paddingTop: 8, fontSize: 12, color: AXIS_TICK_COLOR }}
               formatter={(value) => <span style={{ color: AXIS_TICK_COLOR }}>{value}</span>}
             />
-            {/* Nhiệt độ — dùng palette.coral từ tokens */}
+            {/* Điểm rời theo tầng; màu chuỗi không biểu thị mức cảnh báo. */}
             <Line
               yAxisId="temperature"
               type="monotone"
               dataKey="temperature"
               name="Nhiệt độ (°C)"
-              stroke={palette.coral}
+              stroke={chartSeries.temperature}
               strokeWidth={0}
               dot={{ r: 4 }}
               connectNulls={false}
               activeDot={{ r: 4, strokeWidth: 2, stroke: surface.surface }}
               isAnimationActive={false}
             />
-            {/* Độ ẩm — dùng palette.teal từ tokens */}
             <Line
               yAxisId="humidity"
               type="monotone"
               dataKey="humidity"
               name="Độ ẩm (%)"
-              stroke={palette.teal}
+              stroke={chartSeries.humidity}
               strokeWidth={0}
               strokeDasharray="7 5"
               dot={{ r: 4 }}

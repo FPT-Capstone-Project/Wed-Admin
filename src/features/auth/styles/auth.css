@@ -293,8 +293,8 @@
   font-size: 14px;
   font-weight: 650;
   border-radius: var(--mcms-radius-md);
-  background: var(--mcms-primary);
-  border-color: var(--mcms-primary);
+  background: var(--mcms-primary-strong);
+  border-color: var(--mcms-primary-strong);
   box-shadow: none;
 }
 
