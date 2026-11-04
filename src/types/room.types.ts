@@ -87,6 +87,10 @@ export interface Tray {
   floorNumber?: number | null
   /** Tên tầng (vd: "Tầng 2"). */
   floorName?: string | null
+  /** Undefined: older response omitted the field. Null: explicitly unassigned. */
+  positionId?: number | null
+  rowNumber?: number | null
+  columnNumber?: number | null
   status: TrayStatus
   customerId: string | null
   batchId: string | null

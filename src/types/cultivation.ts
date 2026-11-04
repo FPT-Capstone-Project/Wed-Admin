@@ -47,6 +47,9 @@ export interface CultivationTray {
   floor_number?: number | null
   /** Tên tầng (vd: "Tầng 2") — từ `cultivation_floors.floor_name`. */
   floor_name?: string | null
+  position_id?: number | null
+  row_number?: number | null
+  column_number?: number | null
   tray_code: string
   tray_name: string | null
   status: BeTrayStatus
@@ -117,6 +120,9 @@ export function toUiTray(be: CultivationTray): Tray {
     floorId: be.floor_id ?? null,
     floorNumber: be.floor_number ?? null,
     floorName: be.floor_name ?? null,
+    positionId: be.position_id,
+    rowNumber: be.row_number ?? null,
+    columnNumber: be.column_number ?? null,
     status: uiStatus,
     customerId: null,
     batchId: null,

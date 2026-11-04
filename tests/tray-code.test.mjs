@@ -12,6 +12,6 @@ test('unplaced tray labels preserve floor context without guessing floor numbers
   assert.equal(trayFloorLabel({ code: 'ROOM1-F7-R1-C1', floorName: 'Tầng test 2', floorNumber: 2 }), 'Tầng test 2')
   assert.equal(trayFloorLabel({ code: 'R1-C1', floorNumber: 2 }), 'T2')
   assert.equal(trayFloorLabel({ code: 'ROOM1-F7-R1-C1', floorId: 8 }), 'Tầng ID 8')
-  assert.equal(trayFloorLabel({ code: 'ROOM1-F7-R1-C1' }), 'Tầng ID 7')
+  assert.equal(trayFloorLabel({ code: 'ROOM1-F7-R1-C1' }), 'Chưa rõ tầng')
   assert.equal(trayFloorLabel({ code: 'CUSTOM' }), 'Chưa rõ tầng')
 })

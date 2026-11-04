@@ -133,6 +133,8 @@ export interface CreateIotCommandRequest {
 export type FloorStatus = 'ACTIVE' | 'INACTIVE'
 
 export interface CultivationFloorMapping {
+  total_rows?: number | null
+  total_columns?: number | null
   /**
    * Định danh tầng theo BE (`cultivation_floors.floor_id`).
    *

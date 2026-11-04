@@ -10,6 +10,5 @@ export function trayFloorLabel(tray: { floorName?: string | null; floorNumber?: 
   if (tray.floorName?.trim()) return tray.floorName.trim()
   if (tray.floorNumber != null) return `T${tray.floorNumber}`
   if (tray.floorId != null) return `Tầng ID ${tray.floorId}`
-  const floor = tray.code.match(/(?:^|-)F(\d+)-R\d+-C\d+$/i)
-  return floor ? `Tầng ID ${Number(floor[1])}` : 'Chưa rõ tầng'
+  return 'Chưa rõ tầng'
 }

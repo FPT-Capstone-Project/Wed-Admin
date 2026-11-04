@@ -143,6 +143,7 @@ export function useTiersWithEnvironment() {
 
   return {
     tiersWithEnv,
+    floorLayouts: mappings,
     isLoading: tiersQuery.isLoading || floorsQuery.isLoading,
     isError: tiersQuery.isError || floorsQuery.isError,
     /** Lỗi gốc từ query để UI hiển thị thông điệp thân thiện. */

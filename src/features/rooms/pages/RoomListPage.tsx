@@ -27,7 +27,7 @@ export function RoomListPage() {
   const navigate = useNavigate()
   const { id = null } = useParams<{ id: string }>()
 
-  const { tiersWithEnv, isLoading, isError, error, refetch } =
+  const { tiersWithEnv, floorLayouts, isLoading, isError, error, refetch } =
     useTiersWithEnvironment()
   const sessionSummaries = useTraySessionSummaries()
 
@@ -214,6 +214,7 @@ export function RoomListPage() {
       ) : (
         <RackView
           tiers={tiers}
+          floorLayouts={floorLayouts}
           selectedTrayId={id}
           onSelectTray={handleSelectTray}
           thresholdsByTier={thresholdsByTier}

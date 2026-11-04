@@ -1,4 +1,4 @@
-import { buildTrayLayout } from '../utils/tray-layout.utils'
+import { buildTrayLayout, type FloorLayout } from '../utils/tray-layout.utils'
 import { getClimateTone, getClimateDirection } from '../utils/climate-tone.utils'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
 import { trayFloorLabel } from '../../../shared/ui/tray-code.utils'
@@ -21,6 +21,7 @@ import type { TraySessionSummary } from '../hooks/useTraySessionSummaries'
 
 interface RackViewProps {
   tiers: Tier[]
+  floorLayouts?: FloorLayout[]
   selectedTrayId: string | null
   onSelectTray: (tray: Tray) => void
   /** Ngưỡng canh tác theo tầng — nguồn: BE `/environment` (`thresholds`). */
@@ -189,7 +190,7 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
 
 // ── Tray Card ────────────────────────────────────────────────────────────────
 interface TrayCardProps {
-  showFloor?: boolean
+  unplaced?: boolean
   tray: Tray
   isSelected: boolean
   onClick: () => void
@@ -197,7 +198,7 @@ interface TrayCardProps {
   summary: TraySessionSummary | null
 }
 
-function TrayCard({ tray, isSelected, onClick, summary, showFloor = false }: TrayCardProps) {
+function TrayCard({ tray, isSelected, onClick, summary, unplaced = false }: TrayCardProps) {
   /**
    * Khay "đã tới hạn thu hoạch" nhận nhãn + màu "Chờ thu hoạch" dù BE vẫn
    * trả status `OCCUPIED` — người dùng phải thấy được việc cần xử lý.
@@ -212,7 +213,7 @@ function TrayCard({ tray, isSelected, onClick, summary, showFloor = false }: Tra
   const harvestDate = formatShortDate(summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
   const mushroomName = summary?.mushroomName ?? tray.rental?.mushroomType ?? 'Chưa rõ loại nấm'
   const detail = [
-    tray.code, ...(showFloor ? [trayFloorLabel(tray)] : []), TRAY_STATUS_CONFIG[effectiveStatus].label, mushroomName, customerName,
+    tray.code, ...(unplaced ? [trayFloorLabel(tray)] : []), TRAY_STATUS_CONFIG[effectiveStatus].label, mushroomName, customerName,
     harvestDate ? `Dự kiến thu hoạch ${harvestDate}` : null,
     progress ? `${progress.dayLabel}, ${Math.round(progress.percent)}%` : null,
   ].filter(Boolean).join(' · ')
@@ -221,7 +222,7 @@ function TrayCard({ tray, isSelected, onClick, summary, showFloor = false }: Tra
     <button type="button" onClick={onClick} aria-label={`Mở chi tiết ${trayCode}: ${detail}`}
       aria-current={isSelected ? 'true' : undefined} className="tray-card-btn"
       style={{
-        appearance: 'none', font: 'inherit', width: '100%', height: '100%', minWidth: 0,
+        appearance: 'none', font: 'inherit', width: '100%', height: unplaced ? 'auto' : '100%', minWidth: 0,
         minHeight: tokens.components.tray.minHeight, padding: tokens.space['3'],
         display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: tokens.space['2'],
         textAlign: 'left', borderRadius: tokens.radius.md, cursor: 'pointer',
@@ -229,7 +230,7 @@ function TrayCard({ tray, isSelected, onClick, summary, showFloor = false }: Tra
         color: vis.textColor, background: vis.bgColor, boxShadow: tokens.shadow.xs,
       }}>
       <span style={{ display: 'flex', gap: tokens.space['2'], alignItems: 'center', minWidth: 0 }}>
-        <TrayCodeText code={tray.code} prefix={showFloor ? trayFloorLabel(tray) : undefined} focusable={false} />
+        <TrayCodeText code={tray.code} wrap={unplaced} focusable={false} />
         {tray.status !== 'empty' && <svg aria-hidden="true" width={tokens.components.tray.iconSize} height={tokens.components.tray.iconSize} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
           <path d="M3 13a9 9 0 0 1 18 0H3Zm6 0v7h6v-7" fill="none" stroke="currentColor" strokeWidth={tokens.components.tray.borderWidth} />
         </svg>}
@@ -330,7 +331,7 @@ function EmptyTrayGroup({
           isSelected={selectedTrayId === tray.id}
           onClick={() => onSelectTray(tray)}
           summary={null}
-          showFloor
+          unplaced
         />
       ))}
     </Flex>
@@ -340,12 +341,17 @@ function EmptyTrayGroup({
 // ── RackView ─────────────────────────────────────────────────────────────────
 export function RackView({
   tiers,
+  floorLayouts = [],
   selectedTrayId,
   onSelectTray,
   thresholdsByTier,
   sessionSummaries,
   liveReadings,
 }: RackViewProps) {
+  const floorCount = new Set([
+    ...floorLayouts.map(floor => floor.floor_id),
+    ...tiers.flatMap(tier => tier.trays.map(tray => tray.floorId)),
+  ].filter((id): id is number => id != null && Number.isSafeInteger(id) && id > 0)).size
   const orderedTiers = useMemo(
     () => [...tiers].sort((a, b) => b.tierId - a.tierId),
     [tiers],
@@ -372,7 +378,7 @@ export function RackView({
       style={{ display: 'flex', flexDirection: 'column', gap: tokens.space['5'] }}
     >
       <Typography.Title level={2} style={{ margin: 0, fontSize: 16 }}>
-        Kệ nuôi · {tiers.length} tầng
+        Kệ nuôi · {floorCount} tầng
       </Typography.Title>
       {orderedTiers.map((tier) => {
         const thresholds = thresholdsByTier?.get(tier.tierId) ?? null
@@ -399,8 +405,7 @@ export function RackView({
         const activeTrays = sortedTrays.filter((t) => t.status !== 'empty')
         const emptyTrays = sortedTrays.filter((t) => t.status === 'empty')
         const isEmptyExpanded = expandedEmptyTiers.has(tier.tierId)
-        const layout = buildTrayLayout(tier.trays)
-        const unplacedIds = new Set(layout.unplaced.map(tray => tray.id))
+        const layout = buildTrayLayout(tier.trays, floorLayouts.filter(floor => floor.room_id === tier.tierId))
 
         const temperature = evaluateTemperature(
           liveReadings?.get(tier.tierId)?.temperature ?? null,
@@ -465,57 +470,48 @@ export function RackView({
               </Flex>
             </Flex>
 
-            {layout.grids.map(grid => (
-              <section key={grid.floorId} aria-label={grid.label} style={{ padding: tokens.space['4'] }}>
-                <Typography.Title level={4} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>{grid.label}</Typography.Title>
-                <div style={{ overflowX: 'auto', padding: tokens.space['1'] }}>
-                  <div style={{ display: 'grid', gridAutoRows: tokens.components.tray.minHeight, gridTemplateColumns: `repeat(${grid.columns}, minmax(${tokens.components.tray.minWidth}px, 1fr))`, gap: tokens.space['2'] }}>
-                    {grid.cells.map(({ tray, row, column }) => <div key={tray.id} style={{ gridRow: row, gridColumn: column, minWidth: 0 }}>
-                      <TrayCard tray={tray} isSelected={selectedTrayId === tray.id} onClick={() => onSelectTray(tray)} summary={sessionSummaries?.get(Number(tray.id)) ?? null} />
-                    </div>)}
+            {layout.grids.map(grid => {
+              const cells = new Map(grid.cells.map(cell => [`${cell.row}:${cell.column}`, cell.tray]))
+              const conflicts = new Set(grid.conflicts.map(cell => `${cell.row}:${cell.column}`))
+              return <section key={grid.floorId} aria-label={grid.label} style={{ padding: tokens.space['4'] }}>
+                <Typography.Title level={4} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'], overflowWrap: 'anywhere' }}>{grid.label}</Typography.Title>
+                {grid.rows > 0 && grid.columns > 0 ? <div style={{ overflowX: 'auto', padding: tokens.space['1'] }}>
+                  <div style={{ display: 'grid', gridTemplateRows: `repeat(${grid.rows}, ${tokens.components.tray.minHeight}px)`,
+                    gridTemplateColumns: `repeat(${grid.columns}, ${tokens.components.tray.minWidth}px)`, gap: tokens.space['2'] }}>
+                    {Array.from({ length: grid.rows * grid.columns }, (_, index) => {
+                      const row = Math.floor(index / grid.columns) + 1
+                      const column = index % grid.columns + 1
+                      const tray = cells.get(`${row}:${column}`)
+                      const vacancyLabel = conflicts.has(`${row}:${column}`) ? 'Trùng vị trí khay' : 'Vị trí chưa có khay'
+                      return <div key={`${row}:${column}`} style={{ gridRow: row, gridColumn: column, minWidth: 0 }}>
+                        {tray ? <TrayCard tray={tray} isSelected={selectedTrayId === tray.id} onClick={() => onSelectTray(tray)} summary={sessionSummaries?.get(Number(tray.id)) ?? null} />
+                          : <span role="img" aria-label={`${grid.label}, R${row}-C${column}: ${vacancyLabel}`}
+                            title={`R${row}-C${column}: ${vacancyLabel}`} style={{
+                              display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%',
+                              border: `${tokens.components.tray.borderWidth}px dashed ${tokens.tone.muted.border}`,
+                              borderRadius: tokens.radius.md, background: tokens.tone.muted.bg, color: tokens.tone.muted.text,
+                              fontSize: tokens.typography.sizeSmall,
+                            }}>R{row}-C{column}{conflicts.has(`${row}:${column}`) ? ' !' : ''}</span>}
+                      </div>
+                    })}
                   </div>
-                </div>
+                </div> : <Typography.Text type="secondary">Chưa có vị trí khay</Typography.Text>}
               </section>
-            ))}
-            {layout.unplaced.length > 0 && <Typography.Text type="secondary" style={{ paddingInline: tokens.space['4'] }}>Khay chưa xác định vị trí</Typography.Text>}
-            {/* ── Tray grid ── */}
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(auto-fill, minmax(${tokens.components.tray.fallbackWidth}px, 1fr))`,
-                gap: tokens.space['3'],
-                padding: tokens.space['4'],
-              }}
-            >
-              {activeTrays.filter(tray => unplacedIds.has(tray.id)).map((tray) => (
-                <TrayCard
-                  showFloor
-                  key={tray.id}
-                  tray={tray}
-                  isSelected={selectedTrayId === tray.id}
-                  onClick={() => onSelectTray(tray)}
-                  summary={sessionSummaries?.get(Number(tray.id)) ?? null}
-                />
-              ))}
-
-              {emptyTrays.some(tray => unplacedIds.has(tray.id)) && (
-                <div
-                  style={{
-                    gridColumn: '1 / -1',
-                    display: 'flex',
-                    alignItems: 'flex-start',
-                  }}
-                >
-                  <EmptyTrayGroup
-                    trays={emptyTrays.filter(tray => unplacedIds.has(tray.id))}
-                    selectedTrayId={selectedTrayId}
-                    onSelectTray={onSelectTray}
-                    onToggle={() => toggleEmptyTier(tier.tierId)}
-                    expanded={isEmptyExpanded}
-                  />
+            })}
+            {layout.unplacedGroups.length > 0 && <section style={{ padding: tokens.space['4'] }} aria-label="Khay chưa xác định vị trí">
+              <Typography.Title level={4} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0 }}>Khay chưa xác định vị trí</Typography.Title>
+              {layout.unplacedGroups.map(group => <section key={group.floorId ?? 'unassigned'} aria-label={group.label}>
+                <Typography.Title level={5} style={{ overflowWrap: 'anywhere' }}>{group.label}</Typography.Title>
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${tokens.components.tray.fallbackWidth}px, 1fr))`, gap: tokens.space['3'], marginBottom: tokens.space['4'] }}>
+                  {group.trays.filter(tray => tray.status !== 'empty').map(tray => <TrayCard key={tray.id} unplaced tray={tray}
+                    isSelected={selectedTrayId === tray.id} onClick={() => onSelectTray(tray)} summary={sessionSummaries?.get(Number(tray.id)) ?? null} />)}
+                  {group.trays.some(tray => tray.status === 'empty') && <div style={{ gridColumn: '1 / -1' }}>
+                    <EmptyTrayGroup trays={group.trays.filter(tray => tray.status === 'empty')} selectedTrayId={selectedTrayId}
+                      onSelectTray={onSelectTray} onToggle={() => toggleEmptyTier(tier.tierId)} expanded={isEmptyExpanded} />
+                  </div>}
                 </div>
-              )}
-            </div>
+              </section>)}
+            </section>}
           </section>
         )
       })}
