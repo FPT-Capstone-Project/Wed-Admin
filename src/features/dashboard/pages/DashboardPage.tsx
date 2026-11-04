@@ -1,3 +1,4 @@
+import { summarizeFarmClimate } from '../../rooms/utils/farm-climate.utils'
 /**
  * DashboardPage — Trang tổng quan trang trại MCMS.
  *
@@ -69,18 +70,6 @@ const EMPTY_METRICS: DashboardAnalyticsData = {
   harvest_quality: { usable_rate: 0, waste_rate: 0 },
 }
 
-/** Trung bình các số đo hợp lệ — `null` khi không có số nào. */
-function average(values: Array<number | null>): number | null {
-  const valid = values.filter(
-    (value): value is number =>
-      typeof value === 'number' && Number.isFinite(value),
-  )
-  if (valid.length === 0) return null
-  return (
-    Math.round((valid.reduce((sum, v) => sum + v, 0) / valid.length) * 10) / 10
-  )
-}
-
 export function DashboardPage() {
   // ── KPI tổng quan: một request duy nhất ──────────────────────────────
   const metricsQuery = useDashboardMetrics()
@@ -113,27 +102,18 @@ export function DashboardPage() {
    * Nhiệt độ / độ ẩm trung bình toàn trang trại — tính từ các tầng có
    * dữ liệu cảm biến hợp lệ.
    */
-  const environmentAverages = useMemo(
-    () => ({
-      temperature: average(
-        environmentQuery.points.map((point) => point.temperature),
-      ),
-      humidity: average(
-        environmentQuery.points.map((point) => point.humidity),
-      ),
-    }),
-    [environmentQuery.points],
-  )
+  const temperatureSummary = summarizeFarmClimate(environmentQuery.points, 'temperature')
+  const humiditySummary = summarizeFarmClimate(environmentQuery.points, 'humidity')
 
   /**
-   * Dữ liệu biểu đồ môi trường — chỉ gồm tầng có đủ nhiệt độ + độ ẩm.
+   * Giữ tầng thiếu số đo để biểu đồ không che giấu khoảng trống dữ liệu.
    */
   const environmentChartData = useMemo(
     () =>
       environmentQuery.points.map((point) => ({
         time: point.floorName,
-        temperature: point.temperature ?? 0,
-        humidity: point.humidity ?? 0,
+        temperature: point.temperature,
+        humidity: point.humidity,
       })),
     [environmentQuery.points],
   )
@@ -235,28 +215,30 @@ export function DashboardPage() {
           <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
               title="Nhiệt độ trung bình"
-              value={environmentAverages.temperature ?? 0}
+              value={temperatureSummary.value}
               unit="°C"
               precision={1}
               icon={<FireOutlined />}
               tone="coral"
-              statusTone="ok"
-              status="Ổn định"
-              target="Mục tiêu 23–28°C"
+              statusTone={temperatureSummary.tone}
+              status={temperatureSummary.label}
+              details={temperatureSummary.details}
+              target={temperatureSummary.coverageNote}
             />
           </Col>
 
           <Col xs={24} sm={12} xl={8}>
             <EnvironmentMetricCard
               title="Độ ẩm trung bình"
-              value={environmentAverages.humidity ?? 0}
+              value={humiditySummary.value}
               unit="%"
               precision={1}
               icon={<CloudOutlined />}
               tone="teal"
-              statusTone="ok"
-              status="Tối ưu"
-              target="Mục tiêu 80–92%"
+              statusTone={humiditySummary.tone}
+              status={humiditySummary.label}
+              details={humiditySummary.details}
+              target={humiditySummary.coverageNote}
             />
           </Col>
 

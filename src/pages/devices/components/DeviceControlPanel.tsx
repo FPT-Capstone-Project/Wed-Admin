@@ -1,9 +1,11 @@
+import { climateThresholdsFromConfig } from '../../../features/rooms/utils/farm-climate.utils'
+import { evaluateTemperature, evaluateHumidity, type ClimateReading } from '../../../features/rooms/utils/tray-climate.utils'
+import { tones } from '../../../app/theme/tokens'
 import '../device-industrial.css'
 import { Suspense, useMemo, useState } from 'react'
 import {
   ApiOutlined,
   BulbOutlined,
-  CheckCircleOutlined,
   ControlOutlined,
   ExperimentOutlined,
   EyeOutlined,
@@ -222,6 +224,13 @@ export function DeviceControlPanel() {
     },
   )
 
+  function sensorThresholds(sensor: IotSensor) {
+    const matches = floors.filter(floor =>
+      floor.master_id === masters[0]?.id && floor.node_address === sensor.nodeId)
+    return climateThresholdsFromConfig(matches.length === 1
+      ? configByFloorId.get(matches[0].floor_id) : null)
+  }
+
   // ── Tables ──────────────────────────────────────────────────────────
   const sensorColumns: ColumnsType<IotSensor> = [
     {
@@ -247,77 +256,16 @@ export function DeviceControlPanel() {
       ),
     },
     {
-      title: 'Nhiệt độ (°C)',
-      key: 'temp',
-      className: 'mcms-iot-mono',
-      width: 130,
-      align: 'right',
-      render: (_, row) =>
-        row.temperature == null ? (
-          <Typography.Text type="secondary">—</Typography.Text>
-        ) : (
-          <Flex align="baseline" gap={4} justify="flex-end">
-            <Typography.Text
-              strong
-              style={{
-                fontSize: 18,
-                color:
-                  row.temperature > 30
-                    ? 'var(--ant-color-error)'
-                    : row.temperature < 18
-                      ? 'var(--ant-color-info)'
-                      : 'var(--ant-color-success)',
-              }}
-            >
-              {row.temperature.toFixed(1)}
-            </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>°C</Typography.Text>
-          </Flex>
-        ),
+      title: 'Nhiệt độ (°C)', key: 'temp', width: 190,
+      render: (_, row) => <ClimateMeasurement reading={evaluateTemperature(row.temperature, sensorThresholds(row))} unit="°C" />,
     },
     {
-      title: 'Độ ẩm (%)',
-      key: 'hum',
-      className: 'mcms-iot-mono',
-      width: 120,
-      align: 'right',
-      render: (_, row) =>
-        row.humidity == null ? (
-          <Typography.Text type="secondary">—</Typography.Text>
-        ) : (
-          <Flex align="baseline" gap={4} justify="flex-end">
-            <Typography.Text
-              strong
-              style={{
-                fontSize: 18,
-                color:
-                  row.humidity < 70
-                    ? 'var(--ant-color-warning)'
-                    : 'var(--ant-color-success)',
-              }}
-            >
-              {row.humidity.toFixed(0)}
-            </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>%</Typography.Text>
-          </Flex>
-        ),
+      title: 'Độ ẩm (%)', key: 'hum', width: 190,
+      render: (_, row) => <ClimateMeasurement reading={evaluateHumidity(row.humidity, sensorThresholds(row))} unit="%RH" />,
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'ok',
-      key: 'ok',
-      width: 110,
-      align: 'center',
-      render: (ok: boolean) =>
-        ok ? (
-          <StatusBadge tone="ok" icon={<CheckCircleOutlined />} label={<>
-            Ổn định
-          </>} />
-        ) : (
-          <StatusBadge tone="warning" icon={<ApiOutlined />} label={<>
-            Sai số
-          </>} />
-        ),
+      title: 'Tình trạng cảm biến', dataIndex: 'ok', key: 'ok', width: 160,
+      render: (ok: boolean) => <StatusBadge tone={ok ? 'ok' : 'warning'} label={ok ? 'Dữ liệu hợp lệ' : 'Sai số cảm biến'} />,
     },
     {
       title: 'Cập nhật cuối',
@@ -750,37 +698,9 @@ export function DeviceControlPanel() {
                           Cập nhật: {formatTimestamp(sensor.lastReceivedAt)}
                         </Typography.Text>
                       </Flex>
-                      <Flex gap={12} align="baseline">
-                        <Flex align="baseline" gap={2}>
-                          <Typography.Text
-                            strong
-                            style={{
-                              fontSize: 20,
-                              color:
-                                sensor.temperature != null && sensor.temperature > 30
-                                  ? 'var(--ant-color-error)'
-                                  : 'var(--ant-color-text)',
-                            }}
-                          >
-                            {sensor.temperature != null ? sensor.temperature.toFixed(1) : '—'}
-                          </Typography.Text>
-                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>°C</Typography.Text>
-                        </Flex>
-                        <Flex align="baseline" gap={2}>
-                          <Typography.Text
-                            strong
-                            style={{
-                              fontSize: 20,
-                              color:
-                                sensor.humidity != null && sensor.humidity < 70
-                                  ? 'var(--ant-color-warning)'
-                                  : 'var(--ant-color-success)',
-                            }}
-                          >
-                            {sensor.humidity != null ? sensor.humidity.toFixed(0) : '—'}
-                          </Typography.Text>
-                          <Typography.Text type="secondary" style={{ fontSize: 11 }}>%</Typography.Text>
-                        </Flex>
+                      <Flex gap={12} wrap>
+                        <ClimateMeasurement reading={evaluateTemperature(sensor.temperature, climateThresholdsFromConfig(configByFloorId.get(selectedFloor.floor_id)))} unit="°C" />
+                        <ClimateMeasurement reading={evaluateHumidity(sensor.humidity, climateThresholdsFromConfig(configByFloorId.get(selectedFloor.floor_id)))} unit="%RH" />
                       </Flex>
                     </Flex>
                   </Card>
@@ -842,11 +762,11 @@ export function DeviceControlPanel() {
               },
               {
                 key: 'ok',
-                label: 'Trạng thái',
+                label: 'Tình trạng cảm biến',
                 children: selectedSensor.ok ? (
-                  <StatusBadge tone="ok"  label={<>OK</>} />
+                  <StatusBadge tone="ok" label="Dữ liệu hợp lệ" />
                 ) : (
-                  <StatusBadge tone="danger"  label={<>Lỗi</>} />
+                  <StatusBadge tone="warning" label="Sai số cảm biến" />
                 ),
               },
               {
@@ -915,4 +835,15 @@ export function DeviceControlPanel() {
       </Suspense>
     </div>
   )
+}
+
+function ClimateMeasurement({ reading, unit }: { reading: ClimateReading; unit: string }) {
+  const tone = reading.level === 'neutral' ? 'muted' : reading.level
+  return <Flex vertical gap={4}>
+    <Typography.Text strong style={{ color: tones[tone].text, fontVariantNumeric: 'tabular-nums' }}>
+      {reading.value == null ? '—' : reading.value.toFixed(1) + unit}
+    </Typography.Text>
+    <StatusBadge tone={tone} label={reading.statusLabel} />
+    {reading.targetLabel && <Typography.Text type="secondary">Mục tiêu {reading.targetLabel}</Typography.Text>}
+  </Flex>
 }

@@ -20,8 +20,8 @@ import { StatusBadge } from '../../../shared/ui'
 
 export interface EnvironmentDataPoint {
   time: string
-  temperature: number
-  humidity: number
+  temperature: number | null
+  humidity: number | null
 }
 
 /** Màu axis/tick — dùng token muted text */
@@ -45,7 +45,7 @@ export function EnvironmentChart({
             Môi trường theo tầng
           </Typography.Title>
           <Typography.Text type="secondary">
-            Nhiệt độ và độ ẩm trung bình tại {floorsWithData} tầng có dữ liệu
+            Số đo tại {floorsWithData} tầng có dữ liệu · Mỗi điểm là một tầng, không nối giữa các tầng
           </Typography.Text>
         </div>
         <StatusBadge
@@ -116,8 +116,9 @@ export function EnvironmentChart({
               dataKey="temperature"
               name="Nhiệt độ (°C)"
               stroke={palette.coral}
-              strokeWidth={2}
-              dot={false}
+              strokeWidth={0}
+              dot={{ r: 4 }}
+              connectNulls={false}
               activeDot={{ r: 4, strokeWidth: 2, stroke: surface.surface }}
               isAnimationActive={false}
             />
@@ -128,9 +129,10 @@ export function EnvironmentChart({
               dataKey="humidity"
               name="Độ ẩm (%)"
               stroke={palette.teal}
-              strokeWidth={2}
+              strokeWidth={0}
               strokeDasharray="7 5"
-              dot={false}
+              dot={{ r: 4 }}
+              connectNulls={false}
               activeDot={{ r: 4, strokeWidth: 2, stroke: surface.surface }}
               isAnimationActive={false}
             />

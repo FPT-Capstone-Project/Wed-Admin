@@ -1,4 +1,6 @@
 import { useMemo } from 'react'
+import { climateThresholdsFromConfig } from '../../rooms/utils/farm-climate.utils'
+import type { ClimateThresholds } from '../../rooms/utils/tray-climate.utils'
 import { useQueries } from '@tanstack/react-query'
 import { autoMistingApi } from '../../devices/api/iot.api'
 import { useFloorList, iotKeys } from '../../devices/hooks/useIoT'
@@ -41,6 +43,7 @@ export interface FloorEnvironmentPoint {
   floorName: string
   temperature: number | null
   humidity: number | null
+  thresholds: ClimateThresholds | null
   /** `null` khi BE không trả trạng thái sức khoẻ. */
   healthy: boolean | null
 }
@@ -74,21 +77,16 @@ export function useFloorEnvironmentOverview() {
             temperature: env?.avgTemperature ?? null,
             humidity: env?.avgHumidity ?? null,
             healthy: env?.healthy ?? null,
+            thresholds: climateThresholdsFromConfig(env?.thresholds),
           }
-        })
-        // Chỉ giữ tầng có **cả hai** số đo để biểu đồ không có điểm rỗng.
-        .filter(
-          (point) =>
-            typeof point.temperature === 'number' &&
-            typeof point.humidity === 'number',
-        ),
+        }),
     [floors, queries],
   )
 
   return {
     points,
     /** Số tầng có dữ liệu cảm biến hợp lệ. */
-    floorsWithData: points.length,
+    floorsWithData: points.filter(point => point.temperature != null || point.humidity != null).length,
     isLoading: floorsQuery.isLoading || queries.some((q) => q.isLoading),
     isError: floorsQuery.isError,
     error: floorsQuery.error ?? null,

@@ -114,10 +114,10 @@ function NavigationPanel({
           <WifiOutlined />
         </span>
         <span>
-          <strong>Hệ thống ổn định</strong>
-          <small>Đồng bộ dữ liệu IoT</small>
+          <strong>Giám sát trang trại</strong>
+          <small>Xem kết nối tại trang IoT</small>
         </span>
-        <span className="status-pulse" aria-hidden="true" />
+        <span className="status-pulse" style={{ background: 'var(--mcms-text-muted)' }} aria-hidden="true" />
       </div>
     </div>
   )
@@ -273,8 +273,8 @@ export function AdminLayout() {
 
             <div className="header-actions">
               <div className="header-online-status" role="status">
-                <span className="status-pulse" aria-hidden="true" />
-                Hệ thống trực tuyến
+                <span className="status-pulse" style={{ background: 'var(--mcms-text-muted)' }} aria-hidden="true" />
+                Bảng điều khiển MCMS
               </div>
               <NotificationBell />
               <Dropdown

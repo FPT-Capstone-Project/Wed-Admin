@@ -16,7 +16,7 @@ type EnvironmentTone = 'coral' | 'teal'
 
 interface EnvironmentMetricCardProps {
   title: string
-  value: number
+  value: number | null
   unit: string
   icon: ReactNode
   tone: EnvironmentTone
@@ -26,6 +26,7 @@ interface EnvironmentMetricCardProps {
   status: string
   /** Ngưỡng mục tiêu hiển thị dưới giá trị. */
   target: string
+  details?: string[]
   precision?: number
 }
 
@@ -38,8 +39,9 @@ export function EnvironmentMetricCard({
   status,
   target,
   precision = 0,
+  details = [],
 }: EnvironmentMetricCardProps) {
-  const formattedValue = value.toLocaleString('vi-VN', {
+  const formattedValue = value == null ? '—' : value.toLocaleString('vi-VN', {
     minimumFractionDigits: precision,
     maximumFractionDigits: precision,
   })
@@ -57,6 +59,7 @@ export function EnvironmentMetricCard({
           <StatusBadge tone={statusTone} label={status} />
           {/* Ngưỡng mục tiêu */}
           <span>{target}</span>
+          {details.map(detail => <span key={detail}>{detail}</span>)}
         </Flex>
       }
     />
