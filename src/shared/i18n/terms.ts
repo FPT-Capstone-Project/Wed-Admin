@@ -13,6 +13,8 @@
  */
 
 /** Một mục thuật ngữ. */
+import type { SemanticTone } from '../../app/theme/tokens'
+
 export interface TermEntry {
   /** Nhãn tiếng Việt dùng trong UI. */
   readonly label: string
@@ -281,4 +283,40 @@ export function formatTrayCode(trayCode?: string | null): string {
   if (shortTray) return `KH-${shortTray[1].padStart(2, '0')}`
 
   return raw
+}
+
+/** Display labels only: keys remain the API enum values. */
+export const ISSUE_SEVERITY_PRESENTATION: Record<string, { label: string; tone: SemanticTone }> = {
+  HIGH: { label: 'Cao', tone: 'danger' },
+  MEDIUM: { label: 'Trung bình', tone: 'warning' },
+  LOW: { label: 'Thấp', tone: 'info' },
+}
+
+export const ISSUE_STATUS_PRESENTATION: Record<string, { label: string; tone: SemanticTone }> = {
+  OPEN: { label: 'Mới ghi nhận', tone: 'warning' },
+  WAITING_EXPERT: { label: 'Chờ chuyên gia', tone: 'warning' },
+  IN_PROGRESS: { label: 'Đang xử lý', tone: 'info' },
+  MONITORING: { label: 'Đang theo dõi', tone: 'info' },
+  RESOLVED: { label: 'Đã xử lý', tone: 'success' },
+}
+
+export const HARVEST_STATUS_PRESENTATION: Record<string, { label: string; tone: SemanticTone }> = {
+  PLANNED: { label: 'Đã lên kế hoạch', tone: 'warning' },
+  IN_PROGRESS: { label: 'Đang thu hoạch', tone: 'info' },
+  COMPLETED: { label: 'Đã hoàn thành', tone: 'success' },
+}
+
+export const HARVEST_METHOD_PRESENTATION: Record<string, { label: string; tone: SemanticTone }> = {
+  PICKUP: { label: 'Nhận tại trang trại', tone: 'info' },
+  DELIVERY: { label: 'Giao tận nơi', tone: 'info' },
+}
+
+export function displayPresentation(
+  mapping: Record<string, { label: string; tone: SemanticTone }>,
+  value: string | null | undefined,
+  emptyLabel = 'Chưa có thông tin',
+): { label: string; tone: SemanticTone } {
+  return value && Object.hasOwn(mapping, value)
+    ? mapping[value]
+    : { label: value ? `Chưa xác định (${value})` : emptyLabel, tone: 'muted' }
 }

@@ -1,7 +1,8 @@
+import { HARVEST_STATUS_PRESENTATION, HARVEST_METHOD_PRESENTATION, displayPresentation } from '../../../shared/i18n/terms'
 import { calculateHarvestMetrics } from '../api/harvest-metrics'
 import { Suspense, useState } from 'react'
-import { Button, Card, Col, DatePicker, Flex, InputNumber, Row, Select, Statistic, Table, Tag, Typography } from 'antd'
-import { PageHeader } from '../../../shared/ui'
+import { Button, Card, Col, DatePicker, Flex, InputNumber, Row, Select, Statistic, Table, Typography } from 'antd'
+import { PageHeader, StatusBadge } from '../../../shared/ui'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { auditDate, auditWeight } from '../../../shared/ui/audit-format'
 import { useMushroomTypes } from '../../packages/hooks/useMushroomTypes'
@@ -17,7 +18,7 @@ export function HarvestManagementPage() {
   const metrics = rows ? calculateHarvestMetrics(rows) : null
   return <div style={{ fontVariantNumeric: 'tabular-nums' }}><PageHeader title="Quản lý Thu hoạch" description="Đối soát sản lượng và bàn giao · Chỉ xem. KPI theo bộ lọc; tỷ lệ A/B tính từ khối lượng thương phẩm của các đợt có phẩm cấp A/B." />
     <Flex gap={12} wrap style={{ marginBottom: 16 }}>
-      <Select aria-label="Trạng thái thu hoạch" allowClear placeholder="Trạng thái" style={{ width: 180 }} options={['PLANNED', 'IN_PROGRESS', 'COMPLETED'].map(value => ({ value, label: value }))} onChange={status => setFilters({ ...filters, status })} />
+      <Select aria-label="Trạng thái thu hoạch" allowClear placeholder="Trạng thái" style={{ width: 180 }} options={['PLANNED', 'IN_PROGRESS', 'COMPLETED'].map(value => ({ value, label: displayPresentation(HARVEST_STATUS_PRESENTATION, value).label }))} onChange={status => setFilters({ ...filters, status })} />
       <Select aria-label="Loại nấm" allowClear placeholder="Loại nấm" style={{ width: 190 }} loading={mushrooms.isLoading} options={mushrooms.data?.map(m => ({ value: m.mushroom_type_id, label: m.name }))} onChange={mushroomTypeId => setFilters({ ...filters, mushroomTypeId })} />
       <InputNumber aria-label="Mã đơn hàng" min={1} precision={0} placeholder="Mã đơn" onChange={value => setFilters({ ...filters, orderId: value == null ? undefined : Number(value) })} />
       <DatePicker.RangePicker aria-label="Khoảng ngày thu hoạch" onChange={dates => setFilters({ ...filters, fromDate: dates?.[0]?.format('YYYY-MM-DD'), toDate: dates?.[1]?.format('YYYY-MM-DD') })} />
@@ -33,12 +34,12 @@ export function HarvestManagementPage() {
       { title: 'Đợt / Phiên', render: (_, h) => <code>#{h.harvest_id} / #{h.session_id}</code> },
       { title: 'Khách hàng / Đơn', render: (_, h) => <>{h.customer_name}<br /><code>{h.order_code}</code></> },
       { title: 'Loại nấm', dataIndex: 'mushroom_type' },
-      { title: 'Hình thức nhận', render: (_, h) => <><Tag color={h.harvest_method === 'PICKUP' ? 'blue' : h.harvest_method === 'DELIVERY' ? 'purple' : undefined}>{h.harvest_method ?? 'Chưa chọn'}</Tag><Typography.Paragraph>{h.harvest_method === 'PICKUP' ? auditDate(h.scheduled_at) : h.customer_note ?? '—'}</Typography.Paragraph></> },
+      { title: 'Hình thức nhận', render: (_, h) => <><StatusBadge {...displayPresentation(HARVEST_METHOD_PRESENTATION, h.harvest_method, 'Chưa chọn')} /><Typography.Paragraph>{h.harvest_method === 'PICKUP' ? auditDate(h.scheduled_at) : h.customer_note ?? '—'}</Typography.Paragraph></> },
       { title: 'Tổng (kg)', dataIndex: 'total_weight_kg', render: auditWeight },
       { title: 'Thương phẩm (kg)', dataIndex: 'usable_weight_kg', render: auditWeight },
       { title: 'Loại bỏ (kg)', dataIndex: 'rejected_weight_kg', render: auditWeight },
       { title: 'Phẩm cấp', dataIndex: 'quality_grade', render: value => value ?? '—' },
-      { title: 'Thu hoạch / Bàn giao', render: (_, h) => <><Tag>{h.status}</Tag><Tag>{h.harvest_request_status ?? 'Chưa có yêu cầu'}</Tag></> },
+      { title: 'Thu hoạch / Bàn giao', render: (_, h) => <><StatusBadge {...displayPresentation(HARVEST_STATUS_PRESENTATION, h.status)} /><StatusBadge tone="neutral" label={h.harvest_request_status ?? 'Chưa có yêu cầu'} /></> },
       { title: 'Người xác nhận (ID)', dataIndex: 'confirmed_by', render: value => value ?? '—' },
       { title: 'Hoàn tất bàn giao', dataIndex: 'completed_at', render: auditDate },
       { title: 'Chi tiết', render: (_, h) => <Button onClick={() => setSelected(h.harvest_id)}>Đối soát</Button> },
