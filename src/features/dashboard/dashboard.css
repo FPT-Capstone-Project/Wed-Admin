@@ -1,6 +1,6 @@
 .dashboard-page .dashboard-section,
 .dashboard-page .recent-alerts-card {
-  margin-top: 16px;
+  margin-top: var(--mcms-space-6);
 }
 
 .dashboard-page .section-heading-row {
@@ -23,8 +23,32 @@
   font-size: 16px;
 }
 
-.dashboard-page .mcms-stat-card {
-  height: 100%;
+.dashboard-page .dashboard-kpi-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.dashboard-page .dashboard-kpi-group > .ant-typography {
+  flex: none;
+}
+
+/* Stretch only the card area, after the group title has taken its space. */
+.dashboard-page .dashboard-kpi-group > .mcms-stat-card,
+.dashboard-page .dashboard-kpi-group > .dashboard-kpi-cards {
+  flex: 1 0 auto;
+}
+
+.dashboard-page .dashboard-kpi-cards > .ant-col,
+.dashboard-page .dashboard-environment-metric {
+  display: flex;
+  min-width: 0;
+}
+
+.dashboard-page .dashboard-kpi-cards > .ant-col > .mcms-stat-card,
+.dashboard-page .dashboard-environment-metric > .mcms-stat-card {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .dashboard-page .environment-chart-card,

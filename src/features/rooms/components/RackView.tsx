@@ -1,6 +1,7 @@
 import { buildTrayLayout } from '../utils/tray-layout.utils'
 import { getClimateTone, getClimateDirection } from '../utils/climate-tone.utils'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
+import { trayFloorLabel } from '../../../shared/ui/tray-code.utils'
 import { formatMeasurement, formatMeasurementDetails } from '../../../shared/utils/measurement-format'
 import '../rooms-industrial.css'
 import { CloudOutlined, FireOutlined } from '@ant-design/icons'
@@ -188,6 +189,7 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
 
 // ── Tray Card ────────────────────────────────────────────────────────────────
 interface TrayCardProps {
+  showFloor?: boolean
   tray: Tray
   isSelected: boolean
   onClick: () => void
@@ -195,7 +197,7 @@ interface TrayCardProps {
   summary: TraySessionSummary | null
 }
 
-function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
+function TrayCard({ tray, isSelected, onClick, summary, showFloor = false }: TrayCardProps) {
   /**
    * Khay "đã tới hạn thu hoạch" nhận nhãn + màu "Chờ thu hoạch" dù BE vẫn
    * trả status `OCCUPIED` — người dùng phải thấy được việc cần xử lý.
@@ -210,7 +212,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
   const harvestDate = formatShortDate(summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
   const mushroomName = summary?.mushroomName ?? tray.rental?.mushroomType ?? 'Chưa rõ loại nấm'
   const detail = [
-    tray.code, TRAY_STATUS_CONFIG[effectiveStatus].label, mushroomName, customerName,
+    tray.code, ...(showFloor ? [trayFloorLabel(tray)] : []), TRAY_STATUS_CONFIG[effectiveStatus].label, mushroomName, customerName,
     harvestDate ? `Dự kiến thu hoạch ${harvestDate}` : null,
     progress ? `${progress.dayLabel}, ${Math.round(progress.percent)}%` : null,
   ].filter(Boolean).join(' · ')
@@ -227,7 +229,7 @@ function TrayCard({ tray, isSelected, onClick, summary }: TrayCardProps) {
         color: vis.textColor, background: vis.bgColor, boxShadow: tokens.shadow.xs,
       }}>
       <span style={{ display: 'flex', gap: tokens.space['2'], alignItems: 'center', minWidth: 0 }}>
-        <TrayCodeText code={tray.code} focusable={false} />
+        <TrayCodeText code={tray.code} prefix={showFloor ? trayFloorLabel(tray) : undefined} focusable={false} />
         {tray.status !== 'empty' && <svg aria-hidden="true" width={tokens.components.tray.iconSize} height={tokens.components.tray.iconSize} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
           <path d="M3 13a9 9 0 0 1 18 0H3Zm6 0v7h6v-7" fill="none" stroke="currentColor" strokeWidth={tokens.components.tray.borderWidth} />
         </svg>}
@@ -328,6 +330,7 @@ function EmptyTrayGroup({
           isSelected={selectedTrayId === tray.id}
           onClick={() => onSelectTray(tray)}
           summary={null}
+          showFloor
         />
       ))}
     </Flex>
@@ -486,6 +489,7 @@ export function RackView({
             >
               {activeTrays.filter(tray => unplacedIds.has(tray.id)).map((tray) => (
                 <TrayCard
+                  showFloor
                   key={tray.id}
                   tray={tray}
                   isSelected={selectedTrayId === tray.id}

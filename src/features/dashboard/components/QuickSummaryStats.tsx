@@ -60,8 +60,8 @@ export function QuickSummaryStats({
   const harvest = metrics.harvest_quality
 
   return (
-    <Row gutter={[Number.parseInt(tokens.space['4'], 10), Number.parseInt(tokens.space['6'], 10)]} aria-label="Thống kê nhanh trang trại">
-      <Col xs={24} xl={6}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Doanh thu</Typography.Title>
+    <Row className="dashboard-kpi-groups" gutter={[Number.parseInt(tokens.space['4'], 10), Number.parseInt(tokens.space['6'], 10)]} aria-label="Thống kê nhanh trang trại">
+      <Col className="dashboard-kpi-group" xs={24} xl={6}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Doanh thu</Typography.Title>
         <StatCard
           title="Doanh thu"
           value={formatDashboardCurrency(revenue.value, revenue.currency)}
@@ -71,8 +71,8 @@ export function QuickSummaryStats({
           description="Đã thanh toán · mọi thời điểm"
         />
       </Col>
-      <Col xs={24} xl={12}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Khay</Typography.Title>
-        <Row gutter={[Number.parseInt(tokens.space['3'], 10), Number.parseInt(tokens.space['3'], 10)]}>
+      <Col className="dashboard-kpi-group" xs={24} xl={12}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Khay</Typography.Title>
+        <Row className="dashboard-kpi-cards" gutter={[Number.parseInt(tokens.space['3'], 10), Number.parseInt(tokens.space['3'], 10)]}>
           <Col xs={24} sm={8}>
         <StatCard
           title="Khay đã sử dụng"
@@ -119,7 +119,7 @@ export function QuickSummaryStats({
       </Col>
         </Row>
       </Col>
-      <Col xs={24} xl={6}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Cảnh báo</Typography.Title>
+      <Col className="dashboard-kpi-group" xs={24} xl={6}><Typography.Title level={2} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'] }}>Cảnh báo</Typography.Title>
         <StatCard
           title="Cảnh báo chờ xử lý"
           value={activeAlerts.toLocaleString('vi-VN')}

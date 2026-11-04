@@ -47,7 +47,7 @@ export function EnvironmentMetricCard({
 
   return (
     <Tooltip title={explanation} trigger={['hover', 'focus']}>
-    <div tabIndex={0} aria-label={explanation} style={{ height: '100%' }}>
+    <div className="dashboard-environment-metric" tabIndex={0} aria-label={explanation} style={{ height: '100%' }}>
     <StatCard
       title={title}
       value={<>{formattedValue}{details.some(detail => detail.includes('>')) && <small aria-hidden="true"> ▲</small>}{details.some(detail => detail.includes('<')) && <small aria-hidden="true"> ▼</small>}</>}
