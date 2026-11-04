@@ -7,10 +7,15 @@ export interface DataTableProps<T> {
   /** Cột của bảng. */
   columns: ColumnsType<T>
   /** Dữ liệu. */
-  dataSource: T[]
+  dataSource: T[] | undefined
   /** Khoá dòng — bắt buộc để React không re-mount sai dòng. */
   rowKey: TableProps<T>['rowKey']
   onRow?: TableProps<T>['onRow']
+  onChange?: TableProps<T>['onChange']
+  expandable?: TableProps<T>['expandable']
+  rowClassName?: TableProps<T>['rowClassName']
+  locale?: TableProps<T>['locale']
+  scroll?: TableProps<T>['scroll']
   /** Đang tải — hiện spinner của antd. */
   loading?: boolean
   /** Lỗi tải dữ liệu — hiển thị alert có nút thử lại. */
@@ -48,9 +53,14 @@ export interface DataTableProps<T> {
  */
 export function DataTable<T extends object>({
   columns,
-  dataSource,
+  dataSource = [],
   rowKey,
   onRow,
+  onChange,
+  expandable,
+  rowClassName,
+  locale,
+  scroll,
   loading = false,
   error = null,
   title,
@@ -134,6 +144,9 @@ export function DataTable<T extends object>({
       <Table<T>
         rowKey={rowKey}
         onRow={onRow}
+        onChange={onChange}
+        expandable={expandable}
+        rowClassName={rowClassName}
         columns={columns}
         dataSource={dataSource}
         loading={loading}
@@ -145,7 +158,7 @@ export function DataTable<T extends object>({
           hideOnSinglePage: true,
           ...pagination,
         }}
-        scroll={{ x: scrollX }}
+        scroll={{ x: scrollX, ...scroll }}
         locale={{
           emptyText: loading ? <span role="status">Đang tải dữ liệu…</span> : (
             <EmptyState
@@ -154,6 +167,7 @@ export function DataTable<T extends object>({
               action={emptyAction}
             />
           ),
+          ...locale,
         }}
       />
     </div>

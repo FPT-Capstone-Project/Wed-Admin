@@ -1,3 +1,4 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import {
   CloudOutlined,
   CloudServerOutlined,
@@ -6,7 +7,7 @@ import {
   ThunderboltOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
-import { Table, Tag, Typography } from 'antd'
+import { Tag, Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import type { ReactNode } from 'react'
 import type {
@@ -297,12 +298,12 @@ export function OrderStatusLogTable({ session }: OrderStatusLogTableProps) {
         </div>
       </div>
 
-      <Table<StatusLogRow>
+      <DataTable<StatusLogRow>
         rowKey="id"
         size="middle"
         columns={columns}
         dataSource={rows}
-        pagination={{ pageSize: 6, showSizeChanger: false }}
+        pagination={{ hideOnSinglePage: false, pageSize: 6, showSizeChanger: false }}
         scroll={{ x: 920 }}
         locale={{
           emptyText: 'Chưa có sự kiện nào được ghi nhận cho mẻ này.',

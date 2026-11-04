@@ -1,7 +1,8 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import { HARVEST_STATUS_PRESENTATION, HARVEST_METHOD_PRESENTATION, displayPresentation } from '../../../shared/i18n/terms'
 import { calculateHarvestMetrics } from '../api/harvest-metrics'
 import { Suspense, useState } from 'react'
-import { Button, Col, DatePicker, Flex, InputNumber, Row, Select, Table, Typography } from 'antd'
+import { Button, Descriptions, Col, DatePicker, Flex, InputNumber, Row, Select, Typography } from 'antd'
 import { PageHeader, StatusBadge, StatCard } from '../../../shared/ui'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { auditDate, auditWeight } from '../../../shared/ui/audit-format'
@@ -30,19 +31,20 @@ export function HarvestManagementPage() {
       <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Tỷ lệ thương phẩm A/B (%)" value={metrics?.gradeABPercent == null ? '—' : metrics.gradeABPercent.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /></Col>
       <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Đợt thu hoạch đang chờ giao" value={metrics?.pendingHandover ?? '—'} /></Col>
     </Row>
-    <Table<Harvest> size="small" rowKey="harvest_id" dataSource={rows} loading={query.isLoading} scroll={{ x: 1550 }} pagination={{ pageSize: 20, showSizeChanger: true }} locale={{ emptyText: 'Chưa có đợt thu hoạch phù hợp' }} columns={[
+    <DataTable<Harvest> size="small" rowKey="harvest_id" dataSource={rows} loading={query.isLoading} scrollX={1050} pagination={{ hideOnSinglePage: false, pageSize: 20, showSizeChanger: true }} locale={{ emptyText: 'Chưa có đợt thu hoạch phù hợp' }} expandable={{ expandedRowRender: h => <Descriptions size="small" column={{ xs: 1, md: 2 }} items={[
+        { key: 'method', label: 'Hình thức nhận', children: <><StatusBadge {...displayPresentation(HARVEST_METHOD_PRESENTATION, h.harvest_method, 'Chưa chọn')} /><Typography.Paragraph>{h.harvest_method === 'PICKUP' ? auditDate(h.scheduled_at) : h.customer_note ?? '—'}</Typography.Paragraph></> },
+        { key: 'rejected', label: 'Loại bỏ (kg)', children: auditWeight(h.rejected_weight_kg) },
+        { key: 'grade', label: 'Phẩm cấp', children: h.quality_grade ?? '—' },
+        { key: 'confirmed', label: 'Người xác nhận (ID)', children: h.confirmed_by ?? '—' },
+        { key: 'completed', label: 'Hoàn tất bàn giao', children: auditDate(h.completed_at) },
+      ]} /> }} columns={[
       { title: 'Đợt / Phiên', render: (_, h) => <code>#{h.harvest_id} / #{h.session_id}</code> },
       { title: 'Khách hàng / Đơn', render: (_, h) => <>{h.customer_name}<br /><code>{h.order_code}</code></> },
       { title: 'Loại nấm', dataIndex: 'mushroom_type' },
-      { title: 'Hình thức nhận', render: (_, h) => <><StatusBadge {...displayPresentation(HARVEST_METHOD_PRESENTATION, h.harvest_method, 'Chưa chọn')} /><Typography.Paragraph>{h.harvest_method === 'PICKUP' ? auditDate(h.scheduled_at) : h.customer_note ?? '—'}</Typography.Paragraph></> },
       { title: 'Tổng (kg)', dataIndex: 'total_weight_kg', render: auditWeight },
       { title: 'Thương phẩm (kg)', dataIndex: 'usable_weight_kg', render: auditWeight },
-      { title: 'Loại bỏ (kg)', dataIndex: 'rejected_weight_kg', render: auditWeight },
-      { title: 'Phẩm cấp', dataIndex: 'quality_grade', render: value => value ?? '—' },
       { title: 'Thu hoạch / Bàn giao', render: (_, h) => <><StatusBadge {...displayPresentation(HARVEST_STATUS_PRESENTATION, h.status)} /><StatusBadge tone="neutral" label={h.harvest_request_status ?? 'Chưa có yêu cầu'} /></> },
-      { title: 'Người xác nhận (ID)', dataIndex: 'confirmed_by', render: value => value ?? '—' },
-      { title: 'Hoàn tất bàn giao', dataIndex: 'completed_at', render: auditDate },
-      { title: 'Chi tiết', render: (_, h) => <Button onClick={() => setSelected(h.harvest_id)}>Đối soát</Button> },
+      { title: 'Thao tác', key: 'actions', fixed: 'right', width: 110, render: (_, h) => <Button onClick={() => setSelected(h.harvest_id)}>Đối soát</Button> },
     ]} /></>}
     {selected !== null && (
       <Suspense fallback={null}>

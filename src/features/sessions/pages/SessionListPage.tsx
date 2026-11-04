@@ -1,3 +1,4 @@
+import { Popover, Button } from 'antd'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import '../sessions-industrial.css'
@@ -193,14 +194,17 @@ export function SessionListPage() {
             ),
           ]
           return (
-            <Flex vertical gap={2}>
-              <Typography.Text strong>{codes}</Typography.Text>
-              {floors.length > 0 && (
-                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                  {floors.join(' · ')}
-                </Typography.Text>
-              )}
-            </Flex>
+            <Popover trigger={['click']} title="Danh sách khay / tầng" content={
+              <div style={{ maxWidth: '80vw', overflowWrap: 'anywhere' }}>
+                {session.trays.map((tray, index) => <div key={tray.tray_id ?? index}>
+                  {tray.tray_code ?? 'Chưa có mã'} · {tray.floor_name ?? (tray.floor_number != null ? `Tầng ${tray.floor_number}` : 'Chưa rõ tầng')}
+                </div>)}
+              </div>
+            }>
+              <Button type="link" aria-label={`Xem ${session.trays.length} khay: ${codes}`} style={{ maxWidth: '100%', whiteSpace: 'normal', height: 'auto' }}>
+                {session.trays.length} khay{floors.length > 0 ? ` · ${floors.length === 1 ? floors[0] : `${floors.length} tầng`}` : ''}
+              </Button>
+            </Popover>
           )
         },
       },
@@ -258,6 +262,7 @@ export function SessionListPage() {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',
+        fixed: 'right',
         width: 160,
         render: (status: CultivationSessionStatus) => (
           <SessionStatusTag status={status} />

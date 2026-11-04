@@ -1,6 +1,7 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Collapse, Flex, Form, Input, InputNumber, Modal, Popconfirm, Table } from 'antd'
+import { App, Button, Collapse, Flex, Form, Input, InputNumber, Modal, Popconfirm } from 'antd'
 import { cultivationRoomApi, type RoomRequest } from '../api/cultivation-room.api'
 import { cultivationKeys, useCultivationRooms } from '../hooks/useCultivation'
 import { iotKeys, useFloorList } from '../../devices/hooks/useIoT'
@@ -48,7 +49,7 @@ export function RoomAdministration() {
     <Flex justify="end"><Button type="primary" onClick={() => setEditing(null)}>+ Thêm phòng</Button></Flex>
     <Collapse items={[{ key: 'resources', label: 'Cấu hình phòng & lưới khay', children: <>
       <QueryFeedback query={rooms} />
-      {!rooms.isError && <Table<CultivationRoom> size="small" rowKey="room_id" dataSource={rooms.data} loading={rooms.isLoading} pagination={false} scroll={{ x: 650 }} columns={[
+      {!rooms.isError && <DataTable<CultivationRoom> size="small" rowKey="room_id" dataSource={rooms.data} loading={rooms.isLoading} pagination={false} scroll={{ x: 650 }} columns={[
         { title: 'Mã phòng', dataIndex: 'room_code' }, { title: 'Tên phòng', dataIndex: 'room_name' }, { title: 'Sức chứa', dataIndex: 'capacity' },
         { title: 'Thao tác', render: (_, room) => <Flex gap={8}><Button onClick={() => setEditing(room)}>Sửa</Button><Popconfirm title="Xóa phòng này?" description="Phòng còn khay sẽ không thể xóa." onConfirm={() => remove.mutateAsync(room.room_id).catch(() => undefined)}><Button danger loading={remove.isPending && remove.variables === room.room_id} disabled={remove.isPending}>Xóa</Button></Popconfirm></Flex> },
       ]} />}

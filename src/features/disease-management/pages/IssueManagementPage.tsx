@@ -1,6 +1,7 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import { ISSUE_SEVERITY_PRESENTATION, ISSUE_STATUS_PRESENTATION, displayPresentation } from '../../../shared/i18n/terms'
 import { Suspense, useState } from 'react'
-import { Button, Flex, InputNumber, Select, Table } from 'antd'
+import { Button, Flex, InputNumber, Select } from 'antd'
 import { PageHeader, StatusBadge } from '../../../shared/ui'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { auditDate } from '../../../shared/ui/audit-format'
@@ -18,7 +19,7 @@ export function IssueManagementPage() {
       <InputNumber aria-label="Mã phiên canh tác" placeholder="Mã phiên" min={1} precision={0} onChange={value => setFilters({ ...filters, sessionId: value == null ? undefined : Number(value), page: 1 })} />
     </Flex>
     <QueryFeedback query={query} />
-    {!query.isError && <Table<Issue> size="small" rowKey="issue_id" loading={query.isLoading} dataSource={query.data?.data} scroll={{ x: 950 }} locale={{ emptyText: 'Không có sự cố phù hợp bộ lọc' }} pagination={{ current: filters.page, pageSize: filters.pageSize, total: query.data?.pagination.total, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100], onChange: (page, pageSize) => setFilters({ ...filters, page: pageSize !== filters.pageSize ? 1 : page, pageSize }) }} columns={[
+    {!query.isError && <DataTable<Issue> size="small" rowKey="issue_id" loading={query.isLoading} dataSource={query.data?.data} scroll={{ x: 950 }} locale={{ emptyText: 'Không có sự cố phù hợp bộ lọc' }} pagination={{ hideOnSinglePage: false, current: filters.page, pageSize: filters.pageSize, total: query.data?.pagination.total, showSizeChanger: true, pageSizeOptions: [10, 20, 50, 100], onChange: (page, pageSize) => setFilters({ ...filters, page: pageSize !== filters.pageSize ? 1 : page, pageSize }) }} columns={[
       { title: 'Mã ca', dataIndex: 'issue_id', render: value => <code>{value}</code> },
       { title: 'Tên sự cố', dataIndex: 'title' },
       { title: 'Mức độ', dataIndex: 'severity', render: (value: Issue['severity']) => <StatusBadge {...displayPresentation(ISSUE_SEVERITY_PRESENTATION, value)} /> },

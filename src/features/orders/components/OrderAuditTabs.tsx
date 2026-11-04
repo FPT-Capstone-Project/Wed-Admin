@@ -1,6 +1,7 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import type { ReactNode } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Alert, Card, Descriptions, Empty, Flex, Table, Tabs, Tag } from 'antd'
+import { Alert, Card, Descriptions, Empty, Flex, Tabs, Tag } from 'antd'
 import { orderAuditApi, type OrderHarvestEntry } from '../api/order-audit.api'
 import { useCultivationTrays } from '../../rooms/hooks/useCultivation'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
@@ -22,7 +23,7 @@ function CultivationAudit({ id }: { id: number }) {
 }
 function HarvestAudit({ id }: { id: number }) {
   const query = useQuery({ queryKey: ['orders', id, 'harvest-history'], queryFn: () => orderAuditApi.harvests(id) })
-  return <><QueryFeedback query={query} />{!query.isError && <Table<OrderHarvestEntry> size="small" rowKey="session_id" loading={query.isLoading} dataSource={query.data?.harvests} pagination={false} scroll={{ x: 850 }} locale={{ emptyText: 'Chưa có lịch sử thu hoạch' }} columns={[
+  return <><QueryFeedback query={query} />{!query.isError && <DataTable<OrderHarvestEntry> size="small" rowKey="session_id" loading={query.isLoading} dataSource={query.data?.harvests} pagination={false} scroll={{ x: 850 }} locale={{ emptyText: 'Chưa có lịch sử thu hoạch' }} columns={[
     { title: 'Phiên', dataIndex: 'session_id' }, { title: 'Loại nấm', render: (_, row) => row.mushroom_type.name },
     { title: 'Đợt / Trạng thái', render: (_, row) => row.harvest ? `#${row.harvest.harvest_id} · ${row.harvest.status}` : 'Chưa thu hoạch' },
     { title: 'Ngày', render: (_, row) => auditDate(row.harvest?.harvest_date) },

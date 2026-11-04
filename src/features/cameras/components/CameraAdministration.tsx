@@ -1,6 +1,7 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Flex, Form, Input, Modal, Popconfirm, Select, Table } from 'antd'
+import { App, Button, Flex, Form, Input, Modal, Popconfirm, Select } from 'antd'
 import { useDeleteCamera, useRegisterCamera, useUpdateCamera } from '../hooks/useCameras'
 import { cameraApi } from '../api/camera.api'
 import { useCultivationRooms } from '../../rooms/hooks/useCultivation'
@@ -44,7 +45,7 @@ export function LiveSessionManager() {
   const query = useQuery({ queryKey: ['live-streams', 'admin', page], queryFn: () => cameraApi.adminLiveSessions(page, 20), enabled: open, gcTime: 0 })
   const stop = useMutation({ mutationFn: cameraApi.stopLiveSession, onSuccess: async () => { await client.invalidateQueries({ queryKey: ['live-streams'] }); void message.success('Đã dừng phiên stream') }, onError: (error: Error) => { void message.error(getApiErrorMessage(error)) } })
   return <><Button onClick={() => setOpen(true)}>Quản lý phiên stream</Button><Modal open={open} title="Phiên stream đang hoạt động" onCancel={() => { setOpen(false); stop.reset() }} footer={null} width={760} destroyOnHidden>
-    <QueryFeedback query={query} />{!query.isError && <Table size="small" rowKey="liveToken" loading={query.isLoading} dataSource={query.data?.lives} pagination={{ current: page, pageSize: 20, total: query.data?.count, onChange: setPage, showSizeChanger: false }} columns={[
+    <QueryFeedback query={query} />{!query.isError && <DataTable scrollX={700} size="small" rowKey="liveToken" loading={query.isLoading} dataSource={query.data?.lives} pagination={{ hideOnSinglePage: false, current: page, pageSize: 20, total: query.data?.count, onChange: setPage, showSizeChanger: false }} columns={[
       { title: 'Camera', render: (_, live) => live.camera?.cameraName ?? live.deviceId ?? 'Thiết bị chưa đăng ký' },
       { title: 'Kênh', dataIndex: 'channelId' },
       { title: 'Trạng thái', dataIndex: 'liveStatus' },

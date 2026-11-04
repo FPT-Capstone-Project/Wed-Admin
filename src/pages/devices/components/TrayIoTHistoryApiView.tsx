@@ -1,3 +1,4 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import { useMemo, useState } from 'react'
 import {
   CloudOutlined,
@@ -18,7 +19,6 @@ import {
   Select,
   Space,
   Statistic,
-  Table,
   Tag,
   Typography,
 } from 'antd'
@@ -381,13 +381,13 @@ export function TrayIoTHistoryApiView() {
       ) : readings.length === 0 ? (
         <Empty description="Chưa có dữ liệu lịch sử từ BE cho cảm biến này." />
       ) : (
-        <Table<IotHistoryReading>
+        <DataTable<IotHistoryReading>
           rowKey={(row) => row.id}
           columns={columns}
           dataSource={readings}
           loading={historyLoading}
           size="small"
-          pagination={{ pageSize: 25, showSizeChanger: false }}
+          pagination={{ hideOnSinglePage: false, pageSize: 25, showSizeChanger: false }}
           scroll={{ x: 700 }}
         />
       )}

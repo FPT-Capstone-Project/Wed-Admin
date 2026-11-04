@@ -1,5 +1,6 @@
+import { DataTable } from '../../../shared/ui/DataTable'
 import { LineChartOutlined } from '@ant-design/icons'
-import { Button, Table, Tag } from 'antd'
+import { Button, Tag } from 'antd'
 import type { TableColumnsType } from 'antd'
 import type {
   RentalSession,
@@ -118,11 +119,11 @@ export function RentalHistoryTable({
           <p>{sessions.length} lifecycle được ghi nhận cho khay đang chọn</p>
         </div>
       </div>
-      <Table<RentalSession>
+      <DataTable<RentalSession> size="large"
         rowKey="id"
         columns={columns}
         dataSource={sessions}
-        pagination={{ pageSize: 5, showSizeChanger: false }}
+        pagination={{ hideOnSinglePage: false, pageSize: 5, showSizeChanger: false }}
         scroll={{ x: 1105 }}
         rowClassName={(session) =>
           selectedSessionId === session.id ? 'history-row-selected' : ''
