@@ -132,6 +132,7 @@ export function normalizeFarmSession(raw: unknown): FarmSession {
     mushroom_type_id: pickNumber(obj, 'mushroom_type_id', 'mushroomTypeId'),
     status: (pickString(obj, 'status') ??
       'PENDING') as CultivationSessionStatus,
+    payment_status: pickString(obj, 'payment_status', 'paymentStatus'),
     spawn_issued: pickNumber(obj, 'spawn_issued', 'spawnIssued', 'spawn_used'),
     spawn_remaining: pickNumber(obj, 'spawn_remaining', 'spawnRemaining'),
     tray_count: pickNumber(obj, 'tray_quantity', 'tray_count', 'trayCount', 'trays_count'),

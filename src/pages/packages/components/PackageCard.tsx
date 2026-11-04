@@ -11,13 +11,12 @@ import {
   Button,
   Card,
   Flex,
-  Popconfirm,
   Space,
   Typography,
 } from 'antd'
 import type { BillingCycle, PackageStatus, RentalPackage } from '../../../types/package.types'
 import type { SemanticTone } from '../../../app/theme/tokens'
-import { ActionButton, StatusBadge, MetadataBadge } from '../../../shared/ui'
+import { ActionButton, ConfirmActionButton, StatusBadge, MetadataBadge } from '../../../shared/ui'
 
 interface PackageCardProps {
   rentalPackage: RentalPackage
@@ -149,28 +148,25 @@ export function PackageCard({
                   size="middle"
                   onClick={() => onEdit(rentalPackage)}
                 />
-                <Popconfirm
+                <ConfirmActionButton
+                  icon={<StopOutlined />}
+                  label={
+                    rentalPackage.status === 'INACTIVE'
+                      ? 'Kích hoạt'
+                      : 'Tạm ngưng'
+                  }
+                  description="Thay đổi trạng thái gói cước"
+                  size="middle"
                   title={
                     rentalPackage.status === 'INACTIVE'
                       ? 'Kích hoạt gói cước?'
                       : 'Tạm ngưng gói cước?'
                   }
-                  description="Thay đổi trạng thái sẽ ảnh hưởng khả năng đăng ký mới."
+                  content="Thay đổi trạng thái sẽ ảnh hưởng khả năng đăng ký mới."
                   okText="Xác nhận"
                   cancelText="Hủy"
                   onConfirm={() => onToggleStatus(rentalPackage)}
-                >
-                  <ActionButton
-                    icon={<StopOutlined />}
-                    label={
-                      rentalPackage.status === 'INACTIVE'
-                        ? 'Kích hoạt'
-                        : 'Tạm ngưng'
-                    }
-                    description="Thay đổi trạng thái gói cước"
-                    size="middle"
-                  />
-                </Popconfirm>
+                />
                 <ActionButton
                   icon={
                     rentalPackage.isPopular ? <StarFilled /> : <StarOutlined />
@@ -182,22 +178,18 @@ export function PackageCard({
                   hideLabel
                   onClick={() => onTogglePopular(rentalPackage)}
                 />
-                <Popconfirm
+                <ConfirmActionButton
+                  icon={<DeleteOutlined />}
+                  label="Xóa gói cước"
+                  variant="danger"
+                  size="middle"
+                  hideLabel
                   title="Xóa gói cước?"
-                  description="Thao tác này không thể hoàn tác."
+                  content={`Thao tác này không thể hoàn tác. Bạn có chắc muốn xóa gói "${rentalPackage.name}"?`}
                   okText="Xóa"
                   cancelText="Hủy"
-                  okButtonProps={{ danger: true }}
                   onConfirm={() => onDelete(rentalPackage)}
-                >
-                  <ActionButton
-                    icon={<DeleteOutlined />}
-                    label="Xóa gói cước"
-                    variant="danger"
-                    size="middle"
-                    hideLabel
-                  />
-                </Popconfirm>
+                />
               </>
             ) : (
               <Button

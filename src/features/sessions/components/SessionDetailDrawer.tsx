@@ -12,11 +12,13 @@ import {
 } from 'antd'
 import { useMemo, useState } from 'react'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
-import { useSession } from '../hooks/useSessions'
+import { useAdminCultivationSession } from '../hooks/useAdminCultivationSessions'
+import { toCultivationSession } from '../api/admin-session-mapper'
 import {
   SESSION_DEFAULT_PROGRESS,
   SESSION_STATUS_CONFIG,
 } from './session-status.config'
+import { resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionStatusTag } from './SessionStatusTag'
 import { useFarmSession, useSpawnInspections } from '../../farm/hooks/useFarm'
 import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
@@ -56,21 +58,49 @@ export function SessionDetailDrawer({
 }: SessionDetailDrawerProps) {
   const [activeTab, setActiveTab] = useState('overview')
 
-  const { data: session, isLoading, isError } = useSession(sessionId)
+  // ⚠ Nguồn CHÍNH: endpoint quản trị — đã join sẵn khách / gói / nấm /
+  //   tiến độ / khay được gán.
+  const {
+    data: adminSession,
+    isLoading: adminLoading,
+    isError: adminError,
+  } = useAdminCultivationSession(sessionId)
+
+  // Nguồn bổ sung (luồng farm) — chỉ dùng cho các trường endpoint quản trị
+  // không trả: SĐT khách, trạng thái thanh toán, số phôi đã cấp.
+  const { data: farmSession } = useFarmSession(sessionId)
 
   // Lịch sử kiểm tra phôi lấy từ luồng farm (BE có `spawn-inspections`).
   const { data: inspections, isLoading: inspectionsLoading } =
     useSpawnInspections(sessionId)
 
-  // Chi tiết luồng farm — bổ sung `spawn_issued` (số phôi đã cấp).
-  const { data: farmSession } = useFarmSession(sessionId)
+  const session = useMemo<CultivationSession | null>(() => {
+    if (!adminSession) return null
+    const base = toCultivationSession(adminSession)
+    return {
+      ...base,
+      customer_phone: farmSession?.customer_phone ?? base.customer_phone,
+      payment_status: farmSession?.payment_status ?? base.payment_status,
+    }
+  }, [adminSession, farmSession])
+
+  const isLoading = adminLoading
+  const isError = adminError
 
   const progressPercent = useMemo(() => {
     if (!session) return 0
-    if (typeof session.progress_percent === 'number') {
-      return Math.min(100, Math.max(0, Math.round(session.progress_percent)))
-    }
-    return SESSION_DEFAULT_PROGRESS[session.status] ?? 0
+    // ⚠ Cùng công thức chuẩn với các trang khác — xem
+    //   `utils/session-progress.utils.ts`.
+    return resolveSessionProgress(
+      session.progress_percent,
+      session.status,
+      SESSION_DEFAULT_PROGRESS[session.status] ?? 0,
+      {
+        startDate: session.start_date,
+        endDate: session.expected_harvest_date ?? session.end_date,
+        durationDays: session.duration_days,
+      },
+    )
   }, [session])
 
   return (

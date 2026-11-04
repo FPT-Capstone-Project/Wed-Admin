@@ -30,6 +30,7 @@ export function normalizeSession(raw: unknown): CultivationSession {
     ),
     start_date: pickString(obj, 'start_at', 'start_date', 'startDate'),
     end_date: pickString(obj, 'end_date', 'endDate'),
+    duration_days: pickNumber(obj, 'duration_days', 'durationDays'),
     expected_harvest_date: pickString(
       obj,
       'harvest_date',

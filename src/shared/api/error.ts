@@ -15,6 +15,57 @@ export interface NormalizedApiError {
 /** Mã lỗi của axios khi request hết thời gian chờ. */
 const AXIOS_TIMEOUT_CODES = new Set(['ECONNABORTED', 'ETIMEDOUT'])
 
+/**
+ * Thông báo thân thiện khi **thông tin đăng nhập không đúng**.
+ *
+ * ⚠ Không dùng message mặc định của axios ("Request failed with status code
+ *   401") — quá kỹ thuật, người dùng không biết cần làm gì.
+ */
+export const INVALID_CREDENTIALS_MESSAGE =
+  'Email hoặc mật khẩu không chính xác. Vui lòng thử lại.'
+
+/**
+ * Message 401 "chung chung" của BE — không giúp ích cho người dùng.
+ *
+ * Khi gặp các message này ⇒ fallback sang `INVALID_CREDENTIALS_MESSAGE`.
+ */
+const GENERIC_UNAUTHORIZED_MESSAGES = new Set([
+  'unauthorized',
+  'unauthenticated',
+  'forbidden',
+  'error',
+  'invalid credentials',
+  'invalid email or password',
+  'invalid email or password.',
+  'email or password is incorrect',
+  'incorrect email or password',
+  'wrong password',
+  'request failed with status code 401',
+  'bạn không có quyền thực hiện thao tác này.',
+  // Message mặc định theo status 401 — nói về "hết phiên", không đúng ngữ
+  // cảnh khi user chỉ nhập sai mật khẩu.
+  'phiên đăng nhập đã hết hạn. vui lòng đăng nhập lại.',
+])
+
+/**
+ * Message có chứa **dấu tiếng Việt** không?
+ *
+ * ⚠ Vì sao cần?
+ *   BE trả message tiếng Anh (vd: "Invalid email or password") cho endpoint
+ *   đăng nhập. Web Admin là UI **tiếng Việt** ⇒ hiển thị nguyên xi message
+ *   của BE sẽ lệch ngôn ngữ. Hàm này giúp phân biệt: message BE đã là
+ *   tiếng Việt ⇒ dùng; message tiếng Anh / rỗng ⇒ fallback sang thông báo
+ *   tiếng Việt chuẩn.
+ */
+function containsVietnameseDiacritics(text: string): boolean {
+  return /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđĐÀÁẢÃẠĂÂÈÉÊÌÍÒÓÔƠÙÚƯĐ]/u.test(
+    text,
+  )
+}
+
+/** URL endpoint đăng nhập — 401 ở đây nghĩa là **sai thông tin**, không phải hết phiên. */
+const LOGIN_URL_FRAGMENT = '/api/auth/login'
+
 function readString(obj: Record<string, unknown>, key: string): string | null {
   const value = obj[key]
   return typeof value === 'string' && value.length > 0 ? value : null
@@ -65,6 +116,7 @@ export function extractApiError(error: unknown): NormalizedApiError {
     const obj = payload as Record<string, unknown>
     const message =
       readString(obj, 'message') ??
+      readString(obj, 'detail') ??
       readString(obj, 'error') ??
       defaultMessageForStatus(status)
 
@@ -76,6 +128,54 @@ export function extractApiError(error: unknown): NormalizedApiError {
   }
 
   return { status, code: null, message: defaultMessageForStatus(status) }
+}
+
+/**
+ * Chuẩn hoá lỗi **đăng nhập** thành message thân thiện tiếng Việt.
+ *
+ * ⚠ Vì sao cần hàm riêng?
+ *   - 401 ở endpoint đăng nhập = **sai email/mật khẩu**, KHÔNG phải hết
+ *     phiên ⇒ không được dùng message "Phiên đăng nhập đã hết hạn".
+ *   - Message mặc định của axios ("Request failed with status code 401")
+ *     hoặc message kỹ thuật từ BE không giúp ích người dùng.
+ *
+ * Thứ tự ưu tiên:
+ *   1. `response.data.message` / `response.data.detail` **nếu** đủ cụ thể
+ *      (không phải message chung chung kiểu "Unauthorized").
+ *   2. Fallback: `INVALID_CREDENTIALS_MESSAGE`.
+ *
+ * @param error Lỗi axios (hoặc Error bất kỳ) do `POST /api/auth/login` ném ra.
+ */
+export function extractLoginErrorMessage(error: unknown): string {
+  const { status, message } = extractApiError(error)
+
+  if (status === 401 || isLoginRequest(error)) {
+    const normalized = message.trim().toLowerCase()
+    const isGeneric =
+      GENERIC_UNAUTHORIZED_MESSAGES.has(normalized) ||
+      /^request failed with status code/i.test(message) ||
+      /^(http )?\d{3}$/.test(normalized)
+
+    // Ưu tiên message BE **đã là tiếng Việt** và đủ cụ thể.
+    if (
+      message &&
+      !isGeneric &&
+      containsVietnameseDiacritics(message)
+    ) {
+      return message
+    }
+
+    // Còn lại (message rỗng / tiếng Anh / chung chung) ⇒ thông báo chuẩn.
+    return INVALID_CREDENTIALS_MESSAGE
+  }
+
+  return message
+}
+
+/** Request này có gọi tới endpoint đăng nhập không? */
+function isLoginRequest(error: unknown): boolean {
+  const url = (error as { config?: { url?: string } })?.config?.url
+  return typeof url === 'string' && url.includes(LOGIN_URL_FRAGMENT)
 }
 
 export function getApiErrorMessage(error: unknown): string {

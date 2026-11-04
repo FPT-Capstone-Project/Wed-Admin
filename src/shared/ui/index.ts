@@ -5,6 +5,10 @@
  * giao diện nhất quán giữa các trang.
  */
 export { ActionButton, type ActionButtonProps } from './ActionButton'
+export {
+  ConfirmActionButton,
+  type ConfirmActionButtonProps,
+} from './ConfirmActionButton'
 export { DataTable, type DataTableProps } from './DataTable'
 export { EmptyState, EmptyStateAction, type EmptyStateProps } from './EmptyState'
 export { FallbackThumbnail, type FallbackThumbnailProps } from './FallbackThumbnail'

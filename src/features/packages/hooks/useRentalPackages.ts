@@ -1,10 +1,11 @@
-import {
+﻿import {
   useMutation,
   useQuery,
   useQueryClient,
   type UseMutationOptions,
   type UseQueryOptions,
 } from '@tanstack/react-query'
+import { extractApiError } from '../../../shared/api/error'
 import { rentalPackageApi } from '../api/rental-package.api'
 import type {
   CreateRentalPackageRequest,
@@ -106,10 +107,46 @@ export function useUpdateRentalPackage(
   }, options)
 }
 
+/**
+ * Thông báo chuẩn khi BE trả 409 — gói thuê đã có đơn hàng sử dụng.
+ *
+ * ⚠ BE trả `409 Conflict` + message
+ *   "Rental package is referenced by an order and cannot be deleted".
+ *   Người dùng không thể "xử lý" bằng cách thử lại ⇒ cần chỉ dẫn hành động
+ *   thay thế (chuyển gói sang Tạm ngưng).
+ */
+export const RENTAL_PACKAGE_IN_USE_MESSAGE =
+  'Không thể xóa gói thuê đã có đơn hàng sử dụng. Vui lòng chuyển trạng thái sang Tạm ngưng.'
+
+/** Lỗi này có phải "gói thuê đã có đơn hàng" không? (409 hoặc message của BE) */
+export function isRentalPackageInUseError(error: unknown): boolean {
+  const { status, message } = extractApiError(error)
+  if (status === 409) return true
+  return /referenced by an order|cannot be deleted|đã có đơn hàng/i.test(
+    message ?? '',
+  )
+}
+
 export function useDeleteRentalPackage(
   options?: UseMutationOptions<void, Error, number>,
 ) {
-  return useRentalMutation<void, number>((id) => rentalPackageApi.remove(id), {
-    ...options,
-  })
+  return useRentalMutation<void, number>(
+    async (id) => {
+      try {
+        await rentalPackageApi.remove(id)
+      } catch (error) {
+        /**
+         * ⚠ 409 Conflict — gói thuê đã có đơn hàng tham chiếu ⇒ BE chặn xoá.
+         *   Chuyển thành message tiếng Việt có hướng dẫn hành động thay thế,
+         *   đồng thời giữ nguyên thông tin gốc trong `cause` để component
+         *   có thể phân biệt (không bắt buộc).
+         */
+        if (isRentalPackageInUseError(error)) {
+          throw new Error(RENTAL_PACKAGE_IN_USE_MESSAGE, { cause: error })
+        }
+        throw error
+      }
+    },
+    options,
+  )
 }

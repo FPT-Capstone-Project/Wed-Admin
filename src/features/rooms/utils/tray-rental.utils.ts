@@ -1,5 +1,6 @@
 import type { HarvestStatus, TrayRental } from '../../../types/room.types'
 import type { CultivationSession } from '../../sessions/types/session.types'
+import { calculateSessionProgress } from '../../../shared/utils/date'
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -54,17 +55,20 @@ export function differenceInCalendarDays(
   )
 }
 
-function clampPercentage(value: number) {
-  return Math.min(100, Math.max(0, Math.round(value)))
-}
-
 export function calculateRentalLifecycle(
   rental: TrayRental,
   currentDate: Date = new Date(),
 ): RentalLifecycleMetrics {
+  /**
+   * Tổng ngày của chu kỳ thuê.
+   *
+   * Ưu tiên `durationDays` (15 / 20 ngày — đúng gói người dùng đã mua),
+   * fallback hiệu số ngày giữa ngày kết thúc và ngày bắt đầu.
+   */
   const packageDurationDays = Math.max(
     1,
-    differenceInCalendarDays(rental.packageEndDate, rental.startDate),
+    rental.durationDays ||
+      differenceInCalendarDays(rental.packageEndDate, rental.startDate),
   )
   const daysElapsed = Math.max(
     0,
@@ -111,12 +115,27 @@ export function calculateRentalLifecycle(
     overdueFee,
     totalAmount: rental.basePrice + overdueFee,
     packageDurationDays,
-    progressPercent: clampPercentage(
-      (growthDay / expectedHarvestDay) * 100,
+    /**
+     * ⚠ Tiến độ dùng **công thức chuẩn dùng chung**
+     *   (`src/shared/utils/date.ts` → `calculateSessionProgress`) ⇒ thanh
+     *   "Tiến độ chu kỳ" trong drawer khớp đúng với bảng "Phiên canh tác" và
+     *   thẻ "Sinh trưởng & thu hoạch" (cùng 1 phiên, cùng 1 con số).
+     */
+    progressPercent: calculateSessionProgress(
+      toIsoDateString(rental.startDate),
+      toIsoDateString(rental.expectedHarvestDate),
+      isAlreadyHarvested ? 'COMPLETED' : rental.harvestStatus,
     ),
     harvestMarkerPercent: 100,
     effectiveHarvestStatus,
   }
+}
+
+/** Chuyển `string | Date` thành chuỗi ISO (null nếu không hợp lệ). */
+function toIsoDateString(value: string | Date): string | null {
+  const date = value instanceof Date ? value : new Date(value)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toISOString()
 }
 
 export function formatRentalDate(value: string | Date) {
@@ -159,11 +178,22 @@ export function sessionToTrayRental(session: CultivationSession): TrayRental {
     session.expected_harvest_date ?? session.end_date ?? startDate
   const packageEndDate = harvestDate
 
+  /**
+   * Thời lượng gói thuê (theo ngày).
+   *
+   * Thứ tự ưu tiên:
+   *   1. `duration_days` từ gói thuê của phiên (15 hoặc 20 ngày) — chính
+   *      xác nhất, vì đây là giá trị người dùng đã mua.
+   *   2. Hiệu số ngày giữa `packageEndDate` và `startDate` (18/11 − 3/11 = 15).
+   *
+   * ⚠ KHÔNG dùng `Math.ceil(days / 7)` để quy ra số tuần — làm tròn vậy khiến
+   *   gói 15 ngày bị hiển thị thành "3 Tuần (21 ngày)".
+   */
   const durationDays = Math.max(
     1,
-    differenceInCalendarDays(packageEndDate, startDate),
+    session.duration_days ??
+      differenceInCalendarDays(packageEndDate, startDate),
   )
-  const weeks = Math.max(1, Math.ceil(durationDays / 7))
 
   const harvestStatus: HarvestStatus =
     session.status === 'COMPLETED'
@@ -178,7 +208,8 @@ export function sessionToTrayRental(session: CultivationSession): TrayRental {
     tenantAddress: session.customer_email ?? '—',
     mushroomType: session.mushroom_name ?? '—',
     mushroomVariety: session.package_name ?? '—',
-    weeks,
+    durationDays,
+    packageName: session.package_name ?? '—',
     startDate,
     expectedHarvestDate: harvestDate,
     packageEndDate,

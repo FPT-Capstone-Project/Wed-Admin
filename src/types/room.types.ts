@@ -65,8 +65,16 @@ export interface TrayRental {
   tenantAddress: string
   mushroomType: string
   mushroomVariety: string
-  /** Số tuần gói của lượt thuê này */
-  weeks: number
+  /**
+   * Thời lượng gói thuê **theo ngày** (15 hoặc 20 ngày).
+   *
+   * ⚠ Không dùng "số tuần" làm đơn vị chính: dự án chỉ còn gói 15/20 ngày,
+   *   làm tròn `Math.ceil(days / 7)` sẽ sinh giá trị sai (15 ngày → "3 tuần
+   *   = 21 ngày").
+   */
+  durationDays: number
+  /** Tên gói thuê (vd: "Gói cơ bản"). */
+  packageName: string
   startDate: string | Date
   expectedHarvestDate: string | Date
   packageEndDate: string | Date

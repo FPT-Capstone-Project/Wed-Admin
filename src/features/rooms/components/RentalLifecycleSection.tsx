@@ -185,10 +185,15 @@ export function RentalLifecycleSection({
         <div>
           <dt>Thời gian thuê</dt>
           <dd>
-            <strong>{rental.weeks} Tuần ({rental.weeks * 7} ngày)</strong>
+            <strong>
+              {lifecycle.packageDurationDays} ngày (
+              {formatRentalDate(rental.startDate)} -{' '}
+              {formatRentalDate(rental.expectedHarvestDate)})
+            </strong>
             <span>
-              {formatRentalDate(rental.startDate)} –{' '}
-              {formatRentalDate(rental.packageEndDate)}
+              {rental.packageName && rental.packageName !== '—'
+                ? `Gói: ${rental.packageName}`
+                : '—'}
             </span>
           </dd>
         </div>

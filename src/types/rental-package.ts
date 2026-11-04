@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Rental Packages — DTOs khớp với Swagger schemas.
  * Endpoint: /api/rental-packages
  */
@@ -12,6 +12,14 @@ export interface RentalPackage {
   duration_days: number
   price: number
   status: RentalPackageStatus
+  /**
+   * Số đơn hàng đang tham chiếu gói này.
+   *
+   * ⚠ BE trả 409 ("Rental package is referenced by an order...") khi xoá gói
+   *   đã phát sinh đơn ⇒ FE dùng số này để **làm mờ nút Xóa** kèm giải
+   *   thích, thay vì để user bấm rồi mới nhận lỗi.
+   */
+  order_count?: number | null
 }
 
 /** POST /api/rental-packages */

@@ -108,6 +108,8 @@ export interface CultivationSession {
   start_date?: string | null
   /** Ngày kết thúc dự kiến / thực tế (ISO). */
   end_date?: string | null
+  /** Thời lượng gói thuê theo ngày (15 / 20 ngày). */
+  duration_days?: number | null
   expected_harvest_date?: string | null
   /** Số khay được gán. */
   tray_count?: number | null

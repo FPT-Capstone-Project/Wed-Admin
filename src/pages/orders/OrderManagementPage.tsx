@@ -52,9 +52,10 @@ import type { SemanticTone } from '../../app/theme/tokens'
  *   Mọi hành động ghi (tạo phiên, ghi tiến độ, thu hoạch, huỷ, thông báo)
  *   do **nhân viên (staff)** thực hiện trên app.
  *
- * ⚠ `GET /api/orders` của BE chỉ trả đơn của chính user đăng nhập → Admin
- *   dùng `useAdminOrders()` để hợp nhất thêm dữ liệu từ
- *   `GET /api/farm/sessions` + `GET /api/farm/sessions`.
+ * ⚠ Nguồn dữ liệu: `GET /api/orders/admin` — danh sách đơn của **toàn bộ
+ *   khách hàng** (roles 1 = Admin, 2 = Farm Operator), có phân trang
+ *   server-side. Trước đây trang này phải hợp nhất 3 nguồn vì
+ *   `GET /api/orders` chỉ trả đơn của chính user đăng nhập.
  */
 
 const STATUS_CONFIG: Record<
@@ -99,12 +100,19 @@ const TAB_OPTIONS: Array<{ value: OrderTab; label: string }> = [
 ]
 
 export function OrderManagementPage() {
-  // ── Data from API (read-only) ──────────────────────────────────────────
-  const { orders, isLoading, isError, error, refetch, sourceErrors } = useAdminOrders()
-
   const [searchText, setSearchText] = useState('')
   const [activeTab, setActiveTab] = useState<OrderTab>('ALL')
   const [detailOrder, setDetailOrder] = useState<AdminOrderRow | null>(null)
+
+  // ── Data from API (read-only) ──────────────────────────────────────────
+  const {
+    orders,
+    isLoading,
+    isError,
+    error,
+    refetch,
+    sourceErrors,
+  } = useAdminOrders()
 
   // Payment status polling — chỉ khi đang mở drawer chi tiết
   const { data: payosStatus } = useOrderPaymentStatus(
@@ -189,18 +197,23 @@ export function OrderManagementPage() {
       ),
     },
     {
-      title: 'Gói / Nấm',
+      title: 'Gói / Dịch vụ thuê',
       key: 'package',
-      width: 200,
+      width: 210,
       render: (_, record) => (
         <Flex vertical gap={4}>
           <Typography.Text>{record.packageName}</Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {record.mushroomName}
-            {record.spawnIssued != null
-              ? ` · ${record.spawnIssued} đơn vị phôi`
-              : ''}
           </Typography.Text>
+          {record.quantity != null && (
+            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+              {record.quantity} khay
+              {record.spawnIssued != null
+                ? ` · ${record.spawnIssued} đơn vị phôi`
+                : ''}
+            </Typography.Text>
+          )}
         </Flex>
       ),
     },
@@ -291,6 +304,20 @@ export function OrderManagementPage() {
   ]
 
   const livePayment = payosStatus?.data
+
+  // ⚠ Skeleton chỉ hiện lần **đầu** (chưa có dữ liệu). Các lần đổi trang sau
+  //   giữ bảng + spinner của antd để không nhảy layout.
+  if (isLoading && orders.length === 0) {
+    return (
+      <div>
+        <PageHeader
+          title="Quản lý đơn hàng"
+          description="Đang tải danh sách đơn của toàn bộ khách hàng…"
+        />
+        <Skeleton active paragraph={{ rows: 10 }} />
+      </div>
+    )
+  }
 
   return (
     <div>

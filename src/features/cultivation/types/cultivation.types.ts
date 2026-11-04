@@ -28,40 +28,42 @@ export type GrowthStage =
   | 'COMPLETED'
   | 'CANCELLED'
 
-/** Nhãn tiếng Việt + tỷ lệ tiến độ mặc định của từng giai đoạn. */
+/**
+ * Nhãn tiếng Việt cho từng giai đoạn.
+ *
+ * ⚠ KHÔNG có `defaultProgress` nữa — trước đây mỗi giai đoạn hardcode một tỷ
+ *   lệ tiến độ (`CULTIVATING` → 70 %) ⇒ cùng 1 phiên hiển thị khác nhau giữa
+ *   các trang. Nay **mọi nơi** dùng chung `calculateSessionProgress()`
+ *   (`src/shared/utils/date.ts`) — công thức theo thời gian thực.
+ */
 export const GROWTH_STAGE_META: Record<
   GrowthStage,
-  { label: string; shortLabel: string; defaultProgress: number }
+  { label: string; shortLabel: string }
 > = {
-  PENDING: { label: 'Chờ xử lý', shortLabel: 'Chờ xử lý', defaultProgress: 5 },
+  PENDING: { label: 'Chờ xử lý', shortLabel: 'Chờ xử lý' },
   SPAWN_RESTING: {
     label: 'Ủ tơ / Nuôi sợi',
     shortLabel: 'Ủ tơ',
-    defaultProgress: 20,
   },
   MYCELIAL_DEVELOPMENT: {
     label: 'Phát triển tơ (Nuôi sợi)',
     shortLabel: 'Nuôi sợi',
-    defaultProgress: 35,
   },
   READY_FOR_CULTIVATION: {
     label: 'Sẵn sàng canh tác',
     shortLabel: 'Sẵn sàng',
-    defaultProgress: 50,
   },
   CULTIVATING: {
     label: 'Đang canh tác',
     shortLabel: 'Đang canh tác',
-    defaultProgress: 70,
   },
-  HARVEST_READY: { label: 'Sẵn sàng thu hoạch', shortLabel: 'Sẵn sàng thu hoạch', defaultProgress: 85 },
+  HARVEST_READY: { label: 'Sẵn sàng thu hoạch', shortLabel: 'Sẵn sàng thu hoạch' },
   HARVESTING: {
     label: 'Thu hoạch',
     shortLabel: 'Thu hoạch',
-    defaultProgress: 90,
   },
-  COMPLETED: { label: 'Đã thu hoạch', shortLabel: 'Hoàn tất', defaultProgress: 100 },
-  CANCELLED: { label: 'Đã huỷ', shortLabel: 'Đã huỷ', defaultProgress: 0 },
+  COMPLETED: { label: 'Đã thu hoạch', shortLabel: 'Hoàn tất' },
+  CANCELLED: { label: 'Đã huỷ', shortLabel: 'Đã huỷ' },
 }
 
 /** Sức khỏe phôi — kết luận của lần kiểm tra gần nhất. */

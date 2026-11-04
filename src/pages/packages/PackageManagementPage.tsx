@@ -2,7 +2,6 @@ import { Tabs } from 'antd'
 import { TagsOutlined } from '@ant-design/icons'
 import { PageHeader } from '../../shared/ui'
 import { MushroomVarietyCatalog } from './components/MushroomVarietyCatalog'
-import { MushroomConditionCatalog } from './components/MushroomConditionCatalog'
 import { RentalPackageCatalog } from './components/RentalPackageCatalog'
 
 /**
@@ -10,8 +9,13 @@ import { RentalPackageCatalog } from './components/RentalPackageCatalog'
  * (Role check cứng được bỏ qua vì ở mục này chỉ admin/operator/farm_manager
  * mới thấy trang trong sidebar; nếu BE trả role khác ta vẫn tin tưởng token.)
  *
- * ⚠ Giai đoạn 0: điều kiện sinh trưởng chỉ còn **nhiệt độ & độ ẩm**
- * (đã gỡ CO₂ và độ ẩm giá thể khỏi BE / DB).
+ * ⚠ Tab **"Điều kiện sinh trưởng"** đã được gỡ bỏ (2026-11).
+ *
+ *   Lý do: cấu hình ngưỡng sinh trưởng (nhiệt độ / độ ẩm theo giống nấm) là
+ *   nghiệp vụ của **nhân viên (staff) trên app di động** — Admin web không
+ *   can thiệp. Danh mục vẫn còn ở trang "Cài đặt" (read-only, để đối chiếu).
+ *
+ *   ⇒ Trang này chỉ còn 2 tab: "Giống nấm" & "Gói thuê".
  */
 const CAN_MANAGE = true
 
@@ -42,11 +46,6 @@ export function PackageManagementPage() {
               key: 'varieties',
               label: 'Giống nấm',
               children: <MushroomVarietyCatalog canManage={CAN_MANAGE} />,
-            },
-            {
-              key: 'conditions',
-              label: 'Điều kiện sinh trưởng',
-              children: <MushroomConditionCatalog canManage={CAN_MANAGE} />,
             },
             {
               key: 'packages',

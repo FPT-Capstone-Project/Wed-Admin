@@ -14,7 +14,6 @@ import {
   Empty,
   Flex,
   Input,
-  Popconfirm,
   Segmented,
   Space,
   Tooltip,
@@ -27,7 +26,13 @@ import {
   useMushroomTypes,
   useUpdateMushroomType,
 } from '../../../features/packages/hooks/useMushroomTypes'
-import { ActionButton, StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
+import {
+  ActionButton,
+  StatusBadge,
+  MetadataBadge,
+  DataTable,
+  ConfirmActionButton,
+} from '../../../shared/ui'
 import { FallbackThumbnail } from './FallbackThumbnail'
 import { MushroomVarietyFormModal } from './MushroomVarietyFormModal'
 
@@ -240,21 +245,17 @@ export function MushroomVarietyCatalog({
                   onClick={() => handleOpenEdit(record)}
                 />
 
-                <Popconfirm
+                <ConfirmActionButton
+                  icon={<DeleteOutlined />}
+                  label="Xóa"
+                  description={`Xóa giống ${record.name}`}
+                  variant="danger"
                   title="Xóa giống nấm?"
-                  description="Thao tác này không thể hoàn tác."
+                  content={`Thao tác này không thể hoàn tác. Bạn có chắc muốn xóa giống "${record.name}"?`}
                   okText="Xóa"
                   cancelText="Hủy"
-                  okButtonProps={{ danger: true }}
                   onConfirm={() => handleDelete(record)}
-                >
-                  <ActionButton
-                    icon={<DeleteOutlined />}
-                    label="Xóa"
-                    description={`Xóa giống ${record.name}`}
-                    variant="danger"
-                  />
-                </Popconfirm>
+                />
               </Space>
             ),
           } as ColumnsType<MushroomType>[number],

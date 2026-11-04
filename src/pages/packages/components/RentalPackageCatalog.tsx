@@ -14,7 +14,6 @@ import {
   Empty,
   Flex,
   Input,
-  Popconfirm,
   Segmented,
   Space,
   Tooltip,
@@ -30,8 +29,18 @@ import {
   useRentalPackages,
   useUpdateRentalPackage,
 } from '../../../features/packages/hooks/useRentalPackages'
-import { ActionButton, StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
+import {
+  ActionButton,
+  StatusBadge,
+  MetadataBadge,
+  DataTable,
+  ConfirmActionButton,
+} from '../../../shared/ui'
 import { RentalPackageFormModal } from './RentalPackageFormModal'
+import {
+  isRentalPackageInUseError,
+  RENTAL_PACKAGE_IN_USE_MESSAGE,
+} from '../../../features/packages/hooks/useRentalPackages'
 
 const VND = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -82,7 +91,15 @@ export function RentalPackageCatalog({
 
   const deleteMutation = useDeleteRentalPackage({
     onSuccess: () => messageApi.success('Đã xóa gói thuê.'),
-    onError: (err) => messageApi.error(err.message),
+    onError: (err) => {
+      // ⚠ 409 — gói đã có đơn hàng: hiện message tiếng Việt có hướng dẫn
+      //   hành động thay thế (chuyển sang Tạm ngưng) thay vì message kỹ thuật.
+      if (isRentalPackageInUseError(err)) {
+        messageApi.warning(RENTAL_PACKAGE_IN_USE_MESSAGE)
+        return
+      }
+      messageApi.error(err.message)
+    },
   })
 
   const [searchText, setSearchText] = useState('')
@@ -166,6 +183,27 @@ export function RentalPackageCatalog({
       ),
     },
     {
+      title: 'Đơn hàng',
+      key: 'order_count',
+      width: 130,
+      render: (_, record) => {
+        const count = record.order_count ?? 0
+        return (
+          <Tooltip
+            title={
+              count > 0
+                ? `Gói này đã có ${count} đơn hàng sử dụng ⇒ không thể xoá, chỉ chuyển trạng thái sang Tạm ngưng.`
+                : 'Gói chưa phát sinh đơn hàng nào.'
+            }
+          >
+            <MetadataBadge
+              label={`${count} đơn`}
+            />
+          </Tooltip>
+        )
+      },
+    },
+    {
       title: 'Đơn giá gói',
       key: 'price',
       width: 180,
@@ -227,32 +265,61 @@ export function RentalPackageCatalog({
             key: 'actions',
             width: 160,
             fixed: 'right' as const,
-            render: (_: unknown, record: RentalPackage) => (
-              <Space size={6}>
-                <ActionButton
-                  icon={<EditOutlined />}
-                  label="Sửa"
-                  description={`Sửa gói ${record.package_name}`}
-                  onClick={() => handleOpenEdit(record)}
-                />
+            render: (_: unknown, record: RentalPackage) => {
+              /**
+               * ⚠ Gom 2 trường hợp gói **không thể xoá**:
+               *   1. Đã phát sinh đơn hàng → BE trả 409 ⇒ hướng dẫn chuyển
+               *      trạng thái sang "Tạm ngưng" thay vì xoá.
+               *   2. Đang ở trạng thái "Tạm ngưng" → không cần xoá, chỉ cần
+               *      bật/tắt trạng thái.
+               *
+               * → Làm mờ nút + kèm Tooltip giải thích rõ lý do.
+               */
+              const orderCount = record.order_count ?? 0
+              const isInactive = record.status === 'INACTIVE'
+              const deleteDisabledReason = orderCount
+                ? RENTAL_PACKAGE_IN_USE_MESSAGE
+                : isInactive
+                  ? 'Gói đang tạm ngưng — không cần xóa. Dùng nút trạng thái để mở lại nhận đơn.'
+                  : null
 
-                <Popconfirm
+              const deleteButton = (
+                <ConfirmActionButton
+                  icon={<DeleteOutlined />}
+                  label="Xóa"
+                  description={`Xóa gói ${record.package_name}`}
+                  variant="danger"
                   title="Xóa gói thuê?"
-                  description="Thao tác này không thể hoàn tác."
+                  content={`Thao tác này không thể hoàn tác. Bạn có chắc muốn xóa gói "${record.package_name}"?`}
                   okText="Xóa"
                   cancelText="Hủy"
-                  okButtonProps={{ danger: true }}
                   onConfirm={() => handleDelete(record)}
-                >
+                  disabled={deleteDisabledReason !== null}
+                />
+              )
+
+              return (
+                <Space size={6}>
                   <ActionButton
-                    icon={<DeleteOutlined />}
-                    label="Xóa"
-                    description={`Xóa gói ${record.package_name}`}
-                    variant="danger"
+                    icon={<EditOutlined />}
+                    label="Sửa"
+                    description={`Sửa gói ${record.package_name}`}
+                    onClick={() => handleOpenEdit(record)}
                   />
-                </Popconfirm>
-              </Space>
-            ),
+
+                  {deleteDisabledReason ? (
+                    <Tooltip title={deleteDisabledReason}>
+                      {/* span bọc để tooltip bám được cả khi button bị disabled */}
+                      <span className="mcms-action-button-tooltip">
+                        {deleteButton}
+                      </span>
+                    </Tooltip>
+                  ) : (
+                    deleteButton
+                  )}
+                </Space>
+              )
+            },
           } as ColumnsType<RentalPackage>[number],
         ]
       : []),
@@ -333,7 +400,7 @@ export function RentalPackageCatalog({
           rowKey="package_id"
           loading={isLoading}
           pagination={false}
-          scrollX={900}
+          scrollX={1000}
           size="small"
         />
       )}

@@ -115,6 +115,7 @@ const SAMPLE_TRAYS: SampleTray[] = [
 const TONE_ICONS: Record<SemanticTone, ReactNode> = {
   success: <CheckCircleOutlined />,
   ok: <CheckCircleOutlined />,
+  success: <CheckCircleOutlined />,
   info: <InfoCircleOutlined />,
   warning: <WarningOutlined />,
   danger: <CloseCircleOutlined />,
@@ -122,7 +123,7 @@ const TONE_ICONS: Record<SemanticTone, ReactNode> = {
   neutral: <QuestionCircleOutlined />,
 }
 
-const TONE_ORDER: SemanticTone[] = ['ok', 'info', 'warning', 'danger', 'muted', 'neutral']
+const TONE_ORDER: SemanticTone[] = ['ok', 'success', 'info', 'warning', 'danger', 'muted', 'neutral']
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  Khung trình bày

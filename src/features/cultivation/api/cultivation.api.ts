@@ -1,5 +1,6 @@
 import { farmApi } from '../../farm/api/farm.api'
 import { sessionApi } from '../../sessions/api/session.api'
+import { resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
 import type { CultivationSession, SessionTray } from '../../sessions/types/session.types'
 import type { FarmSession, SpawnInspection } from '../../farm/types/farm.types'
 import {
@@ -59,13 +60,31 @@ export function buildCultivationBatches(
     const inspections = input.inspectionsBySessionId.get(session.session_id) ?? []
 
     const stage = (session.status ?? 'PENDING') as GrowthStage
-    const stageMeta = GROWTH_STAGE_META[stage]
 
-    const progressPercent =
-      typeof session.progress_percent === 'number' &&
-      Number.isFinite(session.progress_percent)
-        ? Math.min(100, Math.max(0, Math.round(session.progress_percent)))
-        : stageMeta.defaultProgress
+    /**
+     * Tiến độ — dùng **công thức chuẩn dùng chung** với trang "Phiên canh
+     * tác" (xem `features/sessions/utils/session-progress.utils.ts`).
+     *
+     * ⚠ Trước đây chỗ này hardcode theo giai đoạn (`CULTIVATING` → 70 %),
+     *   còn trang "Phiên canh tác" dùng giá trị khác ⇒ cùng 1 phiên hiển thị
+     *   2 con số khác nhau. Nay cả hai cùng gọi `resolveSessionProgress`,
+     *   và hàm đó lại gọi `calculateSessionProgress` (shared/utils/date.ts) —
+     *   công thức theo **thời gian thực**.
+     */
+    const progressPercent = resolveSessionProgress(
+      session.progress_percent,
+      session.status,
+      0,
+      {
+        startDate: session.start_date ?? farmSession?.start_date ?? null,
+        endDate:
+          session.expected_harvest_date ??
+          session.end_date ??
+          farmSession?.end_date ??
+          null,
+        durationDays: session.duration_days ?? null,
+      },
+    )
 
     const photos = inspections.flatMap((inspection) => inspection.images ?? [])
 

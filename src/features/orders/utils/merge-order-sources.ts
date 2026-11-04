@@ -1,11 +1,40 @@
-import type { Order } from '../../../types/order'
 import type { CultivationSession } from '../../sessions/types/session.types'
+import type { AdminCultivationSessionDto } from '../../sessions/types/admin-session.types'
 import type { FarmSession } from '../../farm/types/farm.types'
-import type { AdminOrderRow, AdminOrderSource, AdminOrderStatus } from '../types/admin-order.types'
-/** Hợp nhất 3 mảng nguồn thành danh sách đơn duy nhất (key = `order_id`). */
+import type {
+  AdminOrderDto,
+  AdminOrderRow,
+  AdminOrderSource,
+  AdminOrderStatus,
+} from '../types/admin-order.types'
+
+/**
+ * Hợp nhất các nguồn dữ liệu thành danh sách đơn duy nhất (key = `order_id`).
+ *
+ * ## Nguồn
+ *
+ *   1. `order`   — `GET /api/orders/admin` (nguồn CHÍNH): đơn của **mọi**
+ *      khách hàng, đã có tổng tiền / trạng thái thanh toán / trạng thái đơn /
+ *      ngày tạo / tên gói / tên nấm.
+ *   2. `session` — `GET /api/cultivation-sessions/admin`: bổ sung **trạng thái
+ *      phiên canh tác** + `session_id` của đơn đã tạo phiên.
+ *   3. `farm`    — `GET /api/farm/sessions`: bổ sung `spawn_issued` (số phôi đã
+ *      cấp) + số điện thoại khách.
+ *
+ * ## Vì sao vẫn cần hợp nhất?
+ *
+ * `GET /api/orders/admin` gộp **mọi item của 1 đơn** thành 1 record phẳng
+ * (tên gói / tên nấm nối bằng dấu phẩy, không có `order_items`) và **không**
+ * biết phiên canh tác tương ứng. Endpoint phiên thì ngược lại — biết phiên
+ * nhưng không có tiền / thanh toán.
+ *
+ * → Gộp theo `order_id`, ưu tiên nguồn giàu thông tin hơn; trường nào thiếu
+ *   thì lấy từ nguồn còn lại. **Không suy đoán** tổng tiền / tên gói /
+ *   ngày tạo đơn từ số lượng khay/phôi.
+ */
 export function mergeOrderSources(
-  beOrders: Order[],
-  sessions: CultivationSession[],
+  adminOrders: AdminOrderDto[],
+  adminSessions: AdminCultivationSessionDto[],
   farmSessions: FarmSession[],
 ): AdminOrderRow[] {
   const map = new Map<number, AdminOrderRow>()
@@ -15,12 +44,15 @@ export function mergeOrderSources(
     if (existing) return existing
     const created: AdminOrderRow = {
       orderId,
+      // ⚠ BE không sinh `order_code` ⇒ hiển thị mã đơn bằng `#<order_id>`.
       orderCode: `#${orderId}`,
+      customerId: null,
       customerName: '—',
       customerEmail: '—',
       customerPhone: '—',
       packageName: '—',
       mushroomName: '—',
+      quantity: null,
       status: 'PENDING',
       sessionStatus: null,
       sessionId: null,
@@ -28,6 +60,7 @@ export function mergeOrderSources(
       totalAmount: 0,
       spawnIssued: null,
       createdAt: null,
+      updatedAt: null,
       sources: [],
     }
     map.set(orderId, created)
@@ -38,33 +71,29 @@ export function mergeOrderSources(
     if (!row.sources.includes(source)) row.sources.push(source)
   }
 
-  // ── 1. Nguồn `order` — giàu `total_amount` + `status` chuẩn của BE ──
-  for (const be of beOrders) {
-    const orderId = Number(be.order_id)
+  // ── 1. Nguồn `order` — `/api/orders/admin` ────────────────────────────
+  for (const dto of adminOrders) {
+    const orderId = Number(dto.order_id)
     if (!Number.isFinite(orderId) || orderId <= 0) continue
 
     const row = ensure(orderId)
     addSource(row, 'order')
 
-    row.status = (be.status ?? 'PENDING') as AdminOrderStatus
-    row.customerName = be.customer_name ?? row.customerName
-    row.customerEmail = be.customer_email ?? row.customerEmail
-    row.paymentStatus = be.payment_status ?? row.paymentStatus
-    row.totalAmount = be.total_amount ?? row.totalAmount
-    row.orderCode = be.order_code ?? row.orderCode
-    row.createdAt = be.created_at ?? row.createdAt
-
-    row.packageName = be.package_name ?? row.packageName
-    row.mushroomName = be.mushroom_name ?? row.mushroomName
-    const firstItem = be.items?.[0]
-    if (firstItem) {
-      row.packageName = be.package_name ?? firstItem.package_name ?? row.packageName
-      row.mushroomName = be.mushroom_name ?? firstItem.mushroom_name ?? row.mushroomName
-    }
+    row.customerId = dto.customer_id ?? row.customerId
+    row.customerName = dto.customer_name ?? row.customerName
+    row.customerEmail = dto.customer_email ?? row.customerEmail
+    row.packageName = dto.package_name ?? row.packageName
+    row.mushroomName = dto.mushroom_name ?? row.mushroomName
+    row.quantity = dto.quantity ?? row.quantity
+    row.status = (dto.status ?? 'PENDING') as AdminOrderStatus
+    row.paymentStatus = dto.payment_status ?? row.paymentStatus
+    row.totalAmount = parseMoney(dto.total_amount) ?? row.totalAmount
+    row.createdAt = dto.created_at ?? row.createdAt
+    row.updatedAt = dto.updated_at ?? row.updatedAt
   }
 
-  // ── 2. Nguồn `session` (farm/sessions) ──────────────────
-  for (const session of sessions) {
+  // ── 2. Nguồn `session` — `/api/cultivation-sessions/admin` ─────────────
+  for (const session of adminSessions) {
     const orderId = Number(session.order_id)
     if (!Number.isFinite(orderId) || orderId <= 0) continue
 
@@ -73,11 +102,15 @@ export function mergeOrderSources(
 
     row.sessionId = session.session_id
     row.sessionStatus = session.status
+    row.customerId = session.user_id ?? row.customerId
     row.customerName = session.customer_name ?? row.customerName
     row.customerEmail = session.customer_email ?? row.customerEmail
-    row.customerPhone = session.customer_phone ?? row.customerPhone
-    if (row.packageName === '—') row.packageName = session.package_name ?? row.packageName
-    if (row.mushroomName === '—') row.mushroomName = session.mushroom_name ?? row.mushroomName
+    if (row.packageName === '—') {
+      row.packageName = session.package_name ?? row.packageName
+    }
+    if (row.mushroomName === '—') {
+      row.mushroomName = session.mushroom_name ?? row.mushroomName
+    }
     // A session timestamp is not the creation timestamp of its order.
     // Keep unknown order dates null when the order endpoint provides no date.
 
@@ -87,7 +120,7 @@ export function mergeOrderSources(
     }
   }
 
-  // ── 3. Nguồn `farm` — bổ sung `spawn_issued` + tên nấm ────────────────
+  // ── 3. Nguồn `farm` — bổ sung `spawn_issued` + SĐT khách ───────────────
   for (const farm of farmSessions) {
     const orderId = Number(farm.order_id)
     if (!Number.isFinite(orderId) || orderId <= 0) continue
@@ -98,8 +131,12 @@ export function mergeOrderSources(
     row.customerName = farm.customer_name ?? row.customerName
     row.customerEmail = farm.customer_email ?? row.customerEmail
     row.customerPhone = farm.customer_phone ?? row.customerPhone
-    if (row.packageName === '—') row.packageName = farm.package_name ?? row.packageName
-    if (row.mushroomName === '—') row.mushroomName = farm.mushroom_name ?? row.mushroomName
+    if (row.packageName === '—') {
+      row.packageName = farm.package_name ?? row.packageName
+    }
+    if (row.mushroomName === '—') {
+      row.mushroomName = farm.mushroom_name ?? row.mushroomName
+    }
     row.spawnIssued = farm.spawn_issued ?? row.spawnIssued
 
     if (row.sessionId == null) {
@@ -112,7 +149,8 @@ export function mergeOrderSources(
   }
 
   return [...map.values()].sort(
-    (a, b) => (Date.parse(b.createdAt ?? '') || 0) - (Date.parse(a.createdAt ?? '') || 0),
+    (a, b) =>
+      (Date.parse(b.createdAt ?? '') || 0) - (Date.parse(a.createdAt ?? '') || 0),
   )
 }
 
@@ -144,4 +182,17 @@ function sessionToOrderStatus(
     default:
       return 'PENDING'
   }
+}
+
+/**
+ * Parse tiền tệ từ chuỗi (Postgres `numeric`) về number.
+ *
+ * ⚠ BE trả `total_amount` / `subtotal` / … dưới dạng **chuỗi**.
+ */
+function parseMoney(value: string | null | undefined): number | null {
+  if (value == null) return null
+  const trimmed = String(value).trim()
+  if (!trimmed) return null
+  const parsed = Number(trimmed)
+  return Number.isFinite(parsed) ? parsed : null
 }

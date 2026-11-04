@@ -67,6 +67,16 @@ export function resetAuthExpiredNotice(): void {
 }
 
 /**
+ * Request đang gọi tới endpoint **đăng nhập** không?
+ *
+ * 401 ở endpoint này = sai thông tin đăng nhập, KHÔNG phải hết phiên.
+ */
+function isLoginRequest(error: AxiosError): boolean {
+  const url = error.config?.url
+  return typeof url === 'string' && url.includes('/api/auth/login')
+}
+
+/**
  * Timeout cho mọi request (ms).
  *
  * ⚠ Backend deploy trên Azure (App Service) **ngủ (sleep) khi không có
@@ -138,7 +148,13 @@ apiClient.interceptors.response.use(
     //   tại — xem `Backend/src/routes/auth.routes.js`), JWT là access token
     //   thuần. Vì vậy không có luồng refresh ⇒ 401 luôn dẫn tới đăng nhập lại.
     //   `tokenStorage` vẫn hỗ trợ refresh token để sẵn sàng khi BE bổ sung.
-    if (error.response?.status === 401) {
+    //
+    // ⚠ Ngoại lệ: **endpoint đăng nhập** — 401 ở đó nghĩa là *sai email/mật
+    //   khẩu*, KHÔNG phải hết phiên ⇒ không clear token & không dispatch
+    //   `auth-expired` (nếu không, đang ở trang Login lại bị đáy + mất thông
+    //   báo lỗi thân thiện). Trang Login tự hiển thị message từ
+    //   `extractLoginErrorMessage()`.
+    if (error.response?.status === 401 && !isLoginRequest(error)) {
       tokenStorage.clear()
       notifyAuthExpired(error)
     }

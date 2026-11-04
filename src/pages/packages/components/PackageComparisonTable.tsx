@@ -12,7 +12,6 @@ import {
 import {
   Button,
   Flex,
-  Popconfirm,
   Space,
   Typography,
 } from 'antd'
@@ -23,7 +22,13 @@ import type {
   RentalPackage,
 } from '../../../types/package.types'
 import type { SemanticTone } from '../../../app/theme/tokens'
-import { ActionButton, StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
+import {
+  ActionButton,
+  ConfirmActionButton,
+  StatusBadge,
+  MetadataBadge,
+  DataTable,
+} from '../../../shared/ui'
 
 interface PackageComparisonTableProps {
   packages: RentalPackage[]
@@ -197,35 +202,32 @@ export function PackageComparisonTable({
               onClick={() => onEdit(rentalPackage)}
             />
 
-            <Popconfirm
+            <ConfirmActionButton
+              icon={
+                rentalPackage.status === 'INACTIVE' ? (
+                  <PlayCircleOutlined />
+                ) : (
+                  <PauseCircleOutlined />
+                )
+              }
+              label={
+                rentalPackage.status === 'INACTIVE'
+                  ? 'Kích hoạt'
+                  : 'Tạm ngưng'
+              }
+              description="Thay đổi trạng thái gói cước"
+              variant="text"
+              hideLabel
               title={
                 rentalPackage.status === 'INACTIVE'
                   ? 'Kích hoạt gói cước?'
                   : 'Tạm ngưng gói cước?'
               }
-              description="Thay đổi trạng thái sẽ ảnh hưởng khả năng đăng ký mới."
+              content="Thay đổi trạng thái sẽ ảnh hưởng khả năng đăng ký mới."
               okText="Xác nhận"
               cancelText="Hủy"
               onConfirm={() => onToggleStatus(rentalPackage)}
-            >
-              <ActionButton
-                icon={
-                  rentalPackage.status === 'INACTIVE' ? (
-                    <PlayCircleOutlined />
-                  ) : (
-                    <PauseCircleOutlined />
-                  )
-                }
-                label={
-                  rentalPackage.status === 'INACTIVE'
-                    ? 'Kích hoạt'
-                    : 'Tạm ngưng'
-                }
-                description="Thay đổi trạng thái gói cước"
-                variant="text"
-                hideLabel
-              />
-            </Popconfirm>
+            />
 
             <ActionButton
               icon={
@@ -239,21 +241,17 @@ export function PackageComparisonTable({
               onClick={() => onTogglePopular(rentalPackage)}
             />
 
-            <Popconfirm
+            <ConfirmActionButton
+              icon={<DeleteOutlined />}
+              label={`Xóa ${rentalPackage.name}`}
+              variant="text"
+              hideLabel
               title="Xóa gói cước?"
-              description="Thao tác này không thể hoàn tác."
+              content={`Thao tác này không thể hoàn tác. Bạn có chắc muốn xóa gói "${rentalPackage.name}"?`}
               okText="Xóa"
               cancelText="Hủy"
-              okButtonProps={{ danger: true }}
               onConfirm={() => onDelete(rentalPackage)}
-            >
-              <ActionButton
-                icon={<DeleteOutlined />}
-                label={`Xóa ${rentalPackage.name}`}
-                variant="text"
-                hideLabel
-              />
-            </Popconfirm>
+            />
           </Space>
         ) : (
           <Button

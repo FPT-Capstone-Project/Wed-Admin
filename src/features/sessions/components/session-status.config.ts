@@ -50,7 +50,10 @@ export const SESSION_STATUS_CONFIG: Record<
     step: 6,
   },
   COMPLETED: {
-    tone: 'muted',
+    // ⚠ Tone `success` (**xanh dương**) — KHÔNG dùng `muted` (xám) để phân
+    //   biệt rõ "đã hoàn tất" (xanh dương) với "đã huỷ" (đỏ) / "đang chạy"
+    //   (xanh lá) trong cùng 1 bảng.
+    tone: 'success',
     label: 'Đã hoàn tất',
     shortLabel: 'Hoàn tất',
     step: 7,
@@ -61,6 +64,36 @@ export const SESSION_STATUS_CONFIG: Record<
     shortLabel: 'Đã huỷ',
     step: 0,
   },
+}
+
+/**
+ * Badge theo **nhóm trạng thái** — dùng cho bộ lọc & cột trạng thái rút gọn.
+ *
+ * ⚠ Yêu cầu hiển thị:
+ *   - Đang canh tác → **xanh lá cây** (`ok`).
+ *   - Chờ xử lý    → **vàng cam** (`warning`).
+ *   - Hoàn tất      → **xanh dương** (`info`).
+ *   - Đã huỷ       → đỏ (`danger`).
+ */
+export type SessionStatusGroup = 'CULTIVATING' | 'PENDING' | 'FINISHED'
+
+export const SESSION_GROUP_CONFIG: Record<
+  SessionStatusGroup,
+  { tone: SemanticTone; label: string }
+> = {
+  CULTIVATING: { tone: 'ok', label: 'Đang canh tác' },
+  PENDING: { tone: 'warning', label: 'Chờ xử lý' },
+  FINISHED: { tone: 'success', label: 'Đã thu hoạch' },
+}
+
+/** Nhóm trạng thái của 1 phiên canh tác. */
+export function resolveSessionGroup(
+  status: CultivationSessionStatus,
+): SessionStatusGroup {
+  if (status === 'CANCELLED') return 'FINISHED'
+  if (status === 'COMPLETED') return 'FINISHED'
+  if (status === 'PENDING') return 'PENDING'
+  return 'CULTIVATING'
 }
 
 /**

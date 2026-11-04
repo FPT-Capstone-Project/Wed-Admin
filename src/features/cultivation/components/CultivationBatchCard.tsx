@@ -1,14 +1,14 @@
-import dayjs from 'dayjs'
+﻿import dayjs from 'dayjs'
 import {
   CalendarOutlined,
   ExperimentOutlined,
   PictureOutlined,
   SearchOutlined,
 } from '@ant-design/icons'
-import { Card, Flex, Progress, Tooltip, Typography } from 'antd'
+import { Button, Card, Flex, Popover, Progress, Tooltip, Typography } from 'antd'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
-import { Popover, Button } from 'antd'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
+import { calculateSessionProgress } from '../../../shared/utils/date'
 import {
   GROWTH_STAGE_META,
   type CultivationBatch,
@@ -56,6 +56,21 @@ export function CultivationBatchCard({
 
   const isAbnormal = batch.healthStatus === 'ABNORMAL'
   const isCompleted = batch.currentStage === 'COMPLETED'
+
+  /**
+   * ⚠ Tiến độ dùng **công thức chuẩn dùng chung**
+   *   (`src/shared/utils/date.ts` → `calculateSessionProgress`) — truyền trực
+   *   tiếp `startDate` + `estimatedHarvestDate` của phiên ⇒ cùng 1 phiên luôn
+   *   cho cùng 1 con số với trang "Phiên canh tác" & Drawer "Chi tiết khay".
+   *
+   *   Trước đây chỗ này hardcode theo giai đoạn (`CULTIVATING` → 70 %) trong
+   *   khi trang "Phiên canh tác" hiển thị 0 % ⇒ lệch pha.
+   */
+  const progressPercent = calculateSessionProgress(
+    batch.startDate,
+    batch.estimatedHarvestDate ?? batch.endDate,
+    batch.currentStage === 'CANCELLED' ? 'CANCELLED' : batch.currentStage,
+  )
 
   return (
     <Card
@@ -193,11 +208,11 @@ export function CultivationBatchCard({
             >
               <MetadataBadge label={stageMeta.shortLabel} />
               <Typography.Text type="secondary">
-                {batch.progressPercent}% hoàn thành
+                {progressPercent}% hoàn thành
               </Typography.Text>
             </Flex>
             <Progress
-              percent={batch.progressPercent}
+              percent={progressPercent}
               showInfo={false}
               status={isAbnormal ? 'exception' : isCompleted ? 'normal' : 'active'}
               strokeColor={isAbnormal ? tokens.tone.danger.solid : tokens.tone.info.solid}

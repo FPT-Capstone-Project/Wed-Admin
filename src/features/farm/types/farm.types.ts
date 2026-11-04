@@ -43,6 +43,8 @@ export interface FarmSession {
   mushroom_name?: string | null
   mushroom_type_id?: number | null
   status: CultivationSessionStatus
+  /** Trạng thái thanh toán của đơn (`orders.payment_status`). */
+  payment_status?: string | null
   /** Số đơn vị phôi đã cấp cho phiên. */
   spawn_issued?: number | null
   /** Số lượng phôi còn lại trong kho. */

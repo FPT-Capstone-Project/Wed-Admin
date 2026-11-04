@@ -8,6 +8,7 @@ import {
   writeKey,
 } from '../../../shared/api/persistence'
 import { resetErrorToastCache } from '../../../shared/api/error-toast'
+import { extractLoginErrorMessage } from '../../../shared/api/error'
 import { resetAuthExpiredNotice } from '../../../shared/api/client'
 import { rolePermissionsFor } from '../permissions'
 import {
@@ -187,10 +188,12 @@ export const useAuthStore = create<AuthState>((set) => {
         rememberedEmail: rememberMe ? normalizedEmail : '',
       })
     } catch (cause) {
-      const text =
-        cause instanceof Error
-          ? cause.message
-          : 'Đăng nhập thất bại. Vui lòng thử lại.'
+      // ⚠ Dùng `extractLoginErrorMessage` thay vì `cause.message`:
+      //   `cause` là AxiosError ⇒ `message` mặc định là
+      //   "Request failed with status code 401" (quá kỹ thuật, không giúp
+      //   ích người dùng). Hàm này ưu tiên `response.data.message`/`detail`
+      //   rồi fallback sang "Email hoặc mật khẩu không chính xác...".
+      const text = extractLoginErrorMessage(cause)
       set({ lastError: text })
       // Giữ `cause` để giữ nguyên stack gốc khi debug ở Error Boundary.
       throw new Error(text, { cause })
