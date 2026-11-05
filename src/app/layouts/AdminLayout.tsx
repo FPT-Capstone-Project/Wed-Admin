@@ -64,7 +64,16 @@ interface BrandProps {
 function Brand({ onClose }: BrandProps) {
   return (
     <div className="mcms-brand">
-      <span className="mcms-brand-mark" aria-hidden="true">M</span>
+      {/*
+        Logo nấm — dùng **cùng** file `mcms-mark.svg` với trang Login
+        (`features/auth/pages/LoginPage.tsx`) để nhận diện thương hiệu
+        nhất quán giữa màn hình đăng nhập và sidebar.
+
+        ⚠ Trang trí ⇒ `aria-hidden` (tên thương hiệu đã có ở chữ "MCMS").
+      */}
+      <span className="mcms-brand-mark" aria-hidden="true">
+        <img src="/mcms-mark.svg" alt="" width="32" height="32" />
+      </span>
       <div className="mcms-brand-copy">
         <strong>MCMS</strong>
         <span>INDUSTRIAL TELEMETRY</span>

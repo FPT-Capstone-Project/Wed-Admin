@@ -288,6 +288,7 @@ textarea {
   width: 32px;
   height: 32px;
   border-radius: 2px;
+  overflow: hidden;
   color: #2dd4bf;
   background: #0f172a;
   font-family: var(--mcms-font-mono);
@@ -295,6 +296,17 @@ textarea {
   font-weight: 700;
   line-height: 32px;
   text-align: center;
+}
+
+/*
+ * Logo nấm bên trong ô thương hiệu — cùng asset với trang Login
+ * (`/mcms-mark.svg`) ⇒ ảnh tự bo góc theo khung.
+ */
+.mcms-brand-mark img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .mcms-brand-copy {

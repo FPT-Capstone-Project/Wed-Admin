@@ -1,0 +1,170 @@
+/* ==========================================================================
+   Style chung cho module Thông báo (notifications)
+   Chuẩn Industrial Telemetry — dùng token từ :root, KHÔNG hardcode hex
+   (ngoại trừ gradient dầm kim loại mô phỏng vật lý).
+   ========================================================================== */
+
+/* --- Badge chuông trên Header ---------------------------------------- */
+
+/*
+ * ⚠ `.ant-badge-count` là **anh em** của button bên trong Badge, không phải
+ *   con ⇒ selector hậu duệ phải bám vào chính `.mcms-notification-bell`
+ *   (class đặt trên `Badge`), không phải trên `Button`.
+ */
+.mcms-notification-bell .ant-badge-count {
+  font-family: var(--mcms-font-mono);
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+}
+
+/* --- Popover tóm tắt trên Header --------------------------------------- */
+
+.mcms-notification-popover {
+  width: 360px;
+  max-width: calc(100vw - 32px);
+}
+
+.mcms-notification-popover-content {
+  padding: 0 !important;
+}
+
+.mcms-notification-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mcms-space-2);
+  padding: var(--mcms-space-3);
+  border-bottom: 1px solid var(--mcms-border);
+  background: var(--mcms-surface-muted);
+}
+
+.mcms-notification-popover-list {
+  max-height: 380px;
+  overflow-y: auto;
+}
+
+.mcms-notification-popover-item {
+  display: block;
+  width: 100%;
+  padding: var(--mcms-space-3);
+  border: none;
+  border-bottom: 1px solid var(--mcms-border-soft);
+  background: var(--mcms-surface);
+  color: var(--mcms-text);
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 160ms ease;
+}
+
+.mcms-notification-popover-item:hover,
+.mcms-notification-popover-item:focus-visible {
+  background: var(--mcms-surface-hover);
+  outline: none;
+}
+
+.mcms-notification-popover-item[data-unread='true'] {
+  border-left: 3px solid var(--mcms-primary-strong);
+}
+
+/*
+ * Cảnh báo — CHỈ nhóm `iot` (thiết bị & cảm biến) được nền cảnh báo.
+ * Các nhóm khác giữ nền trắng bình thường để bảng không bị "nhiễu" màu.
+ */
+.mcms-notification-popover-item[data-alert-kind='iot'] {
+  background: var(--mcms-tone-danger-bg);
+  border-left-color: var(--mcms-tone-danger-solid);
+}
+
+.mcms-notification-popover-item[data-alert='true']:hover,
+.mcms-notification-popover-item[data-alert='true']:focus-visible {
+  /* Giữ nguyên nền cảnh báo khi hover (đừng đổi về nền thường). */
+  filter: brightness(0.98);
+}
+
+.mcms-notification-popover-title {
+  display: block;
+  font-size: var(--mcms-font-body);
+  font-weight: 600;
+  color: var(--mcms-text);
+  overflow-wrap: anywhere;
+}
+
+.mcms-notification-popover-message {
+  display: block;
+  margin-top: 2px;
+  font-size: var(--mcms-font-small);
+  color: var(--mcms-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.mcms-notification-popover-footer {
+  padding: var(--mcms-space-2);
+  border-top: 1px solid var(--mcms-border);
+  background: var(--mcms-surface-muted);
+}
+
+/* --- Trang danh sách thông báo ---------------------------------------- */
+
+.mcms-notifications-view .ant-table-tbody > tr > td {
+  vertical-align: top;
+}
+
+/* Hàng chưa đọc — nền nhạt + gạch trái (KHÔNG dùng viền màu đậm). */
+.mcms-notifications-view .mcms-notification-row-unread > td {
+  background: var(--mcms-surface-hover);
+}
+
+.mcms-notifications-view .mcms-notification-row-unread > td:first-child {
+  box-shadow: inset 3px 0 0 var(--mcms-primary-strong);
+}
+
+/*
+ * Hàng cảnh báo — CHỈ nhóm `iot` (thiết bị & cảm biến) được tô nền.
+ * Các nhóm khác (canh tác / bệnh hại, hệ thống) giữ nền trắng bình thường.
+ *
+ * ⚠ Nền + gạch trái luôn khớp với Tag ở cột "Loại"
+ *   (xem `NOTIFICATION_CATEGORY_META`).
+ */
+
+/* Thiết bị & cảm biến — nền cảnh báo + gạch trái đỏ. */
+.mcms-notifications-view .mcms-notification-row-iot > td {
+  background: var(--mcms-tone-danger-bg);
+}
+
+.mcms-notifications-view .mcms-notification-row-iot > td:first-child {
+  box-shadow: inset 3px 0 0 var(--mcms-tone-danger-text);
+}
+
+.mcms-notification-mono {
+  font-family: var(--mcms-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* --- Drawer chi tiết --------------------------------------------------- */
+
+.mcms-notification-drawer .ant-drawer-header,
+.mcms-notification-drawer .ant-drawer-body {
+  background: var(--mcms-surface);
+  box-shadow: none;
+}
+
+.mcms-notification-drawer .ant-drawer-header {
+  border-bottom: 1px solid var(--mcms-border);
+}
+
+.mcms-notification-drawer .ant-drawer-footer {
+  border-top: 1px solid var(--mcms-border);
+}
+
+/* Khối nội dung thông báo — dùng đọc dễ, không viền màu sặc sỡ. */
+.mcms-notification-detail-body {
+  padding: var(--mcms-space-4);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  background: var(--mcms-surface-muted);
+  color: var(--mcms-text);
+  font-size: var(--mcms-font-body);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

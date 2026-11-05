@@ -233,6 +233,12 @@ export function DeviceControlPanel() {
   }
 
   // ── Tables ──────────────────────────────────────────────────────────
+  /**
+   * Cột của bảng cảm biến — chỉ các chỉ số vi khí hậu chuẩn.
+   *
+   * ⚠ Không có cột "Thông báo khách" / nút "Báo khách": admin web chỉ
+   *   **xem** telemetry, không gửi thông báo tới khách từ trang này.
+   */
   const sensorColumns: ColumnsType<IotSensor> = [
     {
       title: 'Cảm biến',

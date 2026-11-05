@@ -72,7 +72,13 @@ export interface NotificationListResult {
   unreadCount: number
 }
 
-/** Bộ lọc `GET /api/notifications`. */
+/**
+ * Bộ lọc `GET /api/notifications`.
+ *
+ * ⚠ BE hiện chỉ hỗ trợ `isRead` + phân trang (`parseIsRead`, `parsePagination`
+ *   trong `notification.service.js`). Tham số `type` **không** được BE
+ *   đọc ⇒ FE lọc theo loại ở client (xem `NotificationsPage`).
+ */
 export interface NotificationListQuery {
   /** `true` = chỉ lấy đã đọc, `false` = chỉ lấy chưa đọc. */
   isRead?: boolean
@@ -80,4 +86,42 @@ export interface NotificationListQuery {
   page?: number
   /** Mặc định BE = 20, tối đa 100 */
   pageSize?: number
+}
+
+// ─── Gửi thông báo tới khách của phiên canh tác ───────────────────────────
+
+/**
+ * Loại thông báo mà **Admin / Farm Operator** được phép gửi thủ công.
+ *
+ * ⚠ Nguồn: Swagger `POST /api/notifications/cultivation-sessions/{sessionId}`
+ *   → `type.enum`. BE **từ chối** mọi type ngoài danh sách này (400).
+ */
+export type SendableNotificationType =
+  | 'OPERATOR_MESSAGE'
+  | 'MUSHROOM_DISEASE'
+  | 'DEVICE_ISSUE'
+
+/** Body gửi lên `POST /api/notifications/cultivation-sessions/{sessionId}`. */
+export interface SendSessionNotificationPayload {
+  /** Bắt buộc — 1..100 ký tự sau khi trim. */
+  title: string
+  /** Bắt buộc — 1..1000 ký tự sau khi trim. */
+  message: string
+  /** Mặc định `OPERATOR_MESSAGE`. */
+  type?: SendableNotificationType
+}
+
+/** Thông báo BE trả về sau khi gửi thành công (201). */
+export interface SentSessionNotification {
+  notification_id: number
+  /** Người nhận — luôn là khách hàng (role 3) của phiên. */
+  user_id: number
+  notification_type: SendableNotificationType
+  title: string
+  message: string
+  /** Luôn `CULTIVATION_SESSION` — do BE tự set. */
+  reference_type: string
+  /** `cultivation_sessions.session_id` — do BE tự set. */
+  reference_id: number
+  created_at: string
 }

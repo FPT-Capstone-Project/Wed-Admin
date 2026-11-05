@@ -6,6 +6,88 @@
   box-shadow: none;
 }
 
+/* --- Giàn kệ công nghiệp 2 tầng (industrial rack shell) --------------------
+ *
+ * Mô phỏng giàn kệ thép thực tế:
+ *   • Khung chịu lực bọc ngoài (border 2px + nền slate nhạt + bo góc).
+ *   • Tầng trên render trước (Tầng 2), tầng dưới sau (Tầng 1).
+ *   • Thanh đỡ sàn mâm kẽm nằm GIỮA 2 tầng.
+ *   • Chân đế ở đáy khung.
+ * ---------------------------------------------------------------------- */
+
+.mcms-rack-shell {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 16px;
+  padding: 16px;
+  border: 2px solid #cbd5e1;
+  border-radius: 8px;
+  background: rgba(248, 250, 252, 0.6);
+  box-shadow: var(--mcms-shadow-xs);
+}
+
+.mcms-rack-shelf {
+  padding: 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.mcms-rack-shelf-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+/* Thanh đỡ sàn mâm kẽm — mô phỏng dầm chịu lực giữa 2 tầng. */
+.mcms-rack-beam {
+  height: 12px;
+  margin: 16px 0;
+  border-radius: 999px;
+  background: linear-gradient(to right, #cbd5e1, #94a3b8, #cbd5e1);
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.25);
+}
+
+/* Chân đế giàn kệ. */
+.mcms-rack-feet {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 12px;
+  margin-top: 12px;
+}
+
+.mcms-rack-foot {
+  display: block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: #94a3b8;
+  box-shadow: inset 0 -1px 0 rgba(15, 23, 42, 0.25);
+}
+
+/* Lưới khay: co giãn/cho phép cuộn ngang trên màn hình nhỏ mà không vỡ ô. */
+.mcms-rack-tray-scroll {
+  overflow-x: auto;
+  padding: 4px;
+}
+
+@media (max-width: 767px) {
+  .mcms-rack-shell {
+    margin: 12px;
+    padding: 12px;
+  }
+
+  .mcms-rack-beam {
+    height: 10px;
+    margin: 12px 0;
+  }
+}
+
 .mcms-room-rack .tray-card-btn,
 .mcms-room-rack .rack-tray-btn {
   min-width: 0;

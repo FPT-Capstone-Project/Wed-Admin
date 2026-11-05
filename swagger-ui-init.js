@@ -2743,6 +2743,127 @@ window.onload = function() {
           }
         }
       },
+      "/api/notifications/cultivation-sessions/{sessionId}": {
+        "post": {
+          "tags": [
+            "Notifications"
+          ],
+          "summary": "Send a notification to the Customer who owns a cultivation session",
+          "description": "Admin (1) and Farm Operator (2) only. The backend identifies the active Customer (3) through the session's order. Recipient, creator, and reference fields are set by the backend; caller-supplied values are ignored.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "description": "ID of the cultivation session whose Customer should receive the notification.",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "title",
+                    "message"
+                  ],
+                  "properties": {
+                    "title": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 100,
+                      "description": "Required title; trimmed and must not be blank."
+                    },
+                    "message": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000,
+                      "description": "Required message; trimmed and must not be blank."
+                    },
+                    "type": {
+                      "type": "string",
+                      "enum": [
+                        "OPERATOR_MESSAGE",
+                        "MUSHROOM_DISEASE",
+                        "DEVICE_ISSUE"
+                      ],
+                      "default": "OPERATOR_MESSAGE",
+                      "description": "Optional notification type; trimmed and normalized to uppercase."
+                    }
+                  }
+                },
+                "example": {
+                  "title": "Thông báo về quá trình trồng nấm",
+                  "message": "Farm Operator muốn cập nhật tình trạng trồng nấm của bạn.",
+                  "type": "OPERATOR_MESSAGE"
+                }
+              }
+            }
+          },
+          "responses": {
+            "201": {
+              "description": "Notification saved for the session's Customer",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "example": "Notification sent successfully"
+                      },
+                      "data": {
+                        "$ref": "#/components/schemas/SentCultivationNotification"
+                      }
+                    }
+                  },
+                  "example": {
+                    "message": "Notification sent successfully",
+                    "data": {
+                      "notification_id": 21,
+                      "user_id": 8,
+                      "notification_type": "OPERATOR_MESSAGE",
+                      "title": "Thông báo về quá trình trồng nấm",
+                      "message": "Farm Operator muốn cập nhật tình trạng trồng nấm của bạn.",
+                      "reference_type": "CULTIVATION_SESSION",
+                      "reference_id": 17,
+                      "created_at": "2026-11-04T14:30:00.000Z"
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid session ID, title, message, type, or request body"
+            },
+            "401": {
+              "description": "Missing or invalid JWT"
+            },
+            "403": {
+              "description": "Only Admin (1) and Farm Operator (2) may send notifications"
+            },
+            "404": {
+              "description": "Session or Customer recipient not found"
+            },
+            "409": {
+              "description": "Session is ineligible (completed or cancelled) or Customer account is inactive"
+            },
+            "500": {
+              "description": "Internal server error"
+            }
+          }
+        }
+      },
       "/api/notifications": {
         "get": {
           "tags": [
@@ -9912,6 +10033,19 @@ window.onload = function() {
                               }
                             }
                           },
+                          "autoStatus": {
+                            "type": "string",
+                            "enum": [
+                              "RUNNING",
+                              "PAUSED",
+                              "STOPPED"
+                            ],
+                            "description": "AUTO intent stays enabled while waiting for OFF or valid sensors. RUNNING does not mean the valve is ON."
+                          },
+                          "pauseReason": {
+                            "type": "string",
+                            "nullable": true
+                          },
                           "runtime": {
                             "type": "object",
                             "properties": {
@@ -10240,7 +10374,7 @@ window.onload = function() {
             "Automatic misting"
           ],
           "summary": "Get run, operator, desired/reported SSR, deadlines and errors",
-          "description": "Connection/sensor failure, worker restart or backend shutdown ends the interrupted AUTO run. Reconnection only reconciles OFF_PENDING using fresh live OFF feedback; it never resumes ON. Explicit Start is required. MANUAL with OFF_PENDING does not confirm physical OFF. Authenticated read access.",
+          "description": "AUTO intent persists across connection/sensor failures, worker restart and backend shutdown. Interrupted pulses are discarded. Recovery requires fresh live OFF, cooldown, valid sensors, unchanged crop profile and verified hardware before a new pulse. autoStatus=PAUSED and pauseReason expose waiting for OFF/sensors while mode stays AUTO. Explicit Stop/manual OFF and terminal configuration faults never resume. MANUAL with OFF_PENDING does not confirm physical OFF. Authenticated read access.",
           "security": [
             {
               "bearerAuth": []
@@ -10295,6 +10429,19 @@ window.onload = function() {
                                 "nullable": true
                               }
                             }
+                          },
+                          "autoStatus": {
+                            "type": "string",
+                            "enum": [
+                              "RUNNING",
+                              "PAUSED",
+                              "STOPPED"
+                            ],
+                            "description": "AUTO intent stays enabled while waiting for OFF or valid sensors. RUNNING does not mean the valve is ON."
+                          },
+                          "pauseReason": {
+                            "type": "string",
+                            "nullable": true
                           },
                           "runtime": {
                             "type": "object",

@@ -5,6 +5,8 @@ import type {
   NotificationListQuery,
   NotificationListResult,
   NotificationPagination,
+  SendSessionNotificationPayload,
+  SentSessionNotification,
 } from '../types/notification.types'
 
 const BASE = '/api/notifications'
@@ -25,6 +27,73 @@ export const notificationApi = {
 
     return { items, pagination, unreadCount }
   },
+}
+
+/**
+ * POST /api/notifications/cultivation-sessions/{sessionId}
+ *
+ * Gửi thông báo cho **khách hàng** sở hữu phiên canh tác.
+ *
+ * ⚠ BE tự xác định người nhận ( qua `session → order → user`), tự set
+ *   `reference_type = 'CULTIVATION_SESSION'` và `reference_id = sessionId`
+ *   ⇒ FE **không** được gửi thêm các field này (BE bỏ qua).
+ *
+ * ⚠ BE chỉ cho phép gửi cho phiên còn active (PENDING → HARVESTING);
+ *   phiên COMPLETED / CANCELLED ⇒ **409**.
+ *
+ * ⚠ Chỉ role 1 (Admin) và 2 (Farm Operator) được gọi — Customer không.
+ */
+export async function sendSessionNotification(
+  sessionId: number,
+  payload: SendSessionNotificationPayload,
+): Promise<SentSessionNotification> {
+  if (!Number.isSafeInteger(sessionId) || sessionId <= 0) {
+    throw new Error('Mã phiên canh tác không hợp lệ')
+  }
+
+  const title = payload.title.trim()
+  const message = payload.message.trim()
+
+  // Chặn sớm để không gọi API chắc chắn bị 400.
+  if (!title || title.length > 100) {
+    throw new Error('Tiêu đề thông báo phải có từ 1 đến 100 ký tự')
+  }
+  if (!message || message.length > 1000) {
+    throw new Error('Nội dung thông báo phải có từ 1 đến 1000 ký tự')
+  }
+
+  const response = await apiClient.post<unknown>(
+    `${BASE}/cultivation-sessions/${sessionId}`,
+    {
+      title,
+      message,
+      type: payload.type ?? 'OPERATOR_MESSAGE',
+    },
+  )
+
+  const body = ensureObject<Record<string, unknown>>(response.data)
+  return normalizeSentNotification(body, sessionId)
+}
+
+/** Chuẩn hoá response 201 của `POST .../cultivation-sessions/{sessionId}`. */
+function normalizeSentNotification(
+  raw: Record<string, unknown> | null,
+  sessionId: number,
+): SentSessionNotification {
+  const obj = raw ?? {}
+
+  return {
+    notification_id: pickNumber(obj, 'notification_id', 'notificationId', 'id') ?? 0,
+    user_id: pickNumber(obj, 'user_id', 'userId') ?? 0,
+    notification_type:
+      (pickString(obj, 'notification_type', 'notificationType', 'type') ??
+        'OPERATOR_MESSAGE') as SentSessionNotification['notification_type'],
+    title: pickString(obj, 'title') ?? '',
+    message: pickString(obj, 'message', 'body', 'content') ?? '',
+    reference_type: pickString(obj, 'reference_type', 'referenceType') ?? 'CULTIVATION_SESSION',
+    reference_id: pickNumber(obj, 'reference_id', 'referenceId') ?? sessionId,
+    created_at: pickString(obj, 'created_at', 'createdAt') ?? '',
+  }
 }
 
 // ─── Normalizers ─────────────────────────────────────────────────────────

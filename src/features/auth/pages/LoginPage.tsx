@@ -4,6 +4,7 @@ import {
   RadarChartOutlined,
 } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
+import loginBg from '../../../assets/Login.jpg'
 import { LoginForm } from '../components/LoginForm'
 import '../styles/auth.css'
 
@@ -13,6 +14,9 @@ import '../styles/auth.css'
  * Branding panel: tone màu xanh lá chủ đạo từ tokens.ts (`palette.primary` / `palette.teal`)
  * kết hợp bố cục và hoạ tiết trang trại nấm thông minh hiện đại (kệ nấm, vi khí hậu, mạng IoT).
  * Form panel: Card form sang trọng, cân đối, nút Đăng nhập đạt chiều cao tối thiểu 44px.
+ *
+ * ⚠ Ảnh nền cột trái lấy từ `src/assets/Login.jpg` (Vite tự hash + emit).
+ *   Lớp gradient tối phía trên giữ chữ trắng đủ tương phản (WCAG AA).
  */
 export function LoginPage() {
   const navigate = useNavigate()
@@ -26,6 +30,20 @@ export function LoginPage() {
       {/* ── Cột trái: Branding panel ─────────────────────────────────── */}
       <aside
         className="mcms-login-brand"
+        style={{
+          /*
+           * Ảnh nền + overlay tối xanh rêu.
+           *
+           * ⚠ Gradient đứng **trước** trong `background-image` ⇒ nằm TRÊN
+           *   ảnh ⇒ chữ trắng luôn đủ tương phản.
+           * ⚠ `background-color` (xanh rêu) vẫn giữ trong CSS ⇒ nếu ảnh lỗi
+           *   / chưa tải được thì panel vẫn có nền đặc, không trong suốt.
+           */
+          backgroundImage: `linear-gradient(rgba(10, 25, 20, 0.75), rgba(10, 25, 20, 0.85)), url(${loginBg})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+        }}
         aria-label="Giới thiệu hệ thống quản lý trang trại nấm thông minh MCMS"
       >
         {/* Hoạ tiết trang trại nấm thông minh & mạng cảm biến IoT */}

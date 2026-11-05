@@ -13,6 +13,15 @@ interface NotificationState {
   /** Cờ "đọc" cho badge — UI chỉ hiện chấm đỏ khi `unreadCount > 0`. */
   setUnreadCount: (count: number) => void
 
+  /**
+   * Giảm 1 đơn vị (optimistic) khi đánh dấu 1 thông báo đã đọc.
+   *
+   * ⚠ BE không trả `meta.unread_count` trong response của
+   *   `PATCH /api/notifications/:id/read` ⇒ badge không tự giảm nếu không
+   *   cập nhật tại chỗ. Giá trị được "đồng bộ lại" bởi request list kế tiếp.
+   */
+  decrementUnreadCount: () => void
+
   /** Đặt lại khi đăng xuất, tránh số của user trước lọt sang user sau. */
   reset: () => void
 }
@@ -21,6 +30,13 @@ export const useNotificationStore = create<NotificationState>((set) => ({
   unreadCount: null,
   setUnreadCount: (count) =>
     set({ unreadCount: Number.isFinite(count) && count > 0 ? count : 0 }),
+  decrementUnreadCount: () =>
+    set((state) => ({
+      unreadCount:
+        state.unreadCount === null
+          ? null
+          : Math.max(0, state.unreadCount - 1),
+    })),
   reset: () => set({ unreadCount: null }),
 }))
 

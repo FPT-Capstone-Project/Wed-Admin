@@ -113,7 +113,6 @@ const SAMPLE_TRAYS: SampleTray[] = [
 
 /** Icon đi kèm mỗi tone — badge KHÔNG được chỉ dựa vào màu (WCAG 1.4.1). */
 const TONE_ICONS: Record<SemanticTone, ReactNode> = {
-  success: <CheckCircleOutlined />,
   ok: <CheckCircleOutlined />,
   success: <CheckCircleOutlined />,
   info: <InfoCircleOutlined />,

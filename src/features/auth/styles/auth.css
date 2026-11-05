@@ -399,7 +399,15 @@
 
 /* Tonal brand panel and elevated authentication card. */
 .login-page.mcms-login .mcms-login-brand {
-  background: var(--mcms-sidebar-bg);
+  /*
+   * ⚠ Dùng `background-color` (longhand) thay vì shorthand `background`:
+   *   shorthand sẽ reset `background-image` ⇒ xoá ảnh nền + overlay đặt
+   *   bằng inline style trên `<aside>`.
+   *
+   * Màu này là **fallback**: nếu ảnh nền (`src/assets/Login.jpg`) chưa tải
+   * được / lỗi, panel vẫn giữ nền xanh rêu đặc, chữ trắng vẫn đọc được.
+   */
+  background-color: var(--mcms-sidebar-bg);
   color: var(--mcms-sidebar-text);
 }
 .mcms-login-brand .mcms-login-brand-title,

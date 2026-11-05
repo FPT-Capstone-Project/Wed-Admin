@@ -1,4 +1,4 @@
-import { buildTrayLayout, type FloorLayout } from '../utils/tray-layout.utils'
+import { buildTrayLayout, type FloorLayout, type TrayGrid } from '../utils/tray-layout.utils'
 import { getClimateTone, getClimateDirection } from '../utils/climate-tone.utils'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
 import { trayFloorLabel } from '../../../shared/ui/tray-code.utils'
@@ -186,6 +186,33 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
       </span>
     </Tooltip>
   )
+}
+
+// ── Nhãn tầng theo chiều không gian vật lý ──────────────────────────────────
+/**
+ * Tầng trên hiển thị trước (trên) → "Tầng 2 (Tầng trên)".
+ * Tầng dưới hiển thị sau (dưới)   → "Tầng 1 (Tầng dưới)".
+ *
+ * Giàn chỉ có 1 tầng → không gắn nhãn vị trí (tránh nhập nhằng).
+ */
+function shelfDisplayLabel(
+  grid: TrayGrid,
+  options: { isTopShelf: boolean; isSingleShelf: boolean },
+): string {
+  const label = grid.label.trim()
+  const floorNumber = grid.floorNumber
+  /** Label đã chứa số tầng (vd "Tầng 2", "Phòng A - Tầng 2") → không nối thêm. */
+  const hasFloorNumber = /\bTầng\s*\d+\b/i.test(label)
+
+  let base = label
+  if (!label) {
+    base = floorNumber != null ? `Tầng ${floorNumber}` : `Tầng ID ${grid.floorId}`
+  } else if (floorNumber != null && !hasFloorNumber) {
+    base = `${label} (Tầng ${floorNumber})`
+  }
+
+  if (options.isSingleShelf) return base
+  return options.isTopShelf ? `${base} (Tầng trên)` : `${base} (Tầng dưới)`
 }
 
 // ── Tray Card ────────────────────────────────────────────────────────────────
@@ -416,10 +443,20 @@ export function RackView({
           thresholds,
         )
 
+        // ⚠ Chiều không gian vật lý: Tầng 2 nằm TRÊN, Tầng 1 nằm DƯỚI.
+        // `buildTrayLayout` trả grid theo `floor_number` tăng dần ⇒ đảo ngược
+        // để tầng cao hơn render trước (trên) đúng như giàn kệ thực tế.
+        const orderedGrids = [...layout.grids].sort(
+          (a, b) =>
+            (b.floorNumber ?? -Infinity) - (a.floorNumber ?? -Infinity) ||
+            b.floorId - a.floorId,
+        )
+
         return (
           <section
             key={tier.tierId}
             aria-labelledby={`tier-${tier.tierId}-title`}
+            className="mcms-rack"
             style={{
               backgroundColor: tokens.color.surface,
               border: `1px solid ${tokens.color.border}`,
@@ -470,34 +507,104 @@ export function RackView({
               </Flex>
             </Flex>
 
-            {layout.grids.map(grid => {
-              const cells = new Map(grid.cells.map(cell => [`${cell.row}:${cell.column}`, cell.tray]))
-              const conflicts = new Set(grid.conflicts.map(cell => `${cell.row}:${cell.column}`))
-              return <section key={grid.floorId} aria-label={grid.label} style={{ padding: tokens.space['4'] }}>
-                <Typography.Title level={4} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0, marginBottom: tokens.space['3'], overflowWrap: 'anywhere' }}>{grid.label}</Typography.Title>
-                {grid.rows > 0 && grid.columns > 0 ? <div style={{ overflowX: 'auto', padding: tokens.space['1'] }}>
-                  <div style={{ display: 'grid', gridTemplateRows: `repeat(${grid.rows}, ${tokens.components.tray.minHeight}px)`,
-                    gridTemplateColumns: `repeat(${grid.columns}, ${tokens.components.tray.minWidth}px)`, gap: tokens.space['2'] }}>
-                    {Array.from({ length: grid.rows * grid.columns }, (_, index) => {
-                      const row = Math.floor(index / grid.columns) + 1
-                      const column = index % grid.columns + 1
-                      const tray = cells.get(`${row}:${column}`)
-                      const vacancyLabel = conflicts.has(`${row}:${column}`) ? 'Trùng vị trí khay' : 'Vị trí chưa có khay'
-                      return <div key={`${row}:${column}`} style={{ gridRow: row, gridColumn: column, minWidth: 0 }}>
-                        {tray ? <TrayCard tray={tray} isSelected={selectedTrayId === tray.id} onClick={() => onSelectTray(tray)} summary={sessionSummaries?.get(Number(tray.id)) ?? null} />
-                          : <span role="img" aria-label={`${grid.label}, R${row}-C${column}: ${vacancyLabel}`}
-                            title={`R${row}-C${column}: ${vacancyLabel}`} style={{
-                              display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%',
-                              border: `${tokens.components.tray.borderWidth}px dashed ${tokens.tone.muted.border}`,
-                              borderRadius: tokens.radius.md, background: tokens.tone.muted.bg, color: tokens.tone.muted.text,
-                              fontSize: tokens.typography.sizeSmall,
-                            }}>R{row}-C{column}{conflicts.has(`${row}:${column}`) ? ' !' : ''}</span>}
-                      </div>
-                    })}
-                  </div>
-                </div> : <Typography.Text type="secondary">Chưa có vị trí khay</Typography.Text>}
-              </section>
-            })}
+            {/* ── Giàn kệ công nghiệp: các tầng xếp chồng ── */}
+            {orderedGrids.length > 0 && (
+              <div className="mcms-rack-shell">
+                {orderedGrids.map((grid, gridIndex) => {
+                  const cells = new Map(grid.cells.map(cell => [`${cell.row}:${cell.column}`, cell.tray]))
+                  const conflicts = new Set(grid.conflicts.map(cell => `${cell.row}:${cell.column}`))
+                  const isTopShelf = gridIndex === 0
+                  const isBottomShelf = gridIndex === orderedGrids.length - 1
+                  const shelfLabel = shelfDisplayLabel(grid, {
+                    isTopShelf,
+                    isSingleShelf: orderedGrids.length === 1,
+                  })
+                  return (
+                    <div key={grid.floorId}>
+                      {/* ── Tầng trên (kệ) ── */}
+                      <section className="mcms-rack-shelf" aria-label={shelfLabel}>
+                        <div className="mcms-rack-shelf-header">
+                          <Typography.Title
+                            level={4}
+                            style={{
+                              fontSize: tokens.typography.sizeTitle,
+                              margin: 0,
+                              overflowWrap: 'anywhere',
+                            }}
+                          >
+                            {shelfLabel}
+                          </Typography.Title>
+                          <Typography.Text type="secondary" style={{ fontSize: 'var(--mcms-font-small)' }}>
+                            {grid.rows} × {grid.columns} ô khay
+                          </Typography.Text>
+                        </div>
+                        {grid.rows > 0 && grid.columns > 0 ? (
+                          <div className="mcms-rack-tray-scroll">
+                            <div
+                              style={{
+                                display: 'grid',
+                                gridTemplateRows: `repeat(${grid.rows}, ${tokens.components.tray.minHeight}px)`,
+                                gridTemplateColumns: `repeat(${grid.columns}, ${tokens.components.tray.minWidth}px)`,
+                                gap: tokens.space['2'],
+                              }}
+                            >
+                              {Array.from({ length: grid.rows * grid.columns }, (_, index) => {
+                                const row = Math.floor(index / grid.columns) + 1
+                                const column = (index % grid.columns) + 1
+                                const tray = cells.get(`${row}:${column}`)
+                                const vacancyLabel = conflicts.has(`${row}:${column}`)
+                                  ? 'Trùng vị trí khay'
+                                  : 'Vị trí chưa có khay'
+                                return (
+                                  <div key={`${row}:${column}`} style={{ gridRow: row, gridColumn: column, minWidth: 0 }}>
+                                    {tray ? (
+                                      <TrayCard
+                                        tray={tray}
+                                        isSelected={selectedTrayId === tray.id}
+                                        onClick={() => onSelectTray(tray)}
+                                        summary={sessionSummaries?.get(Number(tray.id)) ?? null}
+                                      />
+                                    ) : (
+                                      <span
+                                        role="img"
+                                        aria-label={`${grid.label}, R${row}-C${column}: ${vacancyLabel}`}
+                                        title={`R${row}-C${column}: ${vacancyLabel}`}
+                                        style={{
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%',
+                                          border: `${tokens.components.tray.borderWidth}px dashed ${tokens.tone.muted.border}`,
+                                          borderRadius: tokens.radius.md, background: tokens.tone.muted.bg, color: tokens.tone.muted.text,
+                                          fontSize: tokens.typography.sizeSmall,
+                                        }}
+                                      >
+                                        R{row}-C{column}{conflicts.has(`${row}:${column}`) ? ' !' : ''}
+                                      </span>
+                                    )}
+                                  </div>
+                                )
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <Typography.Text type="secondary">Chưa có vị trí khay</Typography.Text>
+                        )}
+                      </section>
+
+                      {/* ── Thanh đỡ sàn mâm kẽm giữa 2 tầng ── */}
+                      {!isBottomShelf && (
+                        <div className="mcms-rack-beam" role="presentation" aria-hidden="true" />
+                      )}
+                    </div>
+                  )
+                })}
+
+                {/* ── Chân đế giàn kệ ── */}
+                <div className="mcms-rack-feet" role="presentation" aria-hidden="true">
+                  <span className="mcms-rack-foot" />
+                  <span className="mcms-rack-foot" />
+                  <span className="mcms-rack-foot" />
+                </div>
+              </div>
+            )}
             {layout.unplacedGroups.length > 0 && <section style={{ padding: tokens.space['4'] }} aria-label="Khay chưa xác định vị trí">
               <Typography.Title level={4} style={{ fontSize: tokens.typography.sizeTitle, marginTop: 0 }}>Khay chưa xác định vị trí</Typography.Title>
               {layout.unplacedGroups.map(group => <section key={group.floorId ?? 'unassigned'} aria-label={group.label}>
