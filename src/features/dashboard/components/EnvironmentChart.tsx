@@ -81,10 +81,23 @@ function ClimateHistoryTooltip({ active, payload, floor }: {
           không được hiển thị "—" (trước đây điều này làm mất dữ liệu thật).
         */}
         <span style={{ color: value == null ? tones.muted.text : chartSeries[metric] }}>
-          {metric === 'temperature' ? 'Nhiệt độ' : 'Độ ẩm'}: {formatMeasurement(value)}{value != null && unit} {direction === 'high' ? '▲' : direction === 'low' ? '▼' : ''}
+          {metric === 'temperature' ? 'Nhiệt độ' : 'Độ ẩm'}: {formatMeasurement(value)}{value != null && unit} {direction === 'high' ? '▲ vượt ngưỡng' : direction === 'low' ? '▼ dưới ngưỡng' : ''}
         </span>
         <div>Mục tiêu: {target}</div>
-        {(direction === 'high' || direction === 'low') && <div style={{ color: value == null ? tones.muted.text : chartSeries[metric] }}>{direction === 'high' ? 'Cao' : 'Thấp'} hơn ngưỡng {formatMeasurement(reading.deviation)}{unit}</div>}
+        {(direction === 'high' || direction === 'low') && (
+          /*
+            ⚠ Ghi rõ **tên metric** trong câu ("Nhiệt độ cao hơn ngưỡng…").
+              Chỉ dựa vào màu/đơn vị thì **không đủ**:
+              - Cả nhiệt độ lẫn độ ẩm đều có thể vượt ngưỡng **cùng lúc** ⇒
+                tooltip hiện 2 dòng "Cao/Thấp hơn ngưỡng" liên tiếp.
+              - Màu đỏ của nhiệt độ trùng với nghĩa "nguy hiểm" ⇒ dễ đọc nhầm
+                thành cảnh báo chung thay vì chỉ số bị lệch.
+              ⇒ Chỉ số bị lệch luôn được nêu tên ⇒ không cần đoán.
+          */
+          <div style={{ color: value == null ? tones.muted.text : chartSeries[metric] }}>
+            {metric === 'temperature' ? 'Nhiệt độ' : 'Độ ẩm'} {direction === 'high' ? 'cao hơn' : 'thấp hơn'} ngưỡng {formatMeasurement(reading.deviation)}{unit}
+          </div>
+        )}
       </div>
     })}
   </ChartTooltipSurface>
