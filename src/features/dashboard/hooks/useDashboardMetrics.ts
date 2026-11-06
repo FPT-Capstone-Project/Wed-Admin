@@ -13,6 +13,15 @@ import type { DashboardAnalyticsData } from '../../../types/dashboard'
 export const dashboardKeys = {
   all: ['dashboard'] as const,
   analytics: () => [...dashboardKeys.all, 'analytics'] as const,
+  /**
+   * Lịch sử môi trường theo tầng — `GET /api/analytics/dashboard/environment-history`.
+   *
+   * ⚠ Key **không** chứa `from`/`to`: endpoint này luôn trả cửa sổ mặc định
+   *   24 giờ (BE quyết định mốc cắt) ⇒ đổi cửa sổ là đổi server state, không
+   *   phải đổi cache key. `refetchInterval` lấy nhịp từ `refreshAfterMs` trong
+   *   response (xem `useEnvironmentHistory`).
+   */
+  environmentHistory: () => [...dashboardKeys.all, 'environment-history'] as const,
 }
 
 /**

@@ -431,10 +431,24 @@ export const gridBreakpoint = { xs: 480, sm: 576, md: 768, lg: 992, xl: 1200, xx
  * Token gốc — dùng khi import trong TS.
  * Cấu trúc phẳng để truy cập nhanh: `tokens.color.primary`.
  */
-/** Data series colors are independent of operational severity. */
+/**
+ * Màu các chuỗi dữ liệu (data series) — **độc lập** với màu trạng thái
+ * vận hành (`tones`).
+ *
+ * ⚠ Vì sao nhiệt độ = đỏ, độ ẩm = xanh dương?
+ *   Người dùng đọc biểu đồ theo trực giác: nhiệt độ cao ⇒ nóng ⇒ đỏ;
+ *   độ ẩm ⇒ nước/khí ẩm ⇒ xanh dương. Màu **độc lập** tone trạng thái
+ *   (đỏ ở đây KHÔNG mang nghĩa "nguy hiểm") nên đường biểu diễn vẫn đọc
+ *   được khi đường nằm ngoài ngưỡng (màu cảnh báo nằm ở tooltip/badge).
+ *
+ * ⚠ Tương phản: cả hai đạt WCAG 1.4.11 (≥ 3:1) trên nền trắng **và** nền
+ *   app (`surface.background`) — đã verify bằng `npm run verify:tokens`.
+ */
 export const chartSeries = {
-  temperature: '#7c3aed',
-  humidity: '#0d9488',
+  /** Nhiệt độ — đỏ. `#c2413b` (coral) ⇒ 5.11:1 trên trắng. */
+  temperature: '#c2413b',
+  /** Độ ẩm — xanh dương. `#2563eb` (blue) ⇒ 5.17:1 trên trắng. */
+  humidity: '#2563eb',
   revenue: '#2563eb',
   revenuePrevious: '#64748b',
 } as const

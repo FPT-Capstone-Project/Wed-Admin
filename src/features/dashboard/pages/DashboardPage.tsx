@@ -16,20 +16,30 @@ import { summarizeFarmClimate } from '../../rooms/utils/farm-climate.utils'
  *   - `/api/cultivation-rooms`, `/api/cultivation-trays`
  *   - `/api/iot/floors`, `/api/iot/masters`
  *
- * **Môi trường theo tầng** — `/api/iot/floors/{id}/environment` cho từng tầng,
- *   nhưng mỗi tầng là một query độc lập (`useQueries`) ⇒ một tầng lỗi **không**
- *   làm hỏng cả trang (không còn cascade failure như `Promise.all` cũ).
+ * **Môi trường theo tầng** — `GET /api/analytics/dashboard/environment-history`
+ *   (một request cho **mọi** tầng): trả sẵn cửa sổ thời gian, kích thước
+ *   bucket, nhịp làm mới đề xuất, ngưỡng hiện tại và chuỗi điểm đã gộp.
+ *
+ *   → Trước đây trang này gom dữ liệu **từ nhiều nơi**: `/api/iot/floors` +
+ *   `/api/iot/masters` + `/api/iot/floors/{id}/environment` (× tầng) +
+ *   `/api/iot/masters/{m}/nodes/{n}/sensors/{s}/history` (× tầng × cảm biến,
+ *   có phân trang `limit/offset` tay) ⇒ hàng chục request cho 2 biểu đồ.
+ *   Lỗi ở đây **không** chặn trang — biểu đồ hiện thông báo + nút "Thử lại".
  *
  * → KHÔNG dùng `useRoomStore` / `useAlertStore` / `useOrderStore` (mock).
  */
 import { CalendarOutlined, CloudOutlined, FireOutlined } from '@ant-design/icons'
-import { Col, Row, Skeleton, Typography } from 'antd'
+import { Alert, Button, Col, Row, Skeleton, Typography } from 'antd'
 import { useMemo } from 'react'
 import { PageHeader, StatusBadge } from '../../../shared/ui'
 import { getApiErrorMessage } from '../../../shared/api/error'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { useFarmStructure } from '../hooks/useFarmStructure'
-import { useFloorEnvironmentOverview } from '../hooks/useFloorEnvironmentOverview'
+import {
+  toChartFloors,
+  toLatestEnvironment,
+  useEnvironmentHistory,
+} from '../hooks/useEnvironmentHistory'
 import { useOperationalAlerts } from '../../alerts/hooks/useOperationalAlerts'
 import { EnvironmentChart } from '../components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../components/EnvironmentMetricCard'
@@ -79,8 +89,8 @@ export function DashboardPage() {
   const structureQuery = useFarmStructure()
   const structure = structureQuery.structure
 
-  // ── Môi trường theo tầng: query độc lập, lỗi cục bộ ─────────────────
-  const environmentQuery = useFloorEnvironmentOverview()
+  // ── Môi trường theo tầng: một request cho mọi tầng ───────────────────
+  const environmentQuery = useEnvironmentHistory()
 
   // ── Cảnh báo vận hành (dùng chung query key với RecentAlertsTable) ────
   const alertsQuery = useOperationalAlerts()
@@ -102,8 +112,22 @@ export function DashboardPage() {
    * Nhiệt độ / độ ẩm trung bình toàn trang trại — tính từ các tầng có
    * dữ liệu cảm biến hợp lệ.
    */
-  const temperatureSummary = summarizeFarmClimate(environmentQuery.points, 'temperature')
-  const humiditySummary = summarizeFarmClimate(environmentQuery.points, 'humidity')
+  const chartFloors = useMemo(
+    () => toChartFloors(environmentQuery.data),
+    [environmentQuery.data],
+  )
+  const latestEnvironment = useMemo(
+    () => toLatestEnvironment(chartFloors),
+    [chartFloors],
+  )
+  const temperatureSummary = useMemo(
+    () => summarizeFarmClimate(latestEnvironment, 'temperature'),
+    [latestEnvironment],
+  )
+  const humiditySummary = useMemo(
+    () => summarizeFarmClimate(latestEnvironment, 'humidity'),
+    [latestEnvironment],
+  )
 
   /**
    * Giữ tầng thiếu số đo để biểu đồ không che giấu khoảng trống dữ liệu.
@@ -253,9 +277,27 @@ export function DashboardPage() {
         </Row>
 
         <div className="dashboard-chart-wrap">
-          <EnvironmentChart
-            data={environmentQuery.points}
-          />
+          {environmentQuery.isError ? (
+            <Alert
+              type="warning"
+              showIcon
+              title="Không tải được lịch sử môi trường"
+              description={getApiErrorMessage(environmentQuery.error)}
+              action={
+                <Button onClick={() => void environmentQuery.refetch()}>
+                  Thử lại
+                </Button>
+              }
+            />
+          ) : environmentQuery.isLoading ? (
+            <Skeleton active paragraph={{ rows: 6 }} />
+          ) : (
+            <EnvironmentChart
+              data={chartFloors}
+              from={environmentQuery.data?.from}
+              to={environmentQuery.data?.to}
+            />
+          )}
         </div>
       </section>
 

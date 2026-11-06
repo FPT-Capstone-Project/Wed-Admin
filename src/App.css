@@ -26,8 +26,8 @@
   --mcms-badge-dot-size: 6px;
   --mcms-font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   --mcms-motion-fast: 160ms ease;
-  --mcms-chart-temperature: #7c3aed;
-  --mcms-chart-humidity: #0d9488;
+  --mcms-chart-temperature: #c2413b;
+  --mcms-chart-humidity: #2563eb;
   --mcms-chart-revenue: #2563eb;
   --mcms-chart-revenue-previous: #64748b;
   --mcms-font-body: 13px;

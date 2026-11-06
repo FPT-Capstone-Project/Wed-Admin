@@ -447,6 +447,28 @@ window.onload = function() {
             }
           }
         },
+        "UpdateUserProfileRequest": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": false,
+          "properties": {
+            "fullName": {
+              "type": "string",
+              "minLength": 1,
+              "example": "Nguyen Van A"
+            },
+            "phone": {
+              "type": "string",
+              "nullable": true,
+              "example": "0900000000"
+            },
+            "address": {
+              "type": "string",
+              "nullable": true,
+              "example": "Ho Chi Minh City"
+            }
+          }
+        },
         "UpdateUserStatusRequest": {
           "type": "object",
           "required": [
@@ -1760,6 +1782,56 @@ window.onload = function() {
               "description": "Missing or invalid JWT token"
             }
           }
+        },
+        "patch": {
+          "tags": [
+            "Users"
+          ],
+          "summary": "Update the current authenticated user's profile",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "requestBody": {
+            "required": true,
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateUserProfileRequest"
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Profile updated successfully",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string"
+                      },
+                      "data": {
+                        "$ref": "#/components/schemas/User"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Empty profile, unsupported fields, or invalid field values"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "404": {
+              "description": "User not found"
+            }
+          }
         }
       },
       "/api/users": {
@@ -2739,6 +2811,66 @@ window.onload = function() {
             },
             "409": {
               "description": "Insufficient cultivation capacity (`INSUFFICIENT_TRAYS` or `INSUFFICIENT_SPAWN`)"
+            }
+          }
+        }
+      },
+      "/api/notifications/{notificationId}/confirm-repair": {
+        "patch": {
+          "tags": [
+            "Notifications"
+          ],
+          "summary": "Farm Operator confirms a sensor, node or master repair from their notification",
+          "description": "Requires fresh recovery evidence for the device type. Repeated confirmation is idempotent. GET notifications includes device_incident with device_type (SENSOR, NODE, MASTER), status, resolved_by, resolved_at and can_confirm_repair.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "notificationId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            }
+          ],
+          "requestBody": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "repairNote": {
+                      "type": "string",
+                      "maxLength": 1000
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "responses": {
+            "200": {
+              "description": "Repair confirmed; Admin and original Customer recipients notified"
+            },
+            "400": {
+              "description": "Invalid ID or repair note"
+            },
+            "401": {
+              "description": "Authentication required"
+            },
+            "403": {
+              "description": "Farm Operator only"
+            },
+            "404": {
+              "description": "Device notification not owned by current operator"
+            },
+            "409": {
+              "description": "Device has not recovered"
             }
           }
         }
@@ -7812,6 +7944,154 @@ window.onload = function() {
             },
             "403": {
               "description": "Admin or Farm Operator role required"
+            }
+          }
+        }
+      },
+      "/api/analytics/dashboard/environment-history": {
+        "get": {
+          "tags": [
+            "Analytics"
+          ],
+          "summary": "Chart-ready temperature and humidity history for every active floor",
+          "description": "One request replaces per-floor/per-sensor history pagination. Default window is 24h ending at the latest 5-minute boundary, with 96 15-minute buckets. Custom from/to must be supplied together, with a positive range at most 24h. Buckets start at from; range is [from,to). Only valid non-retained readings from sensors 1-3 are included. Each metric is averaged per sensor then equally across sensors. Missing values are null. Thresholds are the current configured floor thresholds, not historical thresholds. History uses the current master/node mapping of each floor.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "query",
+              "name": "from",
+              "schema": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            {
+              "in": "query",
+              "name": "to",
+              "schema": {
+                "type": "string",
+                "format": "date-time"
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Chart points ordered by time; floors ordered by room and floor number",
+              "content": {
+                "application/json": {
+                  "schema": {
+                    "type": "object",
+                    "properties": {
+                      "data": {
+                        "type": "object",
+                        "properties": {
+                          "from": {
+                            "type": "number",
+                            "description": "Epoch milliseconds"
+                          },
+                          "to": {
+                            "type": "number",
+                            "description": "Exclusive end in epoch milliseconds"
+                          },
+                          "bucketMs": {
+                            "type": "integer",
+                            "example": 900000
+                          },
+                          "refreshAfterMs": {
+                            "type": "integer",
+                            "example": 300000
+                          },
+                          "floors": {
+                            "type": "array",
+                            "items": {
+                              "type": "object",
+                              "properties": {
+                                "floorId": {
+                                  "type": "integer"
+                                },
+                                "floorName": {
+                                  "type": "string"
+                                },
+                                "floorNumber": {
+                                  "type": "integer"
+                                },
+                                "roomId": {
+                                  "type": "integer"
+                                },
+                                "masterDbId": {
+                                  "type": "integer"
+                                },
+                                "masterId": {
+                                  "type": "string"
+                                },
+                                "nodeId": {
+                                  "type": "integer"
+                                },
+                                "thresholds": {
+                                  "type": "object",
+                                  "properties": {
+                                    "temperature_min": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "temperature_max": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "humidity_min": {
+                                      "type": "number",
+                                      "nullable": true
+                                    },
+                                    "humidity_max": {
+                                      "type": "number",
+                                      "nullable": true
+                                    }
+                                  }
+                                },
+                                "points": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "object",
+                                    "properties": {
+                                      "timestamp": {
+                                        "type": "number",
+                                        "description": "Bucket start in epoch milliseconds"
+                                      },
+                                      "temperature": {
+                                        "type": "number",
+                                        "nullable": true,
+                                        "description": "Degrees Celsius"
+                                      },
+                                      "humidity": {
+                                        "type": "number",
+                                        "nullable": true,
+                                        "description": "Relative humidity percent"
+                                      }
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "400": {
+              "description": "Invalid time range"
+            },
+            "401": {
+              "description": "Missing or invalid JWT"
+            },
+            "403": {
+              "description": "Admin or Farm Operator only"
             }
           }
         }
