@@ -1,5 +1,4 @@
 import { ChartFrame, ChartLegend, ChartTooltipSurface } from '../../../shared/ui/charts/ChartPrimitives'
-import { useChartMotion } from '../../../shared/ui/charts/useChartMotion'
 import { chartTickStyle } from '../../../shared/ui/charts/chart-styles'
 import { useMemo } from 'react'
 import { Card, Col, Empty, Row, Typography } from 'antd'
@@ -104,7 +103,6 @@ function ClimateHistoryTooltip({ active, payload, floor }: {
 }
 
 function FloorChart({ floor, from, to }: { floor: EnvironmentChartFloor; from?: number; to?: number }) {
-  const animate = useChartMotion()
   const points = floor.points
   const hasData = points.some(point => point.temperature != null || point.humidity != null)
 
@@ -140,8 +138,31 @@ function FloorChart({ floor, from, to }: { floor: EnvironmentChartFloor; from?: 
                 { key: 'temperature', label: 'Nhiệt độ (°C)', color: chartSeries.temperature },
                 { key: 'humidity', label: 'Độ ẩm (%RH)', color: chartSeries.humidity, dashed: true },
               ]} />} />
-            <Line yAxisId="temperature" dataKey="temperature" name="Nhiệt độ (°C)" stroke={chartSeries.temperature} type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={animate} />
-            <Line yAxisId="humidity" dataKey="humidity" name="Độ ẩm (%RH)" stroke={chartSeries.humidity} strokeDasharray="7 4" type="linear" dot={{ r: 2 }} connectNulls={false} isAnimationActive={animate} />
+            <Line
+              yAxisId="temperature"
+              dataKey="temperature"
+              name="Nhiệt độ (°C)"
+              stroke={chartSeries.temperature}
+              type="monotone"
+              dot={false}
+              activeDot={{ r: 4 }}
+              strokeWidth={2}
+              connectNulls={false}
+              isAnimationActive={true}
+            />
+            <Line
+              yAxisId="humidity"
+              dataKey="humidity"
+              name="Độ ẩm (%RH)"
+              stroke={chartSeries.humidity}
+              strokeDasharray="4 4"
+              type="monotone"
+              dot={false}
+              activeDot={{ r: 4 }}
+              strokeWidth={2}
+              connectNulls={false}
+              isAnimationActive={true}
+            />
           </LineChart>
         </ResponsiveContainer>
       </ChartFrame>}

@@ -6651,6 +6651,275 @@ window.onload = function() {
           }
         }
       },
+      "/api/cultivation-sessions/admin/{sessionId}/iot-history": {
+        "get": {
+          "tags": [
+            "Cultivation Audit"
+          ],
+          "summary": "Get temperature and IoT device command history for a cultivation session",
+          "description": "Admins and Farm Operators can view any session. Customers can view sessions belonging to their account. Resolves assigned trays to floors and IoT devices and returns sensor readings and ON/OFF commands within the session's start_at/end_at interval.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Temperature readings",
+              "device ON/OFF commands": null,
+              "mapped floors": null,
+              "and pagination": null
+            },
+            "400": {
+              "description": "Invalid session ID or pagination"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin",
+              "Farm Operator": null,
+              "or Customer role required": null
+            },
+            "404": {
+              "description": "Session not found"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/admin/{sessionId}/iot-history/sensors": {
+        "get": {
+          "tags": [
+            "Cultivation Audit"
+          ],
+          "summary": "Get temperature and humidity sensor readings for a cultivation session",
+          "description": "Admins and Farm Operators can view any session. Customers can view sessions belonging to their account. Readings are matched from the session's assigned trays to floors and IoT sensor nodes, within the session's start_at/end_at interval.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Temperature and humidity readings with sensor",
+              "floor": null,
+              "and pagination information": null
+            },
+            "400": {
+              "description": "Invalid session ID or pagination"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin",
+              "Farm Operator": null,
+              "or Customer role required": null
+            },
+            "404": {
+              "description": "Session not found or not accessible to this customer"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/{sessionId}/daily-inspections": {
+        "get": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "Get all daily mushroom observations across a cultivation session's trays",
+          "description": "Returns observations for every tray assigned to the session, including growth stage/progress, tray and mushroom conditions, notes, inspector, and uploaded images. Admins and Farm Operators can view any session; Customers can view sessions belonging to their account.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Daily observations across all session trays with pagination"
+            },
+            "400": {
+              "description": "Invalid session ID or pagination"
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin",
+              "Farm Operator": null,
+              "or Customer role required": null
+            },
+            "404": {
+              "description": "Session not found or not accessible to this customer"
+            }
+          }
+        }
+      },
+      "/api/cultivation-sessions/{sessionId}/trays/{sessionTrayId}/daily-inspections": {
+        "get": {
+          "tags": [
+            "Cultivation Sessions"
+          ],
+          "summary": "Get daily mushroom observation history for one tray in a session",
+          "description": "sessionTrayId identifies the tray assignment within the session. Customers can only access their own sessions; Admins and Farm Operators can access any session.",
+          "security": [
+            {
+              "bearerAuth": []
+            }
+          ],
+          "parameters": [
+            {
+              "in": "path",
+              "name": "sessionId",
+              "required": true,
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "path",
+              "name": "sessionTrayId",
+              "required": true,
+              "description": "Session tray assignment ID, not the physical tray ID",
+              "schema": {
+                "type": "integer",
+                "minimum": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "page",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "default": 1
+              }
+            },
+            {
+              "in": "query",
+              "name": "pageSize",
+              "schema": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 100,
+                "default": 20
+              }
+            }
+          ],
+          "responses": {
+            "200": {
+              "description": "Daily observations and images for the selected session tray"
+            },
+            "400": {
+              "description": "Invalid session",
+              "tray assignment": null,
+              "or pagination": null
+            },
+            "401": {
+              "description": "Missing or invalid JWT token"
+            },
+            "403": {
+              "description": "Admin",
+              "Farm Operator": null,
+              "or Customer role required": null
+            },
+            "404": {
+              "description": "Session not found or tray assignment does not belong to this session"
+            }
+          }
+        }
+      },
       "/api/cultivation-sessions/admin/{sessionId}/progress": {
         "get": {
           "tags": [
@@ -7524,7 +7793,7 @@ window.onload = function() {
               }
             },
             "401": {
-              "description": "Invalid email or password"
+              "description": "Email hoặc mật khẩu không chính xác"
             },
             "403": {
               "description": "User account is not active"

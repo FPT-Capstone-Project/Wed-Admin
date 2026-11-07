@@ -1,5 +1,6 @@
 import { climateThresholdsFromConfig } from '../../rooms/utils/farm-climate.utils.ts'
 import type { ClimateThresholds } from '../../rooms/utils/tray-climate.utils.ts'
+import type { TemperatureBounds } from './temperature-threshold.utils.ts'
 import type {
   EnvironmentHistoryData,
   EnvironmentHistoryFloor,
@@ -123,17 +124,41 @@ export interface EnvironmentChartFloor {
  * - Chuyển `thresholds` (shape BE) → `ClimateThresholds` (shape domain) qua
  *   `climateThresholdsFromConfig` — hàm dùng chung với trang Quản lý thiết bị
  *   để hai nơi không lệch cách hiểu ngưỡng.
+ * - `fallbackTemperatureBounds` bổ sung ngưỡng nhiệt độ khi BE trả `null`
+ *   (cấu hình tầng không bật làm mát) ⇒ tooltip vẫn báo vượt/thấp ngưỡng
+ *   nhiệt độ. Ngưỡng độ ẩm **không** bổ sung (BE luôn có).
  */
 export function toChartFloors(
   data: EnvironmentHistoryData | undefined,
+  fallbackTemperatureBounds?: ReadonlyMap<number, TemperatureBounds>,
 ): EnvironmentChartFloor[] {
   return (data?.floors ?? [])
-    .map(floor => ({
-      floorId: floor.floorId,
-      floorName: floor.floorName,
-      thresholds: climateThresholdsFromConfig(floor.thresholds),
-      points: floor.points,
-    }))
+    .map(floor => {
+      const thresholds = climateThresholdsFromConfig(floor.thresholds)
+      const fallback = fallbackTemperatureBounds?.get(floor.floorId)
+
+      // Chỉ bổ sung phần **còn thiếu** — ngưỡng BE luôn được ưu tiên.
+      const merged =
+        thresholds == null
+          ? fallback
+            ? {
+                tempMin: fallback.tempMin,
+                tempMax: fallback.tempMax,
+                humidityMin: null,
+                humidityMax: null,
+              }
+            : null
+          : thresholds.tempMin == null && thresholds.tempMax == null && fallback
+            ? { ...thresholds, ...fallback }
+            : thresholds
+
+      return {
+        floorId: floor.floorId,
+        floorName: floor.floorName,
+        thresholds: merged,
+        points: floor.points,
+      }
+    })
     .filter(floor => floor.points.length > 0)
 }
 

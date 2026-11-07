@@ -34,3 +34,14 @@
 - NO gradients anywhere (no `bg-gradient-to-...`).
 - NO excessive drop shadows (avoid `shadow-lg`, `shadow-xl`, or glowing colored shadows); stick to `shadow-sm` or plain `border`.
 - NO decorative emojis or toy-like icons in production controls.
+
+# Strict UI & Production Rule
+- Never render technical debug widgets, internal API endpoint tags (e.g. `Nguồn | GET /api/...`), schema inspectors, or raw HTTP debug badges in customer/admin-facing UI components. All views must strictly present polished business information.
+
+# Data Fetching & Network Discipline
+- Heavy/secondary data must load **lazily**: never mount a heavy sub-tree (charts, history tables, bulk aggregations) unless its tab/section is actually active. Gate with `activeTab === 'x' && <HeavyComponent />` AND a React Query `enabled` flag.
+- Opening a Drawer/Modal must never trigger bulk pagination. Query the primary entity first and render it independently of secondary panels.
+- Any "fetch-all pages" helper MUST have a hard page cap (e.g. max 20 pages for charts, max 5 for log tables) and an early-stop condition (stop once the oldest record crosses the requested `startTimestamp`).
+- Respect backend `pageSize` limits; query the backend limit before choosing a page size, and clamp with `Math.min` rather than sending an invalid value.
+- Use React Query `placeholderData: keepPreviousData` for range/filter switches so existing data stays visible (dimmed with a spinner) instead of collapsing to an empty skeleton.
+- When aggregating for charts, downsample on the client to a target point count (e.g. 60–100 points per range) so large windows do not require tens of thousands of records.

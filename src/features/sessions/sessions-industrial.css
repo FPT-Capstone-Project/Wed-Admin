@@ -26,3 +26,22 @@
   font-family: var(--mcms-font-mono);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Tab "Lịch sử IoT" ──────────────────────────────────────────────────
+ * Biểu đồ nhiệt độ / độ ẩm + bảng nhật ký lệnh thiết bị.
+ */
+.mcms-session-sensor-chart {
+  min-width: 0;
+  width: 100%;
+}
+.mcms-session-sensor-tooltip-floor {
+  color: var(--mcms-text-muted);
+  font-size: 12px;
+}
+.mcms-session-floor-mapping {
+  padding: 12px;
+  border: 1px solid var(--mcms-border-soft);
+  border-radius: 12px;
+  background: var(--mcms-surface-muted);
+}
+

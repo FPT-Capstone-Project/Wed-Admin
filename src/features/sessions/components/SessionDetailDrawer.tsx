@@ -22,7 +22,7 @@ import { resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionStatusTag } from './SessionStatusTag'
 import { useFarmSession, useSpawnInspections } from '../../farm/hooks/useFarm'
 import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
-import type { SpawnInspection } from '../../farm/types/farm.types'
+import { SessionIoTHistoryTab } from './SessionIoTHistoryTab'
 import type { CultivationSession } from '../types/session.types'
 
 interface SessionDetailDrawerProps {
@@ -56,8 +56,6 @@ export function SessionDetailDrawer({
   sessionId,
   onClose,
 }: SessionDetailDrawerProps) {
-  const [activeTab, setActiveTab] = useState('overview')
-
   // ⚠ Nguồn CHÍNH: endpoint quản trị — đã join sẵn khách / gói / nấm /
   //   tiến độ / khay được gán.
   const {
@@ -69,10 +67,6 @@ export function SessionDetailDrawer({
   // Nguồn bổ sung (luồng farm) — chỉ dùng cho các trường endpoint quản trị
   // không trả: SĐT khách, trạng thái thanh toán, số phôi đã cấp.
   const { data: farmSession } = useFarmSession(sessionId)
-
-  // Lịch sử kiểm tra phôi lấy từ luồng farm (BE có `spawn-inspections`).
-  const { data: inspections, isLoading: inspectionsLoading } =
-    useSpawnInspections(sessionId)
 
   const session = useMemo<CultivationSession | null>(() => {
     if (!adminSession) return null
@@ -126,7 +120,11 @@ export function SessionDetailDrawer({
           )}
         </div>
       }
-      size={760}
+      /*
+       * ⚠ `size="large"` (736px) thay vì 760px cố định — tab "Lịch sử IoT"
+       *   có biểu đồ 2 trục Y + bảng rộng (cảm biến / lệnh thiết bị).
+       */
+      size="large"
       open={sessionId !== null}
       onClose={onClose}
       destroyOnHidden
@@ -143,13 +141,16 @@ export function SessionDetailDrawer({
           </Typography.Text>
         </Flex>
       ) : (
+        /*
+         * ⚠ `key={session.session_id}` ⇒ remount toàn bộ nội dung khi đổi
+         *   phiên ⇒ `activeTab` reset về `'overview'` (pattern "reset state
+         *   bằng key" của React) ⇒ mở phiên mới **không** kế thừa tab "Lịch sử
+         *   IoT" của phiên cũ ⇒ không kéo request nặng ngầm.
+         */
         <SessionDetailContent
+          key={session.session_id}
           session={session}
           progressPercent={progressPercent}
-          activeTab={activeTab}
-          onTabChange={setActiveTab}
-          inspections={inspections?.inspections ?? []}
-          inspectionsLoading={inspectionsLoading}
           spawnIssued={farmSession?.spawn_issued ?? null}
         />
       )}
@@ -160,23 +161,49 @@ export function SessionDetailDrawer({
 interface SessionDetailContentProps {
   session: CultivationSession
   progressPercent: number
-  activeTab: string
-  onTabChange: (key: string) => void
-  inspections: SpawnInspection[]
-  inspectionsLoading: boolean
   spawnIssued: number | null
 }
 
 function SessionDetailContent({
   session,
   progressPercent,
-  activeTab,
-  onTabChange,
-  inspections,
-  inspectionsLoading,
   spawnIssued,
 }: SessionDetailContentProps) {
   const statusConfig = SESSION_STATUS_CONFIG[session.status]
+
+  /**
+   * Tab đang active.
+   *
+   * ⚠ **Nguồn sự thật duy nhất** cho việc lazy-load: chỉ tab IoT được mount
+   *   (⇒ chỉ khi đó mới gọi 2 API lịch sử IoT) và tab "Kiểm tra phôi" chỉ
+   *   gọi API khi được chọn.
+   */
+  const [activeTab, setActiveTab] = useState('overview')
+
+  /*
+   * ⚠ **Lazy loading**: lịch sử kiểm tra phôi chỉ tải khi user thực sự mở
+   *   tab "Kiểm tra phôi" ⇒ mở Drawer không bị chặn bởi request này.
+   */
+  const { data: inspections, isLoading: inspectionsLoading } =
+    useSpawnInspections(session.session_id, {
+      enabled: activeTab === 'inspections',
+    })
+
+  /**
+   * Tầng của các khay được gán — fallback cho ngưỡng canh tác khi BE chưa
+   * trả danh sách tầng đã map trong `/iot-history`.
+   */
+  const floorIds = useMemo(
+    () =>
+      [
+        ...new Set(
+          session.trays
+            .map((tray) => tray.floor_id)
+            .filter((id): id is number => typeof id === 'number'),
+        ),
+      ],
+    [session.trays],
+  )
 
   return (
     <Flex vertical gap={20}>
@@ -199,7 +226,7 @@ function SessionDetailContent({
 
       <Tabs
         activeKey={activeTab}
-        onChange={onTabChange}
+        onChange={setActiveTab}
         items={[
           {
             key: 'overview',
@@ -313,8 +340,31 @@ function SessionDetailContent({
             children: inspectionsLoading ? (
               <Skeleton active paragraph={{ rows: 4 }} />
             ) : (
-              <SpawnInspectionList inspections={inspections} />
+              <SpawnInspectionList
+                inspections={inspections?.inspections ?? []}
+              />
             ),
+          },
+          {
+            /*
+             * ⚠ Tab "Lịch sử IoT" — dùng 2 endpoint read-only:
+             *   - `GET .../iot-history/sensors` → biểu đồ nhiệt độ / độ ẩm.
+             *   - `GET .../iot-history`         → nhật ký lệnh thiết bị.
+             *
+             * ⚠ Chỉ render khi tab đang active ⇒ không gọi API khi user mới
+             *   mở drawer (2 request thừa cho mọi lần xem chi tiết phiên).
+             */
+            key: 'iot-history',
+            label: 'Lịch sử IoT',
+            children:
+              activeTab === 'iot-history' ? (
+                <SessionIoTHistoryTab
+                  sessionId={session.session_id}
+                  fallbackFloorIds={floorIds}
+                />
+              ) : (
+                <Skeleton active paragraph={{ rows: 4 }} />
+              ),
           },
         ]}
       />

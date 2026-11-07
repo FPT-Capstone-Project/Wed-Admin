@@ -41,6 +41,7 @@ import {
   useEnvironmentHistory,
 } from '../hooks/useEnvironmentHistory'
 import { useOperationalAlerts } from '../../alerts/hooks/useOperationalAlerts'
+import { useFloorTemperatureThresholds } from '../hooks/useFloorTemperatureThresholds'
 import { EnvironmentChart } from '../components/EnvironmentChart'
 import { EnvironmentMetricCard } from '../components/EnvironmentMetricCard'
 import { QuickSummaryStats } from '../components/QuickSummaryStats'
@@ -112,9 +113,23 @@ export function DashboardPage() {
    * Nhiệt độ / độ ẩm trung bình toàn trang trại — tính từ các tầng có
    * dữ liệu cảm biến hợp lệ.
    */
-  const chartFloors = useMemo(
-    () => toChartFloors(environmentQuery.data),
+  const floorIds = useMemo(
+    () => (environmentQuery.data?.floors ?? []).map(floor => floor.floorId),
     [environmentQuery.data],
+  )
+
+  /**
+   * Ngưỡng nhiệt độ fallback — suy ra 100% ở FE từ
+   * `GET /api/iot/floors/{floorId}/auto-control` (read-only).
+   *
+   * ⚠ Cần vì BE chỉ trả `temperature_min/max` khi cấu hình tầng bật làm mát
+   *   ⇒ thiếu ngưỡng nhiệt độ ⇒ tooltip không báo vượt/thấp ngưỡng nhiệt độ.
+   */
+  const fallbackTemperatureBounds = useFloorTemperatureThresholds(floorIds)
+
+  const chartFloors = useMemo(
+    () => toChartFloors(environmentQuery.data, fallbackTemperatureBounds),
+    [environmentQuery.data, fallbackTemperatureBounds],
   )
   const latestEnvironment = useMemo(
     () => toLatestEnvironment(chartFloors),
