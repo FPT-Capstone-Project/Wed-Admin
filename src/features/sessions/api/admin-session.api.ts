@@ -82,6 +82,34 @@ export async function fetchAllAdminCultivationSessions(
     status?: CultivationSessionStatus
   } = {},
 ): Promise<AdminCultivationSessionDto[]> {
+  return (await fetchAllAdminCultivationSessionsDetailed(options)).items
+}
+
+/**
+ * Kết quả tải **toàn bộ** phiên — kèm cờ `complete`.
+ *
+ * ⚠ `complete = false` ⇒ đã vượt `maxPages` ⇒ **chưa chắc tải đủ** ⇒ không
+ *   được kết luận "mọi phiên của đơn đã hoàn tất" (xem `derive-order-status.ts`).
+ */
+export interface AllAdminCultivationSessionsResult {
+  items: AdminCultivationSessionDto[]
+  /** Tổng số phiên theo BE (`pagination.total`). */
+  total: number
+  /** `true` khi đã tải **đủ** mọi trang (không bị cắt bởi `maxPages`). */
+  complete: boolean
+}
+
+/**
+ * GET /api/cultivation-sessions/admin — lấy toàn bộ phiên + thông tin "đã đủ
+ * chưa" (dùng cho trang Đơn hàng để suy ra trạng thái đơn từ trạng thái phiên).
+ */
+export async function fetchAllAdminCultivationSessionsDetailed(
+  options: {
+    pageSize?: number
+    maxPages?: number
+    status?: CultivationSessionStatus
+  } = {},
+): Promise<AllAdminCultivationSessionsResult> {
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 100))
   const maxPages = Math.max(1, options.maxPages ?? 20)
 
@@ -91,7 +119,13 @@ export async function fetchAllAdminCultivationSessions(
     status: options.status,
   })
   const totalPages = Math.min(first.pagination.totalPages, maxPages)
-  if (totalPages <= 1) return first.items
+  if (totalPages <= 1) {
+    return {
+      items: first.items,
+      total: first.pagination.total,
+      complete: first.pagination.totalPages <= maxPages,
+    }
+  }
 
   const rest = await Promise.all(
     Array.from({ length: totalPages - 1 }, (_, index) =>
@@ -103,7 +137,13 @@ export async function fetchAllAdminCultivationSessions(
     ),
   )
 
-  return [first.items, ...rest.map((result) => result.items)].flat()
+  const items = [first.items, ...rest.map((result) => result.items)].flat()
+
+  return {
+    items,
+    total: first.pagination.total,
+    complete: first.pagination.totalPages <= maxPages,
+  }
 }
 
 /**

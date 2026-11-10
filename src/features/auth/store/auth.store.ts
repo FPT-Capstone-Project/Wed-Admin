@@ -9,7 +9,14 @@ import {
 } from '../../../shared/api/persistence'
 import { resetErrorToastCache } from '../../../shared/api/error-toast'
 import { extractLoginErrorMessage } from '../../../shared/api/error'
-import { resetAuthExpiredNotice } from '../../../shared/api/client'
+import {
+  extractAccessToken,
+  extractRefreshToken,
+} from '../../../shared/api/token-refresh'
+import {
+  resetAuthExpiredNotice,
+  setTokenRefreshedListener,
+} from '../../../shared/api/client'
 import { rolePermissionsFor } from '../permissions'
 import {
   backendUserToUiUser,
@@ -162,13 +169,34 @@ export const useAuthStore = create<AuthState>((set) => {
       // Chuẩn hóa role về UPPERCASE để RoleGuard so sánh chính xác
       const user = ensureUpperCaseRole(backendUserToUiUser(response.user))
 
+      /*
+       * ⚠ **Access token** — BE có 2 shape:
+       *   - Mới: `{ accessToken, refreshToken }` (khớp `AuthResponse` trong
+       *     `api-schema.d.ts`).
+       *   - Cũ: `{ token }` — JWT thuần.
+       * → Dùng `extractAccessToken()` để không phụ thuộc shape.
+       */
+      const accessToken = extractAccessToken(response)
+      if (!accessToken) {
+        throw new Error('Đăng nhập thất bại. Vui lòng thử lại.')
+      }
+
+      /*
+       * ⚠ **Refresh token** — lưu kèm access token để interceptor 401 xoay
+       *   vòng được (xem `shared/api/client.ts`).
+       *
+       *   Nếu BE chưa trả refresh token ⇒ `null` ⇒ không có luồng refresh ⇒
+       *   401 dẫn tới đăng nhập lại (hành vi cũ, vẫn đúng).
+       */
+      const refreshToken = extractRefreshToken(response)
+
       // ── Yêu cầu B: chọn nơi lưu token theo checkbox ──────────────────
       //   - có tích "Ghi nhớ đăng nhập" → `localStorage` → tồn tại qua
       //     lần tắt trình duyệt.
       //   - không tích                  → `sessionStorage` → mất khi đóng tab.
       tokenStorage.setTokens(
-        response.token,
-        null,
+        accessToken,
+        refreshToken,
         rememberMe ? 'local' : 'session',
       )
       writeUserCache(user)
@@ -183,7 +211,7 @@ export const useAuthStore = create<AuthState>((set) => {
 
       set({
         user,
-        accessToken: response.token,
+        accessToken,
         isAuthenticated: true,
         rememberedEmail: rememberMe ? normalizedEmail : '',
       })
@@ -201,6 +229,26 @@ export const useAuthStore = create<AuthState>((set) => {
   },
 
   logout: () => {
+    /*
+     * ⚠ **Thu hồi refresh token ở BE** (best-effort).
+     *
+     *   BE có `POST /api/auth/logout` (thu hồi cả "family" refresh token).
+     *   Nếu không gọi, refresh token vẫn còn hiệu lực ở BE ⇒ phiên cũ có
+     *   thể bị dùng lại (đặc biệt khi token đã lọt ra ngoài).
+     *
+     *   ⚠ Best-effort: lỗi KHÔNG được ném ⇒ logout ở FE vẫn phải xoá token
+     *   cục bộ dù BE lỗi (mạng chết, refresh token đã hết hạn…).
+     */
+    const refreshToken = tokenStorage.getRefreshToken()
+    if (refreshToken) {
+      void authApi
+        .logout({
+          refreshToken,
+          accessToken: tokenStorage.getAccessToken(),
+        })
+        .catch(() => undefined)
+    }
+
     tokenStorage.clear()
     writeUserCache(null)
     // Badge thông báo thuộc về user trước → phải xoá, nếu không user sau
@@ -238,7 +286,13 @@ export const useAuthStore = create<AuthState>((set) => {
       set({
         user,
         isAuthenticated: true,
-        accessToken: token,
+        /*
+         * ⚠ Đọc lại token từ storage (không dùng biến `token` đã chụp trước
+         *   request): trong lúc `GET /api/users/me` chạy, interceptor có thể đã
+         *   **xoay vòng** access token (401 → refresh → retry) ⇒ token trong
+         *   storage đã là bản mới ⇒ store phải theo, không giữ bản cũ.
+         */
+        accessToken: tokenStorage.getAccessToken(),
         isHydrating: false,
       })
       return true
@@ -257,6 +311,22 @@ export const useAuthStore = create<AuthState>((set) => {
 
   clearError: () => set({ lastError: null }),
   }
+})
+
+/**
+ * Đồng bộ `accessToken` trong store khi interceptor **xoay vòng** token.
+ *
+ * ⚠ Vì sao cần?
+ *   Interceptor (`shared/api/client.ts`) ghi access token mới vào storage.
+ *   Store vẫn giữ token cũ (đã hết hạn) ⇒ 2 nguồn sự thật lệch nhau ⇒
+ *   `AuthGuard` vẫn cho qua (đúng — phiên còn sống) nhưng logic khác đọc
+ *   token từ store sẽ thấy token hết hạn.
+ *
+ * ⚠ Dùng **listener** (không import `auth.store` vào `client.ts`) để tránh
+ *   vòng lặp import: store → client → store.
+ */
+setTokenRefreshedListener((accessToken) => {
+  useAuthStore.setState({ accessToken })
 })
 
 // Selector tiện ích cho component không muốn subscribe to:

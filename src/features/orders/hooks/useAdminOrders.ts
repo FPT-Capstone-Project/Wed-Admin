@@ -5,7 +5,7 @@ import {
   type AdminOrderQuery,
 } from '../api/order.api'
 import { mergeOrderSources } from '../utils/merge-order-sources'
-import { useAdminCultivationSessions } from '../../sessions/hooks/useAdminCultivationSessions'
+import { useAllAdminCultivationSessionsDetailed } from '../../sessions/hooks/useAdminCultivationSessions'
 import type { AdminOrderDto, AdminOrderRow } from '../types/admin-order.types'
 
 /** Query keys cho endpoint quản trị đơn hàng. */
@@ -31,6 +31,13 @@ export const adminOrderKeys = {
  * ⚠ Nguồn phụ: `GET /api/cultivation-sessions/admin` — bổ sung **trạng thái
  *   phiên canh tác** cho đơn (đơn đã tạo phiên thì có trạng thái phiên).
  *   Nguồn phụ lỗi KHÔNG làm hỏng bảng đơn → chỉ hiện cảnh báo nguồn thiếu.
+ *
+ * ⚠ **Vì sao tải TOÀN BỘ phiên (mọi trang) chứ không chỉ trang 1?**
+ *   BE có lỗi: luồng bàn giao thu hoạch set `cultivation_sessions.status =
+ *   'COMPLETED'` mà **không** update `orders.status` ⇒ đơn kẹt "Đang xử lý".
+ *   FE sửa bằng cách **suy ra** trạng thái đơn từ trạng thái phiên — nhưng
+ *   chỉ suy ra được khi đã nắm **đủ** mọi phiên của đơn ⇒ phải tải hết các
+ *   trang. Xem `derive-order-status.ts`.
  */
 export function useAdminOrders(
   query: AdminOrderQuery = {},
@@ -45,13 +52,13 @@ export function useAdminOrders(
   })
 
   // Nguồn phụ: trạng thái phiên của từng đơn.
-  // ⚠ `pageSize` lớn nhất BE cho phép (100) ⇒ bọt được nhiều phiên nhất
-  //   có thể để bổ sung trạng thái cho đơn. Nguồn phụ lỗi KHÔNG làm hỏng
-  //   bảng đơn → chỉ hiện cảnh báo nguồn thiếu.
-  const sessionsQuery = useAdminCultivationSessions(
-    { pageSize: 100 },
-    { retry: false, staleTime: 60_000 },
-  )
+  // ⚠ Tải **toàn bộ** trang phiên ⇒ biết đủ phiên của mọi đơn ⇒ suy ra được
+  //   trạng thái đơn (đơn kẹt "Đang xử lý" dù phiên đã hoàn tất).
+  // ⚠ Nguồn phụ lỗi KHÔNG làm hỏng bảng đơn → chỉ hiện cảnh báo nguồn thiếu.
+  const sessionsQuery = useAllAdminCultivationSessionsDetailed({
+    retry: false,
+    staleTime: 60_000,
+  })
 
   const orders = useMemo(
     () =>
@@ -59,8 +66,9 @@ export function useAdminOrders(
         ordersQuery.data ?? [],
         sessionsQuery.data?.items ?? [],
         [],
+        sessionsQuery.data?.complete ?? false,
       ),
-    [ordersQuery.data, sessionsQuery.data?.items],
+    [ordersQuery.data, sessionsQuery.data?.items, sessionsQuery.data?.complete],
   )
 
   return {

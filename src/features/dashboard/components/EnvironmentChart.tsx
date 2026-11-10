@@ -8,6 +8,7 @@ import { formatMeasurement } from '../../../shared/utils/measurement-format'
 import { evaluateHumidity, evaluateTemperature } from '../../rooms/utils/tray-climate.utils'
 import { getClimateDirection } from '../../rooms/utils/climate-tone.utils'
 import type { EnvironmentChartFloor } from '../utils/environment-history.utils'
+import { resolveEnvironmentDomain } from '../utils/environment-history.utils.ts'
 import { climateAxis } from '../utils/climate-axis.utils'
 
 /**
@@ -41,13 +42,20 @@ export interface EnvironmentChartProps {
   from?: number
   /** Cuối cửa sổ **exclusive** (epoch ms) do BE trả — domain trục hoành. */
   to?: number
+  /**
+   * Kích thước bucket (ms) do BE trả — mặc định 15 phút.
+   *
+   * ⚠ Dùng giá trị thật của BE để domain tính đúng bề rộng bucket cuối
+   *   (BE có thể đổi bucket theo cấu hình ⇒ hardcode 15 phút sẽ lệch).
+   */
+  bucketMs?: number
 }
 
-export function EnvironmentChart({ data = [], from, to }: EnvironmentChartProps) {
+export function EnvironmentChart({ data = [], from, to, bucketMs }: EnvironmentChartProps) {
   if (!data.length) return <Empty description="Chưa có dữ liệu tầng" />
   return <Row gutter={[12, 12]}>
     {data.map(floor => <Col xs={24} lg={12} key={floor.floorId}>
-      <FloorChart floor={floor} from={from} to={to} />
+      <FloorChart floor={floor} from={from} to={to} bucketMs={bucketMs} />
     </Col>)}
   </Row>
 }
@@ -102,7 +110,7 @@ function ClimateHistoryTooltip({ active, payload, floor }: {
   </ChartTooltipSurface>
 }
 
-function FloorChart({ floor, from, to }: { floor: EnvironmentChartFloor; from?: number; to?: number }) {
+function FloorChart({ floor, from, to, bucketMs }: { floor: EnvironmentChartFloor; from?: number; to?: number; bucketMs?: number }) {
   const points = floor.points
   const hasData = points.some(point => point.temperature != null || point.humidity != null)
 
@@ -113,16 +121,25 @@ function FloorChart({ floor, from, to }: { floor: EnvironmentChartFloor; from?: 
   /**
    * Trục hoành là thang số thực (epoch ms).
    *
-   * Ưu tiên cửa sổ BE trả (`from`/`to`); thiếu thì suy ra từ điểm đầu/cuối
-   * cộng 1 bucket. Nhờ vậy đường biểu diễn trải hết bề ngang, kể cả bucket
-   * cuối không có dữ liệu (trục không bị co lại theo dữ liệu).
+   * ⚠ Domain được **hợp nhất** giữa cửa sổ BE (`from`/`to`) và dữ liệu thực
+   *   tế (điểm đầu / điểm cuối) — xem `resolveEnvironmentDomain`.
+   *
+   *   - Nhờ vậy đường biểu diễn trải hết bề ngang, kể cả bucket cuối không
+   *     có dữ liệu (trục không bị co lại theo dữ liệu).
+   *   - Và khi BE trả **điểm mới hơn mốc `to`** (đọc trễ, cache BE, lệch đồng
+   *     hồ server) ⇒ điểm đó **không bị cắt** ra ngoài trục ⇒ chart tự kéo
+   *     dài thay vì đứng hình ở mốc cũ.
    */
-  const xDomain = useMemo<[number, number]>(() => {
-    if (from != null && to != null && to > from) return [from, to]
-    const first = points[0]?.timestamp ?? 0
-    const last = points[points.length - 1]?.timestamp ?? 0
-    return [first, last + DEFAULT_BUCKET_MS]
-  }, [from, to, points])
+  const xDomain = useMemo<[number, number]>(
+    () =>
+      resolveEnvironmentDomain(
+        from,
+        to,
+        bucketMs ?? DEFAULT_BUCKET_MS,
+        points,
+      ),
+    [from, to, bucketMs, points],
+  )
 
   return <Card size="small" className="environment-chart-card" style={{ height: '100%' }}>
     <Typography.Title level={3} style={{ fontSize: 14 }}>{floor.floorName}</Typography.Title>

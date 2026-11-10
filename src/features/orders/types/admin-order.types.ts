@@ -78,8 +78,19 @@ export interface AdminOrderRow {
   mushroomName: string
   /** Tổng số khay của đơn (từ nguồn `order`). */
   quantity: number | null
-  /** Trạng thái đơn (BE). */
+  /**
+   * Trạng thái đơn — giá trị trực tiếp từ BE (`orders.status`) **hoặc** trạng
+   * thái **dẫn xuất** từ trạng thái phiên canh tác.
+   */
   status: AdminOrderStatus
+  /**
+   * `true` khi `status` được **suy ra** từ trạng thái phiên (không phải giá
+   * trị trực tiếp từ `orders.status` của BE).
+   *
+   * ⚠ Xem `derive-order-status.ts` — BE có lỗi quên update `orders.status` ở
+   *   luồng bàn giao thu hoạch ⇒ đơn kẹt "Đang xử lý" dù phiên đã xong.
+   */
+  statusDerived: boolean
   /** Trạng thái phiên canh tác (nếu đơn đã tạo phiên). */
   sessionStatus: CultivationSessionStatus | null
   /** `session_id` của phiên gắn với đơn (nếu có). */

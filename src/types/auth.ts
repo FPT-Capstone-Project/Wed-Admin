@@ -30,11 +30,57 @@ export interface BackendUser {
   updated_at: string
 }
 
-/** Wrapper response của POST /api/auth/login */
+/**
+ * Wrapper response của POST /api/auth/login.
+ *
+ * ⚠ **2 shape** được chấp nhận (BE đang trong quá trình chuyển sang token
+ *   rotation):
+ *   - Shape mới (khớp `AuthResponse` trong `api-schema.d.ts`):
+ *     `{ accessToken, refreshToken, tokenType, expiresIn }`.
+ *   - Shape cũ: `{ token }` — JWT thuần (xem `Backend/src/services/auth.service.js`).
+ *
+ * → Dùng `accessToken ?? token` ở nơi đọc (xem `extractAccessToken` trong
+ *   `shared/api/token-refresh.ts`).
+ */
 export interface LoginResponse {
   message: string
-  token: string
+  /** Access token (shape mới). */
+  accessToken?: string
+  /** Refresh token (shape mới) — dùng để xoay vòng khi access token hết hạn. */
+  refreshToken?: string
+  /** Loại token (vd `'Bearer'`). */
+  tokenType?: string
+  /** Thời hạn access token (vd `'15m'`). */
+  expiresIn?: string
+  /** Access token (shape cũ). */
+  token?: string
   user: BackendUser
+}
+
+// ─── POST /api/auth/refresh ───────────────────────────────────────────────
+
+/** Body cho /api/auth/refresh. */
+export interface RefreshRequest {
+  refreshToken: string
+  /** Tên thiết bị — BE dùng để quản lý "family" refresh token. */
+  deviceName?: string
+}
+
+/**
+ * Response của POST /api/auth/refresh.
+ *
+ * ⚠ BE **xoay vòng** ⇒ trả cả access token mới lẫn refresh token mới; refresh
+ *   token cũ bị vô hiệu. Nếu BE không trả `refreshToken` thì phải **giữ lại**
+ *   refresh token cũ (không xoá).
+ */
+export interface RefreshResponse {
+  accessToken?: string
+  refreshToken?: string
+  tokenType?: string
+  expiresIn?: string
+  /** Shape cũ (fallback). */
+  token?: string
+  message?: string
 }
 
 // ─── GET /api/users/me ────────────────────────────────────────────────────

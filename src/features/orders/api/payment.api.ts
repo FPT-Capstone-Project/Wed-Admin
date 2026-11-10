@@ -14,8 +14,8 @@ import type { PaymentStatusResponse } from '../../../types/payment'
  *
  * ⚠ Đơn ở trạng thái `PENDING` chưa có bản ghi thanh toán ⇒ BE trả 404.
  *   Đây là trạng thái **bình thường**, không phải lỗi ⇒ `getOrderStatus()`
- *   trả `null` (hook sẽ dùng giá trị mặc định) thay vì ném lỗi làm đỏ
- *   phần thanh toán trong drawer chi tiết đơn.
+ *   trả `null` (hook sẽ dừng polling và để UI fallback về dữ liệu chuẩn của
+ *   đơn) thay vì ném lỗi làm đỏ phần thanh toán trong drawer chi tiết đơn.
  */
 export const paymentApi = {
   /**

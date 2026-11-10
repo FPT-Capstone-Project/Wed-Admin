@@ -45,3 +45,29 @@
   background: var(--mcms-surface-muted);
 }
 
+/*
+ * ⚠ Cột "Chi tiết" của bảng nhật ký thiết bị.
+ *
+ *   Vấn đề: `reason` là câu tiếng Việt dài. Nếu cột bị ép hẹp, chữ xuống
+ *   dòng **từng từ một** ⇒ cột cao lêu và khó đọc.
+ *
+ *   → `min-width` giữ độ rộng tối thiểu; `white-space: normal` cho phép
+ *     xuống dòng theo **từ** thay vì theo **ký tự**.
+ *
+ * ⚠ Với `<table layout="fixed">` của antd, `min-width` trên `<td>` **không
+ *   có tác dụng** ⇒ phải đặt trên khối con (`.mcms-session-device-cycle-detail`)
+ *   và bỏ `nowrap` mặc định của ô.
+ */
+.mcms-session-device-cycle-detail-cell {
+  white-space: normal;
+}
+.mcms-session-device-cycle-detail {
+  min-width: 200px;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+/* Ô chứa cột "Chi tiết" — bỏ `nowrap` mặc định của antd Table. */
+.mcms-session-device-cycle-detail .ant-typography {
+  white-space: normal;
+}
+

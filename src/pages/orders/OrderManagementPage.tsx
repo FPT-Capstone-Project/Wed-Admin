@@ -20,6 +20,7 @@ import {
   Segmented,
   Skeleton,
   Space,
+  Tooltip,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -268,9 +269,18 @@ export function OrderManagementPage() {
       dataIndex: 'status',
       key: 'status',
       width: 140,
-      render: (status: AdminOrderStatus) => {
+      render: (status: AdminOrderStatus, record) => {
         const config = STATUS_CONFIG[status]
-        return <StatusBadge tone={config.tone} label={config.label} />
+        const badge = <StatusBadge tone={config.tone} label={config.label} />
+        // ⚠ Trạng thái **dẫn xuất** từ phiên (BE quên update `orders.status`
+        //   ở luồng bàn giao thu hoạch) ⇒ ghi chú lại để admin không tưởng
+        //   dữ liệu sai. Xem `derive-order-status.ts`.
+        if (!record.statusDerived) return badge
+        return (
+          <Tooltip title="Trạng thái này được suy ra từ trạng thái phiên canh tác: mọi phiên của đơn đã hoàn tất (bàn giao thu hoạch) nhưng hệ thống chưa cập nhật trạng thái đơn.">
+            <span>{badge}</span>
+          </Tooltip>
+        )
       },
     },
     {
@@ -303,7 +313,22 @@ export function OrderManagementPage() {
     },
   ]
 
-  const livePayment = payosStatus?.data
+  /**
+   * ⚠ **Dữ liệu thanh toán "live" từ PayOS.**
+   *
+   *   Chỉ dùng được khi PayOS thực sự trả về **mã giao dịch hợp lệ**
+   *   (`paymentCode` khác rỗng). Nếu không có mã ⇒ không có giao dịch PayOS
+   *   nào (đơn chưa tạo link thanh toán, hoặc API lỗi/404) ⇒ **không**
+   *   được dùng `amount` / `paymentStatus` của nó.
+   *
+   *   ⇒ Mặc định UI luôn hiển thị dữ liệu chuẩn của đơn
+   *   (`detailOrder.paymentStatus` / `detailOrder.totalAmount`).
+   */
+  const livePayment = useMemo(() => {
+    const data = payosStatus?.data
+    if (!data?.paymentCode) return null
+    return data
+  }, [payosStatus])
 
   // ⚠ Skeleton chỉ hiện lần **đầu** (chưa có dữ liệu). Các lần đổi trang sau
   //   giữ bảng + spinner của antd để không nhảy layout.

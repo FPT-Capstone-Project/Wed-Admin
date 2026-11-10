@@ -89,8 +89,16 @@ export function AutoControlDetailModal({
    * ⚠ Endpoint read-only ⇒ Admin web đọc được để hiển thị `mode`, `run`,
    * `runtime`, `ssr`, `cooldownRemainingMs`, `lastDecision`.
    */
-  const { data: status, isLoading: statusLoading } =
-    useAutoControlStatus(floorId)
+  const {
+    data: status,
+    isLoading: statusLoading,
+  } = useAutoControlStatus(floorId, {
+    /*
+     * ⚠ Modal **đóng** ⇒ không ai nhìn thấy trạng thái ⇒ **tắt polling** ⇒
+     *   không spam request khi modal đã đóng nhưng component vẫn mounted.
+     */
+    refetchInterval: open ? undefined : false,
+  })
 
   /**
    * Bản ghi cấu hình của tầng đang xem.

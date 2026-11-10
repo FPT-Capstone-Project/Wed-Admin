@@ -1,6 +1,10 @@
 import type { CultivationSession } from '../../sessions/types/session.types'
 import type { AdminCultivationSessionDto } from '../../sessions/types/admin-session.types'
 import type { FarmSession } from '../../farm/types/farm.types'
+import {
+  deriveOrderStatus,
+  pickRepresentativeSession,
+} from './derive-order-status.ts'
 import type {
   AdminOrderDto,
   AdminOrderRow,
@@ -24,18 +28,33 @@ import type {
  * ## Vì sao vẫn cần hợp nhất?
  *
  * `GET /api/orders/admin` gộp **mọi item của 1 đơn** thành 1 record phẳng
- * (tên gói / tên nấm nối bằng dấu phẩy, không có `order_items`) và **không**
+ * (tên gói / tên nấm nối bằng dấu phẳng, không có `order_items`) và **không**
  * biết phiên canh tác tương ứng. Endpoint phiên thì ngược lại — biết phiên
  * nhưng không có tiền / thanh toán.
  *
  * → Gộp theo `order_id`, ưu tiên nguồn giàu thông tin hơn; trường nào thiếu
  *   thì lấy từ nguồn còn lại. **Không suy đoán** tổng tiền / tên gói /
  *   ngày tạo đơn từ số lượng khay/phôi.
+ *
+ * ## Trạng thái đơn — dẫn xuất từ phiên
+ *
+ * ⚠ BE có lỗi: luồng bàn giao thu hoạch (`harvestRequest.model.js` →
+ *   `complete()`) set `cultivation_sessions.status = 'COMPLETED'` nhưng
+ *   **không** update `orders.status` ⇒ đơn kẹt "Đang xử lý" vĩnh viễn.
+ *
+ * → Ở đây ta **dẫn xuất** trạng thái đơn từ trạng thái phiên: nếu đơn có nguồn
+ *   `order` và **mọi** phiên của đơn đã `COMPLETED` ⇒ hiển thị `COMPLETED`.
+ *   Xem `derive-order-status.ts` để biết đầy đủ quy tắc.
+ *
+ * @param sessionsComplete `true` khi đã tải **đủ** phiên của mọi đơn. Nếu
+ *   `false` ⇒ không được kết luận "tất cả phiên đã hoàn tất" (có thể còn
+ *   phiên chưa tải về ⇒ sẽ kết luận sai).
  */
 export function mergeOrderSources(
   adminOrders: AdminOrderDto[],
   adminSessions: AdminCultivationSessionDto[],
   farmSessions: FarmSession[],
+  sessionsComplete = true,
 ): AdminOrderRow[] {
   const map = new Map<number, AdminOrderRow>()
 
@@ -54,6 +73,7 @@ export function mergeOrderSources(
       mushroomName: '—',
       quantity: null,
       status: 'PENDING',
+      statusDerived: false,
       sessionStatus: null,
       sessionId: null,
       paymentStatus: 'UNPAID',
@@ -69,6 +89,19 @@ export function mergeOrderSources(
 
   const addSource = (row: AdminOrderRow, source: AdminOrderSource) => {
     if (!row.sources.includes(source)) row.sources.push(source)
+  }
+
+  // ── 0. Gom phiên theo `order_id` ──────────────────────────────────────
+  //
+  // ⚠ Một đơn có thể sinh **nhiều** phiên (nhiều gói / nhiều item) ⇒ phải gom
+  //   lại thành nhóm trước, không được lấy "phiên cuối gặp" làm đại diện.
+  const sessionsByOrder = new Map<number, AdminCultivationSessionDto[]>()
+  for (const session of adminSessions) {
+    const orderId = Number(session.order_id)
+    if (!Number.isFinite(orderId) || orderId <= 0) continue
+    const bucket = sessionsByOrder.get(orderId)
+    if (bucket) bucket.push(session)
+    else sessionsByOrder.set(orderId, [session])
   }
 
   // ── 1. Nguồn `order` — `/api/orders/admin` ────────────────────────────
@@ -93,30 +126,32 @@ export function mergeOrderSources(
   }
 
   // ── 2. Nguồn `session` — `/api/cultivation-sessions/admin` ─────────────
-  for (const session of adminSessions) {
-    const orderId = Number(session.order_id)
-    if (!Number.isFinite(orderId) || orderId <= 0) continue
-
+  for (const [orderId, sessions] of sessionsByOrder) {
     const row = ensure(orderId)
     addSource(row, 'session')
 
-    row.sessionId = session.session_id
-    row.sessionStatus = session.status
-    row.customerId = session.user_id ?? row.customerId
-    row.customerName = session.customer_name ?? row.customerName
-    row.customerEmail = session.customer_email ?? row.customerEmail
+    const representative = pickRepresentativeSession(sessions)
+    const first = sessions[0]
+
+    row.sessionId = representative?.session_id ?? row.sessionId
+    row.sessionStatus = representative?.status ?? row.sessionStatus
+    row.customerId = first.user_id ?? row.customerId
+    row.customerName = first.customer_name ?? row.customerName
+    row.customerEmail = first.customer_email ?? row.customerEmail
     if (row.packageName === '—') {
-      row.packageName = session.package_name ?? row.packageName
+      row.packageName = first.package_name ?? row.packageName
     }
     if (row.mushroomName === '—') {
-      row.mushroomName = session.mushroom_name ?? row.mushroomName
+      row.mushroomName = first.mushroom_name ?? row.mushroomName
     }
     // A session timestamp is not the creation timestamp of its order.
     // Keep unknown order dates null when the order endpoint provides no date.
 
     // Trạng thái đơn suy ra từ trạng thái phiên khi không có nguồn `order`.
     if (!row.sources.includes('order')) {
-      row.status = sessionToOrderStatus(session.status)
+      row.status = sessionToOrderStatus(
+        representative?.status ?? 'PENDING',
+      )
     }
   }
 
@@ -145,6 +180,21 @@ export function mergeOrderSources(
     }
     if (!row.sources.includes('order') && !row.sources.includes('session')) {
       row.status = sessionToOrderStatus(farm.status)
+    }
+  }
+
+  // ── 4. Trạng thái dẫn xuất — sửa lỗi đơn kẹt "Đang xử lý" ────────────
+  //
+  // ⚠ Chỉ áp dụng cho đơn **có** nguồn `order` (đơn không có nguồn order thì
+  //   trạng thái đã được suy ra từ phiên ở bước 2).
+  for (const [orderId, sessions] of sessionsByOrder) {
+    const row = map.get(orderId)
+    if (!row || !row.sources.includes('order')) continue
+
+    const derived = deriveOrderStatus(row.status, sessions, sessionsComplete)
+    if (derived !== row.status) {
+      row.status = derived
+      row.statusDerived = true
     }
   }
 

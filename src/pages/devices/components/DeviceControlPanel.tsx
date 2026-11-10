@@ -129,14 +129,17 @@ export function DeviceControlPanel() {
   const { data: floors = [], isLoading: floorsLoading } = useFloorList()
 
   /**
-   * Telemetry cảm biến — polling 3s khi đang ở tab "Thời gian thực".
+   * Telemetry cảm biến — polling khi đang ở tab "Thời gian thực".
    *
    * ⚠ `refetchInterval: false` khi chuyển sang tab "Lịch sử" ⇒ TanStack Query
-   * **xoá timer** ⇒ không còn gọi `GET /api/iot/masters/{id}/sensors` mỗi 3s.
+   * **xoá timer** ⇒ không còn gọi `GET /api/iot/masters/{id}/sensors`.
+   *
+   * ⚠ Truyền `undefined` (không ép số) ở tab "Thời gian thực" ⇒ hook tự quyết
+   *   định chu kỳ **và tự dừng khi tab trình duyệt bị ẩn** (xem `useIoT.ts`).
    */
   const { data: sensorsResponse, isLoading: sensorsLoading, isFetching: sensorsFetching } =
     useMasterSensors(masters[0]?.masterId ?? null, {
-      refetchInterval: isRealtimeTab ? TELEMETRY_POLL_INTERVAL_MS : false,
+      refetchInterval: isRealtimeTab ? undefined : false,
     })
   const sensors = sensorsResponse?.sensors ?? []
 
@@ -219,9 +222,11 @@ export function DeviceControlPanel() {
     selectedFloorMasterId,
     selectedFloor?.node_address ?? null,
     {
-      refetchInterval: isRealtimeTab
-        ? TELEMETRY_POLL_INTERVAL_MS
-        : false,
+      /*
+       * ⚠ `undefined` ở tab "Thời gian thực" ⇒ 2 query tự quyết định chu kỳ
+       *   **và tự dừng khi tab trình duyệt bị ẩn** (xem `useIoT.ts`).
+       */
+      refetchInterval: isRealtimeTab ? undefined : false,
     },
   )
 

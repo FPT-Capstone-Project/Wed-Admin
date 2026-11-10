@@ -15,6 +15,7 @@ import {
 } from '@tanstack/react-query'
 import { autoMistingApi, iotApi } from '../api/iot.api'
 import { retryApiErrors } from '../../../shared/api/retry-policy'
+import { useDocumentVisibility } from '../../../shared/hooks/use-document-visibility'
 import { filterActiveSensors } from '../utils/iot-node-scope'
 import type {
   AutoControlConfigRecord,
@@ -67,12 +68,51 @@ export const iotKeys = {
  * Chu kỳ polling telemetry thời gian thực (ms).
  *
  * ⚠ Master gửi telemetry qua MQTT; BE cập nhật `iot_sensor_latest` khi nhận
- * được gói tin. Chu kỳ 3s đủ để số liệu "chạy" mà chưa dồn tải lên BE.
+ *   được gói tin.
+ *
+ * ⚠ **Vì sao 15s (thay vì 3s)?**
+ *   Chu kỳ 3s ⇒ mỗi tầng ~20 request/phút ⇒ vài tầng + vài tab đang mở ⇒
+ *   hàng trăm request/phút dồn lên BE/Supabase ⇒ **spam request**.
+ *
+ *   15s vẫn đủ "live" cho bảng cảm biến (dữ liệu tầng thay đổi chậm) mà
+ *   giảm ~80% lượng request.
  *
  * → Được dùng bởi `useMasterSensors` và `useFloorEnvironment` (bảng "Cảm biến
  * môi trường" + drawer môi trường tầng).
  */
-export const TELEMETRY_POLL_INTERVAL_MS = 3_000
+export const TELEMETRY_POLL_INTERVAL_MS = 15_000
+
+/**
+ * Kiểu chu kỳ polling — khớp với `refetchInterval` của TanStack Query.
+ */
+type PollInterval<TQuery> =
+  | number
+  | false
+  | ((query: TQuery) => number | false | undefined)
+
+/**
+ * Tính chu kỳ polling **có tính tới trạng thái hiển thị của tab**.
+ *
+ * ⚠ Khi người dùng chuyển sang tab khác ⇒ không ai nhìn thấy số liệu ⇒
+ *   polling là request thừa ⇒ **dừng hẳn** (không chỉ bỏ qua lần refetch
+ *   kế tiếp) ⇒ giảm tải rõ rệt cho BE/Supabase.
+ *
+ * @param override Chu kỳ do consumer chỉ định:
+ *   - `false` ⇒ tắt polling hoàn toàn.
+ *   - số ⇒ dùng số đó (bỏ qua visibility).
+ *   - hàm ⇒ **giữ nguyên** (consumer tự quyết định theo query state).
+ *   - `undefined` ⇒ dùng chu kỳ mặc định, nhưng chỉ khi tab đang hiển thị.
+ */
+function useTelemetryPollInterval<TQuery>(
+  override?: PollInterval<TQuery>,
+): PollInterval<TQuery> {
+  const isVisible = useDocumentVisibility()
+
+  if (override === false) return false
+  if (typeof override === 'number') return override
+  if (typeof override === 'function') return override
+  return isVisible ? TELEMETRY_POLL_INTERVAL_MS : false
+}
 
 export function useMasterList(
   options?: Partial<UseQueryOptions<IotMaster[], Error>>,
@@ -105,6 +145,14 @@ export function useMasterSensors(
   masterId: string | null,
   options?: Partial<UseQueryOptions<IotSensorsResponse, Error>>,
 ) {
+  /*
+   * ⚠ Polling chỉ chạy khi component **thật sự hiển thị** trên màn hình:
+   *   - Tab trình duyệt đang active (`document.visibilityState === 'visible'`).
+   *   - Consumer chủ động tắt (`refetchInterval: false`) khi rời màn hình.
+   */
+  const { refetchInterval: intervalOverride, ...restOptions } = options ?? {}
+  const pollInterval = useTelemetryPollInterval(intervalOverride)
+
   return useQuery<IotSensorsResponse, Error>({
     queryKey: iotKeys.sensors(masterId ?? ''),
     queryFn: async () => {
@@ -115,10 +163,10 @@ export function useMasterSensors(
         sensors: filterActiveSensors(result.sensors ?? []),
       }
     },
+    ...restOptions,
     enabled: masterId !== null && masterId.length > 0,
     staleTime: TELEMETRY_POLL_INTERVAL_MS,
-    refetchInterval: TELEMETRY_POLL_INTERVAL_MS,
-    ...options,
+    refetchInterval: pollInterval,
   })
 }
 
@@ -193,6 +241,9 @@ export function useFloorEnvironment(
   floorId: number | null,
   options?: Partial<UseQueryOptions<FloorEnvironmentResponse, Error>>,
 ) {
+  const { refetchInterval: intervalOverride, ...restOptions } = options ?? {}
+  const pollInterval = useTelemetryPollInterval(intervalOverride)
+
   return useQuery<FloorEnvironmentResponse, Error>({
     queryKey: [...iotKeys.floor(floorId ?? -1), 'environment'],
     queryFn: async () => {
@@ -212,10 +263,10 @@ export function useFloorEnvironment(
         }
       )
     },
+    ...restOptions,
     enabled: floorId !== null && floorId > 0,
     staleTime: TELEMETRY_POLL_INTERVAL_MS,
-    refetchInterval: TELEMETRY_POLL_INTERVAL_MS,
-    ...options,
+    refetchInterval: pollInterval,
   })
 }
 
@@ -256,12 +307,14 @@ export function useResolvedFloorEnvironment(
      *
      * ⚠ Truyền xuống **cả hai** query (`/environment` và `/masters/{id}/sensors`)
      * vì cả hai đều là nguồn telemetry. Nếu chỉ tắt một, query còn lại vẫn
-     * gọi API mỗi 3s ⇒ không tiết kiệm được gì.
+     * gọi API mỗi chu kỳ ⇒ không tiết kiệm được gì.
+     *
+     * ⚠ `undefined` ⇒ để 2 query tự quyết định (dừng khi tab bị ẩn).
      */
     refetchInterval?: number | false
   },
 ) {
-  const { refetchInterval = TELEMETRY_POLL_INTERVAL_MS } = options ?? {}
+  const { refetchInterval } = options ?? {}
 
   const floorEnv = useFloorEnvironment(floorId, { refetchInterval })
   const masterSensors = useMasterSensors(masterId, {
@@ -451,16 +504,19 @@ export function useAutoControlStatus(
   floorId: number | null,
   options?: Partial<UseQueryOptions<AutoControlRuntimeStatus, Error>>,
 ) {
+  const { refetchInterval: intervalOverride, ...restOptions } = options ?? {}
+  const pollInterval = useTelemetryPollInterval(intervalOverride)
+
   return useQuery<AutoControlRuntimeStatus, Error>({
     queryKey: iotKeys.autoControlStatus(floorId ?? -1),
     queryFn: async () => {
       const result = await autoMistingApi.getAutoControlStatus(floorId as number)
       return result ?? { mode: 'MANUAL' }
     },
+    ...restOptions,
     enabled: floorId !== null && floorId > 0,
     staleTime: TELEMETRY_POLL_INTERVAL_MS,
-    refetchInterval: TELEMETRY_POLL_INTERVAL_MS,
-    ...options,
+    refetchInterval: pollInterval,
   })
 }
 

@@ -45,3 +45,4 @@ swagger-ui-init.js
 .idea/
 .DS_Store
 Thumbs.db
+temp-swagger.json

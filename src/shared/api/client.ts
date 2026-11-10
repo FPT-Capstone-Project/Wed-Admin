@@ -8,6 +8,10 @@ import {
   resolveApiConfig,
   type ApiConfigResolution,
 } from './api-config'
+import {
+  attemptRefreshAndRetry,
+  setTokenRefreshedListener,
+} from './refresh-interceptor'
 
 /**
  * Cấu hình API đã resolve — đọc `import.meta.env` **một lần** cho cả app.
@@ -59,7 +63,7 @@ function notifyAuthExpired(error: AxiosError) {
 /**
  * Reset cờ "đã thông báo hết phiên" — gọi khi user đăng nhập lại.
  *
- * ⚠ Không có bước này thì sau khi 1 lần 401, mọi 401 về sau đều bị bỏ qua
+ * ⚠ Không có bước này thì sau 1 lần 401, mọi 401 về sau đều bị bỏ qua
  *   ⇒ user đăng nhập lại xong thì lần 401 kế tiếp không thoát được nữa.
  */
 export function resetAuthExpiredNotice(): void {
@@ -95,9 +99,10 @@ const API_TIMEOUT_MS = 60_000
  *
  * - Tự đính kèm Bearer token vào mọi request (đọc từ `tokenStorage` —
  *   cùng nguồn với Zustand `auth.store`).
- * - Tự clear session + dispatch event khi backend trả 401.
- * - Không retry tự động ở tầng axios — để React Query quản lý retry policy
- *   (`retryApiErrors` ở `QueryProvider`).
+ * - Tự **xoay vòng access token** khi BE trả 401 (xem `refresh-interceptor.ts`).
+ * - Tự clear session + dispatch event khi refresh thất bại.
+ * - Không retry tự động ở tầng axios cho lỗi khác 401 — để React Query
+ *   quản lý retry policy (`retryApiErrors` ở `QueryProvider`).
  */
 export const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
@@ -139,22 +144,44 @@ apiClient.interceptors.response.use(
     cancelPendingErrorToast(response.config)
     return normalizeResponse(response)
   },
-  (error: AxiosError) => {
-    // 401: token sai / hết hạn →
-    //   1. xoá token ở CẢ localStorage lẫn sessionStorage,
-    //   2. dispatch `mcms:auth-expired` ⇒ `AdminLayout` clear store + về /login.
-    //
-    // ⚠ BE **không** có endpoint refresh token (`/api/auth/refresh` không tồn
-    //   tại — xem `Backend/src/routes/auth.routes.js`), JWT là access token
-    //   thuần. Vì vậy không có luồng refresh ⇒ 401 luôn dẫn tới đăng nhập lại.
-    //   `tokenStorage` vẫn hỗ trợ refresh token để sẵn sàng khi BE bổ sung.
-    //
-    // ⚠ Ngoại lệ: **endpoint đăng nhập** — 401 ở đó nghĩa là *sai email/mật
-    //   khẩu*, KHÔNG phải hết phiên ⇒ không clear token & không dispatch
-    //   `auth-expired` (nếu không, đang ở trang Login lại bị đáy + mất thông
-    //   báo lỗi thân thiện). Trang Login tự hiển thị message từ
-    //   `extractLoginErrorMessage()`.
-    if (error.response?.status === 401 && !isLoginRequest(error)) {
+  async (error: AxiosError) => {
+    const status = error.response?.status ?? null
+
+    /*
+     * ⚠ **Luồng refresh token** — 401 do access token hết hạn.
+     *
+     *   1. Thử refresh: `POST /api/auth/refresh` (xoay vòng) ⇒ access token
+     *      mới (+ refresh token mới).
+     *   2. Thành công ⇒ gửi lại request gốc với token mới ⇒ **trả về
+     *      response của lần retry** (axios chấp nhận promise resolve trong
+     *      handler lỗi ⇒ caller không hề biết request gốc đã fail).
+     *   3. Thất bại (không có refresh token / BE từ chối) ⇒ xoá token cục bộ
+     *      + dispatch `mcms:auth-expired` ⇒ `AdminLayout` đưa user về /login.
+     *
+     * ⚠ Ngoại lệ: **endpoint đăng nhập** — 401 ở đó nghĩa là *sai email/mật
+     *   khẩu*, KHÔNG phải hết phiên ⇒ không clear token & không dispatch
+     *   `auth-expired` (nếu không, đang ở trang Login lại bị đáy + mất thông
+     *   báo lỗi thân thiện). Trang Login tự hiển thị message từ
+     *   `extractLoginErrorMessage()`.
+     */
+    const outcome = await attemptRefreshAndRetry(apiClient, error, API_BASE_URL)
+
+    if (outcome.kind === 'retried') {
+      // Refresh OK ⇒ trả về response của lần retry.
+      return outcome.promise
+    }
+
+    if (outcome.kind === 'failed') {
+      // Refresh thất bại ⇒ phiên không cứu được ⇒ đóng phiên.
+      tokenStorage.clear()
+      notifyAuthExpired(error)
+      globalErrorToast(error)
+      return Promise.reject(error)
+    }
+
+    // 401 còn lại: token sai / hết hạn mà không refresh được (vd không có
+    // refresh token, hoặc endpoint đăng nhập) ⇒ xoá token + báo hết phiên.
+    if (status === 401 && !isLoginRequest(error)) {
       tokenStorage.clear()
       notifyAuthExpired(error)
     }
@@ -165,6 +192,14 @@ apiClient.interceptors.response.use(
     return Promise.reject(error)
   },
 )
+
+/**
+ * Đăng ký callback được gọi khi access token được xoay vòng.
+ *
+ * ⚠ `auth.store` dùng hàm này để đồng bộ `accessToken` trong Zustand (tránh
+ *   vòng lặp import store → client → store).
+ */
+export { setTokenRefreshedListener }
 
 /**
  * Validate cấu hình API — gọi **một lần** khi app khởi động.

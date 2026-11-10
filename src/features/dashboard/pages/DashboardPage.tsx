@@ -311,6 +311,7 @@ export function DashboardPage() {
               data={chartFloors}
               from={environmentQuery.data?.from}
               to={environmentQuery.data?.to}
+              bucketMs={environmentQuery.data?.bucketMs}
             />
           )}
         </div>

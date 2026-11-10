@@ -1,21 +1,32 @@
 import { ApartmentOutlined, NodeIndexOutlined } from '@ant-design/icons'
 import { Flex, Tag, Typography } from 'antd'
-import type { SessionMappedFloor } from '../types/session-iot-history.types'
+import type { SessionFloorMapping } from '../types/session-floor-mapping.types'
 
 /**
  * Danh sách **tầng đã map** sang thiết bị IoT trong phiên canh tác.
  *
- * ⚠ Nguồn dữ liệu: `GET /api/cultivation-sessions/admin/{sessionId}/iot-history`
- *   → trường `floors` / `mapped_floors` (xem `api/session-iot-history.api.ts`).
+ * ⚠ Nguồn dữ liệu: `GET /api/iot/floors` → lọc theo các tầng thuộc phiên
+ *   (xem `utils/session-floor-matching.utils.ts` → `filterSessionFloorMappings`).
+ *
+ * ⚠ **Vì sao không dùng `floors` của `/iot-history` nữa?**
+ *   BE đã **gỡ bỏ** endpoint `GET /api/cultivation-sessions/admin/{sessionId}/iot-history`
+ *   (commit `4e136253`) ⇒ route trả **404**. Nguồn thay thế là danh sách tầng
+ *   đã map (`/api/iot/floors`) — đây cũng là nguồn chuẩn mà BE dùng để gom
+ *   lịch sử môi trường theo phiên (bảng `cultivation_environment_history`
+ *   join qua `cultivation_session_trays` → `cultivation_trays` → `cultivation_floors`).
  *
  * ⚠ Vì sao cần hiển thị? Đây là thông tin **audit quan trọng**: cho biết
- *   lệnh & cảm biến nào thực sự phục vụ phiên này (BE map theo thiết bị,
- *   không suy đoán được từ danh sách khay).
+ *   thiết bị nào thực sự phục vụ phiên này (BE map theo thiết bị, không suy
+ *   đoán được chỉ từ danh sách khay).
+ *
+ * ⚠ **`floorId` có thể `null`** — schema Swagger của `/api/iot/floors` không
+ *   khai báo cột `floor_id` ⇒ ta hiển thị nhãn tầng theo `floor_name` /
+ *   `floor_number` trước, chỉ fallback về `floor_id` khi không có gì khác.
  */
 export function SessionMappedFloorList({
   floors,
 }: {
-  floors: SessionMappedFloor[]
+  floors: SessionFloorMapping[]
 }) {
   if (floors.length === 0) return null
 
@@ -38,19 +49,23 @@ export function SessionMappedFloorList({
         <Flex gap={8} wrap>
           {floors.map((floor, index) => (
             <Tag
-              key={floor.floor_id ?? `floor-${index}`}
+              key={floor.floorId ?? `floor-${index}`}
               icon={<NodeIndexOutlined />}
               color="blue"
               style={{ padding: '4px 10px' }}
             >
-              {floor.floor_name ??
-                (floor.floor_number != null
-                  ? `Tầng ${floor.floor_number}`
-                  : `Tầng #${floor.floor_id ?? index + 1}`)}
-              {floor.master_identifier ?? floor.master_id
-                ? ` · ${floor.master_identifier ?? floor.master_id}`
-                : ''}
-              {floor.node_address != null ? ` · Node ${floor.node_address}` : ''}
+              {/*
+                ⚠ `floor_name` của BE đã là "Tầng 1" ⇒ không thêm tiều tố
+                  "Tầng" để tránh lặp ("Tầng Tầng 1").
+              */}
+              {floor.floorName ??
+                (floor.floorNumber != null
+                  ? `Tầng ${floor.floorNumber}`
+                  : floor.floorId != null
+                    ? `Tầng #${floor.floorId}`
+                    : `Tầng #${index + 1}`)}
+              {floor.masterId != null ? ` · Master ${floor.masterId}` : ''}
+              {floor.nodeAddress != null ? ` · Node ${floor.nodeAddress}` : ''}
             </Tag>
           ))}
         </Flex>

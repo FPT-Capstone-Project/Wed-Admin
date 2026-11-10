@@ -6,10 +6,12 @@ import {
 import {
   Alert,
   Button,
+  Descriptions,
   Empty,
   Flex,
   Segmented,
   Skeleton,
+  Tag,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -17,14 +19,30 @@ import { useMemo, useState } from 'react'
 import { DataTable } from '../../../shared/ui/DataTable'
 import { formatMeasurement } from '../../../shared/utils/measurement-format'
 import {
-  useSessionAllCommands,
-  useSessionSensorChart,
-  useSessionSensorHistory,
-} from '../hooks/useSessionIoTHistory'
-import { useSessionClimateThresholds } from '../hooks/useSessionClimateThresholds'
-import type { SessionSensorReading } from '../types/session-iot-history.types'
-import type { SessionSensorTimeRange } from '../utils/session-sensor-aggregation.utils'
-import { SessionCommandTable } from './SessionCommandTable'
+  useLatestSessionEnvironment,
+  useSessionEnvironmentChart,
+  useSessionEnvironmentHistory,
+} from '../hooks/useSessionEnvironmentHistory'
+import {
+  useSessionClimateThresholds,
+} from '../hooks/useSessionClimateThresholds'
+import {
+  useSessionDeviceCycles,
+  useSessionFloorMappings,
+} from '../hooks/useSessionDeviceActivity'
+import type { SessionEnvironmentRecord } from '../types/session-environment-history.types'
+import type { CultivationSessionStatus } from '../types/session.types'
+import {
+  buildFloorLabelMap,
+  collectMappedFloorIds,
+  filterSessionFloorMappings,
+  type SessionFloorKey,
+} from '../utils/session-floor-matching.utils'
+import {
+  resolveSessionChartAnchor,
+  type SessionSensorTimeRange,
+} from '../utils/session-sensor-aggregation.utils'
+import { SessionDeviceCycleTable } from './SessionDeviceCycleTable'
 import { SessionMappedFloorList } from './SessionMappedFloorList'
 import { SessionSensorChart } from './SessionSensorChart'
 
@@ -34,8 +52,9 @@ type IoTHistoryView = 'sensors' | 'commands'
 /**
  * Số bản ghi tối đa hiển thị trong bảng "Dữ liệu cảm biến chi tiết".
  *
- * ⚠ BE báo tổng có thể lên tới **hàng trăm nghìn** lần đo (≈22.000 trang) —
- *   không ai đọc nổi. Ta chặn ở **200 bản ghi mới nhất** (≈10 trang × 20).
+ * ⚠ BE đã **gộp sẵn 10 phút/tầng** ⇒ 1 phiên (15–20 ngày) chỉ có vài nghìn
+ *   bản ghi ⇒ không còn rủi ro "hàng trăm nghìn" như khi đọc dữ liệu thô.
+ *   Ta vẫn giới hạn ở **200 bản ghi mới nhất** cho bảng để dễ đọc.
  */
 const MAX_SENSOR_TABLE_RECORDS = 200
 
@@ -58,10 +77,41 @@ function fmtDateTime(value: string | null | undefined): string {
   return DATE_TIME_FMT.format(date)
 }
 
+/**
+ * Nhãn tiếng Việt cho giai đoạn canh tác — khớp
+ * `components/admin-session-status.config.ts` → `SESSION_GROWTH_STAGE_CONFIG`.
+ */
+const GROWTH_STAGE_LABEL: Record<string, string> = {
+  FRUITING_INITIATION: 'Khởi động ra hoa',
+  PINNING: 'Đang hình thành nụ',
+  YOUNG_FRUITING: 'Nấm non đang lớn',
+  MATURATION: 'Chín kho',
+  UNKNOWN: 'Chưa ghi nhận',
+}
+
 export interface SessionIoTHistoryTabProps {
   sessionId: number | null
-  /** Tầng của các khay được gán — fallback khi BE chưa trả `floors`. */
+  /** Tầng của các khay được gán — nguồn chuẩn của các tầng thuộc phiên. */
   fallbackFloorIds: number[]
+  /** Đầu phiên (ISO 8601) — dùng lọc nhật ký thiết bị theo đúng khoảng phiên. */
+  sessionStart?: string | null
+  /** Cuối phiên (ISO 8601) — `null` nghĩa là phiên đang chạy. */
+  sessionEnd?: string | null
+  /**
+   * Trạng thái phiên — dùng để biết phiên đã kết thúc hay chưa.
+   *
+   * ⚠ **Quan trọng**: phiên đã kết thúc thì biểu đồ phải neo về **cuối
+   *   phiên** thay vì `now` (xem `resolveSessionChartAnchor`).
+   */
+  sessionStatus?: CultivationSessionStatus | null
+  /**
+   * Khoá tầng của phiên — dùng để khớp với danh sách tầng của BE.
+   *
+   * ⚠ Khi BE **không** trả `floor_id` trong `/api/iot/floors`, ta cần thêm
+   *   `room_id` + `floor_number` + `floor_name` để khớp tầng (xem
+   *   `utils/session-floor-matching.utils.ts`).
+   */
+  floorKeys?: SessionFloorKey[]
 }
 
 /**
@@ -69,31 +119,33 @@ export interface SessionIoTHistoryTabProps {
  *
  * ## Phân tách trách nhiệm 2 API
  *
- * | Sub-tab           | Endpoint                        | Nội dung                         |
- * |-------------------|---------------------------------|----------------------------------|
- * | **Cảm biến**     | `GET .../iot-history/sensors`   | Nhiệt độ + độ ẩm raw (biểu đồ)  |
- * | **Lệnh thiết bị** | `GET .../iot-history`           | Lệnh ON/OFF + tầng đã map (bảng) |
+ * | Sub-tab           | Endpoint                                       | Nội dung                       |
+ * |-------------------|------------------------------------------------|--------------------------------|
+ * | **Cảm biến**     | `GET /api/environment-history/sessions/{id}`    | Nhiệt độ + độ ẩm (biểu đồ + bảng) |
+ * | **Lệnh thiết bị** | `GET /api/iot/floors/{floorId}/auto-control/logs` | Nhật ký chu kỳ bật/tắt thiết bị |
  *
- * ⚠ **Tách riêng** vì đây là 2 endpoint khác nhau với mục đích khác nhau:
- *   biểu đồ cần **nhiều điểm** (gộp nhiều trang), còn bảng audit cần
- *   **phân trang server-side**. Trộn chung sẽ khiến mỗi lần đổi bảng phải
- *   vẽ lại toàn bộ biểu đồ.
+ * ⚠ **Vì sao đổi API?**
+ *   BE đã **gỡ bỏ** nhóm `/api/cultivation-sessions/admin/{sessionId}/iot-history`
+ *   (commit `4e136253` — "xóa xem lịch sử iot của từng phiên trồng") ⇒ cả
+ *   `/iot-history` lẫn `/iot-history/sensors` đều trả **404**.
+ *
+ *   - Dữ liệu cảm biến nay nằm ở nhóm **Environment History**
+ *     (`/api/environment-history/sessions/{sessionId}`), đã **gộp sẵn 10
+ *     phút/tầng** bởi BE ⇒ 1 request phủ trọn cửa sổ thay vì hàng trăm
+ *     trang dữ liệu thô.
+ *   - Nhật ký lệnh thiết bị nay nằm ở `iot_auto_control_logs`, đọc **theo
+ *     tầng** ⇒ ta gộp log của các tầng thuộc phiên rồi lọc theo khoảng thời
+ *     gian của phiên.
  *
  * ⚠ Chỉ gọi API của sub-tab đang mở ⇒ không tải thừa khi user vừa mở drawer.
- *
- * ⚠ Shape response đã verify từ Backend:
- *   - `/iot-history` → `data = { session, floors, temperatureReadings,
- *     deviceEvents, pagination }` — key lệnh là **`deviceEvents`**.
- *   - `/iot-history/sensors` → `data = { session, readings, pagination }`.
- *
- * ⚠ Cả 2 route **đã được BE implement** (verify từ
- *   `Backend/src/routes/cultivationSession.routes.js`) ⇒ 404 chỉ xảy ra khi
- *   phiên không tồn tại / bị chặn quyền ⇒ hook trả `null` ⇒ hiển thị empty
- *   state có hướng dẫn thay vì banner lỗi đỏ.
  */
 export function SessionIoTHistoryTab({
   sessionId,
   fallbackFloorIds,
+  sessionStart,
+  sessionEnd,
+  sessionStatus = null,
+  floorKeys = [],
 }: SessionIoTHistoryTabProps) {
   const [view, setView] = useState<IoTHistoryView>('sensors')
 
@@ -106,20 +158,109 @@ export function SessionIoTHistoryTab({
    */
   const [timeRange, setTimeRange] = useState<SessionSensorTimeRange>('1h')
 
-  /*
+  /**
+   * ⚠ Phiên đã **kết thúc** hay chưa?
+   *
+   *   `COMPLETED` / `CANCELLED` ⇒ dữ liệu nằm trong quá khứ ⇒ biểu đồ phải
+   *   neo về cuối phiên thay vì `now`.
+   */
+  const sessionEnded =
+    sessionStatus === 'COMPLETED' || sessionStatus === 'CANCELLED'
+
+  /**
    * ⚠ **Tầng dùng cho biểu đồ** — lấy từ `trays[].floor_id` của endpoint quản
    *   trị (nguồn chuẩn của phiên).
    *
-   *   Nguồn `environment-history` trả dữ liệu của **mọi tầng ACTIVE** ⇒ phải
-   *   lọc theo đúng tầng của phiên, nếu không sẽ vẽ lẫn tầng của phiên khác.
+   *   Endpoint `environment-history` **đã giới hạn theo phiên** ⇒ trả về đúng
+   *   các tầng thuộc phiên ⇒ không cần lọc thêm.
    *
-   *   ⚠ Dùng `fallbackFloorIds` (không phải `floorIds`) vì `floorIds` còn phụ
-   *     thuộc `mappedFloors` — mà `mappedFloors` chỉ có khi sub-tab "Lệnh thiết
-   *     bị" được mở ⇒ lúc này luôn rỗng. `fallbackFloorIds` luôn sẵn có.
+   *   Ta vẫn giữ danh sách này để (1) gắn **nhãn tầng** cho tooltip biểu đồ và
+   *   (2) làm căn cứ lấy nhật ký thiết bị ở sub-tab "Lệnh thiết bị".
    */
   const chartFloorIds = fallbackFloorIds
 
-  // ─── Cảm biến (biểu đồ — đã gộp nhiều trang theo mốc thời gian) ───────
+  // ─── Tầng đã map của hệ thống ──────────────────────────────────────────
+  /*
+   * ⚠ Danh sách tầng (`GET /api/iot/floors`) được dùng cho **cả 2** sub-tab:
+   *   - "Cảm biến": gắn nhãn tầng cho tooltip biểu đồ.
+   *   - "Lệnh thiết bị": lọc tầng **thuộc phiên** + lấy `floor_id` để gọi
+   *     `GET /api/iot/floors/{floorId}/auto-control/logs`.
+   *
+   *   ⇒ Gọi **1 lần** cho cả tab (danh sách tầng rất nhỏ) ⇒ không tải thừa.
+   */
+  const {
+    data: floorMappings,
+    isLoading: mappingLoading,
+  } = useSessionFloorMappings()
+
+  /**
+   * Nhãn tầng — tra theo `floor_id` để hiển thị "Tầng 1" (số tầng **thực tế**)
+   * thay vì "Tầng #1" / ID database.
+   *
+   * ⚠ **Vì sao gộp 2 nguồn?**
+   *   - BE map (`/api/iot/floors`): có `floor_number` + `floor_name` chuẩn,
+   *     nhưng có thể **thiếu** `floor_id` (Swagger không khai báo cột này).
+   *   - `trays[]` của phiên (`floorKeys`): có `floor_id` + `floor_number`,
+   *     luôn có sẵn trong dữ liệu phiên.
+   *   ⇒ Gộp cả hai ⇒ **luôn** map được `floor_id` → `floor_number` ⇒ không
+   *     bao giờ rơi vào nhánh fallback in ID database.
+   */
+  const floorLabels = useMemo(() => {
+    const labels = buildFloorLabelMap([
+      ...(floorMappings ?? []),
+      ...floorKeys,
+    ])
+
+    // Fallback cuối cùng: tầng có `floor_id` nhưng không có bất kỳ metadata nào.
+    for (const id of chartFloorIds) {
+      if (!labels.has(id)) labels.set(id, `Tầng ${id}`)
+    }
+
+    return labels
+  }, [chartFloorIds, floorMappings, floorKeys])
+
+  // ─── Cảm biến (biểu đồ) ────────────────────────────────────────────────
+  /*
+   * ⚠ **Thứ tự gọi API** — `latest` phải **đi trước** `chart` vì mốc neo của
+   *   biểu đồ (cho phiên đã kết thúc) lấy từ bản ghi mới nhất.
+   *
+   *   ⇒ Với phiên **đã kết thúc**, ta **chờ** `latest` resolve rồi mới bật
+   *     `chart` ⇒ không phải fetch 2 lần (lần đầu neo nhầm, lần 2 neo đúng).
+   *
+   *   Với phiên **đang chạy**, mốc neo là `now` ⇒ không cần chờ ⇒ `chart` bật
+   *   luôn ⇒ không bị chậm.
+   */
+  const {
+    data: latestRecord,
+    isPending: latestPending,
+  } = useLatestSessionEnvironment(sessionId, {
+    enabled: view === 'sensors',
+  })
+
+  /**
+   * ⚠ **Mốc neo của biểu đồ** — phiên đã kết thúc thì lùi về cuối phiên.
+   *
+   *   Nếu không có mốc neo, biểu đồ của phiên kết thúc sẽ **trống trơn**
+   *   (dữ liệu nằm trong quá khứ, cửa sổ lại tính từ `now`).
+   */
+  const chartAnchorEnd = useMemo(
+    () =>
+      resolveSessionChartAnchor({
+        sessionEnded,
+        sessionEnd,
+        latestRecord,
+      }),
+    [sessionEnded, sessionEnd, latestRecord],
+  )
+
+  /**
+   * ⚠ Phiên đã kết thúc ⇒ chờ `latest` xong rồi mới vẽ biểu đồ.
+   *
+   *   ⇒ trục thời gian luôn khớp đúng vùng dữ liệu thực tế, chỉ 1 request.
+   */
+  const chartReady =
+    view !== 'sensors' || !sessionEnded || !latestPending
+
   const {
     data: chartPoints,
     isLoading: chartLoading,
@@ -127,9 +268,13 @@ export function SessionIoTHistoryTab({
     isError: chartFailed,
     error: chartError,
     refetch: refetchChart,
-  } = useSessionSensorChart(sessionId, timeRange, chartFloorIds, {
-    enabled: view === 'sensors',
-  })
+  } = useSessionEnvironmentChart(
+    sessionId,
+    timeRange,
+    floorLabels,
+    chartAnchorEnd,
+    { enabled: view === 'sensors' && chartReady },
+  )
 
   // ─── Cảm biến (bảng — phân trang server-side) ──────────────────────────
   const [sensorPage, setSensorPage] = useState(1)
@@ -140,44 +285,101 @@ export function SessionIoTHistoryTab({
     isError: sensorFailed,
     error: sensorError,
     refetch: refetchSensors,
-  } = useSessionSensorHistory(
+  } = useSessionEnvironmentHistory(
     sessionId,
     { page: sensorPage, pageSize: sensorPageSize },
     { enabled: view === 'sensors' },
   )
 
-  // ─── Lệnh thiết bị (gom TOÀN BỘ lệnh của phiên — lọc client-side) ─────
-  const {
-    data: allCommandsData,
-    isLoading: commandLoading,
-    isError: commandFailed,
-    error: commandError,
-    refetch: refetchCommands,
-  } = useSessionAllCommands(sessionId, { enabled: view === 'commands' })
+  // ─── Lệnh thiết bị (nhật ký theo tầng — lọc client-side) ─────────────
+  const sessionWindow = useMemo(() => {
+    const from = sessionStart ? Date.parse(sessionStart) : undefined
+    /*
+     * ⚠ **Không** dùng `Date.now()` trong render (React purity rule).
+     *   Phiên chưa có `end_date` (đang canh tác) ⇒ không chặn trên ⇒ log tới
+     *   hiện tại vẫn được lấy (đúng ý nghĩa "từ lúc bắt đầu phiên").
+     */
+    const to = sessionEnd ? Date.parse(sessionEnd) : undefined
+    return {
+      from: Number.isFinite(from) ? from : undefined,
+      to: Number.isFinite(to) ? to : undefined,
+    }
+  }, [sessionStart, sessionEnd])
 
-  const readings = useMemo(
-    () => sensorPageData?.readings ?? [],
-    [sensorPageData?.readings],
-  )
-  const commands = useMemo(
-    () => allCommandsData?.commands ?? [],
-    [allCommandsData?.commands],
-  )
+  /**
+   * ⚠ **Tầng đã map thuộc phiên** — khớp theo `floor_id` trước, fallback sang
+   *   `room_id` + `floor_number` / thiết bị / tên khi BE không trả `floor_id`.
+   *
+   *   Xem `utils/session-floor-matching.utils.ts` để hiểu thứ tự ưu tiên.
+   */
   const mappedFloors = useMemo(
-    () => allCommandsData?.floors ?? [],
-    [allCommandsData?.floors],
+    () => filterSessionFloorMappings(floorKeys, floorMappings ?? []),
+    [floorKeys, floorMappings],
+  )
+
+  /**
+   * ⚠ **Nhãn tầng cho bảng nhật ký thiết bị.**
+   *
+   *   ⚠ **Vì sao cần?**
+   *     `floor_id` là khoá kỹ thuật trong DB (`cultivation_floors.floor_id` là
+   *     SERIAL, đánh số theo thứ tự tạo — **không** theo thứ tự tầng).
+   *     ⇒ Tầng "Tầng 2" có thể có `floor_id = 3` ⇒ in trực tiếp `floor_id`
+   *       sẽ hiện "Tầng 3" ⇒ **sai**, lệch với thẻ tầng ở trên.
+   *
+   *   ⚠ Gộp **cả** tầng BE map (`mappedFloors`) lẫn tầng của các khay được
+   *     gán (`floorKeys`) ⇒ luôn map được `floor_id` → `floor_number`, kể cả
+   *     khi BE map thiếu `floor_id` hoặc thiếu `floor_number`.
+   */
+  const deviceFloorLabels = useMemo(
+    () => buildFloorLabelMap([...mappedFloors, ...floorKeys]),
+    [mappedFloors, floorKeys],
+  )
+
+  /**
+   * ⚠ **Tầng dùng để gọi endpoint nhật ký thiết bị.**
+   *
+   *   Ưu tiên `floor_id` mà BE map trong `/iot/floors` (đây mới là định danh
+   *   đúng của tầng — `room_id` chỉ là phòng chứa tầng).
+   *
+   *   Fallback về `trays[].floor_id` của endpoint quản trị khi BE map không
+   *   khớp được tầng nào (thiếu `floor_id` trong response `/api/iot/floors`).
+   */
+  const deviceFloorIds = useMemo(() => {
+    const ids = collectMappedFloorIds(mappedFloors)
+    if (ids.length > 0) return ids
+    return fallbackFloorIds
+  }, [mappedFloors, fallbackFloorIds])
+
+  const {
+    data: deviceCycles,
+    isLoading: deviceLoading,
+    isError: deviceFailed,
+    error: deviceError,
+    refetch: refetchDevices,
+  } = useSessionDeviceCycles(
+    view === 'commands' ? deviceFloorIds : [],
+    sessionWindow,
+    {
+      enabled: view === 'commands',
+      floorLabels: deviceFloorLabels,
+    },
+  )
+
+  const records = useMemo(
+    () => sensorPageData?.records ?? [],
+    [sensorPageData?.records],
   )
 
   /**
    * Tầng dùng để tra ngưỡng canh tác.
    *
-   * Ưu tiên tầng BE map trong `/iot-history`; fallback tầng của các khay được
+   * Ưu tiên tầng BE map trong `/iot/floors`; fallback tầng của các khay được
    * gán (endpoint quản trị trả `trays[].floor_id`).
    */
   const floorIds = useMemo(() => {
     const ids = new Set<number>()
     mappedFloors.forEach((floor) => {
-      if (floor.floor_id != null) ids.add(floor.floor_id)
+      if (floor.floorId != null) ids.add(floor.floorId)
     })
     fallbackFloorIds.forEach((id) => ids.add(id))
     return [...ids]
@@ -187,47 +389,62 @@ export function SessionIoTHistoryTab({
     view === 'sensors' ? floorIds : [],
   )
 
-  const readingColumns: ColumnsType<SessionSensorReading> = [
+  const recordColumns: ColumnsType<SessionEnvironmentRecord> = [
     {
-      title: 'Thời điểm',
-      key: 'timestamp',
-      width: 150,
+      title: 'Khoảng thời gian',
+      key: 'period',
+      width: 170,
       render: (_, row) => (
-        <Typography.Text className="mcms-session-mono" style={{ fontSize: 12 }}>
-          {fmtDateTime(row.measured_at ?? row.received_at)}
-        </Typography.Text>
+        <Flex vertical gap={2}>
+          <Typography.Text className="mcms-session-mono" style={{ fontSize: 12 }}>
+            {fmtDateTime(row.period_start)}
+          </Typography.Text>
+          <Typography.Text
+            className="mcms-session-mono"
+            type="secondary"
+            style={{ fontSize: 11 }}
+          >
+            → {fmtDateTime(row.period_end)}
+          </Typography.Text>
+        </Flex>
       ),
     },
     {
       title: 'Tầng',
-      dataIndex: 'floor_name',
-      key: 'floor_name',
-      width: 130,
-      render: (value: string | null, row) => (
-        <Typography.Text style={{ fontSize: 12 }}>
-          {value ?? (row.floor_id != null ? `Tầng ${row.floor_id}` : '—')}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: 'Cảm biến',
-      key: 'sensor',
-      width: 120,
-      render: (_, row) => (
-        <Typography.Text
-          className="mcms-session-mono"
-          style={{ fontSize: 12 }}
-        >
-          {row.sensor_id != null ? `Sensor ${row.sensor_id}` : '—'}
-          {row.node_address != null ? ` · N${row.node_address}` : ''}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: 'Nhiệt độ',
-      dataIndex: 'temperature',
-      key: 'temperature',
+      dataIndex: 'floor_id',
+      key: 'floor_id',
       width: 110,
+      /*
+       * ⚠ **Dùng map `floorLabels`** để hiển thị **số tầng thực tế**
+       *   (`Tầng ${floor_number}`) thay vì in trực tiếp `row.floor_id`.
+       *
+       *   `floor_id` là khoá kỹ thuật trong DB (SERIAL) ⇒ có thể khác số tầng
+       *   (tầng "Tầng 2" có `floor_id = 3`) ⇒ in thẳng sẽ hiện "Tầng 3" ⇒ sai.
+       */
+      render: (value: number | null) => (
+        <Typography.Text style={{ fontSize: 12 }}>
+          {value != null
+            ? (floorLabels.get(value) ?? `Tầng ${value}`)
+            : '—'}
+        </Typography.Text>
+      ),
+    },
+    {
+      title: 'Giai đoạn',
+      dataIndex: 'growth_stage',
+      key: 'growth_stage',
+      width: 150,
+      render: (value: string | null) => (
+        <Tag color={value === 'UNKNOWN' ? 'default' : 'blue'} style={{ fontSize: 11 }}>
+          {value ? (GROWTH_STAGE_LABEL[value] ?? value) : '—'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Nhiệt độ TB',
+      dataIndex: 'temperature_avg',
+      key: 'temperature_avg',
+      width: 120,
       align: 'right',
       render: (value: number | null) => (
         <Typography.Text strong>
@@ -236,32 +453,14 @@ export function SessionIoTHistoryTab({
       ),
     },
     {
-      title: 'Độ ẩm',
-      dataIndex: 'humidity',
-      key: 'humidity',
-      width: 110,
+      title: 'Độ ẩm TB',
+      dataIndex: 'humidity_avg',
+      key: 'humidity_avg',
+      width: 120,
       align: 'right',
       render: (value: number | null) => (
         <Typography.Text strong>
           {value != null ? `${formatMeasurement(value)}%RH` : '—'}
-        </Typography.Text>
-      ),
-    },
-    {
-      title: 'Trạng thái',
-      key: 'status',
-      width: 110,
-      align: 'center',
-      render: (_, row) => (
-        <Typography.Text
-          type={row.is_valid === false ? 'danger' : 'secondary'}
-          style={{ fontSize: 12 }}
-        >
-          {row.is_valid === false
-            ? 'Sai số'
-            : row.is_valid === true
-              ? 'Hợp lệ'
-              : '—'}
         </Typography.Text>
       ),
     },
@@ -276,7 +475,11 @@ export function SessionIoTHistoryTab({
           message="Không tải được lịch sử cảm biến."
           description={chartError?.message}
         />
-      ) : chartLoading && !chartPoints ? (
+      ) : (chartLoading && !chartPoints) || (!chartReady && !chartPoints) ? (
+        /*
+         * ⚠ Chờ `latest` resolve (phiên đã kết thúc) ⇒ hiển thị skeleton thay
+         *   vì biểu đồ chưa thể vẽ đúng mốc neo.
+         */
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : (
         <>
@@ -284,9 +487,59 @@ export function SessionIoTHistoryTab({
             points={chartPoints ?? []}
             thresholdsByFloor={thresholdsByFloor}
             timeRange={timeRange}
+            anchorEnd={chartAnchorEnd}
             onTimeRangeChange={setTimeRange}
             loading={chartFetching}
           />
+
+          {/* ── Chỉ số mới nhất ─────────────────────────────────────── */}
+          {latestRecord && (
+            <Descriptions
+              size="small"
+              bordered
+              column={{ xs: 1, sm: 2, lg: 4 }}
+              title="Chỉ số môi trường mới nhất"
+              items={[
+                {
+                  key: 'time',
+                  label: 'Thời điểm',
+                  children: (
+                    <Typography.Text
+                      className="mcms-session-mono"
+                      style={{ fontSize: 12 }}
+                    >
+                      {fmtDateTime(latestRecord.period_start)}
+                    </Typography.Text>
+                  ),
+                },
+                {
+                  key: 'floor',
+                  label: 'Tầng',
+                  children:
+                    latestRecord.floor_id != null
+                      ? `Tầng ${latestRecord.floor_id}`
+                      : '—',
+                },
+                {
+                  key: 'temp',
+                  label: 'Nhiệt độ TB',
+                  children:
+                    latestRecord.temperature_avg != null
+                      ? `${formatMeasurement(latestRecord.temperature_avg)}°C`
+                      : '—',
+                },
+                {
+                  key: 'humidity',
+                  label: 'Độ ẩm TB',
+                  children:
+                    latestRecord.humidity_avg != null
+                      ? `${formatMeasurement(latestRecord.humidity_avg)}%RH`
+                      : '—',
+                },
+              ]}
+            />
+          )}
+
           {sensorFailed && (
             <Alert
               type="warning"
@@ -296,38 +549,47 @@ export function SessionIoTHistoryTab({
             />
           )}
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Bảng hiển thị tối đa {MAX_SENSOR_TABLE_RECORDS} bản ghi đo mới nhất
-            để đối chiếu thông số tức thời. Để theo dõi toàn bộ chu kỳ, vui lòng
-            quan sát biểu đồ phía trên.
+            Bảng hiển thị tối đa {MAX_SENSOR_TABLE_RECORDS} bản ghi mới nhất.
+            Mỗi bản ghi là trung bình của các lần đo hợp lệ trong 10 phút tại
+            tầng đó. Để theo dõi toàn bộ chu kỳ, vui lòng quan sát biểu đồ phía
+            trên.
           </Typography.Text>
-          <DataTable<SessionSensorReading>
+          {/*
+            ⚠ **Phiên đã kết thúc** — biểu đồ neo về cuối phiên thay vì `now`
+              ⇒ ghi chú lại để Admin không tưởng là lỗi hiển thị sai.
+          */}
+          {sessionEnded && (
+            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Phiên đã kết thúc nên biểu đồ được neo về thời điểm dữ liệu cuối
+              cùng
+              {chartAnchorEnd
+                ? ` (${fmtDateTime(new Date(chartAnchorEnd).toISOString())})`
+                : ''}
+              , không phải thời điểm hiện tại.
+            </Typography.Text>
+          )}
+          <DataTable<SessionEnvironmentRecord>
             rowKey={(row) =>
-              row.reading_id != null
-                ? String(row.reading_id)
-                : `${row.received_at}-${row.sensor_id}-${row.master_id}`
+              `${row.session_id ?? ''}-${row.floor_id ?? ''}-${row.period_start ?? ''}`
             }
             title="Dữ liệu cảm biến chi tiết"
-            description="Nhiệt độ và độ ẩm từng lần đo trong phiên canh tác."
-            columns={readingColumns}
-            dataSource={readings}
+            description="Nhiệt độ và độ ẩm trung bình theo tầng, đã gộp sẵn theo nhóm 10 phút."
+            columns={recordColumns}
+            dataSource={records}
             loading={sensorLoading}
             pagination={{
               current: sensorPage,
               pageSize: sensorPageSize,
               /*
                * ⚠ **Giới hạn cứng 10 trang** (~100–200 bản ghi mới nhất).
-               *
-               * BE báo tổng có thể lên tới **hàng trăm nghìn** lần đo (≈22.000
-               * trang) — không ai đọc nổi. Ta chặn phân trang ở 10 trang gần
-               * nhất; phần còn lại xem qua biểu đồ.
                */
               total: Math.min(
-                sensorPageData?.pagination.total ?? readings.length,
+                sensorPageData?.pagination.total ?? records.length,
                 MAX_SENSOR_TABLE_RECORDS,
               ),
               showSizeChanger: true,
               pageSizeOptions: ['10', '20', '50', '100'],
-              showTotal: (total) => `Tổng ${total} lần đo`,
+              showTotal: (total) => `Tổng ${total} bản ghi`,
               onChange: (nextPage, nextPageSize) => {
                 /*
                  * ⚠ Chặn bước sang trang > 10 — bảng chỉ dẫn tới 200 bản ghi
@@ -346,9 +608,9 @@ export function SessionIoTHistoryTab({
                 setSensorPageSize(nextPageSize)
               },
             }}
-            scroll={{ x: 760 }}
+            scroll={{ x: 720 }}
             emptyTitle="Chưa có dữ liệu cảm biến"
-            emptyDescription="Phiên này chưa ghi nhận lần đo nào từ cảm biến."
+            emptyDescription="Phiên này chưa ghi nhận bản ghi môi trường nào. Dữ liệu được tổng hợp mỗi 10 phút khi thiết bị hoạt động trong suốt phiên."
           />
         </>
       )}
@@ -357,19 +619,22 @@ export function SessionIoTHistoryTab({
 
   const commandsContent = (
     <Flex vertical gap={16}>
-      {commandFailed ? (
+      {deviceFailed ? (
         <Alert
           type="warning"
           showIcon
-          message="Không tải được nhật ký lệnh thiết bị."
-          description={commandError?.message}
+          message="Không tải được nhật ký thiết bị."
+          description={deviceError?.message}
         />
-      ) : commandLoading && !allCommandsData ? (
+      ) : deviceLoading && !deviceCycles ? (
         <Skeleton active paragraph={{ rows: 6 }} />
       ) : (
         <>
           <SessionMappedFloorList floors={mappedFloors} />
-          <SessionCommandTable commands={commands} loading={commandLoading} />
+          <SessionDeviceCycleTable
+            cycles={deviceCycles ?? []}
+            loading={deviceLoading || mappingLoading}
+          />
         </>
       )}
     </Flex>
@@ -402,13 +667,13 @@ export function SessionIoTHistoryTab({
           type="text"
           size="small"
           icon={<ReloadOutlined />}
-          loading={chartLoading || commandLoading || sensorLoading}
+          loading={chartLoading || sensorLoading || deviceLoading}
           onClick={() => {
             if (view === 'sensors') {
               void refetchChart()
               void refetchSensors()
             } else {
-              void refetchCommands()
+              void refetchDevices()
             }
           }}
         >
@@ -421,10 +686,15 @@ export function SessionIoTHistoryTab({
       {view === 'sensors' &&
         !chartLoading &&
         !chartFailed &&
+        chartReady &&
         (chartPoints?.length ?? 0) === 0 && (
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description="Phiên này chưa có lịch sử cảm biến. Cảm biến chỉ ghi nhận dữ liệu khi thiết bị hoạt động trong suốt phiên."
+            description={
+              sessionEnded
+                ? 'Phiên này không có dữ liệu cảm biến trong khoảng thời gian đã chọn. Dữ liệu môi trường được tổng hợp mỗi 10 phút khi thiết bị hoạt động trong suốt phiên.'
+                : 'Phiên này chưa có lịch sử cảm biến. Dữ liệu môi trường được tổng hợp mỗi 10 phút khi thiết bị hoạt động trong suốt phiên.'
+            }
           />
         )}
     </Flex>

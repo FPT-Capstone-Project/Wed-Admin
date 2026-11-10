@@ -6,6 +6,8 @@ import type {
   LoginRequest,
   LoginResponse,
   MeResponse,
+  RefreshRequest,
+  RefreshResponse,
   ResetPasswordRequest,
 } from '../../../types/auth'
 
@@ -29,6 +31,45 @@ export const authApi = {
       payload,
     )
     return ensureObject<LoginResponse>(response.data)
+  },
+
+  /**
+   * POST /api/auth/refresh — **xoay vòng** refresh token.
+   *
+   * ⚠ BE trả access token mới **và** refresh token mới (rotation) ⇒ refresh
+   *   token cũ bị vô hiệu sau lần dùng đầu tiên. Vì vậy phải lưu **cả hai**
+   *   token mới, không giữ refresh token cũ.
+   *
+   * ⚠ Endpoint này **không** được đi qua interceptor refresh (tránh vòng lặp
+   *   vô hạn) — xem `client.ts`.
+   */
+  async refresh(payload: RefreshRequest): Promise<RefreshResponse | null> {
+    const response = await apiClient.post<unknown>(
+      '/api/auth/refresh',
+      payload,
+    )
+    return ensureObject<RefreshResponse>(response.data)
+  },
+
+  /**
+   * POST /api/auth/logout — thu hồi cả họ refresh token của phiên hiện tại.
+   *
+   * ⚠ **Best-effort**: lỗi không được ném ra — logout ở FE vẫn phải xoá token
+   *   cục bộ dù BE lỗi (mạng chết, refresh token đã hết hạn…).
+   *
+   * ⚠ `accessToken` được truyền **tường minh** vì store xoá storage ngay
+   *   sau khi gọi ⇒ request interceptor sẽ không còn tìm thấy token để gắn
+   *   `Authorization` header.
+   */
+  async logout(payload: {
+    refreshToken: string
+    accessToken?: string | null
+  }): Promise<void> {
+    await apiClient.post<unknown>('/api/auth/logout', { refreshToken: payload.refreshToken }, {
+      headers: payload.accessToken
+        ? { Authorization: `Bearer ${payload.accessToken}` }
+        : undefined,
+    })
   },
 
   /** GET /api/users/me */

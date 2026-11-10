@@ -1,6 +1,7 @@
 import '../sessions-industrial.css'
-import { ExperimentOutlined, ShopOutlined } from '@ant-design/icons'
+import { ExperimentOutlined, PictureOutlined, ShopOutlined } from '@ant-design/icons'
 import {
+  Button,
   Descriptions,
   Drawer,
   Flex,
@@ -12,6 +13,7 @@ import {
 } from 'antd'
 import { useMemo, useState } from 'react'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
+import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import { useAdminCultivationSession } from '../hooks/useAdminCultivationSessions'
 import { toCultivationSession } from '../api/admin-session-mapper'
 import {
@@ -22,7 +24,12 @@ import { resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionStatusTag } from './SessionStatusTag'
 import { useFarmSession, useSpawnInspections } from '../../farm/hooks/useFarm'
 import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
+import { useSessionGallery } from '../hooks/useSessionGallery'
+import { DailyInspectionList } from './DailyInspectionList'
+import { GalleryPhotoGrid } from './GalleryPhotoGrid'
+import { SessionGalleryModal } from './SessionGalleryModal'
 import { SessionIoTHistoryTab } from './SessionIoTHistoryTab'
+import { toSessionFloorKey } from '../utils/session-floor-matching.utils'
 import type { CultivationSession } from '../types/session.types'
 
 interface SessionDetailDrawerProps {
@@ -189,9 +196,28 @@ function SessionDetailContent({
       enabled: activeTab === 'inspections',
     })
 
+  /*
+   * ⚠ **Lazy loading**: kiểm tra khay (giai đoạn 2) + thư viện ảnh tổng hợp
+   *   chỉ tải khi user mở 1 trong 2 tab liên quan ⇒ không tải 2 endpoint ảnh
+   *   khi user mới mở drawer.
+   *
+   * ⚠ Dùng **chung 1 hook** (`useSessionGallery`) cho cả "Kiểm tra khay" lẫn
+   *   "Thư viện ảnh" ⇒ không tạo 2 observer trên cùng 1 query key (TanStack
+   *   Query sẽ chạy 1 request cho mỗi key, nhưng 2 observer vẫn là 2 sub).
+   */
+  const gallery = useSessionGallery(
+    session.session_id,
+    activeTab === 'tray-inspections' || activeTab === 'gallery',
+  )
+
+  /** Mở modal thư viện ảnh — chỉ khi bấm nút (không tự mở). */
+  const [galleryOpen, setGalleryOpen] = useState(false)
+
   /**
-   * Tầng của các khay được gán — fallback cho ngưỡng canh tác khi BE chưa
-   * trả danh sách tầng đã map trong `/iot-history`.
+   * Tầng của các khay được gán — nguồn chuẩn cho các tầng thuộc phiên.
+   *
+   * ⚠ Dùng cho cả biểu đồ môi trường (lọc tầng của phiên) lẫn nhật ký thiết
+   *   bị (gộp log theo tầng).
    */
   const floorIds = useMemo(
     () =>
@@ -202,6 +228,30 @@ function SessionDetailContent({
             .filter((id): id is number => typeof id === 'number'),
         ),
       ],
+    [session.trays],
+  )
+
+  /**
+   * Khoá tầng của phiên — dùng để **khớp** với danh sách tầng của BE.
+   *
+   * ⚠ **Vì sao cần nhiều thông tin hơn `floor_id`?**
+   *   Schema Swagger của `GET /api/iot/floors` **không** khai báo cột
+   *   `floor_id` ⇒ ở runtime cột này có thể thiếu ⇒ ta khớp theo thứ tự:
+   *   `floor_id` → `room_id` + `floor_number` → `master_id` + `node_address` →
+   *   `floor_name`.
+   *
+   *   Xem `utils/session-floor-matching.utils.ts`.
+   */
+  const floorKeys = useMemo(
+    () =>
+      session.trays.map((tray) =>
+        toSessionFloorKey({
+          floor_id: tray.floor_id,
+          room_id: tray.room_id,
+          floor_number: tray.floor_number,
+          floor_name: tray.floor_name,
+        }),
+      ),
     [session.trays],
   )
 
@@ -347,12 +397,97 @@ function SessionDetailContent({
           },
           {
             /*
-             * ⚠ Tab "Lịch sử IoT" — dùng 2 endpoint read-only:
-             *   - `GET .../iot-history/sensors` → biểu đồ nhiệt độ / độ ẩm.
-             *   - `GET .../iot-history`         → nhật ký lệnh thiết bị.
+             * ⚠ Tab "Kiểm tra khay" — **giai đoạn 2** của vòng đời.
+             *
+             *   Nguồn: `GET /api/cultivation-sessions/{sessionId}/daily-inspections`
+             *   (đã gộp mọi trang) ⇒ gồm ảnh của từng lần kiểm tra.
              *
              * ⚠ Chỉ render khi tab đang active ⇒ không gọi API khi user mới
-             *   mở drawer (2 request thừa cho mọi lần xem chi tiết phiên).
+             *   mở drawer.
+             */
+            key: 'tray-inspections',
+            label: 'Kiểm tra khay',
+            children:
+              activeTab === 'tray-inspections' ? (
+                gallery.isLoading ? (
+                  <Skeleton active paragraph={{ rows: 4 }} />
+                ) : gallery.isError ? (
+                  <LoadErrorAlert
+                    error={gallery.error}
+                    resource="lịch sử kiểm tra khay"
+                    onRetry={gallery.refetch}
+                  />
+                ) : (
+                  <DailyInspectionList
+                    inspections={gallery.dailyInspections}
+                    showTrayLabel
+                  />
+                )
+              ) : (
+                <Skeleton active paragraph={{ rows: 4 }} />
+              ),
+          },
+          {
+            /*
+             * ⚠ Tab "Thư viện ảnh" — thư viện ảnh **tổng hợp** xuyên suốt
+             *   vòng đời: giai đoạn 1 (ủ phôi) + giai đoạn 2 (trên khay).
+             *
+             * ⚠ BE chưa có endpoint gộp ⇒ FE gọi 2 endpoint rồi ghép — xem
+             *   `features/sessions/hooks/useSessionGallery.ts`.
+             */
+            key: 'gallery',
+            label: 'Thư viện ảnh',
+            children:
+              activeTab === 'gallery' ? (
+                <Flex vertical gap={12}>
+                  <Flex justify="space-between" align="center" gap={8} wrap>
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      {gallery.stats.total} ảnh từ {gallery.stats.inspectionCount}{' '}
+                      lần kiểm tra (ủ phôi: {gallery.stats.spawnCount} · trên
+                      khay: {gallery.stats.trayCount})
+                    </Typography.Text>
+                    <Button
+                      type="primary"
+                      icon={<PictureOutlined />}
+                      disabled={gallery.stats.total === 0}
+                      onClick={() => setGalleryOpen(true)}
+                    >
+                      Xem thư viện ảnh
+                    </Button>
+                  </Flex>
+                  {gallery.isError ? (
+                    <LoadErrorAlert
+                      error={gallery.error}
+                      resource="thư viện ảnh phiên"
+                      onRetry={gallery.refetch}
+                    />
+                  ) : gallery.isLoading ? (
+                    <Skeleton active paragraph={{ rows: 3 }} />
+                  ) : gallery.photos.length === 0 ? (
+                    <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                      Chưa có ảnh kiểm tra nào trong vòng đời phiên này.
+                    </Typography.Text>
+                  ) : (
+                    <GalleryPhotoGrid
+                      photos={gallery.photos}
+                      onSelect={() => setGalleryOpen(true)}
+                    />
+                  )}
+                </Flex>
+              ) : (
+                <Skeleton active paragraph={{ rows: 4 }} />
+              ),
+          },
+          {
+            /*
+             * ⚠ Tab "Lịch sử IoT" — dùng 2 nhóm endpoint read-only:
+             *   - `GET /api/environment-history/sessions/{sessionId}`
+             *     → lịch sử môi trường (biểu đồ + bảng cảm biến chi tiết).
+             *   - `GET /api/iot/floors/{floorId}/auto-control/logs`
+             *     → nhật ký chu kỳ bật/tắt thiết bị.
+             *
+             * ⚠ Chỉ render khi tab đang active ⇒ không gọi API khi user mới
+             *   mở drawer (request thừa cho mọi lần xem chi tiết phiên).
              */
             key: 'iot-history',
             label: 'Lịch sử IoT',
@@ -361,6 +496,10 @@ function SessionDetailContent({
                 <SessionIoTHistoryTab
                   sessionId={session.session_id}
                   fallbackFloorIds={floorIds}
+                  floorKeys={floorKeys}
+                  sessionStart={session.start_date}
+                  sessionEnd={session.end_date}
+                  sessionStatus={session.status}
                 />
               ) : (
                 <Skeleton active paragraph={{ rows: 4 }} />
@@ -374,6 +513,17 @@ function SessionDetailContent({
         phôi, thu hoạch và chuyển giai đoạn được thực hiện trên ứng dụng của
         nhân viên.
       </Typography.Text>
+
+      <SessionGalleryModal
+        open={galleryOpen}
+        onCancel={() => setGalleryOpen(false)}
+        photos={gallery.photos}
+        stats={gallery.stats}
+        isLoading={gallery.isLoading}
+        error={gallery.error}
+        onRetry={gallery.refetch}
+        contextLabel={`Phiên #${session.session_id}`}
+      />
     </Flex>
   )
 }

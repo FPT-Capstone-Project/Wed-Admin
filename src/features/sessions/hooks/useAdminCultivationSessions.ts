@@ -6,7 +6,9 @@ import {
   fetchAdminCultivationSession,
   fetchAdminCultivationSessions,
   fetchAllAdminCultivationSessions,
+  fetchAllAdminCultivationSessionsDetailed,
   type AdminSessionQuery,
+  type AllAdminCultivationSessionsResult,
 } from '../api/admin-session.api'
 import type {
   AdminCultivationSessionDto,
@@ -23,6 +25,7 @@ export const adminSessionKeys = {
     [...adminSessionKeys.all, 'list', query] as const,
   allItems: (status?: CultivationSessionStatus) =>
     [...adminSessionKeys.all, 'all-items', status ?? 'ALL'] as const,
+  allDetailed: () => [...adminSessionKeys.all, 'all-detailed'] as const,
   details: () => [...adminSessionKeys.all, 'detail'] as const,
   detail: (sessionId: number) =>
     [...adminSessionKeys.details(), sessionId] as const,
@@ -69,6 +72,29 @@ export function useAllAdminCultivationSessions(
     queryKey: adminSessionKeys.allItems(status),
     queryFn: () =>
       fetchAllAdminCultivationSessions({ status, pageSize: 100 }),
+    placeholderData: (prev) => prev,
+    staleTime: 30_000,
+    ...options,
+  })
+}
+
+/**
+ * Danh sách **toàn bộ** phiên (đã gộp mọi trang server-side) + cờ "đã tải đủ".
+ *
+ * ⚠ Dùng cho trang "Đơn đặt từ App" vì cần **toàn bộ** phiên của mỗi đơn để
+ *   suy ra trạng thái đơn (đơn bị kẹt "Đang xử lý" dù phiên đã
+ *   `COMPLETED` — xem `derive-order-status.ts`).
+ *
+ * ⚠ `complete = false` ⇒ đã vượt giới hạn trang ⇒ **không** kết luận "mọi phiên
+ *   của đơn đã hoàn tất" được.
+ */
+export function useAllAdminCultivationSessionsDetailed(
+  options?: Partial<UseQueryOptions<AllAdminCultivationSessionsResult, Error>>,
+) {
+  return useQuery<AllAdminCultivationSessionsResult, Error>({
+    queryKey: adminSessionKeys.allDetailed(),
+    queryFn: () =>
+      fetchAllAdminCultivationSessionsDetailed({ pageSize: 100 }),
     placeholderData: (prev) => prev,
     staleTime: 30_000,
     ...options,

@@ -28,21 +28,22 @@ import { useMemo } from 'react'
 import {
   buildAxisTicks,
   resolveAxisDomain,
-  SENSOR_TIME_RANGE_BUCKET_MINUTES,
+  ENVIRONMENT_HISTORY_BUCKET_MINUTES,
   SENSOR_TIME_RANGE_OPTIONS,
-  SENSOR_TIME_RANGE_USES_SERVER_AGGREGATE,
-  type SessionClimatePoint,
   type SessionSensorTimeRange,
 } from '../utils/session-sensor-aggregation.utils'
+import type { SessionClimatePoint } from '../utils/session-environment-aggregation.utils'
 
 /**
  * Biểu đồ lịch sử cảm biến của một phiên canh tác.
  *
- * ⚠ Nguồn dữ liệu (xem `hooks/useSessionIoTHistory.ts` → `useSessionSensorChart`):
- *   - `1h` → `GET /api/cultivation-sessions/admin/{sessionId}/iot-history/sensors`
- *     (dữ liệu thô, gom 1 phút/điểm tại FE).
- *   - `6h/12h/24h` → `GET /api/analytics/dashboard/environment-history`
- *     (BE gộp sẵn 15 phút/điểm — 1 request phủ trọn cửa sổ).
+ * ⚠ Nguồn dữ liệu (duy nhất): `GET /api/environment-history/sessions/{sessionId}`
+ *   (xem `hooks/useSessionEnvironmentHistory.ts` → `useSessionEnvironmentChart`).
+ *
+ *   BE đã **gỡ bỏ** endpoint cũ
+ *   `/api/cultivation-sessions/admin/{sessionId}/iot-history/sensors`
+ *   (commit `4e136253`) ⇒ nay chỉ còn nguồn **Environment History**, đã gộp
+ *   sẵn **10 phút/tầng**.
  *
  * Quy ước hiển thị (đồng nhất với `features/dashboard/components/EnvironmentChart.tsx`):
  *   - Trục tung **trái**  = nhiệt độ (°C) — đường liền, **đỏ**.
@@ -58,15 +59,9 @@ import {
  *   tầng thì dùng ngưỡng **chung** (hợp nhất các tầng) để không bị mất cảnh
  *   báo.
  *
- * ⚠ **Trục hoành cố định theo cửa sổ thời gian cho 6h/12h/24h**:
+ * ⚠ **Trục hoành cố định theo cửa sổ thời gian**:
  *   nếu co theo min/max dữ liệu, biểu đồ sẽ "co cụm" về vài chút cuối cùng
  *   (lỗi đã gặp: chọn 6 giờ nhưng trục chỉ hiện 21:30–22:00).
- *   Riêng 1h co theo dữ liệu thực tế để trải đường line trên toàn biểu đồ.
- *
- * ⚠ **Gom theo nhóm thời gian** (xem `utils/session-sensor-aggregation.utils.ts`):
- *   3 cảm biến × mỗi 5 giây ⇒ ~36 điểm/phút ⇒ vẽ thẳng sẽ thành đường
- *   răng cưa dạng sọc đứng. Bảng "Dữ liệu cảm biến chi tiết" bên dưới giữ
- *   **log gốc**.
  */
 
 /** Một điểm đã chuẩn hoá cho biểu đồ. */
@@ -106,6 +101,15 @@ export interface SessionSensorChartProps {
    *   hoạt fetch lại, không chỉ re-render.
    */
   timeRange: SessionSensorTimeRange
+  /**
+   * Mốc **neo** của cửa sổ (epoch ms) — dùng cho **phiên đã kết thúc**.
+   *
+   * ⚠ `null` ⇒ trục tính từ `now` (phiên đang chạy).
+   *
+   * ⚠ Phải **khớp** với anchor mà hook `useSessionEnvironmentChart` dùng để
+   *   gọi API ⇒ nếu lệch, trục sẽ không trùng với vùng dữ liệu đã tải.
+   */
+  anchorEnd?: number | null
   /** Callback khi đổi khoảng thời gian. */
   onTimeRangeChange: (range: SessionSensorTimeRange) => void
   /**
@@ -121,6 +125,7 @@ export function SessionSensorChart({
   points: climatePoints,
   thresholdsByFloor,
   timeRange,
+  anchorEnd = null,
   onTimeRangeChange,
   loading = false,
 }: SessionSensorChartProps) {
@@ -185,44 +190,36 @@ export function SessionSensorChart({
   }, [climatePoints, thresholdsByFloor, sharedThresholds])
 
   /**
-   * **Domain trục hoành CỐ ĐỊNH cho 6h/12h/24h** theo cửa sổ đã chọn.
+   * **Domain trục hoành CỐ ĐỊNH** theo cửa sổ đã chọn.
    *
-   * ⚠ Các mốc dài không dùng `['dataMin', 'dataMax']` — trục sẽ co theo dữ liệu
-   *   thực có ⇒ khi dữ liệu chỉ phủ 30 phút cuối, trục chỉ hiện 30 phút đó
-   *   (đúng lỗi "co cụm": chọn 6 giờ nhưng trục chỉ hiện 21:30–22:00).
+   * ⚠ Không dùng `['dataMin', 'dataMax']` — trục sẽ co theo dữ liệu thực có ⇒
+   *   khi dữ liệu chỉ phủ 30 phút cuối, trục chỉ hiện 30 phút đó (đúng lỗi
+   *   "co cụm": chọn 6 giờ nhưng trục chỉ hiện 21:30–22:00).
    *
    * ⚠ **Padding 1 phút mỗi mép**: điểm dữ liệu nằm **đúng** trên mép domain
-   *   (mốc `:00`/`:15`/`:30`/`:45` của bucket BE) sẽ bị Recharts cắt mất một
-   *   nửa ⇒ mép phải (mốc `now`) "mất" luôn. Padding nhỏ giữ trọn điểm mà
-   *   không làm lệch cửa sổ hiển thị (1 phút trên cửa sổ 6–24 giờ).
-   *   Riêng 1h dùng min/max dữ liệu và padding 10px trên XAxis.
+   *   (mốc tròn 10 phút của bucket BE) sẽ bị Recharts cắt mất một nửa ⇒ mép
+   *   phải (mốc `now`) "mất" luôn. Padding nhỏ giữ trọn điểm mà không làm lệch
+   *   cửa sổ hiển thị (1 phút trên cửa sổ 1–24 giờ).
    *
    *   ⚠ Padding **chỉ** áp dụng cho domain của biểu đồ, **không** áp dụng cho
-   *     cửa sổ gọi API — BE giới hạn `to - from ≤ 24h` ⇒ cửa sổ fetch phải
-   *     đúng 24 giờ, không được nới rộng thêm.
+   *     cửa sổ gọi API — cửa sổ fetch phải đúng số giờ đã chọn (xem
+   *     `resolveTimeRangeWindow`).
    */
   const xDomain = useMemo<[number, number]>(
-    () => resolveAxisDomain(timeRange),
-    [timeRange],
+    () => resolveAxisDomain(timeRange, new Date(), anchorEnd),
+    [timeRange, anchorEnd],
   )
 
   /**
-   * Mốc 1h lấy tối đa 5 nhãn trải đều theo chỉ số các điểm đo thực tế.
-   * Các mốc dài trải đều suốt cửa sổ, độc lập dữ liệu.
+   * Mốc trục hoành trải đều suốt cửa sổ — **độc lập dữ liệu**.
    *
    * ⚠ 5 mốc: `start`, `start + 1/4`, …, `end` ⇒ mốc 6 giờ lúc 22:00 sẽ là
    *   16:00 · 17:30 · 19:00 · 20:30 · 22:00.
    */
-  const xTicks = useMemo(() => {
-    if (timeRange !== '1h') return buildAxisTicks(timeRange)
-
-    const timestamps = [...new Set(points.map((point) => point.timestamp))]
-    if (timestamps.length <= 5) return timestamps
-
-    return Array.from({ length: 5 }, (_, index) =>
-      timestamps[Math.round((index * (timestamps.length - 1)) / 4)],
-    )
-  }, [points, timeRange])
+  const xTicks = useMemo(
+    () => buildAxisTicks(timeRange, new Date(), anchorEnd),
+    [timeRange, anchorEnd],
+  )
 
   // Domain trục Y suy ra từ dữ liệu thật (bước 1/2/5×10ⁿ) — không hardcode.
   const temperatureAxis = useMemo(
@@ -289,8 +286,7 @@ export function SessionSensorChart({
             <XAxis
               dataKey="timestamp"
               type="number"
-              domain={timeRange === '1h' ? ['dataMin', 'dataMax'] : xDomain}
-              padding={timeRange === '1h' ? { left: 10, right: 10 } : undefined}
+              domain={xDomain}
               ticks={xTicks}
               /*
                * ⚠ `interval="preserveStartEnd"` ⇒ giữ **đủ 5 mốc** đã tính.
@@ -300,7 +296,7 @@ export function SessionSensorChart({
                */
               interval="preserveStartEnd"
               tickFormatter={(value: number) =>
-                formatAxisTimestamp(value, timeRange !== '1h' && value === xTicks[0])
+                formatAxisTimestamp(value, value === xTicks[0])
               }
               minTickGap={20}
               tick={chartTickStyle}
@@ -380,13 +376,11 @@ export function SessionSensorChart({
 
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>
         {/*
-         * ⚠ Mốc dài dùng nguồn **BE gộp sẵn** (15 phút/điểm) ⇒ không nói
-         *   "trung bình theo phút" (sai), nói đúng nhóm thời gian thực tế.
-         */}
-        {SENSOR_TIME_RANGE_USES_SERVER_AGGREGATE[timeRange]
-          ? `Giá trị hiển thị là trung bình theo nhóm 15 phút của ${points.length} nhóm lần đo trong khoảng đã chọn.`
-          : `Giá trị hiển thị là trung bình theo nhóm ${SENSOR_TIME_RANGE_BUCKET_MINUTES[timeRange]} phút của ${points.length} nhóm lần đo trong khoảng đã chọn.`}{' '}
-        Bảng bên dưới giữ log gốc từng lần đo.
+          ⚠ Nguồn **BE gộp sẵn** (10 phút/tầng) ⇒ nói đúng nhóm thời gian
+          *   thực tế, không nói "trung bình theo phút" (sai).
+          */}
+        {`Giá trị hiển thị là trung bình theo nhóm ${ENVIRONMENT_HISTORY_BUCKET_MINUTES} phút của ${points.length} nhóm lần đo trong khoảng đã chọn.`}{' '}
+        Bảng bên dưới giữ chi tiết từng nhóm theo tầng.
       </Typography.Text>
     </Flex>
   )

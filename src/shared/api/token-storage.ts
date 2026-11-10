@@ -79,6 +79,20 @@ function readRefreshToken(): string | null {
   )
 }
 
+/**
+ * Chế độ lưu **đang dùng** — suy ra từ nơi access token đang nằm.
+ *
+ * ⚠ Cần cho luồng refresh token: sau khi xoay vòng, token mới phải được ghi
+ *   **về đúng chỗ** cũ (localStorage nếu user tích "Ghi nhớ đăng nhập",
+ *   sessionStorage nếu không) ⇒ nếu ghi nhầm chỗ, phiên "ghi nhớ" sẽ mất
+ *   khi đóng tab (và ngược lại, phiên ngắn sẽ sống dai bất thường).
+ *
+ *   Ưu tiên `local` vì `readAccessToken` cũng ưu tiên `local` ⇒ nhất quán.
+ */
+function readPersistence(): TokenPersistence {
+  return readKey(ACCESS_TOKEN_KEY, 'local') ? 'local' : 'session'
+}
+
 export const tokenStorage = {
   /**
    * Token truy cập — ưu tiên `localStorage`, fallback `sessionStorage`.
@@ -93,6 +107,16 @@ export const tokenStorage = {
   /** Token refresh — cùng quy tắc ưu tiên với `getAccessToken`. */
   getRefreshToken(): string | null {
     return readRefreshToken()
+  },
+
+  /**
+   * Chế độ lưu đang dùng (`'local'` | `'session'`).
+   *
+   * ⚠ Dùng khi xoay vòng refresh token để ghi token mới **về đúng** storage
+   *   của phiên đang chạy (xem `readPersistence`).
+   */
+  getPersistence(): TokenPersistence {
+    return readPersistence()
   },
 
   /**

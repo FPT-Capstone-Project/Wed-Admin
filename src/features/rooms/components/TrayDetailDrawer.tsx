@@ -31,6 +31,8 @@ import { RentalLifecycleSection } from './RentalLifecycleSection'
 import { SessionStatusTag } from '../../sessions/components/SessionStatusTag'
 import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
 import { useSpawnInspections } from '../../farm/hooks/useFarm'
+import { DailyInspectionList } from '../../sessions/components/DailyInspectionList'
+import { useTrayDailyInspections } from '../../sessions/hooks/useSessionInspections'
 import { ACTIVE_SESSION_STATUSES } from '../../sessions/types/session.types'
 import { TrayStatusTag } from './TrayStatusTag'
 
@@ -157,6 +159,41 @@ export function TrayDetailDrawer({
 
   const { data: inspections, isLoading: inspectionsLoading, isError: inspectionsError, error: inspectionError, refetch: refetchInspections } =
     useSpawnInspections(session?.session_id ?? null)
+
+  /**
+   * `session_tray_id` của khay này trong phiên.
+   *
+   * ⚠ **Khoá khác nhau**:
+   *   - `tray_id` → `cultivation_trays.tray_id` (khay **vật lý**).
+   *   - `session_tray_id` → `cultivation_session_trays.session_tray_id`
+   *     (lần **gán khay vào phiên**).
+   *
+   *   Endpoint kiểm tra khay dùng `session_tray_id` ⇒ phải tra theo `tray_id`
+   *   trong `session.trays[]` để lấy khoá đúng.
+   */
+  const sessionTrayId = useMemo(() => {
+    if (!session) return null
+    const match = session.trays.find((tray) => tray.tray_id === trayNumericId)
+    return match?.session_tray_id ?? null
+  }, [session, trayNumericId])
+
+  /**
+   * Lịch sử kiểm tra **chỉ của khay này** (giai đoạn 2) + ảnh.
+   *
+   * ⚠ Nguồn:
+   *   `GET /api/cultivation-sessions/{sessionId}/trays/{sessionTrayId}/daily-inspections`
+   *
+   * ⚠ Nghiệp vụ chỉ quan tâm ảnh **từ lúc phôi được gán lên khay** ⇒ BE
+   *   đã lọc theo `session_tray_id` nên mọi lần kiểm tra trả về đều nằm
+   *   trong khoảng thời gian phôi nằm trên khay này.
+   */
+  const {
+    data: dailyInspections,
+    isLoading: dailyInspectionsLoading,
+    isError: dailyInspectionsError,
+    error: dailyInspectionsErrorDetail,
+    refetch: refetchDailyInspections,
+  } = useTrayDailyInspections(session?.session_id ?? null, sessionTrayId)
 
   /**
    * Ngày dùng để tính vòng đời canh tác.
@@ -368,6 +405,40 @@ export function TrayDetailDrawer({
               <SpawnInspectionList inspections={inspections?.inspections ?? []} />
             )}
           </InfoCard>
+
+          {/*
+            * ⚠ Lịch sử kiểm tra **trên khay này** (giai đoạn 2) + ảnh.
+            *
+            *   Nguồn: `GET /api/cultivation-sessions/{sessionId}/trays/{sessionTrayId}/daily-inspections`
+            *
+            * ⚠ Chỉ hiện khi tra được `session_tray_id` (khoá gán khay trong
+            *   phiên) — `useSessions` (luồng farm) **không** trả khoá này nên
+            *   nếu thiếu thì bỏ qua card thay vì gọi sai endpoint.
+            */}
+          {sessionTrayId !== null && (
+            <InfoCard
+              icon={<ExperimentOutlined />}
+              title="Lịch sử kiểm tra trên khay"
+              subtitle={`Chỉ ảnh kiểm tra phát sinh từ khi phôi được gán lên khay này · ${
+                dailyInspections?.pagination.total ?? 0
+              } lần kiểm tra`}
+            >
+              {dailyInspectionsLoading ? (
+                <Spin tip="Đang tải lịch sử kiểm tra khay..." />
+              ) : dailyInspectionsError ? (
+                <LoadErrorAlert
+                  error={dailyInspectionsErrorDetail}
+                  resource="lịch sử kiểm tra khay"
+                  onRetry={refetchDailyInspections}
+                />
+              ) : (
+                <DailyInspectionList
+                  inspections={dailyInspections?.inspections ?? []}
+                  emptyDescription="Chưa có lần kiểm tra nào trên khay này."
+                />
+              )}
+            </InfoCard>
+          )}
         </div>
       )
     }

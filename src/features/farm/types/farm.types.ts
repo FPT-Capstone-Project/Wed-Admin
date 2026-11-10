@@ -92,8 +92,21 @@ export interface SpawnInspection {
   next_check_at?: string | null
   /** Danh sách ảnh Cloudinary kèm theo lần kiểm tra. */
   images?: SpawnInspectionImage[]
+  /**
+   * Mốc thời gian kiểm tra (ISO).
+   *
+   * ⚠ BE trả cột `inspected_at` — normalizer map sang `checked_at`.
+   */
   checked_at?: string | null
   created_at?: string | null
+  /** Người thực hiện kiểm tra (`users.full_name`). */
+  inspected_by_name?: string | null
+  /**
+   * Giai đoạn ủ phôi tại thời điểm kiểm tra.
+   *
+   * ⚠ BE trả 2 giá trị: `RESTING` / `MYCELIAL_DEVELOPMENT`.
+   */
+  stage?: string | null
 }
 
 /** Kết quả `GET /api/farm/sessions/{id}/spawn-inspections`. */

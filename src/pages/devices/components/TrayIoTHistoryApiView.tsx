@@ -80,9 +80,16 @@ export function TrayIoTHistoryApiView() {
     [masters],
   )
 
-  // Lấy sensors để biết phạm vi node/sensor hợp lệ
+  /**
+   * Lấy sensors để biết phạm vi node/sensor hợp lệ.
+   *
+   * ⚠ Chỉ dùng để **danh sách tag** (phạm vi chọn) — không hiển thị số liệu
+   *   live ⇒ **tắt polling** ⇒ tránh gọi API mỗi chu kỳ chỉ để lấy danh sách
+   *   (mà danh sách này hầu như không đổi).
+   */
   const { data: sensorsResp } = useMasterSensors(
     primaryMaster?.masterId ?? null,
+    { refetchInterval: false },
   )
   const availableSensors = sensorsResp?.sensors ?? []
 

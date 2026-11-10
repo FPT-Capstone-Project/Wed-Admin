@@ -1,24 +1,26 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  aggregateReadingsByBucket,
   buildAxisTicks,
-  mergeFloorClimatePoints,
   resolveAxisDomain,
   resolveTimeRangeWindow,
-  SENSOR_TIME_RANGE_BUCKET_MINUTES,
-  SENSOR_TIME_RANGE_USES_SERVER_AGGREGATE,
+  ENVIRONMENT_HISTORY_BUCKET_MINUTES,
 } from '../src/features/sessions/utils/session-sensor-aggregation.utils.ts'
+import {
+  environmentRecordsToClimatePoints,
+  filterEnvironmentRecordsByWindow,
+  mergeFloorClimatePoints,
+} from '../src/features/sessions/utils/session-environment-aggregation.utils.ts'
 
 const NOW = new Date('2026-11-07T22:07:00+07:00')
 
-test('time window is exactly the selected range and aligned to 15 minutes', () => {
+test('time window is exactly the selected range and aligned to 10 minutes', () => {
   for (const [range, hours] of [['1h', 1], ['6h', 6], ['12h', 12], ['24h', 24]]) {
     const { start, end } = resolveTimeRangeWindow(range, NOW)
     assert.equal(end - start, hours * 60 * 60 * 1000)
-    // BE rejects windows longer than 24h — align to 15m keeps it exactly 24h.
     assert.ok(end <= NOW.getTime())
-    assert.equal(end % (15 * 60_000), 0)
+    // BE buckets are aligned on 10-minute boundaries (date_bin '10 minutes').
+    assert.equal(end % (10 * 60_000), 0)
   }
 })
 
@@ -65,34 +67,118 @@ test('axis ticks stay inside the domain so no mark is clipped', () => {
   }
 })
 
-test('bucket size grows with the range so point count stays bounded', () => {
-  assert.equal(SENSOR_TIME_RANGE_BUCKET_MINUTES['1h'], 1)
-  assert.equal(SENSOR_TIME_RANGE_BUCKET_MINUTES['6h'], 5)
-  assert.equal(SENSOR_TIME_RANGE_BUCKET_MINUTES['12h'], 10)
-  assert.equal(SENSOR_TIME_RANGE_BUCKET_MINUTES['24h'], 15)
-
-  // Long ranges use the server-aggregated source (1 request, full window).
-  assert.equal(SENSOR_TIME_RANGE_USES_SERVER_AGGREGATE['1h'], false)
-  assert.equal(SENSOR_TIME_RANGE_USES_SERVER_AGGREGATE['6h'], true)
-  assert.equal(SENSOR_TIME_RANGE_USES_SERVER_AGGREGATE['24h'], true)
+test('environment history bucket size matches the 10-minute BE aggregation', () => {
+  assert.equal(ENVIRONMENT_HISTORY_BUCKET_MINUTES, 10)
 })
 
-test('raw readings are grouped into stable hour-aligned buckets', () => {
-  const readings = [
-    { reading_id: 1, received_at: '2026-11-07T21:00:10+07:00', measured_at: null, temperature: 20, humidity: 80, sensor_id: 1, node_address: 1, master_id: 'm', floor_id: 1, floor_name: 'Tầng 1', is_valid: true, retained: false },
-    { reading_id: 2, received_at: '2026-11-07T21:00:40+07:00', measured_at: null, temperature: 24, humidity: null, sensor_id: 2, node_address: 1, master_id: 'm', floor_id: 1, floor_name: 'Tầng 1', is_valid: true, retained: false },
-    { reading_id: 3, received_at: '2026-11-07T21:03:00+07:00', measured_at: null, temperature: null, humidity: 90, sensor_id: 3, node_address: 1, master_id: 'm', floor_id: 2, floor_name: 'Tầng 2', is_valid: true, retained: false },
+test('environment records are grouped by period_start and averaged per metric', () => {
+  const points = environmentRecordsToClimatePoints([
+    {
+      session_id: 1,
+      floor_id: 1,
+      period_start: '2026-11-07T14:00:00.000Z',
+      period_end: '2026-11-07T14:10:00.000Z',
+      growth_stage: 'PINNING',
+      temperature_avg: 20,
+      humidity_avg: 80,
+    },
+    {
+      session_id: 1,
+      floor_id: 2,
+      period_start: '2026-11-07T14:00:00.000Z',
+      period_end: '2026-11-07T14:10:00.000Z',
+      growth_stage: 'PINNING',
+      temperature_avg: 24,
+      humidity_avg: null,
+    },
+    {
+      session_id: 1,
+      floor_id: 1,
+      period_start: '2026-11-07T14:10:00.000Z',
+      period_end: '2026-11-07T14:20:00.000Z',
+      growth_stage: 'PINNING',
+      temperature_avg: null,
+      humidity_avg: 90,
+    },
+  ])
+
+  assert.equal(points.length, 2, 'two distinct 10-minute buckets')
+
+  const first = points[0]
+  assert.equal(first.temperature, 22, 'averaged per metric — humidity is not polluted')
+  assert.equal(first.humidity, 80, 'a floor without humidity does not dilute the other')
+  assert.equal(first.sampleCount, 2, 'two floors contributed temperature samples')
+  assert.equal(first.serverAggregated, true)
+  assert.deepEqual(first.floorIds.sort(), [1, 2])
+
+  const second = points[1]
+  assert.equal(second.temperature, null, 'no sample ⇒ null, never 0')
+  assert.equal(second.humidity, 90)
+})
+
+test('floor labels are resolved from the floor id map', () => {
+  const labels = new Map([[1, 'Tầng 1']])
+  const [point] = environmentRecordsToClimatePoints(
+    [
+      {
+        session_id: 1,
+        floor_id: 1,
+        period_start: '2026-11-07T14:00:00.000Z',
+        period_end: '2026-11-07T14:10:00.000Z',
+        growth_stage: 'PINNING',
+        temperature_avg: 25,
+        humidity_avg: 82,
+      },
+    ],
+    labels,
+  )
+  assert.deepEqual(point.floorLabels, ['Tầng 1'])
+})
+
+test('records without a valid period_start are skipped', () => {
+  const points = environmentRecordsToClimatePoints([
+    {
+      session_id: 1,
+      floor_id: 1,
+      period_start: null,
+      period_end: null,
+      growth_stage: null,
+      temperature_avg: 25,
+      humidity_avg: 82,
+    },
+  ])
+  assert.equal(points.length, 0)
+})
+
+test('records are filtered by the [start, end] window', () => {
+  const records = [
+    {
+      session_id: 1,
+      floor_id: 1,
+      period_start: '2026-11-07T13:00:00.000Z',
+      period_end: '2026-11-07T13:10:00.000Z',
+      growth_stage: 'PINNING',
+      temperature_avg: 20,
+      humidity_avg: 80,
+    },
+    {
+      session_id: 1,
+      floor_id: 1,
+      period_start: '2026-11-07T14:00:00.000Z',
+      period_end: '2026-11-07T14:10:00.000Z',
+      growth_stage: 'PINNING',
+      temperature_avg: 25,
+      humidity_avg: 85,
+    },
   ]
 
-  const points = aggregateReadingsByBucket(readings, 5)
-  assert.equal(points.length, 1, '3 samples inside one 5-minute bucket')
-
-  const point = points[0]
-  assert.equal(point.temperature, 22, 'averaged per metric — humidity is not polluted')
-  assert.equal(point.humidity, 85)
-  assert.equal(point.sampleCount, 3)
-  assert.equal(point.serverAggregated, false)
-  assert.deepEqual(point.floorIds.sort(), [1, 2])
+  const filtered = filterEnvironmentRecordsByWindow(
+    records,
+    Date.parse('2026-11-07T13:30:00.000Z'),
+    Date.parse('2026-11-07T14:30:00.000Z'),
+  )
+  assert.equal(filtered.length, 1)
+  assert.equal(filtered[0].temperature_avg, 25)
 })
 
 test('server-aggregated floors merge per timestamp and metric', () => {
