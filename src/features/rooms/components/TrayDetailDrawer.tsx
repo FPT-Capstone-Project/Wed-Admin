@@ -1,6 +1,7 @@
+import { formatDate } from '../../../shared/utils/date'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import '../rooms-industrial.css'
-import { MetadataBadge } from '../../../shared/ui'
+import { EmptyState, MetadataBadge } from '../../../shared/ui'
 import {
   ApiOutlined,
   CalendarOutlined,
@@ -35,6 +36,8 @@ import { DailyInspectionList } from '../../sessions/components/DailyInspectionLi
 import { useTrayDailyInspections } from '../../sessions/hooks/useSessionInspections'
 import { ACTIVE_SESSION_STATUSES } from '../../sessions/types/session.types'
 import { TrayStatusTag } from './TrayStatusTag'
+import { PAYMENT_STATUS_DICTIONARY } from '../../../shared/i18n/status/order'
+import { presentStatus } from '../../../shared/i18n/status/registry'
 
 interface TrayDetailDrawerProps {
   trayId: string | null
@@ -42,16 +45,6 @@ interface TrayDetailDrawerProps {
   currentDate?: Date
 }
 
-const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-})
-function fmtDate(v: string | null | undefined) {
-  if (!v) return '—'
-  const d = new Date(v)
-  return Number.isNaN(d.getTime()) ? v : DATE_FMT.format(d)
-}
 
 // ── Info Card helper ─────────────────────────────────────────────────────────
 interface InfoCardProps {
@@ -153,9 +146,9 @@ export function TrayDetailDrawer({
     if (sessionsError) return null
     const items = sessionsData?.items ?? []
     return (
-      items.find((s) => ACTIVE_SESSION_STATUSES.has(s.status)) ?? (apiTray?.status === 'rented' ? null : items[0] ?? null)
+      items.find((s) => ACTIVE_SESSION_STATUSES.has(s.status)) ?? null
     )
-  }, [sessionsData, sessionsError, apiTray?.status])
+  }, [sessionsData, sessionsError])
 
   const { data: inspections, isLoading: inspectionsLoading, isError: inspectionsError, error: inspectionError, refetch: refetchInspections } =
     useSpawnInspections(session?.session_id ?? null)
@@ -299,8 +292,10 @@ export function TrayDetailDrawer({
               <SessionStatusTag status={session.status} />
               {session.payment_status && (
                 <StatusBadge
-                  tone={session.payment_status === 'PAID' ? 'ok' : 'warning'}
-                  label={session.payment_status}
+                  {...presentStatus(
+                    PAYMENT_STATUS_DICTIONARY,
+                    session.payment_status,
+                  )}
                 />
               )}
             </Flex>
@@ -365,11 +360,11 @@ export function TrayDetailDrawer({
               </Descriptions.Item>
 
               <Descriptions.Item label={<><CalendarOutlined /> Bắt đầu</>}>
-                {fmtDate(session.start_date)}
+                {formatDate(session.start_date)}
               </Descriptions.Item>
 
               <Descriptions.Item label="Kết thúc">
-                {fmtDate(session.expected_harvest_date ?? session.end_date)}
+                {formatDate(session.expected_harvest_date ?? session.end_date)}
               </Descriptions.Item>
 
               <Descriptions.Item label="Phòng / Tầng" span={2}>
@@ -462,7 +457,7 @@ export function TrayDetailDrawer({
             <TrayStatusTag status={apiTray.status} />
           </Flex>
         </InfoCard>
-        {apiTray.status === 'rented' ? occupiedNotice : !sessionsError && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Khay chưa có phiên canh tác nào đang chạy." />}
+        {!sessionsError && <EmptyState title="Khay hiện chưa được gán cho phiên canh tác nào" />}
         {sessionsError && <LoadErrorAlert error={sessionError} resource="dữ liệu phiên của khay" onRetry={refetchSessions} />}
       </div>
     )

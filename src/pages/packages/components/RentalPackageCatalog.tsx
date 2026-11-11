@@ -11,10 +11,12 @@ import {
 import {
   App,
   Button,
+  Card,
   Empty,
   Flex,
   Input,
   Segmented,
+  Skeleton,
   Space,
   Tooltip,
   Typography,
@@ -41,6 +43,8 @@ import {
   isRentalPackageInUseError,
   RENTAL_PACKAGE_IN_USE_MESSAGE,
 } from '../../../features/packages/hooks/useRentalPackages'
+import { CATALOG_STATUS_DICTIONARY } from '../../../shared/i18n/status/package'
+import { presentStatus } from '../../../shared/i18n/status/registry'
 
 const VND = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -54,16 +58,10 @@ interface RentalPackageCatalogProps {
   canManage: boolean
 }
 
-/** Trạng thái gói → tone ngữ nghĩa chuẩn (dùng StatusBadge, không dùng Tag). */
-const STATUS_TONE: Record<RentalPackageStatus, 'ok' | 'muted'> = {
-  ACTIVE: 'ok',
-  INACTIVE: 'muted',
-}
-
-const STATUS_LABEL: Record<RentalPackageStatus, string> = {
-  ACTIVE: 'Đang nhận đơn',
-  INACTIVE: 'Tạm ngưng',
-}
+/**
+ * ⚠ Nhãn + tone lấy từ **module trung tâm**
+ *   (`src/shared/i18n/status/package.ts`) ⇒ 1 nguồn sự thật.
+ */
 
 export function RentalPackageCatalog({
   canManage,
@@ -73,6 +71,7 @@ export function RentalPackageCatalog({
   const {
     data: packages = [],
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
@@ -224,8 +223,7 @@ export function RentalPackageCatalog({
         const isActive = record.status === 'ACTIVE'
         const badge = (
           <StatusBadge
-            tone={STATUS_TONE[record.status]}
-            label={STATUS_LABEL[record.status]}
+            {...presentStatus(CATALOG_STATUS_DICTIONARY, record.status)}
             icon={
               isActive ? (
                 <CheckCircleOutlined aria-hidden="true" />
@@ -378,7 +376,15 @@ export function RentalPackageCatalog({
         </Button>
       </Flex>
 
-      {isError ? (
+      {isLoading && packages.length === 0 ? (
+        <Flex gap={16} wrap aria-label="Đang tải danh sách gói thuê" aria-busy="true">
+          {[0, 1, 2].map((key) => (
+            <Card key={key} style={{ flex: '1 1 240px', minWidth: 0 }}>
+              <Skeleton active paragraph={{ rows: 4 }} />
+            </Card>
+          ))}
+        </Flex>
+      ) : isError ? (
         <Empty
           description={
             <Flex vertical align="center" gap={4}>
@@ -399,6 +405,7 @@ export function RentalPackageCatalog({
           columns={columns}
           rowKey="package_id"
           loading={isLoading}
+          isFetching={isFetching}
           pagination={false}
           scrollX={1000}
           size="small"

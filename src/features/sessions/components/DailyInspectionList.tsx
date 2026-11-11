@@ -1,48 +1,27 @@
+import { formatDate } from '../../../shared/utils/date'
 import { Flex, Image, Tooltip, Typography } from 'antd'
 import { useMemo } from 'react'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
 import { tokens } from '../../../app/theme/tokens'
+import { SESSION_GROWTH_STAGE_DICTIONARY } from '../../../shared/i18n/status/session'
+import { TRAY_CONDITION_DICTIONARY } from '../../../shared/i18n/status/issue'
+import { presentStatus, statusLabel } from '../../../shared/i18n/status/registry'
 import type { DailyInspection } from '../types/session-inspection.types'
+import { formatSessionProgress } from '../utils/session-progress.utils'
 
-const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-})
 
-function fmtDate(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return DATE_FMT.format(date)
-}
-
-/** Nhãn giai đoạn sinh trưởng (BE dùng 4 giá trị — xem `admin-session.types.ts`). */
-const GROWTH_STAGE_LABELS: Record<string, string> = {
-  FRUITING_INITIATION: 'Khởi tạo ra nụ',
-  PINNING: 'Đang ra nụ (pinning)',
-  YOUNG_FRUITING: 'Nấm non',
-  MATURATION: 'Chín kho',
-}
-
-/** Nhãn tình trạng khay / nấm — BE trả string tự do ⇒ map an toàn. */
+/**
+ * Nhãn giai đoạn sinh trưởng — lấy từ **module trung tâm** để khớp với
+ * `admin-session-status.config.ts` (trước đây có 5 bảng trùng lặp với
+ * nhãn khác nhau).
+ */
+/** Nhãn tình trạng khay / nấm — lấy từ **module trung tâm** (an toàn). */
 function pickConditionLabel(value: string | null | undefined): string | null {
   if (!value) return null
   const trimmed = value.trim()
   if (!trimmed) return null
-  const known: Record<string, string> = {
-    GOOD: 'Tốt',
-    NORMAL: 'Bình thường',
-    OK: 'Bình thường',
-    FAIR: 'Khá',
-    POOR: 'Kém',
-    BAD: 'Xấu',
-    MOLDY: 'Mốc',
-    CONTAMINATED: 'Nhiễm khuẩn',
-  }
-  return known[trimmed.toUpperCase()] ?? trimmed
+  // ⚠ `presentStatus` ⇒ enum lạ của BE hiện "Chưa xác định (x)" thay vì lộ raw.
+  return presentStatus(TRAY_CONDITION_DICTIONARY, trimmed, trimmed).label
 }
 
 interface DailyInspectionCardProps {
@@ -57,8 +36,11 @@ interface DailyInspectionCardProps {
  */
 export function DailyInspectionCard({ inspection }: DailyInspectionCardProps) {
   const stageLabel = inspection.growth_stage
-    ? (GROWTH_STAGE_LABELS[inspection.growth_stage.toUpperCase()] ??
-      inspection.growth_stage)
+    ? statusLabel(
+        SESSION_GROWTH_STAGE_DICTIONARY,
+        inspection.growth_stage,
+        inspection.growth_stage,
+      )
     : null
 
   const trayCondition = pickConditionLabel(inspection.tray_condition)
@@ -79,17 +61,15 @@ export function DailyInspectionCard({ inspection }: DailyInspectionCardProps) {
       <Flex justify="space-between" align="center" gap={8} wrap>
         <Flex align="center" gap={8} wrap>
           <Typography.Text strong style={{ fontSize: 13 }}>
-            Kiểm tra {fmtDate(inspection.inspection_date)}
+            Kiểm tra {formatDate(inspection.inspection_date)}
           </Typography.Text>
           {stageLabel && (
             <StatusBadge tone="ok" label={stageLabel} />
           )}
         </Flex>
-        {inspection.growth_progress != null && (
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Tiến độ: {inspection.growth_progress}%
-          </Typography.Text>
-        )}
+        <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          Tiến độ: {formatSessionProgress(inspection.growth_progress)}
+        </Typography.Text>
       </Flex>
 
       <Flex gap={6} wrap>

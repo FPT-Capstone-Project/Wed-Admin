@@ -1,12 +1,18 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Button, Card, Descriptions, Drawer, Empty, Flex, Form, Image, Modal, Popconfirm, Select, Tag, Typography } from 'antd'
+import { Button, Card, Descriptions, Drawer, Empty, Flex, Form, Image, Modal, Popconfirm, Select, Typography } from 'antd'
 import { issuesApi, type Consultation, type Evidence } from '../api/issues.api'
 import { useConsultations, useIssue, useIssueActions, useTreatments } from '../api/issues.queries'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { auditDate } from '../../../shared/ui/audit-format'
+import {
+  ISSUE_STATUS_DICTIONARY,
+  MEDIA_STAGE_DICTIONARY,
+} from '../../../shared/i18n/status/issue'
+import { presentStatus } from '../../../shared/i18n/status/registry'
+import { StatusBadge } from '../../../shared/ui'
 function EvidenceGallery({ media }: { media: Evidence[] }) {
-  return <Image.PreviewGroup><Flex gap={8} wrap>{media.map(item => <div key={item.media_id}>{item.media_stage && <Tag>{item.media_stage}</Tag>}{item.media_type === 'VIDEO' ? <video src={item.media_url} controls preload="none" style={{ width: 180 }} /> : <Image width={140} src={item.media_url} alt={item.caption ?? 'Bằng chứng hiện trường'} />}<Typography.Paragraph>{item.caption}</Typography.Paragraph></div>)}</Flex></Image.PreviewGroup>
+  return <Image.PreviewGroup><Flex gap={8} wrap>{media.map(item => <div key={item.media_id}>{item.media_stage && <StatusBadge {...presentStatus(MEDIA_STAGE_DICTIONARY, item.media_stage)} title="Giai đoạn bằng chứng" />}{item.media_type === 'VIDEO' ? <video src={item.media_url} controls preload="none" style={{ width: 180 }} /> : <Image width={140} src={item.media_url} alt={item.caption ?? 'Bằng chứng hiện trường'} />}<Typography.Paragraph>{item.caption}</Typography.Paragraph></div>)}</Flex></Image.PreviewGroup>
 }
 function TreatmentLog({ id }: { id: number }) {
   const query = useTreatments(id)
@@ -32,7 +38,7 @@ export function IssueDetailDrawer({ id, onClose }: { id: number; onClose: () => 
   return <Drawer open onClose={onClose} title="Hồ sơ Bệnh học & Điều trị" size={800}>
     <QueryFeedback query={query} />
     {!query.isError && issue && <Flex vertical gap={16}>
-      <Descriptions column={1} bordered size="small" items={[{ key: 'id', label: 'Mã ca', children: issue.issue_id }, { key: 'title', label: 'Tên sự cố', children: issue.title }, { key: 'status', label: 'Trạng thái', children: <Tag>{issue.status}</Tag> }, { key: 'session', label: 'Phiên / Khay', children: `${issue.session_id ?? '—'} / ${issue.tray_id ?? '—'}` }]} />
+      <Descriptions column={1} bordered size="small" items={[{ key: 'id', label: 'Mã ca', children: issue.issue_id }, { key: 'title', label: 'Tên sự cố', children: issue.title }, { key: 'status', label: 'Trạng thái', children: <StatusBadge {...presentStatus(ISSUE_STATUS_DICTIONARY, issue.status)} /> }, { key: 'session', label: 'Phiên / Khay', children: `${issue.session_id ?? '—'} / ${issue.tray_id ?? '—'}` }]} />
       <Card size="small" title="Triệu chứng ban đầu"><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{issue.description}</Typography.Paragraph><EvidenceGallery media={issue.media ?? []} /></Card>
       <QueryFeedback query={consultations} />
       {!consultations.isError && consultations.data?.length === 0 && <Empty description="Chưa có yêu cầu tư vấn chuyên gia cho ca bệnh này" />}

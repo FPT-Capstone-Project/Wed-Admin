@@ -146,13 +146,7 @@ export function formatRentalDate(value: string | Date) {
   }).format(parseCalendarDate(value))
 }
 
-export function formatVnd(value: number) {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(value)
-}
+export { formatVND as formatVnd } from '../../../shared/utils/currency'
 
 /**
  * Chuyển `CultivationSession` (BE flat DTO từ

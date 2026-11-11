@@ -1,3 +1,4 @@
+import { formatDate } from '../../shared/utils/date'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import '../../styles/reports-users-industrial.css'
 import { Suspense, useMemo, useState } from 'react'
@@ -18,6 +19,7 @@ import {
   Input,
   Row,
   Select,
+  Skeleton,
   Space,
   Typography,
 } from 'antd'
@@ -27,29 +29,18 @@ import {
   USER_STATUS_OPTIONS,
   getRoleLabel,
 } from '../../features/users/user-status.config'
+import { USER_STATUS_DICTIONARY } from '../../shared/i18n/status/user'
+import { presentStatus } from '../../shared/i18n/status/registry'
 import { useUsers } from '../../features/users/hooks/useUsers'
 import type {
   UserListQuery,
   UserStatus,
   UserWithRole,
 } from '../../types/user.types'
-import type { SemanticTone } from '../../app/theme/tokens'
 import { ActionButton, MetadataBadge, StatCard, StatusBadge, DataTable } from '../../shared/ui'
 import { UserDetailDrawer } from '../../app/router/lazy-modals'
 
 const PAGE_SIZE = 20
-
-const ROLE_BADGE_CONFIG: Record<number, { tone: SemanticTone; label: string }> = {
-  1: { tone: 'info', label: 'Quản trị viên' },
-  2: { tone: 'ok', label: 'Vận hành trang trại' },
-  3: { tone: 'neutral', label: 'Khách thuê khay' },
-}
-
-const USER_STATUS_BADGE_CONFIG: Record<UserStatus, { tone: SemanticTone; label: string }> = {
-  ACTIVE: { tone: 'ok', label: 'Hoạt động' },
-  BLOCKED: { tone: 'danger', label: 'Đã khoá' },
-  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
-}
 
 export function UserManagementPage() {
   const [searchText, setSearchText] = useState('')
@@ -65,13 +56,14 @@ export function UserManagementPage() {
   )
 
   const {
-    data: users = [],
+    data,
     isLoading,
     isFetching,
     isError,
     error,
     refetch,
   } = useUsers(listQuery)
+  const users = useMemo(() => data ?? [], [data])
 
   // BE chỉ hỗ trợ lọc theo roleId → tìm kiếm + lọc status làm phía client.
   const filteredUsers = useMemo(() => {
@@ -178,13 +170,10 @@ export function UserManagementPage() {
         key: 'role_id',
         width: 200,
         render: (roleId: number, user) => {
-          const config = ROLE_BADGE_CONFIG[roleId] ?? {
-            tone: 'neutral',
-            label: getRoleLabel(roleId, user.role_name),
-          }
+          const roleLabel = getRoleLabel(roleId, user.role_name)
           return (
             <Space direction="vertical" size={2}>
-              <MetadataBadge label={config.label} />
+              <MetadataBadge label={roleLabel} />
               {user.role_description && (
                 <Typography.Text
                   type="secondary"
@@ -203,30 +192,16 @@ export function UserManagementPage() {
         dataIndex: 'status',
         key: 'status',
         width: 140,
-        render: (status: UserStatus) => {
-          const config = USER_STATUS_BADGE_CONFIG[status] ?? {
-            tone: 'neutral',
-            label: status,
-          }
-          return <StatusBadge tone={config.tone} label={config.label} />
-        },
+        render: (status: UserStatus) => (
+          <StatusBadge {...presentStatus(USER_STATUS_DICTIONARY, status)} />
+        ),
       },
       {
         title: 'Ngày tạo',
         dataIndex: 'created_at',
         key: 'created_at',
         width: 160,
-        render: (value: string) => {
-          const date = new Date(value)
-
-          return Number.isNaN(date.getTime()) ? (
-            value
-          ) : (
-            new Intl.DateTimeFormat('vi-VN', { dateStyle: 'medium' }).format(
-              date,
-            )
-          )
-        },
+        render: (value: string | null | undefined) => formatDate(value),
       },
       {
         // ⚠ Cột hành động CHỈ có nút "Xem" — web admin ở chế độ chỉ xem:
@@ -344,7 +319,7 @@ export function UserManagementPage() {
         </Button>
       </Flex>
 
-      {isError ? (
+      {isLoading && !data ? <Skeleton active paragraph={{ rows: 8 }} /> : isError ? (
         <Empty
           description={
             <Flex vertical align="center" gap={4}>
@@ -365,6 +340,7 @@ export function UserManagementPage() {
           columns={columns}
           dataSource={filteredUsers}
           loading={isLoading}
+          isFetching={isFetching}
           emptyTitle="Không có tài khoản phù hợp"
           pagination={{
             current: visiblePage,

@@ -9,6 +9,7 @@ import {
   ADMIN_ONLY,
 } from '../../routes/access-policy'
 import { PageFallback } from './PageFallback'
+import { AppErrorBoundary } from '../../shared/ui/AppErrorBoundary'
 import {
   IssueManagementPage,
   HarvestManagementPage,
@@ -35,7 +36,11 @@ import {
 
 /** Bọc một element với Suspense fallback (full-screen PageFallback). */
 function withSuspense(node: ReactElement) {
-  return <Suspense fallback={<PageFallback />}>{node}</Suspense>
+  return (
+    <AppErrorBoundary>
+      <Suspense fallback={<PageFallback />}>{node}</Suspense>
+    </AppErrorBoundary>
+  )
 }
 
 export const router = createBrowserRouter([
@@ -117,6 +122,10 @@ export const router = createBrowserRouter([
       // ── ADMIN + OPERATOR ─────────────────────────────────────────────
       {
         index: true,
+        element: withSuspense(<DashboardPage />),
+      },
+      {
+        path: 'dashboard',
         element: withSuspense(<DashboardPage />),
       },
       {

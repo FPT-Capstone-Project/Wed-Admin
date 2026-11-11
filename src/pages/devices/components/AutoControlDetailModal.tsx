@@ -20,6 +20,13 @@ import type { ColumnsType } from 'antd/es/table'
 import { useMemo } from 'react'
 import { StatusBadge, MetadataBadge, DataTable } from '../../../shared/ui'
 import {
+  AUTO_CONTROL_ACTION_DICTIONARY,
+  AUTO_CONTROL_RUN_STATUS_DICTIONARY,
+  CONTROL_STATE_DICTIONARY,
+  SSR_STATE_DICTIONARY,
+} from '../../../shared/i18n/status/iot'
+import { presentStatus } from '../../../shared/i18n/status/registry'
+import {
   useAutoControlConfiguration,
   useAutoControlLogs,
   useAutoControlStatus,
@@ -387,7 +394,9 @@ export function AutoControlDetailModal({
             {
               key: 'budget',
               label: 'Giới hạn kích hoạt mỗi giờ',
-              children: `${config.max_activations_per_hour ?? '—'} lần`,
+              children: config.max_activations_per_hour == null
+                ? 'Chưa thiết lập'
+                : `${config.max_activations_per_hour} lần`,
             },
             {
               key: 'cumulative',
@@ -483,14 +492,10 @@ export function AutoControlDetailModal({
               children: status?.run ? (
                 <Flex vertical gap={2}>
                   <StatusBadge
-                    tone={
-                      status.run.status === 'RUNNING'
-                        ? 'ok'
-                        : status.run.status === 'FAULT'
-                          ? 'danger'
-                          : 'muted'
-                    }
-                    label={status.run.status}
+                    {...presentStatus(
+                      AUTO_CONTROL_RUN_STATUS_DICTIONARY,
+                      status.run.status,
+                    )}
                   />
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                     {status.run.dry_run
@@ -523,17 +528,10 @@ export function AutoControlDetailModal({
               children: status?.runtime ? (
                 <Flex vertical gap={2}>
                   <StatusBadge
-                    tone={
-                      status.runtime.control_state === 'MISTING'
-                        ? 'ok'
-                        : status.runtime.control_state === 'SENSOR_FAULT' ||
-                            status.runtime.control_state === 'FAULT'
-                          ? 'danger'
-                          : status.runtime.control_state === 'OFF_PENDING'
-                            ? 'warning'
-                            : 'muted'
-                    }
-                    label={status.runtime.control_state}
+                    {...presentStatus(
+                      CONTROL_STATE_DICTIONARY,
+                      status.runtime.control_state,
+                    )}
                   />
                   {status.runtime.last_evaluated_at && (
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -568,13 +566,25 @@ export function AutoControlDetailModal({
               children: status?.ssr ? (
                 <Flex vertical gap={2}>
                   <StatusBadge
-                    tone={
-                      status.ssr.reported_state === 'ON' ? 'ok' : 'muted'
-                    }
-                    label={`Rơ-le: ${status.ssr.reported_state}`}
+                    {...presentStatus(
+                      SSR_STATE_DICTIONARY,
+                      status.ssr.reported_state,
+                    )}
+                    label={`Rơ-le: ${
+                      presentStatus(
+                        SSR_STATE_DICTIONARY,
+                        status.ssr.reported_state,
+                      ).label
+                    }`}
                   />
                   <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                    Trạng thái mong muốn: {status.ssr.desired_state}
+                    Trạng thái mong muốn:{' '}
+                    {
+                      presentStatus(
+                        SSR_STATE_DICTIONARY,
+                        status.ssr.desired_state,
+                      ).label
+                    }
                   </Typography.Text>
                 </Flex>
               ) : (
@@ -602,16 +612,16 @@ export function AutoControlDetailModal({
               children: status?.lastDecision ? (
                 <Flex vertical gap={2}>
                   <StatusBadge
-                    tone={
-                      status.lastDecision.action === 'ON'
-                        ? 'ok'
-                        : status.lastDecision.action === 'FAULT'
-                          ? 'danger'
-                          : 'muted'
-                    }
+                    {...presentStatus(
+                      CONTROL_STATE_DICTIONARY,
+                      status.lastDecision.state,
+                    )}
                     label={
                       status.lastDecision.action
-                        ? `Hành động: ${status.lastDecision.action}`
+                        ? `Hành động: ${presentStatus(
+                            AUTO_CONTROL_ACTION_DICTIONARY,
+                            status.lastDecision.action,
+                          ).label}`
                         : formatEventType(
                             status.lastDecision.event_type ?? '',
                           )
@@ -619,7 +629,13 @@ export function AutoControlDetailModal({
                   />
                   {status.lastDecision.state && (
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                      Trạng thái: {status.lastDecision.state}
+                      Trạng thái:{' '}
+                      {
+                        presentStatus(
+                          CONTROL_STATE_DICTIONARY,
+                          status.lastDecision.state,
+                        ).label
+                      }
                     </Typography.Text>
                   )}
                   {status.lastDecision.created_at && (

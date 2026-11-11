@@ -7,6 +7,8 @@ import {
   formatCycleDuration,
   type SessionDeviceCycle,
 } from '../utils/session-device-cycle.utils'
+import { AUTO_CONTROL_EVENT_DICTIONARY } from '../../../shared/i18n/status/iot'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 
 /**
  * Bảng nhật ký **chu kỳ hoạt động** của thiết bị IoT trong một phiên canh tác.
@@ -98,7 +100,11 @@ export function SessionDeviceCycleTable({
             type="secondary"
             style={{ fontSize: 11 }}
           >
-            {cycle.onEvent.event_type ?? '—'}
+            {statusLabel(
+              AUTO_CONTROL_EVENT_DICTIONARY,
+              cycle.onEvent.event_type,
+              '—',
+            )}
           </Typography.Text>
         </Flex>
       ),

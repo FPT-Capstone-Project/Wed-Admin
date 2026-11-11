@@ -35,6 +35,8 @@ import {
 } from '../../../shared/ui'
 import { FallbackThumbnail } from './FallbackThumbnail'
 import { MushroomVarietyFormModal } from './MushroomVarietyFormModal'
+import { CATALOG_STATUS_DICTIONARY } from '../../../shared/i18n/status/package'
+import { presentStatus } from '../../../shared/i18n/status/registry'
 
 const VND = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -48,16 +50,10 @@ interface MushroomVarietyCatalogProps {
   canManage: boolean
 }
 
-/** Trạng thái nhận đơn → tone ngữ nghĩa chuẩn (dùng StatusBadge, không dùng Tag). */
-const STATUS_TONE: Record<MushroomTypeStatus, 'ok' | 'muted'> = {
-  ACTIVE: 'ok',
-  INACTIVE: 'muted',
-}
-
-const STATUS_LABEL: Record<MushroomTypeStatus, string> = {
-  ACTIVE: 'Đang nhận đơn',
-  INACTIVE: 'Tạm ngưng',
-}
+/**
+ * ⚠ Nhãn + tone lấy từ **module trung tâm**
+ *   (`src/shared/i18n/status/package.ts`) ⇒ 1 nguồn sự thật.
+ */
 
 export function MushroomVarietyCatalog({
   canManage,
@@ -193,8 +189,7 @@ export function MushroomVarietyCatalog({
         const isActive = record.status === 'ACTIVE'
         const badge = (
           <StatusBadge
-            tone={STATUS_TONE[record.status]}
-            label={STATUS_LABEL[record.status]}
+            {...presentStatus(CATALOG_STATUS_DICTIONARY, record.status)}
             icon={
               isActive ? (
                 <CheckCircleOutlined aria-hidden="true" />

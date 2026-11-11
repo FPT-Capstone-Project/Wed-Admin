@@ -15,7 +15,6 @@ import type {
   HistoryRangePreset,
   HistoryViewMode,
   RentalSession,
-  RentalSessionStatus,
 } from '../../../types/iot-history'
 import { useFloorList } from '../../../features/devices/hooks/useIoT'
 import { useTrayHistory } from '../../../features/devices/hooks/useTrayHistory'
@@ -39,17 +38,10 @@ const RANGE_OPTIONS: Array<{ value: HistoryRangePreset; label: string }> = [
   { value: 'ALL', label: 'Toàn bộ dữ liệu' },
 ]
 
-const SESSION_STATUS_CONFIG: Record<
-  RentalSessionStatus,
-  { color: string; label: string }
-> = {
-  ACTIVE: { color: 'success', label: 'Đang trồng' },
-  COMPLETED: { color: 'default', label: 'Hoàn thành' },
-  OVERDUE: { color: 'error', label: 'Quá hạn' },
-}
+import { RENTAL_SESSION_STATUS_LEGACY_CONFIG } from '../../../shared/i18n/status/iot'
 
 function SessionDropdownOption({ session }: { session: RentalSession }) {
-  const status = SESSION_STATUS_CONFIG[session.status]
+  const status = RENTAL_SESSION_STATUS_LEGACY_CONFIG[session.status]
 
   return (
     <div className="session-dropdown-option">
@@ -70,7 +62,7 @@ function SessionDropdownOption({ session }: { session: RentalSession }) {
 }
 
 function SelectedSessionLabel({ session }: { session: RentalSession }) {
-  const status = SESSION_STATUS_CONFIG[session.status]
+  const status = RENTAL_SESSION_STATUS_LEGACY_CONFIG[session.status]
   const fullLabel = `${session.orderId} · ${session.tenantName} - ${session.mushroomType} (${formatHistoryDate(session.startDate)} – ${formatHistoryDate(session.endDate)})`
 
   return (
@@ -291,12 +283,12 @@ export function TrayIoTHistoryView() {
         <span>
           <FireOutlined aria-hidden="true" />
           <small>Nhiệt độ TB</small>
-          <strong>{longTermSummary.temperature.toLocaleString('vi-VN')}°C</strong>
+          <strong>{Number(longTermSummary.temperature).toFixed(1)}°C</strong>
         </span>
         <span>
           <CloudOutlined aria-hidden="true" />
           <small>Độ ẩm TB</small>
-          <strong>{longTermSummary.humidity.toLocaleString('vi-VN')}%RH</strong>
+          <strong>{Number(longTermSummary.humidity).toFixed(1)}%RH</strong>
         </span>
         <span>
           <HistoryOutlined aria-hidden="true" />

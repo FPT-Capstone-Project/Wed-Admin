@@ -18,6 +18,8 @@ import type { ColumnsType } from 'antd/es/table'
 import { useMemo, useState } from 'react'
 import { DataTable } from '../../../shared/ui/DataTable'
 import { formatMeasurement } from '../../../shared/utils/measurement-format'
+import { SESSION_GROWTH_STAGE_DICTIONARY } from '../../../shared/i18n/status/session'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 import {
   useLatestSessionEnvironment,
   useSessionEnvironmentChart,
@@ -78,15 +80,26 @@ function fmtDateTime(value: string | null | undefined): string {
 }
 
 /**
- * Nhãn tiếng Việt cho giai đoạn canh tác — khớp
- * `components/admin-session-status.config.ts` → `SESSION_GROWTH_STAGE_CONFIG`.
+ * Nhãn tiếng Việt cho giai đoạn canh tác — lấy từ **module trung tâm**
+ * (khớp `components/admin-session-status.config.ts`).
  */
 const GROWTH_STAGE_LABEL: Record<string, string> = {
-  FRUITING_INITIATION: 'Khởi động ra hoa',
-  PINNING: 'Đang hình thành nụ',
-  YOUNG_FRUITING: 'Nấm non đang lớn',
-  MATURATION: 'Chín kho',
+  ...Object.fromEntries(
+    Object.entries(SESSION_GROWTH_STAGE_DICTIONARY).map(([key, value]) => [
+      key,
+      value.label,
+    ]),
+  ),
   UNKNOWN: 'Chưa ghi nhận',
+}
+
+/**
+ * Nhãn giai đoạn **an toàn** — enum lạ của BE không bao giờ lộ ra UI.
+ */
+function growthStageLabel(value: string | null | undefined): string {
+  if (!value) return '—'
+  if (value === 'UNKNOWN') return GROWTH_STAGE_LABEL.UNKNOWN
+  return statusLabel(SESSION_GROWTH_STAGE_DICTIONARY, value, GROWTH_STAGE_LABEL[value] ?? value)
 }
 
 export interface SessionIoTHistoryTabProps {
@@ -436,7 +449,7 @@ export function SessionIoTHistoryTab({
       width: 150,
       render: (value: string | null) => (
         <Tag color={value === 'UNKNOWN' ? 'default' : 'blue'} style={{ fontSize: 11 }}>
-          {value ? (GROWTH_STAGE_LABEL[value] ?? value) : '—'}
+          {growthStageLabel(value)}
         </Tag>
       ),
     },

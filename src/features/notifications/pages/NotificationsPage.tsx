@@ -53,6 +53,8 @@ import {
   notificationTypeLabel,
   type NotificationCategory,
 } from '../components/notification-status.config'
+import { REFERENCE_TYPE_DICTIONARY } from '../../../shared/i18n/status/reference'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 import '../notifications-industrial.css'
 
 type ReadFilter = 'ALL' | 'UNREAD' | 'READ'
@@ -435,7 +437,7 @@ export function NotificationsPage() {
                   key: 'reference',
                   label: 'Đối tượng liên quan',
                   children: detail.reference_type
-                    ? `${detail.reference_type}${detail.reference_id ? ` #${detail.reference_id}` : ''}`
+                    ? `${statusLabel(REFERENCE_TYPE_DICTIONARY, detail.reference_type)}${detail.reference_id ? ` #${detail.reference_id}` : ''}`
                     : '—',
                 },
               ]}

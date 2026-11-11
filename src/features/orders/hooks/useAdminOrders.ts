@@ -73,6 +73,7 @@ export function useAdminOrders(
 
   return {
     orders,
+    sessions: sessionsQuery.data?.items ?? [],
     isLoading: ordersQuery.isLoading,
     isFetching: ordersQuery.isFetching,
     isError: ordersQuery.isError,

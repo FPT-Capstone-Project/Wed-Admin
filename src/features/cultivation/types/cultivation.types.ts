@@ -11,22 +11,19 @@
  */
 
 import type { SpawnInspection } from '../../farm/types/farm.types'
+import {
+  SESSION_STATUS_DICTIONARY,
+  type SessionStatusKey,
+} from '../../../shared/i18n/status/session'
 
 /**
  * Giai đoạn sinh trưởng — hiển thị thân thiện cho Admin.
  *
- * ⚠ Ánh xạ từ `CultivationSessionStatus` của BE (8 trạng thái).
+ * ⚠ Ánh xạ từ `CultivationSessionStatus` của BE (9 trạng thái).
+ *
+ * ⚠ **Re-export** từ module trung tâm để không có 2 nguồn sự thật (2.C).
  */
-export type GrowthStage =
-  | 'PENDING'
-  | 'SPAWN_RESTING'
-  | 'MYCELIAL_DEVELOPMENT'
-  | 'READY_FOR_CULTIVATION'
-  | 'CULTIVATING'
-  | 'HARVEST_READY'
-  | 'HARVESTING'
-  | 'COMPLETED'
-  | 'CANCELLED'
+export type GrowthStage = SessionStatusKey
 
 /**
  * Nhãn tiếng Việt cho từng giai đoạn.
@@ -35,36 +32,20 @@ export type GrowthStage =
  *   lệ tiến độ (`CULTIVATING` → 70 %) ⇒ cùng 1 phiên hiển thị khác nhau giữa
  *   các trang. Nay **mọi nơi** dùng chung `calculateSessionProgress()`
  *   (`src/shared/utils/date.ts`) — công thức theo thời gian thực.
+ *
+ * ⚠ Nguồn sự thật: `src/shared/i18n/status/session.ts` (nhãn chuẩn cho mọi
+ *   màn hình) — trước đây file này giữ 1 bảng riêng với nhãn **khác** ("Ủ tơ
+ *   / Nuôi sợi" vs "Phôi đang nảy mầm") ⇒ cùng 1 phiên hiển thị 2 nhãn.
  */
 export const GROWTH_STAGE_META: Record<
   GrowthStage,
   { label: string; shortLabel: string }
-> = {
-  PENDING: { label: 'Chờ xử lý', shortLabel: 'Chờ xử lý' },
-  SPAWN_RESTING: {
-    label: 'Ủ tơ / Nuôi sợi',
-    shortLabel: 'Ủ tơ',
-  },
-  MYCELIAL_DEVELOPMENT: {
-    label: 'Phát triển tơ (Nuôi sợi)',
-    shortLabel: 'Nuôi sợi',
-  },
-  READY_FOR_CULTIVATION: {
-    label: 'Sẵn sàng canh tác',
-    shortLabel: 'Sẵn sàng',
-  },
-  CULTIVATING: {
-    label: 'Đang canh tác',
-    shortLabel: 'Đang canh tác',
-  },
-  HARVEST_READY: { label: 'Sẵn sàng thu hoạch', shortLabel: 'Sẵn sàng thu hoạch' },
-  HARVESTING: {
-    label: 'Thu hoạch',
-    shortLabel: 'Thu hoạch',
-  },
-  COMPLETED: { label: 'Đã thu hoạch', shortLabel: 'Hoàn tất' },
-  CANCELLED: { label: 'Đã huỷ', shortLabel: 'Đã huỷ' },
-}
+> = Object.fromEntries(
+  Object.entries(SESSION_STATUS_DICTIONARY).map(([key, value]) => [
+    key,
+    { label: value.label, shortLabel: value.shortLabel },
+  ]),
+) as Record<GrowthStage, { label: string; shortLabel: string }>
 
 /** Sức khỏe phôi — kết luận của lần kiểm tra gần nhất. */
 export type SpawnHealthStatus = 'NORMAL' | 'WARNING' | 'ABNORMAL' | 'UNKNOWN'

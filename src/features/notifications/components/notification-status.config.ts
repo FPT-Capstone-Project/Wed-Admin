@@ -7,24 +7,34 @@
  *   Lý do: nội dung thông báo là text tự do do BE sinh (có thể tiếng Việt
  *   hoặc tiếng Anh) ⇒ bắt từ khoá regex sẽ gắn nhãn sai và khó bảo trì.
  *   Chỉ `notification_type` mới là phân loại **chính thức** của hệ thống.
+ *
+ * ⚠ Nhãn loại thông báo lấy từ **module trung tâm**
+ *   `src/shared/i18n/status/reference.ts` ⇒ 1 nguồn sự thật.
  */
 import type { NotificationType } from '../types/notification.types'
+import {
+  NOTIFICATION_TYPE_DICTIONARY,
+} from '../../../shared/i18n/status/reference'
+import {
+  presentStatus,
+  statusLabel,
+} from '../../../shared/i18n/status/registry'
 
 /** Nhãn tiếng Việt của từng loại thông báo. */
-export const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
-  CULTIVATION_STARTED: 'Bắt đầu canh tác',
-  CULTIVATION_PROGRESS: 'Tiến độ canh tác',
-  CULTIVATION_COMPLETED: 'Hoàn thành canh tác',
-  CULTIVATION_CANCELLED: 'Hủy canh tác',
-  MUSHROOM_DISEASE: 'Nấm bệnh / mốc',
-  DEVICE_ISSUE: 'Sự cố cảm biến & thiết bị',
-  OPERATOR_MESSAGE: 'Thông báo từ nhân viên',
-  PAYMENT_STATUS: 'Trạng thái thanh toán',
-}
+export const NOTIFICATION_TYPE_LABELS: Record<string, string> = Object.fromEntries(
+  Object.entries(NOTIFICATION_TYPE_DICTIONARY).map(([key, value]) => [
+    key,
+    value.label,
+  ]),
+)
 
-/** Nhãn fallback khi BE trả type lạ (chưa có trong bảng). */
+/**
+ * Nhãn fallback khi BE trả type lạ (chưa có trong bảng).
+ *
+ * ⚠ Trả về "Chưa xác định (TYPE)" thay vì lộ chuỗi tiếng Anh.
+ */
 export function notificationTypeLabel(type: string): string {
-  return NOTIFICATION_TYPE_LABELS[type] ?? type
+  return statusLabel(NOTIFICATION_TYPE_DICTIONARY, type)
 }
 
 /**
@@ -124,4 +134,11 @@ export function isIotDangerAlert(
   type: NotificationType | string,
 ): boolean {
   return notificationCategory(type) === 'iot'
+}
+
+/** Presentation đầy đủ của loại thông báo — dùng cho `StatusBadge`. */
+export function notificationTypePresentation(
+  type: NotificationType | string,
+): { label: string; tone: 'ok' | 'success' | 'info' | 'warning' | 'danger' | 'muted' | 'neutral' } {
+  return presentStatus(NOTIFICATION_TYPE_DICTIONARY, type)
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuthStore } from '../store/auth.store'
 import type { LoginCredentials } from '../types/auth.types'
+import { extractApiError, INVALID_CREDENTIALS_MESSAGE } from '../../../shared/api/error'
 
 interface LoginFormProps {
   onSuccess?: () => void
@@ -19,6 +20,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const [form] = Form.useForm<LoginCredentials>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [errorType, setErrorType] = useState<'error' | 'warning'>('error')
 
   /**
    * Tự điền email + tích sẵn checkbox khi tải lại trang Login.
@@ -40,6 +42,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   const handleSubmit = async (credentials: LoginCredentials) => {
     setIsSubmitting(true)
     setErrorMessage(null)
+    setErrorType('error')
     clearError()
 
     try {
@@ -47,10 +50,19 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       messageApi.success('Đăng nhập thành công.')
       onSuccess?.()
     } catch (error) {
-      const text =
-        error instanceof Error
-          ? error.message
+      // The auth store wraps the original AxiosError in Error.cause.
+      let cause: unknown = error
+      for (let depth = 0; depth < 5 && cause instanceof Error && cause.cause; depth += 1) {
+        cause = cause.cause
+      }
+      const { status } = extractApiError(cause)
+      const isConnectionError = status == null || status >= 500
+      const text = status === 400 || status === 401
+        ? INVALID_CREDENTIALS_MESSAGE
+        : isConnectionError
+          ? 'Hệ thống máy chủ đang gặp sự cố kết nối. Vui lòng thử lại sau ít phút.'
           : 'Không thể đăng nhập. Vui lòng thử lại.'
+      setErrorType(isConnectionError ? 'warning' : 'error')
       setErrorMessage(text)
       messageApi.error(text)
     } finally {
@@ -71,7 +83,7 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
 
       {(errorMessage ?? lastError) && (
         <Alert
-          type="error"
+          type={errorType}
           title={errorMessage ?? lastError}
           showIcon
           closable

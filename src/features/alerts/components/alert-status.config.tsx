@@ -10,9 +10,20 @@ import type {
   OperationalAlertSeverity,
   OperationalAlertSource,
 } from '../types/alert.types'
+import {
+  ALERT_CATEGORY_DICTIONARY,
+  ALERT_SEVERITY_DICTIONARY,
+  ALERT_SOURCE_DICTIONARY,
+} from '../../../shared/i18n/status/reference'
 
 /**
  * Cấu hình hiển thị cảnh báo vận hành (read-only).
+ *
+ * ⚠ Nhãn + tone lấy từ **module trung tâm** `src/shared/i18n/status/reference.ts`
+ *   ⇒ chỉ 1 nguồn sự thật cho cảnh báo.
+ *
+ * ⚠ `icon` vẫn nằm ở feature layer vì là **JSX** (module trung tâm là
+ *   `.ts` thuần, không chứa React).
  *
  * Nguồn: `features/alerts/types/alert.types.ts` — model thống nhất từ
  * nhật ký auto-control + thông báo nghiệp vụ.
@@ -24,41 +35,48 @@ export interface AlertSeverityConfig {
   icon: ReactNode
 }
 
+/** Icon đi kèm theo mức độ cảnh báo. */
+const ALERT_SEVERITY_ICONS: Record<OperationalAlertSeverity, ReactNode> = {
+  CRITICAL: <SafetyOutlined />,
+  WARNING: <ExclamationCircleOutlined />,
+  INFO: <InfoCircleOutlined />,
+}
+
 /** Mức độ → nhãn + màu + icon. */
 export const ALERT_SEVERITY_CONFIG: Record<
   OperationalAlertSeverity,
   AlertSeverityConfig
 > = {
   CRITICAL: {
-    label: 'Nghiêm trọng',
-    tone: 'danger',
-    icon: <SafetyOutlined />,
+    label: ALERT_SEVERITY_DICTIONARY.CRITICAL.label,
+    tone: ALERT_SEVERITY_DICTIONARY.CRITICAL.tone,
+    icon: ALERT_SEVERITY_ICONS.CRITICAL,
   },
   WARNING: {
-    label: 'Cảnh báo',
-    tone: 'warning',
-    icon: <ExclamationCircleOutlined />,
+    label: ALERT_SEVERITY_DICTIONARY.WARNING.label,
+    tone: ALERT_SEVERITY_DICTIONARY.WARNING.tone,
+    icon: ALERT_SEVERITY_ICONS.WARNING,
   },
   INFO: {
-    label: 'Thông tin',
-    tone: 'info',
-    icon: <InfoCircleOutlined />,
+    label: ALERT_SEVERITY_DICTIONARY.INFO.label,
+    tone: ALERT_SEVERITY_DICTIONARY.INFO.tone,
+    icon: ALERT_SEVERITY_ICONS.INFO,
   },
 }
 
 /** Nhóm cảnh báo → nhãn tiếng Việt. */
 export const ALERT_CATEGORY_LABELS: Record<OperationalAlertCategory, string> = {
-  AUTO_CONTROL_FAULT: 'Lỗi hệ thống tưới tự động',
-  DEVICE_OFFLINE: 'Thiết bị mất kết nối',
-  SENSOR_FAULT: 'Cảm biến bất thường',
-  RETRY_WAIT: 'Tạm dừng do lỗi cảm biến',
-  MUSHROOM_DISEASE: 'Nấm bệnh / mốc',
-  DEVICE_ISSUE: 'Sự cố thiết bị',
-  OPERATOR_MESSAGE: 'Thông báo từ nhân viên',
+  AUTO_CONTROL_FAULT: ALERT_CATEGORY_DICTIONARY.AUTO_CONTROL_FAULT.label,
+  DEVICE_OFFLINE: ALERT_CATEGORY_DICTIONARY.DEVICE_OFFLINE.label,
+  SENSOR_FAULT: ALERT_CATEGORY_DICTIONARY.SENSOR_FAULT.label,
+  RETRY_WAIT: ALERT_CATEGORY_DICTIONARY.RETRY_WAIT.label,
+  MUSHROOM_DISEASE: ALERT_CATEGORY_DICTIONARY.MUSHROOM_DISEASE.label,
+  DEVICE_ISSUE: ALERT_CATEGORY_DICTIONARY.DEVICE_ISSUE.label,
+  OPERATOR_MESSAGE: ALERT_CATEGORY_DICTIONARY.OPERATOR_MESSAGE.label,
 }
 
 /** Nguồn phát sinh → nhãn tiếng Việt. */
 export const ALERT_SOURCE_LABELS: Record<OperationalAlertSource, string> = {
-  IOT_AUTO_CONTROL: 'Nhật ký IoT',
-  NOTIFICATION: 'Thông báo hệ thống',
+  IOT_AUTO_CONTROL: ALERT_SOURCE_DICTIONARY.IOT_AUTO_CONTROL.label,
+  NOTIFICATION: ALERT_SOURCE_DICTIONARY.NOTIFICATION.label,
 }

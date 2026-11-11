@@ -1,8 +1,11 @@
+import { formatVND } from '../../../shared/utils/currency'
 import type {
   ReportsAnalytics,
   MonthlyRevenue,
   SpeciesBreakdown,
 } from '../../../features/analytics/api/analytics.api'
+import { SESSION_STATUS_DICTIONARY } from '../../../shared/i18n/status/session'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 
 /**
  * Utilities cho Executive Dashboard — **dữ liệu thật**.
@@ -34,17 +37,12 @@ export function safeDivide(numerator: number, denominator: number): number {
   return numerator / denominator
 }
 
-/**
- * Format tiền tệ VND — luôn trả về chuỗi hợp lệ, fallback `0 đ` khi đầu vào lỗi.
- */
-export function formatCurrency(value: unknown, fallback = '0 đ'): string {
-  const safeValue = toSafeNumber(value)
-  if (safeValue === 0) return fallback
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND',
-    maximumFractionDigits: 0,
-  }).format(safeValue)
+/** Compatibility adapter; all currency formatting lives in the shared utility. */
+export function formatCurrency(value: unknown, fallback = '—'): string {
+  return formatVND(
+    typeof value === 'number' || typeof value === 'string' ? value : null,
+    { fallback },
+  )
 }
 
 // ─── Types ───────────────────────────────────────────────────────────────
@@ -53,7 +51,7 @@ export function formatCurrency(value: unknown, fallback = '0 đ'): string {
 export interface MonthlyRevenuePoint {
   month: string
   current: number
-  previous: number
+  previous: number | null
 }
 
 /** Hiệu suất theo giống nấm — dựng từ cơ cấu giống nấm thật. */
@@ -104,8 +102,8 @@ export function buildMonthlyComparison(
   return safe.map((entry) => ({
     month: entry.label,
     current: Math.round(toSafeNumber(entry.estimatedRevenue)),
-    // Kỳ trước chưa có dữ liệu thật → hiển thị 0 thay vì bịa số.
-    previous: 0,
+    // null phân biệt thiếu lịch sử với doanh thu kỳ trước thực sự bằng 0.
+    previous: null,
   }))
 }
 
@@ -131,7 +129,7 @@ export function buildQuarterlyRevenue(
     .map(([key, revenue]) => ({
       month: key.split('-')[1],
       current: Math.round(revenue),
-      previous: 0,
+      previous: null,
     }))
 }
 
@@ -201,19 +199,8 @@ export function buildStageDistribution(analytics: ReportsAnalytics) {
   return Object.entries(analytics.sessionsByStage)
     .filter(([, count]) => count > 0)
     .map(([stage, count]) => ({
-      stage: STAGE_LABELS[stage] ?? stage,
+      // ⚠ Dùng từ điển trung tâm ⇒ 1 nguồn sự thật (2.C) + không lộ enum lạ.
+      stage: statusLabel(SESSION_STATUS_DICTIONARY, stage),
       count,
     }))
-}
-
-const STAGE_LABELS: Record<string, string> = {
-  PENDING: 'Chờ xử lý',
-  SPAWN_RESTING: 'Ủ tơ / Nuôi sợi',
-  MYCELIAL_DEVELOPMENT: 'Phát triển tơ',
-  READY_FOR_CULTIVATION: 'Sẵn sàng canh tác',
-  CULTIVATING: 'Đang canh tác',
-  HARVEST_READY: 'Sẵn sàng thu hoạch',
-  HARVESTING: 'Thu hoạch',
-  COMPLETED: 'Đã thu hoạch',
-  CANCELLED: 'Đã huỷ',
 }

@@ -1,55 +1,37 @@
-import type { UserRole, UserStatus } from '../../types/user.types'
+/**
+ * Cấu hình trạng thái tài khoản & vai trò — **re-export từ module trung tâm**.
+ *
+ * ⚠ File này **giữ nguyên API cũ** (mọi import hiện tại trong codebase vẫn
+ *   chạy đúng) nhưng **nguồn sự thật duy nhất** đã chuyển sang
+ *   `src/shared/i18n/status/user.ts`.
+ */
+
+import type { UserStatus } from '../../types/user.types'
+import {
+  ROLE_OPTION_BY_ID,
+  ROLE_OPTIONS,
+  USER_STATUS_LEGACY_CONFIG,
+  USER_STATUS_OPTIONS,
+  getRoleOption,
+  getRoleLabel,
+  nextToggleStatus,
+  type RoleOption,
+} from '../../shared/i18n/status/user'
 
 /**
  * Nhãn tiếng Việt cho enum của BE.
  *
- * BE KHÔNG có endpoint `/api/roles`, nên danh sách vai trò được khai báo tĩnh ở
+ * ⚠ BE KHÔNG có endpoint `/api/roles`, nên danh sách vai trò được khai báo tĩnh ở
  * FE, đồng bộ với seed hiện tại (đã verify 2026-10-22 — xem `types/auth.ts`):
  *   1 = ADMIN, 2 = OPERATOR, 3 = CUSTOMER.
  *
  * ⚠ Swagger mô tả sai ("1 = Farm Operator, 2 = Admin") — đã báo BE sửa.
  */
-export interface RoleOption {
-  roleId: number
-  role: UserRole
-  label: string
-  description: string
-}
+export type { RoleOption }
 
-export const ROLE_OPTIONS: readonly RoleOption[] = [
-  {
-    roleId: 1,
-    role: 'ADMIN',
-    label: 'Quản trị viên',
-    description: 'Toàn quyền: tài khoản, vụ thuê, IoT, cấu hình.',
-  },
-  {
-    roleId: 2,
-    role: 'OPERATOR',
-    label: 'Vận hành trang trại',
-    description: 'Vận hành vụ thuê, khay, IoT. Không huỷ vụ thuê.',
-  },
-  {
-    roleId: 3,
-    role: 'CUSTOMER',
-    label: 'Khách thuê khay',
-    description: 'Đặt gói thuê, theo dõi tiến độ canh tác.',
-  },
-]
+export { ROLE_OPTIONS, ROLE_OPTION_BY_ID, getRoleOption, getRoleLabel }
 
-/** roleId → option, dùng để map nhanh khi render bảng. */
-export const ROLE_OPTION_BY_ID: ReadonlyMap<number, RoleOption> = new Map(
-  ROLE_OPTIONS.map((option) => [option.roleId, option]),
-)
-
-export function getRoleOption(roleId: number): RoleOption | undefined {
-  return ROLE_OPTION_BY_ID.get(roleId)
-}
-
-export function getRoleLabel(roleId: number, roleName?: string | null): string {
-  return getRoleOption(roleId)?.label ?? roleName ?? `Vai trò #${roleId}`
-}
-
+/** Shape legacy `{ color, label }` — dùng cho `Tag color` của antd. */
 export interface StatusOption {
   color: string
   label: string
@@ -58,24 +40,13 @@ export interface StatusOption {
 /** BE chỉ hỗ trợ 3 status: ACTIVE / INACTIVE / BLOCKED. */
 export const USER_STATUS_CONFIG: Readonly<
   Record<UserStatus, StatusOption>
-> = {
-  ACTIVE: { color: 'success', label: 'Hoạt động' },
-  INACTIVE: { color: 'default', label: 'Tạm ngưng' },
-  BLOCKED: { color: 'error', label: 'Đã khoá' },
-}
+> = USER_STATUS_LEGACY_CONFIG
 
-export const USER_STATUS_OPTIONS = (
-  Object.keys(USER_STATUS_CONFIG) as UserStatus[]
-).map((status) => ({
-  value: status,
-  label: USER_STATUS_CONFIG[status].label,
-}))
+export { USER_STATUS_OPTIONS }
 
 /**
  * Status đích khi bấm nút khoá / mở khoá.
  * - ACTIVE → BLOCKED (chặn đăng nhập)
  * - BLOCKED | INACTIVE → ACTIVE (kích hoạt lại)
  */
-export function nextToggleStatus(status: UserStatus): UserStatus {
-  return status === 'ACTIVE' ? 'BLOCKED' : 'ACTIVE'
-}
+export { nextToggleStatus }

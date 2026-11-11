@@ -327,7 +327,7 @@ export function TrayIoTHistoryApiView() {
           <Card size="small" style={{ flex: '1 1 180px' }}>
             <Statistic
               title="Nhiệt độ TB"
-              value={summary.avgTemp || '—'}
+              value={summary.avgTemp ?? '—'}
               precision={1}
               suffix="°C"
               prefix={<FireOutlined />}

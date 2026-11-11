@@ -11,6 +11,8 @@ import type {
   CreatePackageInput,
   PackageStatus,
 } from '../../../types/package.types'
+import { PACKAGE_STATUS_DICTIONARY } from '../../../shared/i18n/status/package'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 
 interface PackageFormModalProps {
   open: boolean
@@ -28,11 +30,16 @@ const BILLING_CYCLE_OPTIONS = [
   { value: 'YEARLY', label: 'Theo năm' },
 ] satisfies Array<{ value: BillingCycle; label: string }>
 
-const STATUS_OPTIONS = [
-  { value: 'ACTIVE', label: 'Đang kinh doanh' },
-  { value: 'INACTIVE', label: 'Tạm ngưng' },
-  { value: 'PROMOTION', label: 'Gói ưu đãi đặc biệt' },
-] satisfies Array<{ value: PackageStatus; label: string }>
+/**
+ * ⚠ Nhãn lấy từ **module trung tâm** (`src/shared/i18n/status/package.ts`)
+ *   ⇒ cùng 1 trạng thái gói hiển thị giống nhau ở bảng, card & form.
+ */
+const STATUS_OPTIONS = (
+  Object.keys(PACKAGE_STATUS_DICTIONARY) as PackageStatus[]
+).map((value) => ({
+  value,
+  label: statusLabel(PACKAGE_STATUS_DICTIONARY, value),
+})) satisfies Array<{ value: PackageStatus; label: string }>
 
 export function PackageFormModal({
   open,

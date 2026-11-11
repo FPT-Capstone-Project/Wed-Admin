@@ -1,5 +1,8 @@
+import { formatVND } from '../../shared/utils/currency'
 import { LoadErrorAlert } from '../../shared/ui/LoadErrorAlert'
-import { formatDate } from '../../shared/utils/date'
+import { formatSessionProgress } from '../../features/sessions/utils/session-progress.utils'
+import { formatDate, isValidDateValue } from '../../shared/utils/date'
+import { cleanText } from '../../shared/utils/text'
 import { OrderAuditTabs } from '../../features/orders/components/OrderAuditTabs'
 import '../../features/sessions/sessions-industrial.css'
 import { useMemo, useState } from 'react'
@@ -44,7 +47,12 @@ import {
   MetadataBadge,
   UserAvatar,
 } from '../../shared/ui'
-import type { SemanticTone } from '../../app/theme/tokens'
+import {
+  ORDER_STATUS_DICTIONARY,
+  PAYMENT_STATUS_DICTIONARY,
+} from '../../shared/i18n/status/order'
+import { SESSION_PROGRESS_STAGE_DICTIONARY } from '../../shared/i18n/status/session'
+import { presentStatus, statusLabel } from '../../shared/i18n/status/registry'
 
 /**
  * Trang Quản lý Đơn hàng — **100% READ-ONLY**.
@@ -58,35 +66,6 @@ import type { SemanticTone } from '../../app/theme/tokens'
  *   server-side. Trước đây trang này phải hợp nhất 3 nguồn vì
  *   `GET /api/orders` chỉ trả đơn của chính user đăng nhập.
  */
-
-const STATUS_CONFIG: Record<
-  AdminOrderStatus,
-  { tone: SemanticTone; label: string }
-> = {
-  PENDING: { tone: 'warning', label: 'Chờ xử lý' },
-  CONFIRMED: { tone: 'info', label: 'Đã xác nhận' },
-  PROCESSING: { tone: 'ok', label: 'Đang xử lý' },
-  COMPLETED: { tone: 'muted', label: 'Hoàn thành' },
-  CANCELLED: { tone: 'danger', label: 'Đã hủy' },
-}
-
-const PAYMENT_STATUS_CONFIG: Record<
-  string,
-  { tone: SemanticTone; label: string }
-> = {
-  PAID: { tone: 'ok', label: 'Đã thanh toán' },
-  UNPAID: { tone: 'warning', label: 'Chưa thanh toán' },
-  REFUNDED: { tone: 'danger', label: 'Đã hoàn tiền' },
-  PENDING: { tone: 'info', label: 'Đang xử lý' },
-  FAILED: { tone: 'danger', label: 'Thất bại' },
-  REFUND_PENDING: { tone: 'warning', label: 'Chờ hoàn tiền' },
-}
-
-const VND = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
 
 type OrderTab = 'ALL' | AdminOrderStatus
 
@@ -108,7 +87,9 @@ export function OrderManagementPage() {
   // ── Data from API (read-only) ──────────────────────────────────────────
   const {
     orders,
+    sessions,
     isLoading,
+    isFetching,
     isError,
     error,
     refetch,
@@ -130,6 +111,25 @@ export function OrderManagementPage() {
   const { data: spawnInspections } = useOrderSpawnInspections(
     detailOrder ? detailOrder.orderId : null,
   )
+
+  const sessionId = cultivationStatus?.session_id ?? detailOrder?.sessionId
+  const session = detailOrder
+    ? sessions.find((entry) => entry.order_id === detailOrder.orderId &&
+        (sessionId == null || entry.session_id === sessionId))
+    : undefined
+  const cultivationSummary = cultivationStatus || session ? {
+    status: cleanText(cultivationStatus?.status) !== '—' ? cultivationStatus?.status : session?.status,
+    growth_stage: cleanText(cultivationStatus?.growth_stage) !== '—'
+      ? cultivationStatus?.growth_stage
+      : session?.current_stage ?? session?.growth_status,
+    progress_percent: formatSessionProgress(cultivationStatus?.progress_percent) !== '—' &&
+      cultivationStatus?.progress_percent != null && Number.isFinite(Number(cultivationStatus.progress_percent))
+      ? cultivationStatus.progress_percent
+      : session?.progress_percent,
+    expected_harvest_date: isValidDateValue(cultivationStatus?.expected_harvest_date)
+      ? cultivationStatus?.expected_harvest_date
+      : isValidDateValue(session?.harvest_date) ? session?.harvest_date : session?.end_at,
+  } : null
 
   const filteredOrders = useMemo(() => {
     const q = searchText.trim().toLowerCase()
@@ -243,21 +243,23 @@ export function OrderManagementPage() {
       key: 'payment',
       width: 150,
       render: (_, record) => {
-        const config = PAYMENT_STATUS_CONFIG[record.paymentStatus]
+        // ⚠ Tra qua từ điển trung tâm ⇒ **không bao giờ** lộ `payment_status`
+        //   thô của BE (vd `REFUND_PENDING`) khi BE trả giá trị lạ.
+        const payment = presentStatus(
+          PAYMENT_STATUS_DICTIONARY,
+          record.paymentStatus,
+          'Chưa có thông tin',
+        )
         return (
           <Flex vertical gap={2}>
-            {config ? (
-              <StatusBadge tone={config.tone} label={config.label} />
-            ) : (
-              <MetadataBadge label={record.paymentStatus} />
-            )}
+            <StatusBadge tone={payment.tone} label={payment.label} />
             {record.totalAmount > 0 && (
               <Typography.Text
                 type="secondary"
                 style={{ fontSize: 11 }}
                 className="mcms-session-mono"
               >
-                {VND.format(record.totalAmount)}
+                {formatVND(record.totalAmount)}
               </Typography.Text>
             )}
           </Flex>
@@ -270,8 +272,8 @@ export function OrderManagementPage() {
       key: 'status',
       width: 140,
       render: (status: AdminOrderStatus, record) => {
-        const config = STATUS_CONFIG[status]
-        const badge = <StatusBadge tone={config.tone} label={config.label} />
+        const order = presentStatus(ORDER_STATUS_DICTIONARY, status)
+        const badge = <StatusBadge tone={order.tone} label={order.label} />
         // ⚠ Trạng thái **dẫn xuất** từ phiên (BE quên update `orders.status`
         //   ở luồng bàn giao thu hoạch) ⇒ ghi chú lại để admin không tưởng
         //   dữ liệu sai. Xem `derive-order-status.ts`.
@@ -390,7 +392,7 @@ export function OrderManagementPage() {
         <Col xs={12} lg={6}>
           <StatCard
             title="Tổng giá trị"
-            value={VND.format(summary.totalAmount)}
+            value={formatVND(summary.totalAmount)}
             tone="info"
             icon={<CreditCardOutlined />}
             description="Tổng tiền của các đơn đã tạo"
@@ -428,6 +430,7 @@ export function OrderManagementPage() {
         rowKey="orderId"
         size="small"
         loading={isLoading}
+        isFetching={isFetching}
         error={
           isError
             ? {
@@ -456,8 +459,7 @@ export function OrderManagementPage() {
             <Space>
               <Typography.Text code>{detailOrder.orderCode}</Typography.Text>
               <StatusBadge
-                tone={STATUS_CONFIG[detailOrder.status].tone}
-                label={STATUS_CONFIG[detailOrder.status].label}
+                {...presentStatus(ORDER_STATUS_DICTIONARY, detailOrder.status)}
               />
             </Space>
           ) : (
@@ -470,7 +472,12 @@ export function OrderManagementPage() {
         destroyOnHidden
       >
         {detailOrder && (
-          <OrderAuditTabs key={detailOrder.orderId} orderId={detailOrder.orderId}><Flex vertical gap={20}>
+          <OrderAuditTabs
+            key={detailOrder.orderId}
+            orderId={detailOrder.orderId}
+            orderStatus={detailOrder.status}
+            paymentStatus={livePayment?.paymentStatus ?? detailOrder.paymentStatus}
+          ><Flex vertical gap={20}>
             {/* ── Thông tin đơn ─────────────────────────────────────── */}
             <Descriptions
               column={1}
@@ -552,11 +559,13 @@ export function OrderManagementPage() {
                   children: (() => {
                     const liveStatus =
                       livePayment?.paymentStatus ?? detailOrder.paymentStatus
-                    const config = PAYMENT_STATUS_CONFIG[liveStatus]
                     return (
                       <StatusBadge
-                        tone={config?.tone ?? 'neutral'}
-                        label={config?.label ?? liveStatus}
+                        {...presentStatus(
+                          PAYMENT_STATUS_DICTIONARY,
+                          liveStatus,
+                          'Chưa có thông tin',
+                        )}
                       />
                     )
                   })(),
@@ -577,7 +586,7 @@ export function OrderManagementPage() {
                   label: 'Số tiền',
                   children: (
                     <Typography.Text strong type="danger">
-                      {VND.format(
+                      {formatVND(
                         livePayment?.amount ?? detailOrder.totalAmount,
                       )}
                     </Typography.Text>
@@ -591,7 +600,7 @@ export function OrderManagementPage() {
               <Typography.Title level={5} style={{ marginTop: 0 }}>
                 Trạng thái canh tác
               </Typography.Title>
-              {cultivationStatus ? (
+              {cultivationSummary ? (
                 <Descriptions
                   column={1}
                   size="small"
@@ -601,8 +610,8 @@ export function OrderManagementPage() {
                       key: 'status',
                       label: 'Trạng thái',
                       children:
-                        cultivationStatus.status ? (
-                          <SessionStatusTag status={cultivationStatus.status} />
+                        cultivationSummary.status ? (
+                          <SessionStatusTag status={cultivationSummary.status} />
                         ) : (
                           '—'
                         ),
@@ -610,21 +619,23 @@ export function OrderManagementPage() {
                     {
                       key: 'stage',
                       label: 'Giai đoạn',
-                      children: cultivationStatus.growth_stage ?? '—',
+                      children: statusLabel(
+                        SESSION_PROGRESS_STAGE_DICTIONARY,
+                        cultivationSummary.growth_stage,
+                        'Chưa ghi nhận',
+                      ),
                     },
                     {
                       key: 'progress',
                       label: 'Tiến độ',
                       children:
-                        cultivationStatus.progress_percent != null
-                          ? `${cultivationStatus.progress_percent}%`
-                          : '—',
+                        formatSessionProgress(cultivationSummary.progress_percent),
                     },
                     {
                       key: 'harvest',
                       label: 'Dự kiến thu hoạch',
-                      children: cultivationStatus.expected_harvest_date
-                        ? formatDate(cultivationStatus.expected_harvest_date)
+                      children: cultivationSummary.expected_harvest_date
+                        ? formatDate(cultivationSummary.expected_harvest_date)
                         : '—',
                     },
                   ]}
@@ -647,13 +658,15 @@ export function OrderManagementPage() {
                   {cultivationProgress.entries.map((entry, index) => (
                     <Flex key={entry.progress_id ?? index} gap={10} align="start">
                       <MetadataBadge
-                        label={entry.current_stage ?? entry.stage ?? '—'}
+                        label={statusLabel(
+                          SESSION_PROGRESS_STAGE_DICTIONARY,
+                          entry.current_stage ?? entry.stage,
+                          'Chưa ghi nhận',
+                        )}
                       />
                       <Flex vertical gap={0}>
                         <Typography.Text style={{ fontSize: 12 }}>
-                          {entry.progress_percent != null
-                            ? `${entry.progress_percent}%`
-                            : '—'}
+                          {formatSessionProgress(entry.progress_percent)}
                           {entry.description ? ` · ${entry.description}` : ''}
                         </Typography.Text>
                         <Typography.Text

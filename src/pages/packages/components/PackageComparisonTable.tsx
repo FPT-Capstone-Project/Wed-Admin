@@ -21,7 +21,11 @@ import type {
   PackageStatus,
   RentalPackage,
 } from '../../../types/package.types'
-import type { SemanticTone } from '../../../app/theme/tokens'
+import {
+  BILLING_CYCLE_DICTIONARY,
+  PACKAGE_STATUS_DICTIONARY,
+} from '../../../shared/i18n/status/package'
+import { presentStatus, statusLabel } from '../../../shared/i18n/status/registry'
 import {
   ActionButton,
   ConfirmActionButton,
@@ -38,24 +42,6 @@ interface PackageComparisonTableProps {
   onToggleStatus: (rentalPackage: RentalPackage) => void
   onTogglePopular: (rentalPackage: RentalPackage) => void
   onSelect: (rentalPackage: RentalPackage) => void
-}
-
-const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
-  WEEKLY: 'Theo tuần',
-  BIWEEKLY: 'Theo 2 tuần',
-  MONTHLY: 'Theo tháng',
-  CROP_CYCLE: 'Theo vụ mùa',
-  QUARTERLY: 'Theo quý',
-  YEARLY: 'Theo năm',
-}
-
-const STATUS_CONFIG: Record<
-  PackageStatus,
-  { tone: SemanticTone; label: string }
-> = {
-  ACTIVE: { tone: 'ok', label: 'Đang nhận đơn' },
-  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
-  PROMOTION: { tone: 'info', label: 'Gói ưu đãi' },
 }
 
 const VND_FORMATTER = new Intl.NumberFormat('vi-VN', {
@@ -102,7 +88,8 @@ export function PackageComparisonTable({
       dataIndex: 'billingCycle',
       key: 'billingCycle',
       width: 130,
-      render: (cycle: BillingCycle) => BILLING_CYCLE_LABELS[cycle],
+      render: (cycle: BillingCycle) =>
+        statusLabel(BILLING_CYCLE_DICTIONARY, cycle),
     },
     {
       title: 'Thời hạn',
@@ -172,11 +159,9 @@ export function PackageComparisonTable({
       dataIndex: 'status',
       key: 'status',
       width: 140,
-      render: (status: PackageStatus) => {
-        const config = STATUS_CONFIG[status]
-
-        return <StatusBadge tone={config.tone} label={config.label} />
-      },
+      render: (status: PackageStatus) => (
+        <StatusBadge {...presentStatus(PACKAGE_STATUS_DICTIONARY, status)} />
+      ),
     },
     {
       title: 'Đăng ký',

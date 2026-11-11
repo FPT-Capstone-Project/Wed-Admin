@@ -38,6 +38,7 @@ const SD_STREAM_ID = 1
 
 /** Tăng timeout lên 30s giống file index.html để Wasm kịp nạp luồng từ Singapore */
 const BOOT_TIMEOUT_MS = 30_000
+const FRAME_TIMEOUT_MS = 10_000
 
 export function CameraStreamModal({
   open,
@@ -49,6 +50,7 @@ export function CameraStreamModal({
   const playerRef = useRef<ImouPlayerInstance | null>(null)
   const [playerError, setPlayerError] = useState<string | null>(null)
   const [isPlayerBooting, setPlayerBooting] = useState(false)
+  const [isConnectionLost, setConnectionLost] = useState(false)
   const [playerGeneration, setPlayerGeneration] = useState(0)
 
   // State chọn luồng HD (0) hoặc SD (1)
@@ -77,6 +79,7 @@ export function CameraStreamModal({
 
   /** Lấy token mới + dựng lại player */
   const handleRefreshToken = useCallback(() => {
+    setConnectionLost(false)
     setPlayerGeneration((generation) => generation + 1)
     void refetchToken()
   }, [refetchToken])
@@ -88,10 +91,34 @@ export function CameraStreamModal({
 
     let disposed = false
     let bootTimer: number | null = null
+    let frameTimer: number | null = null
+    let lastFrameAt: number | null = null
+    let connectionLost = false
+    let playbackError = false
     const host = hostRef.current
+
+    const markFrame = () => {
+      if (disposed) return
+      const firstFrame = lastFrameAt === null
+      lastFrameAt = performance.now()
+      if (firstFrame) setPlayerBooting(false)
+      if (bootTimer !== null) {
+        window.clearTimeout(bootTimer)
+        bootTimer = null
+      }
+      if (connectionLost) {
+        connectionLost = false
+        setConnectionLost(false)
+      }
+      if (playbackError) {
+        playbackError = false
+        setPlayerError(null)
+      }
+    }
 
     const boot = async () => {
       setPlayerError(null)
+      setConnectionLost(false)
       setPlayerBooting(true)
 
       try {
@@ -138,6 +165,7 @@ export function CameraStreamModal({
           dpr: window.devicePixelRatio || 0,
           handleError: (err) => {
             if (disposed) return
+            playbackError = true
             setPlayerError(describeImouPlayerError(err))
             setPlayerBooting(false)
           },
@@ -145,16 +173,15 @@ export function CameraStreamModal({
             if (disposed) return
             // Tắt trạng thái booting ngay khi nhận được frame đầu tiên
             if (event?.type === 'playStart') {
-              setPlayerBooting(false)
-              if (bootTimer !== null) {
-                window.clearTimeout(bootTimer)
-                bootTimer = null
-              }
+              markFrame()
+            }
+          },
+          handlePerf: (event) => {
+            if (event.type === 'videoFrame' || event.type === 'videoFrameSecond') {
+              markFrame()
             }
           },
         }
-
-        console.log('[ImouPlayer Config]', playerConfig)
 
         const player = new ImouPlayer(playerConfig)
 
@@ -164,9 +191,17 @@ export function CameraStreamModal({
         }
 
         playerRef.current = player
+        frameTimer = window.setInterval(() => {
+          if (disposed || lastFrameAt === null || connectionLost) return
+          if (performance.now() - lastFrameAt > FRAME_TIMEOUT_MS) {
+            connectionLost = true
+            setConnectionLost(true)
+            setPlayerBooting(false)
+          }
+        }, 1_000)
 
         // Hết 30 giây không phát được mới báo lỗi
-        bootTimer = window.setTimeout(() => {
+        if (lastFrameAt === null) bootTimer = window.setTimeout(() => {
           if (disposed) return
           setPlayerBooting(false)
           const sdkMessage = readImouPlayerMessage(player)
@@ -192,6 +227,7 @@ export function CameraStreamModal({
     return () => {
       disposed = true
       if (bootTimer !== null) window.clearTimeout(bootTimer)
+      if (frameTimer !== null) window.clearInterval(frameTimer)
       const player = playerRef.current
       playerRef.current = null
       try {
@@ -287,6 +323,17 @@ export function CameraStreamModal({
           ) : null}
 
           <div ref={hostRef} className="camera-stream-modal-player" />
+
+          {isConnectionLost && !isLoading ? (
+            <div className="camera-stream-modal-disconnected" role="alert">
+              <Typography.Paragraph style={{ color: 'inherit', marginBottom: 0 }}>
+                Đang mất kết nối luồng camera. Vui lòng kiểm tra thiết bị hoặc thử kết nối lại
+              </Typography.Paragraph>
+              <Button type="primary" icon={<ReloadOutlined />} onClick={handleRefreshToken} loading={isFetchingToken}>
+                Kết nối lại
+              </Button>
+            </div>
+          ) : null}
 
           {missingToken && !isLoading ? (
             <div className="camera-stream-modal-empty">

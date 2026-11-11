@@ -1,3 +1,4 @@
+import { formatDate } from '../../../shared/utils/date'
 import { Popover, Button } from 'antd'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
@@ -39,12 +40,17 @@ import {
 import { SessionStatusTag } from '../components/SessionStatusTag'
 import {
   SESSION_DEFAULT_PROGRESS,
-  SESSION_STATUS_CONFIG,
 } from '../components/session-status.config'
 import {
-  SESSION_GROWTH_STAGE_CONFIG,
-  SESSION_HARVEST_STATUS_CONFIG,
-} from '../components/admin-session-status.config'
+  SESSION_GROWTH_STAGE_DICTIONARY,
+  SESSION_HARVEST_STATUS_DICTIONARY,
+  SESSION_STATUS_DICTIONARY,
+} from '../../../shared/i18n/status/session'
+import {
+  presentStatus,
+  selectOptions,
+  statusLabel,
+} from '../../../shared/i18n/status/registry'
 import { resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionDetailDrawer } from '../../../app/router/lazy-modals'
 
@@ -60,10 +66,10 @@ import { SessionDetailDrawer } from '../../../app/router/lazy-modals'
  * nhân viên (staff) thực hiện trên app.
  */
 
-const STATUS_OPTIONS = CULTIVATION_SESSION_STATUSES.map((status) => ({
-  value: status,
-  label: SESSION_STATUS_CONFIG[status].label,
-}))
+const STATUS_OPTIONS = selectOptions(
+  SESSION_STATUS_DICTIONARY,
+  CULTIVATION_SESSION_STATUSES,
+)
 
 /**
  * Nhóm bộ lọc nhanh ở đầu bảng.
@@ -139,18 +145,6 @@ function resolveProgress(session: AdminCultivationSessionDto): number {
   )
 }
 
-const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-})
-
-function fmtDate(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return DATE_FMT.format(date)
-}
 
 /**
  * Sắp xếp mặc định: **Đang canh tác** lên trước → **Chờ xử lý** → **Đã kết
@@ -264,11 +258,11 @@ export function SessionListPage() {
         key: 'customer',
         width: 200,
         render: (_, session) => (
-          <Flex vertical>
-            <Typography.Text strong>
+          <Flex vertical style={{ width: 168, maxWidth: '100%', minWidth: 0 }}>
+            <Typography.Text strong ellipsis={{ tooltip: true }} style={{ width: '100%' }}>
               {session.customer_name ?? '—'}
             </Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+            <Typography.Text type="secondary" ellipsis={{ tooltip: true }} style={{ fontSize: 12, width: '100%' }}>
               {session.customer_email ?? '—'}
             </Typography.Text>
           </Flex>
@@ -360,8 +354,8 @@ export function SessionListPage() {
               <Flex justify="space-between" align="center" gap={8}>
                 <Typography.Text style={{ fontSize: 12, fontWeight: 600 }}>
                   {stage
-                    ? (SESSION_GROWTH_STAGE_CONFIG[stage]?.label ?? stage)
-                    : (SESSION_STATUS_CONFIG[session.status]?.shortLabel ??
+                    ? statusLabel(SESSION_GROWTH_STAGE_DICTIONARY, stage)
+                    : (SESSION_STATUS_DICTIONARY[session.status]?.shortLabel ??
                       session.status)}
                 </Typography.Text>
                 <Typography.Text type="secondary" style={{ fontSize: 11 }}>
@@ -384,7 +378,10 @@ export function SessionListPage() {
         width: 170,
         render: (_, session) => {
           const harvestConfig = session.harvest_status
-            ? SESSION_HARVEST_STATUS_CONFIG[session.harvest_status]
+            ? presentStatus(
+                SESSION_HARVEST_STATUS_DICTIONARY,
+                session.harvest_status,
+              )
             : null
           return (
             <Flex vertical gap={2}>
@@ -399,7 +396,7 @@ export function SessionListPage() {
                 </Typography.Text>
               )}
               <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                {fmtDate(session.harvest_date)}
+                {formatDate(session.harvest_date)}
               </Typography.Text>
             </Flex>
           )
@@ -413,7 +410,7 @@ export function SessionListPage() {
         width: 110,
         render: (value: string | null) => (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {fmtDate(value)}
+            {formatDate(value)}
           </Typography.Text>
         ),
       },
@@ -564,7 +561,8 @@ export function SessionListPage() {
           rowKey="session_id"
           columns={columns}
           dataSource={filteredItems}
-          loading={isLoading || isFetching}
+          loading={isLoading}
+          isFetching={isFetching}
           scrollX={1180}
           pagination={{
             pageSize: 20,

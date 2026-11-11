@@ -93,6 +93,21 @@
   box-shadow: none;
 }
 
+.mcms-camera-stream-modal .camera-stream-modal-disconnected {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 24px;
+  text-align: center;
+  color: #fff;
+  background: rgb(15 23 42 / 78%);
+}
+
 .mcms-camera-stream-modal .camera-stream-modal-player-root {
   --imou-icon-color-active: #cbd5e1;
   --imou-icon-color-rgba43: rgba(203, 213, 225, 0.24);

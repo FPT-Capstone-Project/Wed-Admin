@@ -51,6 +51,11 @@ export interface ImouPlayerCallbackPayload {
   type?: string
 }
 
+/** Frame notifications exposed by the bundled SDK, including Wasm playback. */
+export interface ImouPlayerPerfPayload {
+  type?: string
+}
+
 export interface ImouPlayerOptions {
   id: string
   width: number
@@ -79,6 +84,7 @@ export interface ImouPlayerOptions {
   dpr?: number
   handleError?: (err: ImouPlayerErrorPayload) => void
   handleCallBack?: (event: ImouPlayerCallbackPayload) => void
+  handlePerf?: (event: ImouPlayerPerfPayload) => void
 }
 
 export interface ImouPlayerInstance {

@@ -1,3 +1,4 @@
+import { formatDate } from '../../../shared/utils/date'
 import '../../../styles/reports-users-industrial.css'
 import { StatusBadge, MetadataBadge } from '../../../shared/ui'
 import {
@@ -36,16 +37,6 @@ interface UserDetailDrawerProps {
   onClose: () => void
 }
 
-const DATE_FORMAT = new Intl.DateTimeFormat('vi-VN', {
-  dateStyle: 'medium',
-  timeStyle: 'short',
-})
-
-function formatDateTime(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  return Number.isNaN(date.getTime()) ? value : DATE_FORMAT.format(date)
-}
 
 /**
  * Drawer chi tiết tài khoản — **CHỈ XEM**.
@@ -196,12 +187,12 @@ export function UserDetailDrawer({
                 {
                   key: 'createdAt',
                   label: 'Ngày tạo',
-                  children: formatDateTime(profile.created_at),
+                  children: formatDate(profile.created_at),
                 },
                 {
                   key: 'updatedAt',
                   label: 'Cập nhật lần cuối',
-                  children: formatDateTime(profile.updated_at),
+                  children: formatDate(profile.updated_at),
                 },
               ]}
             />

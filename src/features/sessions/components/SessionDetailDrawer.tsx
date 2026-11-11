@@ -1,3 +1,4 @@
+import { formatDate } from '../../../shared/utils/date'
 import '../sessions-industrial.css'
 import { ExperimentOutlined, PictureOutlined, ShopOutlined } from '@ant-design/icons'
 import {
@@ -18,8 +19,10 @@ import { useAdminCultivationSession } from '../hooks/useAdminCultivationSessions
 import { toCultivationSession } from '../api/admin-session-mapper'
 import {
   SESSION_DEFAULT_PROGRESS,
-  SESSION_STATUS_CONFIG,
 } from './session-status.config'
+import { SESSION_HARVEST_STATUS_DICTIONARY, SESSION_STATUS_DICTIONARY } from '../../../shared/i18n/status/session'
+import { PAYMENT_STATUS_DICTIONARY } from '../../../shared/i18n/status/order'
+import { presentStatus } from '../../../shared/i18n/status/registry'
 import { resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionStatusTag } from './SessionStatusTag'
 import { useFarmSession, useSpawnInspections } from '../../farm/hooks/useFarm'
@@ -37,18 +40,6 @@ interface SessionDetailDrawerProps {
   onClose: () => void
 }
 
-const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
-  day: '2-digit',
-  month: '2-digit',
-  year: 'numeric',
-})
-
-function fmtDate(value: string | null | undefined): string {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return value
-  return DATE_FMT.format(date)
-}
 
 /**
  * Drawer chi tiết phiên canh tác — **100% READ-ONLY**.
@@ -118,8 +109,10 @@ export function SessionDetailDrawer({
                 <SessionStatusTag status={session.status} />
                 {session.payment_status && (
                   <StatusBadge
-                    tone={session.payment_status === 'PAID' ? 'ok' : 'warning'}
-                    label={session.payment_status}
+                    {...presentStatus(
+                      PAYMENT_STATUS_DICTIONARY,
+                      session.payment_status,
+                    )}
                   />
                 )}
               </Space>
@@ -176,7 +169,8 @@ function SessionDetailContent({
   progressPercent,
   spawnIssued,
 }: SessionDetailContentProps) {
-  const statusConfig = SESSION_STATUS_CONFIG[session.status]
+  // ⚠ `presentStatus` ⇒ không bao giờ lộ enum lạ của BE.
+  const statusConfig = presentStatus(SESSION_STATUS_DICTIONARY, session.status)
 
   /**
    * Tab đang active.
@@ -264,7 +258,7 @@ function SessionDetailContent({
             Tiến độ canh tác
           </Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {statusConfig?.label ?? session.status} · {progressPercent}%
+            {statusConfig.label} · {progressPercent}%
           </Typography.Text>
         </Flex>
         <Progress
@@ -341,7 +335,7 @@ function SessionDetailContent({
                       children: (
                         <MetadataBadge
                           className="mcms-session-mono"
-                          label={fmtDate(session.start_date)}
+                          label={formatDate(session.start_date)}
                         />
                       ),
                     },
@@ -351,14 +345,14 @@ function SessionDetailContent({
                       children: (
                         <MetadataBadge
                           className="mcms-session-mono"
-                          label={fmtDate(
+                          label={formatDate(
                             session.expected_harvest_date ?? session.end_date,
                           )}
                         />
                       ),
                     },
                     { key: 'spawnRequested', label: 'Số phôi yêu cầu', children: session.spawn_quantity ?? '—' },
-                    { key: 'harvestStatus', label: 'Trạng thái thu hoạch', children: session.harvest_status ?? '—' },
+                    { key: 'harvestStatus', label: 'Trạng thái thu hoạch', children: presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, session.harvest_status).label },
                     {
                       key: 'spawn',
                       label: 'Phôi đã cấp',

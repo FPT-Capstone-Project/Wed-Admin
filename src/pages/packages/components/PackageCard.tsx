@@ -14,8 +14,12 @@ import {
   Space,
   Typography,
 } from 'antd'
-import type { BillingCycle, PackageStatus, RentalPackage } from '../../../types/package.types'
-import type { SemanticTone } from '../../../app/theme/tokens'
+import type { RentalPackage } from '../../../types/package.types'
+import {
+  BILLING_CYCLE_DICTIONARY,
+  PACKAGE_STATUS_DICTIONARY,
+} from '../../../shared/i18n/status/package'
+import { presentStatus, statusLabel } from '../../../shared/i18n/status/registry'
 import { ActionButton, ConfirmActionButton, StatusBadge, MetadataBadge } from '../../../shared/ui'
 
 interface PackageCardProps {
@@ -26,24 +30,6 @@ interface PackageCardProps {
   onToggleStatus: (rentalPackage: RentalPackage) => void
   onTogglePopular: (rentalPackage: RentalPackage) => void
   onSelect: (rentalPackage: RentalPackage) => void
-}
-
-const BILLING_CYCLE_LABELS: Record<BillingCycle, string> = {
-  WEEKLY: 'Theo tuần',
-  BIWEEKLY: 'Theo 2 tuần',
-  MONTHLY: 'Theo tháng',
-  CROP_CYCLE: 'Theo vụ mùa',
-  QUARTERLY: 'Theo quý',
-  YEARLY: 'Theo năm',
-}
-
-const STATUS_CONFIG: Record<
-  PackageStatus,
-  { tone: SemanticTone; label: string }
-> = {
-  ACTIVE: { tone: 'ok', label: 'Đang nhận đơn' },
-  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
-  PROMOTION: { tone: 'info', label: 'Gói ưu đãi' },
 }
 
 const VND_FORMATTER = new Intl.NumberFormat('vi-VN', {
@@ -60,7 +46,10 @@ export function PackageCard({
   onTogglePopular,
   onSelect,
 }: PackageCardProps) {
-  const statusConfig = STATUS_CONFIG[rentalPackage.status]
+  const statusConfig = presentStatus(
+    PACKAGE_STATUS_DICTIONARY,
+    rentalPackage.status,
+  )
   const isAvailable = rentalPackage.status !== 'INACTIVE'
 
   return (
@@ -89,7 +78,7 @@ export function PackageCard({
           </Flex>
           <dl className="mcms-package-specs">
             <dt>Giá cước</dt><dd>{VND_FORMATTER.format(rentalPackage.price)}</dd>
-            <dt>Chu kỳ</dt><dd>{BILLING_CYCLE_LABELS[rentalPackage.billingCycle]}</dd>
+            <dt>Chu kỳ</dt><dd>{statusLabel(BILLING_CYCLE_DICTIONARY, rentalPackage.billingCycle)}</dd>
             <dt>Thời hạn</dt><dd>{rentalPackage.durationDays} ngày</dd>
             <dt>Số khay tối đa</dt><dd>{rentalPackage.maxTrays}</dd>
             <dt>Khách đăng ký</dt><dd>{rentalPackage.totalSubscribers}</dd>

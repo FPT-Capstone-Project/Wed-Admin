@@ -1,3 +1,4 @@
+import { formatVND } from '../../../shared/utils/currency'
 import { ChartFrame, ChartLegend, ChartTooltipSurface } from '../../../shared/ui/charts/ChartPrimitives'
 import { useChartMotion } from '../../../shared/ui/charts/useChartMotion'
 import { chartTickStyle } from '../../../shared/ui/charts/chart-styles'
@@ -14,31 +15,14 @@ import {
   YAxis,
 } from 'recharts'
 import { tones, chartSeries } from '../../../app/theme/tokens'
-
-interface ComparativeChartPoint {
-  month: string
-  current: number
-  previous: number
-}
+import type { MonthlyRevenuePoint } from '../../../features/analytics/utils/executive-report.utils'
 
 interface ComparativeRevenueChartProps {
-  data: ComparativeChartPoint[]
+  data: MonthlyRevenuePoint[]
   currentLabel: string
   previousLabel: string
   height?: number
 }
-
-const VND_COMPACT = new Intl.NumberFormat('vi-VN', {
-  notation: 'compact',
-  compactDisplay: 'short',
-  maximumFractionDigits: 1,
-})
-
-const VND_FULL = new Intl.NumberFormat('vi-VN', {
-  style: 'currency',
-  currency: 'VND',
-  maximumFractionDigits: 0,
-})
 
 const CURRENT_COLOR = chartSeries.revenue
 const PREVIOUS_COLOR = chartSeries.revenuePrevious
@@ -55,9 +39,10 @@ function CustomTooltip({
   if (!active || !payload || payload.length === 0) return null
 
   const current = (payload.find((p) => p.dataKey === 'current')?.value ?? 0)
-  const previous = (payload.find((p) => p.dataKey === 'previous')?.value ?? 0)
-  const difference = current - previous
-  const deltaPercent = previous > 0 ? (difference / previous) * 100 : 0
+  const previous = payload.find((p) => p.dataKey === 'previous')?.value
+  const hasPrevious = previous != null
+  const difference = hasPrevious ? current - previous : 0
+  const deltaPercent = hasPrevious && previous > 0 ? (difference / previous) * 100 : 0
   const isImprovement = difference >= 0
 
   return (
@@ -66,13 +51,14 @@ function CustomTooltip({
       <TooltipRow
         color={CURRENT_COLOR}
         label="Doanh thu kỳ này"
-        value={VND_FULL.format(current)}
+        value={formatVND(current)}
       />
       <TooltipRow
         color={PREVIOUS_COLOR}
         label="Doanh thu kỳ trước"
-        value={VND_FULL.format(previous)}
+        value={hasPrevious ? formatVND(previous) : 'Chưa có dữ liệu kỳ trước'}
       />
+      {hasPrevious && <>
       <div
         style={{
           marginTop: 6,
@@ -91,7 +77,7 @@ function CustomTooltip({
           }}
         >
           {difference >= 0 ? '+' : ''}
-          {VND_FULL.format(difference)}
+          {formatVND(difference)}
         </span>
       </div>
       <div
@@ -113,6 +99,7 @@ function CustomTooltip({
           {deltaPercent.toFixed(1)}%
         </span>
       </div>
+      </>}
     </ChartTooltipSurface>
   )
 }
@@ -178,12 +165,14 @@ function ComparativeRevenueChartInner({
     return data.reduce(
       (acc, point) => {
         acc.current += point.current
-        acc.previous += point.previous
+        acc.previous += point.previous ?? 0
         return acc
       },
       { current: 0, previous: 0 },
     )
   }, [data])
+
+  const hasPreviousData = data.some((point) => point.previous != null)
 
   const totalDelta =
     totals.previous > 0
@@ -212,7 +201,7 @@ function ComparativeRevenueChartInner({
               fontVariantNumeric: 'tabular-nums',
             }}
           >
-            {VND_FULL.format(totals.current)}
+            {formatVND(totals.current)}
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -221,11 +210,12 @@ function ComparativeRevenueChartInner({
             style={{
               fontSize: 16,
               fontWeight: 600,
-              color: totalDelta >= 0 ? tones.ok.text : tones.danger.text,
+              color: !hasPreviousData ? 'var(--mcms-text-muted)' : totalDelta >= 0 ? tones.ok.text : tones.danger.text,
             }}
           >
-            {totalDelta >= 0 ? '+' : ''}
-            {totalDelta.toFixed(1)}%
+            {hasPreviousData
+              ? `${totalDelta >= 0 ? '+' : ''}${totalDelta.toFixed(1)}%`
+              : 'Chưa có dữ liệu kỳ trước'}
           </div>
         </div>
       </div>
@@ -250,7 +240,7 @@ function ComparativeRevenueChartInner({
               tickLine={false}
             />
             <YAxis
-              tickFormatter={(v: number) => `${VND_COMPACT.format(v)}`}
+              tickFormatter={(v: number) => formatVND(v, { compact: true })}
               tick={chartTickStyle}
               axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}
@@ -260,17 +250,17 @@ function ComparativeRevenueChartInner({
               cursor={{ fill: 'var(--mcms-surface-hover)' }}
             />
             <Legend content={() => <ChartLegend items={[
-              { key: 'previous', label: previousLabel, color: PREVIOUS_COLOR },
+              ...(hasPreviousData ? [{ key: 'previous', label: previousLabel, color: PREVIOUS_COLOR }] : []),
               { key: 'current', label: currentLabel, color: CURRENT_COLOR },
             ]} />} />
-            <Bar
+            {hasPreviousData && <Bar
               isAnimationActive={animate}
               dataKey="previous"
               name="previous"
               fill={PREVIOUS_COLOR}
               radius={[4, 4, 0, 0]}
               maxBarSize={28}
-            />
+            />}
             <Bar
               isAnimationActive={animate}
               dataKey="current"

@@ -2,11 +2,14 @@ import dayjs from 'dayjs'
 import { Flex, Tooltip, Typography } from 'antd'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
 import {
-  ALERT_CATEGORY_LABELS,
   ALERT_SEVERITY_CONFIG,
-  ALERT_SOURCE_LABELS,
 } from './alert-status.config'
 import type { OperationalAlert } from '../types/alert.types'
+import {
+  ALERT_CATEGORY_DICTIONARY,
+  ALERT_SOURCE_DICTIONARY,
+} from '../../../shared/i18n/status/reference'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 
 interface AlertItemRowProps {
   alert: OperationalAlert
@@ -50,9 +53,9 @@ export function AlertItemRow({ alert }: AlertItemRowProps) {
 
           <Flex gap={8} wrap style={{ marginTop: 6, fontSize: 12 }}>
             <Typography.Text type="secondary">
-              {ALERT_CATEGORY_LABELS[alert.category] ?? alert.category}
+              {statusLabel(ALERT_CATEGORY_DICTIONARY, alert.category)}
               {' · '}
-              {ALERT_SOURCE_LABELS[alert.source]}
+              {statusLabel(ALERT_SOURCE_DICTIONARY, alert.source)}
             </Typography.Text>
             {alert.floorName && (
               <Typography.Text type="secondary">· {alert.floorName}</Typography.Text>
@@ -72,7 +75,7 @@ export function AlertItemRow({ alert }: AlertItemRowProps) {
       </Flex>
 
       <Flex gap={8} wrap align="center">
-        <MetadataBadge label={ALERT_SOURCE_LABELS[alert.source]} />
+        <MetadataBadge label={statusLabel(ALERT_SOURCE_DICTIONARY, alert.source)} />
       </Flex>
     </Flex>
   )

@@ -53,6 +53,12 @@ export function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, Math.round(value)))
 }
 
+/** Format recorded progress without inventing a value for missing data. */
+export function formatSessionProgress(value: number | string | null | undefined): string {
+  if (value == null || (typeof value === 'string' && value.trim() === '')) return '—'
+  return `${clampPercent(Number(value))}%`
+}
+
 /** Thông tin cần thiết để tính tiến độ theo thời gian. */
 export interface SessionProgressInput {
   /** Ngày bắt đầu canh tác (ISO). */

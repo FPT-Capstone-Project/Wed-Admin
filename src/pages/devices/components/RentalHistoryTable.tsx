@@ -11,14 +11,7 @@ import {
   formatRentalDurationLabel,
 } from '../utils/iot-history.utils'
 
-const STATUS_CONFIG: Record<
-  RentalSessionStatus,
-  { color: string; label: string }
-> = {
-  COMPLETED: { color: 'default', label: 'Đã hoàn thành' },
-  ACTIVE: { color: 'success', label: 'Đang vận hành' },
-  OVERDUE: { color: 'error', label: 'Quá hạn' },
-}
+import { RENTAL_SESSION_STATUS_LEGACY_CONFIG } from '../../../shared/i18n/status/iot'
 
 interface RentalHistoryTableProps {
   sessions: RentalSession[]
@@ -72,8 +65,8 @@ export function RentalHistoryTable({
       width: 220,
       render: (_, session) => (
         <div className="history-average-metrics">
-          <span>{session.avgTemp.toLocaleString('vi-VN')}°C</span>
-          <span>{session.avgHumidity.toLocaleString('vi-VN')}%RH</span>
+          <span>{Number(session.avgTemp).toFixed(1)}°C</span>
+          <span>{Number(session.avgHumidity).toFixed(1)}%RH</span>
         </div>
       ),
     },
@@ -82,16 +75,19 @@ export function RentalHistoryTable({
       dataIndex: 'status',
       key: 'status',
       width: 140,
-      filters: Object.entries(STATUS_CONFIG).map(([value, config]) => ({
-        value,
-        text: config.label,
-      })),
-      onFilter: (value, session) => session.status === value,
-      render: (status: RentalSessionStatus) => (
-        <Tag color={STATUS_CONFIG[status].color}>
-          {STATUS_CONFIG[status].label}
-        </Tag>
+      filters: Object.entries(RENTAL_SESSION_STATUS_LEGACY_CONFIG).map(
+        ([value, config]) => ({
+          value,
+          text: config.label,
+        }),
       ),
+      onFilter: (value, session) => session.status === value,
+      render: (status: RentalSessionStatus) => {
+        const meta = RENTAL_SESSION_STATUS_LEGACY_CONFIG[status]
+        return (
+          <Tag color={meta?.color ?? 'default'}>{meta?.label ?? status}</Tag>
+        )
+      },
     },
     {
       title: 'Thao tác',

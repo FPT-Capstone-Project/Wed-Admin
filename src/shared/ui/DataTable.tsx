@@ -18,6 +18,8 @@ export interface DataTableProps<T> {
   scroll?: TableProps<T>['scroll']
   /** Đang tải — hiện spinner của antd. */
   loading?: boolean
+  /** Background refresh; keep rows visible with subdued feedback. */
+  isFetching?: boolean
   /** Lỗi tải dữ liệu — hiển thị alert có nút thử lại. */
   error?: { message?: string } | null
   /** Tiêu đề bảng. */
@@ -62,6 +64,7 @@ export function DataTable<T extends object>({
   locale,
   scroll,
   loading = false,
+  isFetching = false,
   error = null,
   title,
   description,
@@ -96,7 +99,7 @@ export function DataTable<T extends object>({
   const hasHeader = Boolean(title || description || toolbar)
 
   return (
-    <div className={['mcms-data-table', className].filter(Boolean).join(' ')} aria-busy={loading}>
+    <div className={['mcms-data-table', className].filter(Boolean).join(' ')} aria-busy={loading || isFetching}>
       {hasHeader && (
         <div
           style={{
@@ -142,6 +145,7 @@ export function DataTable<T extends object>({
       )}
 
       <Table<T>
+        style={{ opacity: isFetching && !loading ? 0.6 : 1 }}
         rowKey={rowKey}
         onRow={onRow}
         onChange={onChange}

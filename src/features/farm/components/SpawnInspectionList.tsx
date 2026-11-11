@@ -2,7 +2,8 @@ import { Flex, Image, Tooltip, Typography } from 'antd'
 import type { ReactNode } from 'react'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
 import type { SpawnInspection } from '../types/farm.types'
-import { SPAWN_CONDITION_CONFIG } from '../../sessions/components/session-status.config'
+import { SPAWN_CONDITION_DICTIONARY } from '../../../shared/i18n/status/session'
+import { presentStatus } from '../../../shared/i18n/status/registry'
 
 const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -31,11 +32,9 @@ interface SpawnInspectionCardProps {
  * và các ảnh Cloudinary kèm theo.
  */
 export function SpawnInspectionCard({ inspection }: SpawnInspectionCardProps) {
+  // ⚠ `presentStatus` ⇒ không bao giờ lộ enum lạ của BE.
   const conditionConfig = inspection.condition
-    ? (SPAWN_CONDITION_CONFIG[inspection.condition] ?? {
-        tone: 'neutral' as const,
-        label: inspection.condition,
-      })
+    ? presentStatus(SPAWN_CONDITION_DICTIONARY, inspection.condition)
     : null
 
   return (
@@ -56,7 +55,7 @@ export function SpawnInspectionCard({ inspection }: SpawnInspectionCardProps) {
             Kiểm tra {fmtDate(inspection.checked_at ?? inspection.created_at)}
           </Typography.Text>
           {conditionConfig && (
-            <StatusBadge tone={conditionConfig.tone} label={conditionConfig.label} />
+            <StatusBadge {...conditionConfig} />
           )}
         </Flex>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>

@@ -18,6 +18,8 @@ import type {
   AutoControlLogEntry,
   AutoControlLogSensor,
 } from '../../../types/iot'
+import { AUTO_CONTROL_EVENT_DICTIONARY } from '../../../shared/i18n/status/iot'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 
 // ─── Định dạng cơ bản ───────────────────────────────────────────────────
 
@@ -169,19 +171,13 @@ const FAILED_EVENT_TYPES = new Set(['FAULT', 'OFF_FAILED', 'RETRY_WAIT'])
  * lỗi, nên vẫn xếp "thành công" — nhưng nhãn phải nói rõ là quyết định
  * chứ không phải "đã tưới". Xem `formatEventType`.
  */
-export const AUTO_CONTROL_EVENT_LABELS: Readonly<Record<string, string>> = {
-  DECISION: 'Quyết định tưới',
-  START: 'Bắt đầu phiên tự động',
-  STOP: 'Dừng phiên tự động',
-  ON_REQUESTED: 'Yêu cầu mở van tưới',
-  OFF_REQUESTED: 'Yêu cầu đóng van tưới',
-  PULSE_RESERVED: 'Phun sương',
-  OFF_CONFIRMED: 'Đã đóng van tưới',
-  RETRY_WAIT: 'Tạm dừng — chờ thử lại',
-  CONFIG_SAVED: 'Lưu cấu hình',
-  FAULT: 'Lỗi hệ thống',
-  MANUAL_OVERRIDE: 'Nhân viên ngắt tưới',
-}
+export const AUTO_CONTROL_EVENT_LABELS: Readonly<Record<string, string>> =
+  Object.fromEntries(
+    Object.entries(AUTO_CONTROL_EVENT_DICTIONARY).map(([key, value]) => [
+      key,
+      value.label,
+    ]),
+  )
 
 /**
  * Kết quả thực tế của một dòng nhật ký — điều hệ thống **đã làm**,
@@ -283,9 +279,8 @@ export function resolveLogStatus(
  */
 export function formatEventType(eventType: string | null | undefined): string {
   if (!eventType) return '—'
-  const key = eventType.toUpperCase()
-  if (key === 'DECISION') return 'Đánh giá điều kiện'
-  return AUTO_CONTROL_EVENT_LABELS[key] ?? eventType
+  // ⚠ Dùng `presentStatus` ⇒ **không bao giờ** lộ enum lạ của BE.
+  return statusLabel(AUTO_CONTROL_EVENT_DICTIONARY, eventType, '—')
 }
 
 /**

@@ -6,7 +6,7 @@ import {
   PlayCircleOutlined,
   ReloadOutlined,
 } from '@ant-design/icons'
-import { Flex, Space, Typography } from 'antd'
+import { Flex, Skeleton, Space, Typography } from 'antd'
 import type { TableColumnsType } from 'antd'
 import { CameraStreamModal } from '../../app/router/lazy-modals'
 import { useCameras } from '../../features/cameras/hooks/useCameras'
@@ -22,16 +22,9 @@ import {
   StatCard,
   StatusBadge,
 } from '../../shared/ui'
-import type { SemanticTone } from '../../app/theme/tokens'
+import { CAMERA_STATUS_DICTIONARY } from '../../shared/i18n/status/camera'
+import { presentStatus, statusLabel } from '../../shared/i18n/status/registry'
 
-const STATUS_META: Record<
-  CameraStatus,
-  { tone: SemanticTone; label: string }
-> = {
-  ACTIVE: { tone: 'ok', label: 'Hoạt động' },
-  INACTIVE: { tone: 'muted', label: 'Ngừng' },
-  OFFLINE: { tone: 'danger', label: 'Mất kết nối' },
-}
 
 
 export function CameraOverviewPage() {
@@ -100,14 +93,9 @@ export function CameraOverviewPage() {
         dataIndex: 'status',
         key: 'status',
         width: 130,
-        render: (status: CameraStatus) => {
-          const meta = STATUS_META[status] ?? {
-            tone: 'neutral' as const,
-            label: status,
-          }
-
-          return <StatusBadge tone={meta.tone} label={meta.label} />
-        },
+        render: (status: CameraStatus) => (
+          <StatusBadge {...presentStatus(CAMERA_STATUS_DICTIONARY, status)} />
+        ),
       },
       {
         title: 'Hành động',
@@ -208,7 +196,7 @@ export function CameraOverviewPage() {
           <ActionButton
             key={status}
             icon={<CameraOutlined />}
-            label={STATUS_META[status].label}
+            label={statusLabel(CAMERA_STATUS_DICTIONARY, status)}
             variant={statusFilter === status ? 'primary' : 'default'}
             size="middle"
             onClick={() => setStatusFilter(status)}
@@ -216,13 +204,14 @@ export function CameraOverviewPage() {
         ))}
       </Flex>
 
-      <DataTable<Camera>
+      {isLoading && !camerasQuery.data ? <Skeleton active paragraph={{ rows: 8 }} /> : <DataTable<Camera>
         rowKey={(record) =>
           `cam-${record.id || record.cameraCode || 'unknown'}`
         }
         columns={columns}
         dataSource={cameras}
-        loading={isLoading || isFetching}
+        loading={isLoading}
+        isFetching={isFetching}
         error={
           isError
             ? {
@@ -236,7 +225,7 @@ export function CameraOverviewPage() {
         scrollX={1100}
         emptyTitle={
           statusFilter
-            ? `Không có camera ${STATUS_META[statusFilter].label.toLowerCase()}`
+            ? `Không có camera ${statusLabel(CAMERA_STATUS_DICTIONARY, statusFilter).toLowerCase()}`
             : 'Chưa đăng ký camera nào'
         }
         emptyDescription={
@@ -244,7 +233,7 @@ export function CameraOverviewPage() {
             ? 'Thử chọn trạng thái khác hoặc tải lại danh sách camera.'
             : 'Đăng ký camera Imou để theo dõi toàn cảnh nhà trồng.'
         }
-      />
+      />}
 
       {/*
         ⚠ `CameraStreamModal` được lazy-load (xem `app/router/lazy-modals.ts`)

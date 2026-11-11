@@ -3,6 +3,7 @@ import { StatusBadge, DataTable } from '../../../shared/ui'
 import { useMemo, useState } from 'react'
 import { HistoryOutlined, RightOutlined } from '@ant-design/icons'
 import {
+  Alert,
   Button,
   Flex,
   InputNumber,
@@ -53,7 +54,7 @@ export function SensorHistoryPanel({
   const [sensorId, setSensorId] = useState<number>(1)
   const [limit, setLimit] = useState<number>(50)
 
-  const { data: history, isLoading, isError, refetch } = useSensorHistory(
+  const { data: history, isLoading, isFetching, isError, refetch } = useSensorHistory(
     masterId,
     nodeId,
     sensorId,
@@ -177,7 +178,15 @@ export function SensorHistoryPanel({
         </Button>
       </Flex>
 
-      <DataTable<IotHistoryReading>
+      {isError ? (
+        <Alert
+          type="error"
+          showIcon
+          title="Không tải được lịch sử telemetry."
+          description="Vui lòng thử tải lại dữ liệu cảm biến."
+          action={<Button onClick={() => void refetch()} loading={isFetching}>Thử lại</Button>}
+        />
+      ) : <DataTable<IotHistoryReading>
         rowKey={(row) => row.id}
         columns={columns}
         dataSource={readings}
@@ -185,12 +194,8 @@ export function SensorHistoryPanel({
         size="small"
         pagination={{ pageSize: 10, showSizeChanger: false }}
         scrollX={600}
-        emptyTitle={
-                isError
-                  ? 'Không tải được lịch sử telemetry.'
-                  : 'Chưa có dữ liệu lịch sử cho cảm biến này.'
-              }
-      />
+        emptyTitle="Chưa có dữ liệu lịch sử cho cảm biến này."
+      />}
     </Flex>
   )
 }

@@ -26,6 +26,7 @@ import {
   Empty,
   Flex,
   Segmented,
+  Select,
   Space,
   Tooltip,
   Typography,
@@ -48,7 +49,6 @@ import type {
   CultivationFloorMapping,
   FloorStatus,
   IotSensor,
-  MasterStatus,
 } from '../../../types/iot'
 import type { Camera } from '../../../types/camera.types'
 import { AutoControlDetailModal } from '../../../app/router/lazy-modals'
@@ -62,17 +62,49 @@ import {
   FLOOR_CAMERA_UNAVAILABLE_MESSAGES,
   type FloorCameraUnavailableReason,
 } from '../utils/floor-camera.utils'
-
-const MASTER_STATUS_CONFIG: Record<
-  MasterStatus,
-  { color: string; label: string }
-> = {
-  online: { color: 'success', label: 'Trực tuyến' },
-  offline: { color: 'default', label: 'Mất kết nối' },
-}
+import {
+  FLOOR_STATUS_DICTIONARY,
+  MASTER_STATUS_DICTIONARY,
+  SENSOR_VALIDITY_DICTIONARY,
+} from '../../../shared/i18n/status/iot'
+import { presentStatus, statusLabel } from '../../../shared/i18n/status/registry'
 
 /** Tab của card "Cảm biến môi trường". */
 type SensorTab = 'realtime' | 'history'
+
+/**
+ * Nhãn trạng thái **bộ điều khiển** (master).
+ *
+ * ⚠ Luôn tra qua từ điển trung tâm ⇒ không bao giờ lộ `online` / `offline`
+ *   thô ra giao diện.
+ */
+function masterStatusLabel(status: string | null | undefined): string {
+  return statusLabel(MASTER_STATUS_DICTIONARY, status, 'Chưa xác định')
+}
+
+/**
+ * Nhãn trạng thái **tầng** (sàn).
+ *
+ * ⚠ `cultivation_floors.status` chỉ có `ACTIVE` / `INACTIVE` — nhưng BE có
+ *   thể trả giá trị lạ ⇒ dùng `statusLabel` để không lộ chuỗi thô.
+ */
+function floorStatusLabel(status: string | null | undefined): string {
+  return statusLabel(FLOOR_STATUS_DICTIONARY, status, 'Chưa ghi nhận')
+}
+
+/**
+ * Nhãn tình trạng số đo của cảm biến.
+ *
+ * ⚠ BE trả **boolean** (`IotSensor.ok`) ⇒ chuẩn hoá sang `VALID` / `INVALID`
+ *   trước khi tra cứu.
+ */
+function sensorValidityLabel(ok: boolean): string {
+  return statusLabel(
+    SENSOR_VALIDITY_DICTIONARY,
+    ok ? 'VALID' : 'INVALID',
+    'Chưa ghi nhận',
+  )
+}
 
 function formatTimestamp(timestamp: string | number | null) {
   if (!timestamp) return '—'
@@ -127,6 +159,19 @@ export function DeviceControlPanel() {
   // ── Data from APIs (read-only) ───────────────────────────────────────
   const { data: masters = [] } = useMasterList({ staleTime: 30_000 })
   const { data: floors = [], isLoading: floorsLoading } = useFloorList()
+  const [selectedMasterId, setSelectedMasterId] = useState<number | null>(null)
+  // Resolve the default after the asynchronous list arrives, without an effect
+  // that could overwrite the administrator's selection on a refresh.
+  const selectedMaster = masters.find((master) => master.id === selectedMasterId)
+    ?? masters.find((master) => master.reportedStatus === 'online')
+    ?? masters[0]
+  const selectedFloors = useMemo(
+    () => floors.filter((floor) => floor.master_id === selectedMaster?.id),
+    [floors, selectedMaster?.id],
+  )
+  const isMasterOnline = selectedMaster?.reportedStatus === 'online'
+  const onlineCount = masters.filter((master) => master.reportedStatus === 'online').length
+  const onlineTone = onlineCount === 0 ? 'danger' : onlineCount === masters.length ? 'ok' : 'warning'
 
   /**
    * Telemetry cảm biến — polling khi đang ở tab "Thời gian thực".
@@ -138,7 +183,7 @@ export function DeviceControlPanel() {
    *   định chu kỳ **và tự dừng khi tab trình duyệt bị ẩn** (xem `useIoT.ts`).
    */
   const { data: sensorsResponse, isLoading: sensorsLoading, isFetching: sensorsFetching } =
-    useMasterSensors(masters[0]?.masterId ?? null, {
+    useMasterSensors(selectedMaster?.masterId ?? null, {
       refetchInterval: isRealtimeTab ? undefined : false,
     })
   const sensors = sensorsResponse?.sensors ?? []
@@ -231,8 +276,7 @@ export function DeviceControlPanel() {
   )
 
   function sensorThresholds(sensor: IotSensor) {
-    const matches = floors.filter(floor =>
-      floor.master_id === masters[0]?.id && floor.node_address === sensor.nodeId)
+    const matches = selectedFloors.filter(floor => floor.node_address === sensor.nodeId)
     return climateThresholdsFromConfig(matches.length === 1
       ? configByFloorId.get(matches[0].floor_id) : null)
   }
@@ -264,7 +308,18 @@ export function DeviceControlPanel() {
     },
     {
       title: 'Tình trạng cảm biến', dataIndex: 'ok', key: 'ok', width: 160,
-      render: (ok: boolean) => <StatusBadge tone={ok ? 'ok' : 'warning'} label={ok ? 'Dữ liệu hợp lệ' : 'Sai số cảm biến'} />,
+      render: (ok: boolean) => !isMasterOnline ? (
+        <StatusBadge
+          tone="danger"
+          label="Mất tín hiệu"
+          title="Bộ điều khiển đang ngoại tuyến, dữ liệu có thể đã cũ"
+        />
+      ) : (
+        <StatusBadge
+          tone={ok ? 'ok' : 'warning'}
+          label={sensorValidityLabel(ok)}
+        />
+      ),
     },
     {
       title: 'Cập nhật cuối',
@@ -338,9 +393,11 @@ export function DeviceControlPanel() {
                 {master.masterId}
               </Typography.Text>
             </Flex>
-            <StatusBadge tone={status === 'online' ? 'ok' : 'danger'} style={{ fontSize: 11, width: 'fit-content' }} label={<>
-              {MASTER_STATUS_CONFIG[status].label}
-            </>} />
+            <StatusBadge
+              {...presentStatus(MASTER_STATUS_DICTIONARY, status)}
+              title={`Trạng thái bộ điều khiển: ${masterStatusLabel(status)}`}
+              style={{ fontSize: 11, width: 'fit-content' }}
+            />
           </Flex>
         )
       },
@@ -379,9 +436,10 @@ export function DeviceControlPanel() {
       width: 110,
       align: 'center',
       render: (status: FloorStatus) => (
-        <StatusBadge tone={status === 'ACTIVE' ? 'ok' : 'muted'}  label={<>
-          {status === 'ACTIVE' ? 'Hoạt động' : 'Ngừng'}
-        </>} />
+        <StatusBadge
+          {...presentStatus(FLOOR_STATUS_DICTIONARY, status, 'Chưa ghi nhận')}
+          title={`Trạng thái tầng: ${floorStatusLabel(status)}`}
+        />
       ),
     },
     {
@@ -485,6 +543,28 @@ export function DeviceControlPanel() {
 
   return (
     <div className="mcms-iot-view">
+      <Flex align="center" gap={12} wrap style={{ marginBottom: 16 }}>
+        <Typography.Text strong>Bộ điều khiển</Typography.Text>
+        <Select<number>
+          aria-label="Chọn bộ điều khiển Master"
+          value={selectedMaster?.id}
+          disabled={masters.length === 0}
+          placeholder="Chưa có bộ điều khiển"
+          style={{ width: 320, maxWidth: '100%' }}
+          options={masters.map((master) => ({
+            value: master.id,
+            label: `${master.masterId} · ${masterStatusLabel(master.reportedStatus)}`,
+          }))}
+          onChange={(id) => {
+            setSelectedMasterId(id)
+            setSelectedFloor(null)
+            setSelectedSensor(null)
+            setAutoControlFloor(null)
+            setStreamingCamera(null)
+            setStreamingFloor(null)
+          }}
+        />
+      </Flex>
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
         <StatCard
           title="Bộ điều khiển trung tâm"
@@ -509,12 +589,12 @@ export function DeviceControlPanel() {
         />
         <StatCard
           title="Bộ điều khiển trực tuyến"
-          value={masters.filter((m) => m.reportedStatus === 'online').length}
+          value={onlineCount}
           suffix={`/ ${masters.length}`}
           icon={<WifiOutlined />}
-          tone="ok"
+          tone={onlineTone}
           highlightValue
-          description="Đang kết nối bình thường"
+          description={onlineCount === 0 ? 'Không có bộ điều khiển trực tuyến' : onlineCount === masters.length ? 'Tất cả bộ điều khiển đang trực tuyến' : 'Một số bộ điều khiển đang ngoại tuyến'}
           style={{ flex: '1 1 200px' }}
         />
       </Flex>
@@ -538,7 +618,7 @@ export function DeviceControlPanel() {
         <DataTable<CultivationFloorMapping>
           rowKey="floor_id"
           columns={floorColumns}
-          dataSource={floors}
+          dataSource={selectedFloors}
           loading={floorsLoading || configsLoading}
           size="small"
           pagination={{ pageSize: 10, showSizeChanger: false }}
@@ -553,7 +633,7 @@ export function DeviceControlPanel() {
           <Flex align="center" gap={8}>
             <WifiOutlined aria-hidden="true" />
             <span>
-              Cảm biến môi trường — Bộ điều khiển {masters[0]?.masterId ?? '—'}
+              Cảm biến môi trường — Bộ điều khiển {selectedMaster?.masterId ?? '—'}
             </span>
             {isRealtimeTab && sensorsFetching && !sensorsLoading && (
               <StatusBadge tone="info" style={{ fontSize: 11 }} label={<>
@@ -583,7 +663,7 @@ export function DeviceControlPanel() {
       >
         {isRealtimeTab ? (
           <Flex vertical gap={16}>
-            {floors.filter(floor => floor.master_id === masters[0]?.id).map(floor => (
+            {selectedFloors.map(floor => (
               <section key={floor.floor_id} aria-label={floor.floor_name || `Tầng ${floor.floor_number}`}>
                 <Typography.Title level={4}>{floor.floor_name || `Tầng ${floor.floor_number}`}</Typography.Title>
           <DataTable<IotSensor>
@@ -598,11 +678,11 @@ export function DeviceControlPanel() {
           />
               </section>
             ))}
-            {sensors.some(sensor => !floors.some(floor => floor.master_id === masters[0]?.id && floor.node_address === sensor.nodeId)) && (
+            {sensors.some(sensor => !selectedFloors.some(floor => floor.node_address === sensor.nodeId)) && (
               <DataTable<IotSensor> title="Cảm biến chưa gán tầng" rowKey={row => `${row.nodeId}-${row.sensorId}`}
-                columns={sensorColumns} dataSource={sensors.filter(sensor => !floors.some(floor => floor.master_id === masters[0]?.id && floor.node_address === sensor.nodeId))} />
+                columns={sensorColumns} dataSource={sensors.filter(sensor => !selectedFloors.some(floor => floor.node_address === sensor.nodeId))} />
             )}
-            {!floors.some(floor => floor.master_id === masters[0]?.id) && !sensors.length && <Empty description="Chưa có dữ liệu tầng" />}
+            {!selectedFloors.length && !sensors.length && <Empty description="Chưa có dữ liệu tầng" />}
           </Flex>
         ) : (
           /*
@@ -610,7 +690,8 @@ export function DeviceControlPanel() {
             tốn request nào cho bảng live.
           */
           <SensorHistoryPanel
-            masterId={masters[0]?.masterId ?? null}
+            key={selectedMaster?.masterId ?? 'no-master'}
+            masterId={selectedMaster?.masterId ?? null}
             onOpenFullHistory={() => navigate('/devices/history')}
           />
         )}
@@ -649,6 +730,19 @@ export function DeviceControlPanel() {
                   key: 'floor_number',
                   label: 'Số tầng',
                   children: selectedFloor.floor_number,
+                },
+                {
+                  key: 'floor_status',
+                  label: 'Trạng thái tầng',
+                  children: (
+                    <StatusBadge
+                      {...presentStatus(
+                        FLOOR_STATUS_DICTIONARY,
+                        selectedFloor.status,
+                        'Chưa ghi nhận',
+                      )}
+                    />
+                  ),
                 },
                 {
                   key: 'avgTemperature',
@@ -762,10 +856,13 @@ export function DeviceControlPanel() {
               {
                 key: 'ok',
                 label: 'Tình trạng cảm biến',
-                children: selectedSensor.ok ? (
-                  <StatusBadge tone="ok" label="Dữ liệu hợp lệ" />
+                children: !isMasterOnline ? (
+                  <StatusBadge tone="danger" label="Mất tín hiệu" title="Bộ điều khiển đang ngoại tuyến, dữ liệu có thể đã cũ" />
                 ) : (
-                  <StatusBadge tone="warning" label="Sai số cảm biến" />
+                  <StatusBadge
+                    tone={selectedSensor.ok ? 'ok' : 'warning'}
+                    label={sensorValidityLabel(selectedSensor.ok)}
+                  />
                 ),
               },
               {

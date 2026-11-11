@@ -8,6 +8,27 @@ import { useCultivationRooms } from '../../rooms/hooks/useCultivation'
 import { CAMERA_STATUSES, type Camera, type CreateCameraRequest } from '../../../types/camera.types'
 import { getApiErrorMessage } from '../../../shared/api/error'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
+import { CAMERA_STATUS_DICTIONARY, LIVE_SESSION_STATUS_DICTIONARY } from '../../../shared/i18n/status/camera'
+import { presentStatus, selectOptions, statusLabel } from '../../../shared/i18n/status/registry'
+import { StatusBadge } from '../../../shared/ui'
+
+/**
+ * Nhãn trạng thái **phiên live** (Imou).
+ *
+ * ⚠ Imou trả `liveStatus` dạng **số** (`0` / `1`) ⇒ chuẩn hoá sang chuỗi
+ *   trước khi tra cứu trong `LIVE_SESSION_STATUS_DICTIONARY`.
+ */
+function liveSessionStatusLabel(
+  liveStatus: string | number | null | undefined,
+): string {
+  return statusLabel(
+    LIVE_SESSION_STATUS_DICTIONARY,
+    liveStatus === null || liveStatus === undefined
+      ? null
+      : String(liveStatus),
+    'Chưa xác định',
+  )
+}
 export function CameraFormModal({ camera, onClose }: { camera: Camera | null; onClose: () => void }) {
   const [form] = Form.useForm<CreateCameraRequest>()
   const rooms = useCultivationRooms()
@@ -23,7 +44,7 @@ export function CameraFormModal({ camera, onClose }: { camera: Camera | null; on
       <Form.Item name="cameraCode" label="Imou Device ID" rules={[{ required: true, whitespace: true }]}><Input maxLength={100} /></Form.Item>
       <Form.Item name="cameraName" label="Tên camera" rules={[{ required: true, whitespace: true }]}><Input maxLength={255} /></Form.Item>
       <Form.Item name="streamUrl" label="Stream URL (tùy chọn)" rules={[{ validator: (_, value: string | undefined) => !value?.trim() || /^(https?|rtsp):\/\/\S+$/i.test(value.trim()) ? Promise.resolve() : Promise.reject(new Error('Nhập URL HTTP, HTTPS hoặc RTSP hợp lệ')) }]}><Input /></Form.Item>
-      <Form.Item name="status" label="Trạng thái" rules={[{ required: true }]}><Select options={CAMERA_STATUSES.map(value => ({ value, label: value }))} /></Form.Item>
+      <Form.Item name="status" label="Trạng thái" rules={[{ required: true }]}><Select options={selectOptions(CAMERA_STATUS_DICTIONARY, CAMERA_STATUSES)} /></Form.Item>
     </Form>
   </Modal>
 }
@@ -48,7 +69,7 @@ export function LiveSessionManager() {
     <QueryFeedback query={query} />{!query.isError && <DataTable scrollX={700} size="small" rowKey="liveToken" loading={query.isLoading} dataSource={query.data?.lives} pagination={{ hideOnSinglePage: false, current: page, pageSize: 20, total: query.data?.count, onChange: setPage, showSizeChanger: false }} columns={[
       { title: 'Camera', render: (_, live) => live.camera?.cameraName ?? live.deviceId ?? 'Thiết bị chưa đăng ký' },
       { title: 'Kênh', dataIndex: 'channelId' },
-      { title: 'Trạng thái', dataIndex: 'liveStatus' },
+      { title: 'Trạng thái', render: (_, live) => <StatusBadge {...presentStatus(LIVE_SESSION_STATUS_DICTIONARY, live.liveStatus === null || live.liveStatus === undefined ? null : String(live.liveStatus), 'Chưa xác định')} title={`Trạng thái phiên stream: ${liveSessionStatusLabel(live.liveStatus)}`} /> },
       { title: 'Thao tác', render: (_, live) => <Popconfirm title="Dừng phiên stream?" description="Người đang xem phiên này sẽ bị ngắt kết nối." onConfirm={() => stop.mutateAsync(live.liveToken).catch(() => undefined)}><Button danger disabled={stop.isPending} loading={stop.isPending && stop.variables === live.liveToken}>Dừng stream</Button></Popconfirm> },
     ]} />}
   </Modal></>
