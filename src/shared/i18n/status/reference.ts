@@ -45,6 +45,7 @@ export type AlertCategoryKey =
   | 'RETRY_WAIT'
   | 'MUSHROOM_DISEASE'
   | 'DEVICE_ISSUE'
+  | 'SENSOR_ALERT'
   | 'OPERATOR_MESSAGE'
 
 /** Nguồn phát sinh cảnh báo. */
@@ -108,6 +109,7 @@ export const ALERT_CATEGORY_DICTIONARY: Record<
   RETRY_WAIT: { tone: 'warning', label: 'Tạm dừng do lỗi cảm biến' },
   MUSHROOM_DISEASE: { tone: 'warning', label: 'Nấm bệnh / mốc' },
   DEVICE_ISSUE: { tone: 'danger', label: 'Sự cố thiết bị' },
+  SENSOR_ALERT: { tone: 'danger', label: 'Cảnh báo cảm biến' },
   OPERATOR_MESSAGE: { tone: 'neutral', label: 'Thông báo từ nhân viên' },
 }
 

@@ -22,14 +22,23 @@ export type NotificationType =
   | 'CULTIVATION_CANCELLED'
   | 'MUSHROOM_DISEASE'
   | 'DEVICE_ISSUE'
+  | 'SENSOR_ALERT'
   | 'OPERATOR_MESSAGE'
   | 'PAYMENT_STATUS'
   | (string & {})
 
-/** Nhóm thông báo liên quan cảnh báo vận hành (dùng cho trang `/alerts`). */
+/**
+ * Nhóm thông báo liên quan cảnh báo vận hành (dùng cho trang `/alerts`).
+ *
+ * ⚠ Gồm cả type **kỹ thuật** (`DEVICE_ISSUE`, `SENSOR_ALERT`) và type
+ *   **nghiệp vụ** (`MUSHROOM_DISEASE`, `OPERATOR_MESSAGE`) — trung tâm
+ *   "Cảnh báo & Thông báo" sẽ tách 2 nhóm này ra 2 tab
+ *   (xem `features/notifications/utils/notification-classification.ts`).
+ */
 export const OPERATIONAL_NOTIFICATION_TYPES: readonly NotificationType[] = [
   'MUSHROOM_DISEASE',
   'DEVICE_ISSUE',
+  'SENSOR_ALERT',
   'OPERATOR_MESSAGE',
 ]
 

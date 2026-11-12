@@ -66,14 +66,9 @@ export const CultivationManagementPage = lazy(() =>
     default: m.CultivationManagementPage,
   })),
 )
-export const AlertManagementPage = lazy(() =>
-  import('../../features/alerts/pages/AlertManagementPage').then((m) => ({
-    default: m.AlertManagementPage,
-  })),
-)
-export const NotificationsPage = lazy(() =>
-  import('../../features/notifications/pages/NotificationsPage').then((m) => ({
-    default: m.NotificationsPage,
+export const AlertCenterPage = lazy(() =>
+  import('../../features/alert-center/pages/AlertCenterPage').then((m) => ({
+    default: m.AlertCenterPage,
   })),
 )
 export const ReportsAnalyticsPage = lazy(() =>

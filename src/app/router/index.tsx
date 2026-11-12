@@ -13,7 +13,7 @@ import { AppErrorBoundary } from '../../shared/ui/AppErrorBoundary'
 import {
   IssueManagementPage,
   HarvestManagementPage,
-  AlertManagementPage,
+  AlertCenterPage,
   CameraOverviewPage,
   ChangePasswordPage,
   CultivationManagementPage,
@@ -31,7 +31,6 @@ import {
   StyleGuidePage,
   UnauthorizedPage,
   UserManagementPage,
-  NotificationsPage,
 } from './lazy-pages'
 
 /** Bọc một element với Suspense fallback (full-screen PageFallback). */
@@ -185,13 +184,29 @@ export const router = createBrowserRouter([
         element: withSuspense(<CultivationManagementPage />),
       },
       {
+        /**
+         * Trung tâm **"Cảnh báo & Thông báo"** — gộp 2 phân hệ cũ
+         * (`/alerts` + `/notifications`) vào 1 trang có 2 tab.
+         *
+         * ⚠ Mọi role đã đăng nhập (Admin + Farm Operator) đều xem được —
+         *   giữ nguyên như 2 route cũ (cả hai đều không có RoleGuard riêng).
+         */
         path: 'alerts',
-        element: withSuspense(<AlertManagementPage />),
+        element: withSuspense(<AlertCenterPage />),
       },
       {
-        // Thông báo — đọc `GET /api/notifications` (chỉ đọc).
+        /**
+         * Redirect cũ: `/notifications` → `/alerts?tab=notifications`.
+         *
+         * ⚠ Giữ nguyên để **không gãy** các liên kết điều hướng cũ:
+         *   - Quả chuông trên Header (`NotificationBell` → "Xem tất cả").
+         *   - Bookmark / link được gửi từ email hoặc trang khác.
+         *
+         * `replace` để không đẩy entry vào lịch sử (user không bị "back"
+         * mãi về trang redirect).
+         */
         path: 'notifications',
-        element: withSuspense(<NotificationsPage />),
+        element: <Navigate to="/alerts?tab=notifications" replace />,
       },
       {
         path: 'reports',

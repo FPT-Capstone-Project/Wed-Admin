@@ -99,7 +99,7 @@ export function RecentAlertsTable() {
           variant="text"
           icon={<ArrowRightOutlined />}
           label="Xem"
-          description="Xem chi tiết tại trang Cảnh báo vận hành"
+          description="Xem chi tiết tại trung tâm Cảnh báo & Thông báo"
           hideLabel
           onClick={() => navigate('/alerts')}
         />

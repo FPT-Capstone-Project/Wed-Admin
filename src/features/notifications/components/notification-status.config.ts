@@ -10,6 +10,10 @@
  *
  * ⚠ Nhãn loại thông báo lấy từ **module trung tâm**
  *   `src/shared/i18n/status/reference.ts` ⇒ 1 nguồn sự thật.
+ *
+ * ⚠ Phân loại tab 1 / tab 2 nằm ở
+ *   `features/notifications/utils/notification-classification.ts` — module
+ *   này chỉ lo phần **hiển thị**.
  */
 import type { NotificationType } from '../types/notification.types'
 import {
@@ -19,6 +23,12 @@ import {
   presentStatus,
   statusLabel,
 } from '../../../shared/i18n/status/registry'
+import {
+  businessNotificationGroup,
+  type NotificationBusinessGroup,
+} from '../utils/notification-classification'
+
+export type { NotificationBusinessGroup }
 
 /** Nhãn tiếng Việt của từng loại thông báo. */
 export const NOTIFICATION_TYPE_LABELS: Record<string, string> = Object.fromEntries(
@@ -43,6 +53,9 @@ export function notificationTypeLabel(type: string): string {
  * - `iot`         → thiết bị & cảm biến IoT (`DEVICE_ISSUE`, `SENSOR_ALERT`).
  * - `cultivation` → canh tác & bệnh hại (`MUSHROOM_DISEASE`).
  * - `system`      → còn lại (vòng đời canh tác, thanh toán, nhân viên…).
+ *
+ * ⚠ Nhóm này chỉ phục vụ **gắn nhãn** (Tag / icon). Quyết định "thuộc tab
+ *   nào" nằm ở `notification-classification.ts`.
  */
 export type NotificationCategory = 'iot' | 'cultivation' | 'system'
 
@@ -57,7 +70,7 @@ export interface NotificationCategoryMeta {
    *   đỏ (khẩn cấp) > cam (cần xem) > mặc định (thông thường).
    */
   color: string | null
-  /** Icon đi kèm Tag. */
+  /** Icon kèm Tag. */
   icon: 'warning' | 'bug' | 'system'
   /** Mô tả dùng cho tooltip. */
   description: string
@@ -117,7 +130,9 @@ export function notificationCategory(
   return TYPE_TO_CATEGORY[type] ?? 'system'
 }
 
-/** Metadata hiển thị của nhóm (label / color / icon / description). */
+/**
+ * Metadata hiển thị của nhóm (label / color / icon / description).
+ */
 export function notificationCategoryMeta(
   type: NotificationType | string,
 ): NotificationCategoryMeta {
@@ -125,12 +140,43 @@ export function notificationCategoryMeta(
 }
 
 /**
- * Thông báo này là **cảnh báo IoT khẩn cấp** không?
+ * Nhóm **nghiệp vụ** của thông báo — dùng cho bộ lọc của tab 2
+ * ("Thông báo hệ thống").
  *
- * ⚠ Chỉ nhóm `iot` mới được tô nền hàng — nhóm `cultivation` và `system`
- *   giữ nền trắng bình thường để bảng không bị "nhiễu" màu.
+ * ⚠ Chỉ áp dụng cho thông báo **không** thuộc nhóm kỹ thuật — xem
+ *   `isTechnicalNotificationType()`.
  */
-export function isIotDangerAlert(
+export type NotificationBusinessMeta = {
+  value: NotificationBusinessGroup
+  label: string
+}
+
+/** Danh sách nhóm nghiệp vụ (dùng cho `Select` bộ lọc của tab 2). */
+export const NOTIFICATION_BUSINESS_GROUPS: readonly NotificationBusinessMeta[] = [
+  { value: 'cultivation', label: 'Canh tác / Phiên / Bệnh hại' },
+  { value: 'harvest', label: 'Thu hoạch' },
+  { value: 'order', label: 'Đơn hàng / Thanh toán' },
+  { value: 'system', label: 'Hệ thống chung' },
+]
+
+/**
+ * Nhóm nghiệp vụ của thông báo — dùng cho bộ lọc & Tag của tab 2.
+ */
+export function notificationBusinessGroup(
+  type: NotificationType | string,
+): NotificationBusinessGroup {
+  return businessNotificationGroup(type)
+}
+
+/**
+ * Thông báo này có phải cảnh báo IoT không?
+ *
+ * ⚠ Chỉ dùng để **gắn nhãn** (hiển thị Tag / chữ "Thiết bị IoT"), KHÔNG
+ *   dùng để tô nền dòng — nền dòng chỉ phụ thuộc trạng thái đọc
+ *   (đỏ nhạt = chưa đọc, xám nhạt = đã đọc). Xem
+ *   `features/alert-center/alert-center-industrial.css`.
+ */
+export function isIotAlert(
   type: NotificationType | string,
 ): boolean {
   return notificationCategory(type) === 'iot'

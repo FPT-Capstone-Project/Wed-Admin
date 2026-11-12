@@ -39,10 +39,17 @@ export function AlertItemRow({ alert }: AlertItemRowProps) {
         </div>
 
         <div>
-          <Flex align="center" gap={8} wrap>
-            <Typography.Text strong>{alert.title}</Typography.Text>
-            {!alert.isRead && <MetadataBadge label="Chưa đọc" />}
-          </Flex>
+            <Flex align="center" gap={8} wrap>
+              {/*
+                * ⚠ Tiêu đề **chỉ in đậm khi CHƯA ĐỌC** — đã đọc thì chữ về
+                *   bình thường (màu xám đậm mặc định), giúp hai trạng thái
+                *   phân biệt rõ ngay bằng mắt.
+                */}
+              <Typography.Text strong={!alert.isRead}>
+                {alert.title}
+              </Typography.Text>
+              {!alert.isRead && <MetadataBadge label="Chưa đọc" />}
+            </Flex>
 
           <Typography.Paragraph
             style={{ margin: '4px 0 0', fontSize: 13 }}

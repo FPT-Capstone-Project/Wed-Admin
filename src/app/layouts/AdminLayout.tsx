@@ -31,8 +31,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/devices': 'Thiết bị IoT',
   '/camera': 'Camera toàn cảnh',
   '/cultivation': 'Sinh trưởng & thu hoạch',
-  '/alerts': 'Cảnh báo vi khí hậu',
-  '/notifications': 'Thông báo',
+  '/alerts': 'Cảnh báo & Thông báo',
   '/issues': 'Sự cố & Bệnh hại',
   '/harvests': 'Quản lý Thu hoạch',
   '/reports': 'Báo cáo & phân tích',
@@ -48,6 +47,13 @@ const PAGE_TITLES: Record<string, string> = {
 function getSelectedMenuKey(pathname: string) {
   if (pathname.startsWith('/rooms') || pathname.startsWith('/trays')) {
     return '/rooms'
+  }
+
+  // ⚠ `/notifications` đã gộp vào trung tâm "Cảnh báo & Thông báo" ⇒
+  //   menu vẫn phải highlight đúng mục gộp (route có redirect nhưng
+  //   sidebar render trước khi redirect xử lý xong).
+  if (pathname.startsWith('/notifications')) {
+    return '/alerts'
   }
 
   const matchingPath = Object.keys(PAGE_TITLES)

@@ -41,6 +41,7 @@ export type OperationalAlertCategory =
   | 'RETRY_WAIT'
   | 'MUSHROOM_DISEASE'
   | 'DEVICE_ISSUE'
+  | 'SENSOR_ALERT'
   | 'OPERATOR_MESSAGE'
 
 /** Bộ lọc trạng thái đọc. */
@@ -73,4 +74,19 @@ export interface OperationalAlert {
   /** ID tham chiếu (session / notification). */
   referenceId: number | null
   referenceType: string | null
+  /**
+   * ID thông báo gốc — **chỉ có** khi nguồn là `NOTIFICATION`.
+   *
+   * ⚠ KHÁC với `referenceId` (id của đối tượng được tham chiếu, vd
+   *   `cultivation_sessions.session_id`). Muốn đánh dấu đã đọc thì PHẢI
+   *   dùng `notificationId` — `referenceId` sẽ gọi nhầm endpoint.
+   */
+  notificationId: number | null
+  /**
+   * `notification_type` gốc của BE — **chỉ có** khi nguồn là `NOTIFICATION`.
+   *
+   * ⚠ Dùng để phân loại tab 1 / tab 2 mà **không** phải suy đoán lại từ
+   *   nội dung (xem `features/notifications/utils/notification-classification.ts`).
+   */
+  notificationType: string | null
 }

@@ -58,7 +58,9 @@ export function NotificationBell() {
 
   const handleOpenAll = () => {
     setOpen(false)
-    navigate('/notifications')
+    // ⚠ Trung tâm gộp "Cảnh báo & Thông báo" — mở thẳng tab "Thông báo hệ
+    //   thống" để không bắt người dùng tự chọn lại.
+    navigate('/alerts?tab=notifications')
   }
 
   return (
@@ -115,7 +117,6 @@ export function NotificationBell() {
                     type="button"
                     className="mcms-notification-popover-item"
                     data-unread={item.is_read ? 'false' : 'true'}
-                    data-alert={category === 'iot' ? 'true' : 'false'}
                     data-alert-kind={category}
                     disabled={pending}
                     onClick={() => {

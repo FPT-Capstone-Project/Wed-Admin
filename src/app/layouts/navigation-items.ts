@@ -21,7 +21,6 @@ export type MenuIconName =
   | 'camera'
   | 'cultivation'
   | 'alerts'
-  | 'notifications'
   | 'sessions'
   | 'issues'
   | 'harvests'
@@ -84,12 +83,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
       {
         key: '/alerts',
         icon: 'alerts',
-        label: 'Cảnh báo vi khí hậu',
-      },
-      {
-        key: '/notifications',
-        icon: 'notifications',
-        label: 'Thông báo',
+        label: 'Cảnh báo & Thông báo',
       },
       {
         key: '/sessions',

@@ -27,7 +27,45 @@ export const notificationApi = {
 
     return { items, pagination, unreadCount }
   },
+
+  /**
+   * Lấy **toàn bộ** thông báo của tài khoản (bỏ giới hạn 1 trang).
+   *
+   * ⚠ Vì sao cần?
+   *   BE **không** hỗ trợ lọc theo `notification_type` ⇒ FE phải tự lọc ở
+   *   client. Muốn đếm chính xác "số chưa đọc" của **từng tab** (tab 1 =
+   *   cảnh báo kỹ thuật IoT, tab 2 = thông báo nghiệp vụ) thì phải nắm
+   *   được **toàn bộ** bản ghi — nếu chỉ lấy 1 trang thì số đếm bị sai
+   *   (thiếu bản ghi ở trang sau).
+   *
+   * ⚠ BE giới hạn `pageSize ≤ 100` ⇒ phải gọi **nhiều trang** và ghép lại.
+   */
+  async listAll(): Promise<NotificationListResult> {
+    const pageSize = MAX_PAGE_SIZE
+
+    const first = await notificationApi.list({ page: 1, pageSize })
+    const totalPages = first.pagination?.totalPages ?? 1
+
+    if (totalPages <= 1) return first
+
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) =>
+        notificationApi.list({ page: index + 2, pageSize }),
+      ),
+    )
+
+    return {
+      items: [...first.items, ...rest.flatMap((result) => result.items)],
+      pagination: first.pagination,
+      // `unreadCount` của BE là tổng chưa đọc của **mọi** nhóm — giữ nguyên
+      // để badge toàn cục (quả chuông Header) khớp BE.
+      unreadCount: first.unreadCount,
+    }
+  },
 }
+
+/** BE giới hạn `pageSize` tối đa 100 (`utils/pagination.js`). */
+const MAX_PAGE_SIZE = 100
 
 /**
  * POST /api/notifications/cultivation-sessions/{sessionId}

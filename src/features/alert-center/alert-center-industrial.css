@@ -1,0 +1,64 @@
+/* ==========================================================================
+   Trung tâm "Cảnh báo & Thông báo" — chuẩn hoá màu nền theo trạng thái đọc.
+
+   ⚠ QUY TẮC (rất quan trọng — áp dụng cho **cả 2** tab):
+     - CHƯA ĐỌC  → nền đỏ nhạt + viền trái đỏ đậm + tiêu đề in đậm.
+     - ĐÃ ĐỌC    → nền xám nhạt trung tính + **KHÔNG** viền đỏ + chữ bình
+                   thường. Tuyệt đối không giữ nền đỏ ở trạng thái đã đọc.
+   ========================================================================== */
+
+/* Chuyển màu mượt khi trạng thái đọc thay đổi (đánh dấu đã đọc). */
+.mcms-alert-center .ant-table-tbody > tr > td {
+  transition:
+    background-color 200ms ease,
+    box-shadow 200ms ease;
+}
+
+/* ── CHƯA ĐỌC ──────────────────────────────────────────────────────────── */
+
+.mcms-alert-center .mcms-center-row-unread > td {
+  background: var(--mcms-tone-danger-bg);
+}
+
+.mcms-alert-center .mcms-center-row-unread > td:first-child {
+  box-shadow: inset 3px 0 0 var(--mcms-tone-danger-solid);
+}
+
+/* ── ĐÃ ĐỌC ────────────────────────────────────────────────────────────── */
+
+.mcms-alert-center .mcms-center-row-read > td {
+  background: var(--mcms-surface-hover);
+}
+
+.mcms-alert-center .mcms-center-row-read > td:first-child {
+  box-shadow: none;
+}
+
+/* ── Drawer chi tiết ───────────────────────────────────────────────────── */
+
+.mcms-alert-center-drawer .ant-drawer-header,
+.mcms-alert-center-drawer .ant-drawer-body {
+  background: var(--mcms-surface);
+  box-shadow: none;
+}
+
+.mcms-alert-center-drawer .ant-drawer-header {
+  border-bottom: 1px solid var(--mcms-border);
+}
+
+.mcms-alert-center-drawer .ant-drawer-footer {
+  border-top: 1px solid var(--mcms-border);
+}
+
+/* Khối nội dung — dùng đọc dễ, không viền màu sặc sỡ. */
+.mcms-alert-center-detail-body {
+  padding: var(--mcms-space-4);
+  border: 1px solid var(--mcms-border);
+  border-radius: var(--mcms-radius-md);
+  background: var(--mcms-surface-muted);
+  color: var(--mcms-text);
+  font-size: var(--mcms-font-body);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}

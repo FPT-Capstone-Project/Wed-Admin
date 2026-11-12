@@ -1,17 +1,5 @@
-/**
- * Trang "Thông báo" — danh sách thông báo hệ thống của tài khoản Admin.
- *
- * ⚠ Nguồn dữ liệu: `GET /api/notifications` (BE tự phân trang server-side).
- *   - Bộ lọc **trạng thái đọc** (`isRead`) → gửi lên BE.
- *   - Bộ lọc **loại** + tìm kiếm → lọc ở client vì BE chưa hỗ trợ
- *     tham số `type` cho endpoint này (xem `notification.api.ts`).
- *
- * ⚠ Phân loại hoàn toàn dựa trên `notification_type` của BE (xem
- *   `notification-status.config.ts`) — KHÔNG suy đoán từ nội dung.
- *   - Cột "Loại" chỉ hiển thị **1 Tag duy nhất**.
- *   - Chỉ cảnh báo IoT mới được tô nền hàng; các loại khác nền trắng.
- */
 import { useMemo, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   BellOutlined,
   BugOutlined,
@@ -38,24 +26,27 @@ import {
   ActionButton,
   DataTable,
   MetadataBadge,
-  PageHeader,
   StatCard,
   StatusBadge,
 } from '../../../shared/ui'
 import { formatDate, formatRelativeTime } from '../../../shared/utils/date'
-import { useNotifications, useNotificationActions } from '../hooks/useNotifications'
-import type { AppNotification } from '../types/notification.types'
 import {
-  isIotDangerAlert,
-  NOTIFICATION_CATEGORY_META,
+  useAllNotifications,
+  useNotificationActions,
+} from '../../notifications/hooks/useNotifications'
+import { markAlertsAsRead } from '../utils/mark-alerts-as-read'
+import type { AppNotification } from '../../notifications/types/notification.types'
+import {
+  NOTIFICATION_BUSINESS_GROUPS,
+  notificationBusinessGroup,
   notificationCategory,
   notificationCategoryMeta,
   notificationTypeLabel,
-  type NotificationCategory,
-} from '../components/notification-status.config'
+  type NotificationBusinessGroup,
+} from '../../notifications/components/notification-status.config'
+import { isBusinessNotificationType } from '../../notifications/utils/notification-classification'
 import { REFERENCE_TYPE_DICTIONARY } from '../../../shared/i18n/status/reference'
 import { statusLabel } from '../../../shared/i18n/status/registry'
-import '../notifications-industrial.css'
 
 type ReadFilter = 'ALL' | 'UNREAD' | 'READ'
 
@@ -65,55 +56,103 @@ const READ_OPTIONS: Array<{ value: ReadFilter; label: string }> = [
   { value: 'READ', label: 'Đã đọc' },
 ]
 
-/** Bộ lọc theo **nhóm hiển thị** (dựa trực tiếp trên `notification_type`). */
-type TypeFilter = 'ALL' | NotificationCategory
+/**
+ * Bộ lọc theo **nhóm nghiệp vụ** (dựa trực tiếp trên `notification_type`).
+ *
+ * ⚠ KHÔNG có nhóm `iot` ở đây — nhóm kỹ thuật đã bị **loại trừ hoàn toàn**
+ *   (thuộc tab 1). Xem `isBusinessNotificationType()`.
+ */
+type TypeFilter = 'ALL' | NotificationBusinessGroup
 
 const TYPE_FILTER_OPTIONS: Array<{ value: TypeFilter; label: string }> = [
   { value: 'ALL', label: 'Tất cả loại' },
-  { value: 'iot', label: NOTIFICATION_CATEGORY_META.iot.label },
-  { value: 'cultivation', label: NOTIFICATION_CATEGORY_META.cultivation.label },
-  { value: 'system', label: NOTIFICATION_CATEGORY_META.system.label },
+  ...NOTIFICATION_BUSINESS_GROUPS.map((group) => ({
+    value: group.value,
+    label: group.label,
+  })),
 ]
 
 /** Icon tương ứng với nhóm hiển thị. */
-function CategoryIcon({ category }: { category: NotificationCategory }) {
+function CategoryIcon({ category }: { category: string }) {
   if (category === 'iot') return <WarningOutlined />
   if (category === 'cultivation') return <BugOutlined />
   return <BellOutlined />
 }
 
-export function NotificationsPage() {
-  const { read, readAll, pending } = useNotificationActions()
+/**
+ * Tab 2 của Trung tâm "Cảnh báo & Thông báo" — **Thông báo hệ thống**.
+ *
+ * ⚠ **Phạm vi dữ liệu (tách biệt hoàn toàn với tab 1)**:
+ *   Chỉ hiển thị thông báo **nghiệp vụ vận hành**:
+ *     - Đơn hàng / thanh toán (`PAYMENT_STATUS`, `ORDER_STATUS`).
+ *     - Thu hoạch (`HARVEST_*`).
+ *     - Phiên canh tác / vòng đời canh tác (`CULTIVATION_*`).
+ *     - Sự cố bệnh hại (`MUSHROOM_DISEASE`).
+ *     - Thông báo hệ thống chung (`OPERATOR_MESSAGE`, type lạ).
+ *
+ *   ⇒ Mọi thông báo thuộc nhóm **kỹ thuật** (IoT / thiết bị / cảm biến /
+ *     vi khí hậu) đều bị **loại trừ** ⇒ 2 tab không thể hiển thị trùng
+ *     bản ghi (trước đây 23 bản ghi cảm biến IoT hiện ở cả 2 tab).
+ *
+ * ⚠ Tái sử dụng nguyên vẹn logic fetch + hiển thị của trang `/notifications`
+ *   cũ (`useNotifications` + `useNotificationActions`). Chỉ bổ sung:
+ *   - Chuẩn hoá màu nền dòng theo trạng thái đọc (đỏ nhạt / xám nhạt).
+ *     Trước đây chỉ nhóm `iot` được tô nền đỏ ⇒ thông báo đã đọc vẫn giữ
+ *     nền đỏ. Nay **mọi** dòng đã đọc đều chuyển về nền xám trung tính.
+ */
+export function NotificationsPanel() {
+  const { read, readMany, pending } = useNotificationActions()
+  const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
   const [readFilter, setReadFilter] = useState<ReadFilter>('ALL')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
-  const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
   const [detail, setDetail] = useState<AppNotification | null>(null)
 
-  const query = useMemo(
-    () => ({
-      isRead: readFilter === 'ALL' ? undefined : readFilter === 'READ',
-      page,
-      pageSize,
-    }),
-    [page, pageSize, readFilter],
-  )
+    /**
+     * Đánh dấu đã đọc — **optimistic** trên CẢ 2 cache.
+     *
+     * ⚠ Tab 1 (Cảnh báo) **cũng** chứa các thông báo kỹ thuật (nguồn
+     *   `NOTIFICATION`) ⇒ phải cập nhật cache cảnh báo luôn, nếu không badge
+     *   của tab 1 sẽ **stale** (vẫn đếm cảnh báo đã đọc) ⇒ người dùng tưởng
+     *   còn việc chưa xem.
+     */
+  const markRead = (notificationId: number) => {
+    markAlertsAsRead(queryClient, [notificationId])
+    read.mutate(notificationId)
+  }
 
-  const { data, isLoading, isError, error, refetch } = useNotifications(query)
+  /**
+   * Lấy **toàn bộ** thông báo (mọi trang).
+   *
+   * ⚠ BE không lọc được theo `notification_type` ⇒ phải lọc ở client. Nếu
+   *   chỉ lấy 1 trang thì danh sách tab 2 bị "thưa" và số đếm badge sai.
+   */
+  const { data, isLoading, isError, error, refetch } = useAllNotifications()
 
   const items = useMemo(() => data?.items ?? [], [data])
-  const pagination = data?.pagination
+
+  /**
+   * Tập thông báo **nghiệp vụ** — đã loại trừ toàn bộ nhóm kỹ thuật (tab 1).
+   */
+  const businessItems = useMemo(
+    () => items.filter((item) => isBusinessNotificationType(item.notification_type)),
+    [items],
+  )
 
   const filteredItems = useMemo(() => {
     const keyword = searchText.trim().toLowerCase()
 
-    return items.filter((item) => {
-      // Lọc theo nhóm — suy ra trực tiếp từ `notification_type` của BE.
-      if (typeFilter !== 'ALL') {
-        if (notificationCategory(item.notification_type) !== typeFilter) {
-          return false
-        }
+    return businessItems.filter((item) => {
+      // Bộ lọc trạng thái đọc.
+      if (readFilter === 'UNREAD' && item.is_read) return false
+      if (readFilter === 'READ' && !item.is_read) return false
+
+      // Lọc theo nhóm nghiệp vụ — suy ra trực tiếp từ `notification_type`.
+      if (
+        typeFilter !== 'ALL' &&
+        notificationBusinessGroup(item.notification_type) !== typeFilter
+      ) {
+        return false
       }
 
       if (!keyword) return true
@@ -122,12 +161,20 @@ export function NotificationsPage() {
         .filter(Boolean)
         .some((value) => value!.toLowerCase().includes(keyword))
     })
-  }, [items, searchText, typeFilter])
+  }, [businessItems, readFilter, searchText, typeFilter])
+
+  /**
+   * Số chưa đọc của **tab 2** — tính trên đúng tập đang hiển thị.
+   */
+  const unreadCount = useMemo(
+    () => businessItems.filter((item) => !item.is_read).length,
+    [businessItems],
+  )
 
   const openDetail = (item: AppNotification) => {
     setDetail(item)
     // Mở chi tiết ⇒ coi như đã đọc (giống hành vi app khách hàng).
-    if (!item.is_read && !pending) read.mutate(item.notification_id)
+    if (!item.is_read && !pending) markRead(item.notification_id)
   }
 
   /** Nhóm hiển thị của thông báo đang mở trong Drawer. */
@@ -138,48 +185,61 @@ export function NotificationsPage() {
   )
   const detailCategory = useMemo(
     () =>
-      detail ? notificationCategory(detail.notification_type) : ('system' as const),
+      detail
+        ? notificationCategory(detail.notification_type)
+        : ('system' as const),
     [detail],
   )
 
+  /**
+   * Đánh dấu đọc **tất cả** thông báo đang hiển thị ở tab 2.
+   *
+   * ⚠ KHÔNG dùng `readAll` (đánh dấu đọc toàn bộ tài khoản) vì sẽ xoá luôn
+   *   cảnh báo kỹ thuật của tab 1 ⇒ mất việc chưa xem ở tab kia.
+   *   Chỉ đánh dấu đọc **đúng các ID** thuộc tab 2.
+   */
+  const markAllVisibleRead = () => {
+    const ids = businessItems
+      .filter((item) => !item.is_read)
+      .map((item) => item.notification_id)
+    if (ids.length === 0) return
+
+    markAlertsAsRead(queryClient, ids)
+    readMany.mutate(ids)
+  }
+
   return (
-    <div className="mcms-notifications-view">
-      <PageHeader
-        title="Thông báo"
-        description="Danh sách thông báo của tài khoản đang đăng nhập."
-        actions={
-          <Flex gap={8} align="center" wrap>
-            <MetadataBadge
-              label={`${data?.unreadCount ?? 0} chưa đọc`}
-              icon={<BellOutlined />}
-            />
-            <Button
-              loading={readAll.isPending}
-              disabled={pending || !data?.unreadCount}
-              onClick={() => readAll.mutate()}
-            >
-              Đánh dấu tất cả đã đọc
-            </Button>
-          </Flex>
-        }
-      />
+    <div>
+      <Flex gap={8} align="center" wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
+        <MetadataBadge
+          label={`${unreadCount} chưa đọc`}
+          icon={<BellOutlined />}
+        />
+        <Button
+          loading={readMany.isPending}
+          disabled={pending || unreadCount === 0}
+          onClick={markAllVisibleRead}
+        >
+          Đánh dấu tất cả đã đọc
+        </Button>
+      </Flex>
 
       <Row gutter={[12, 12]} style={{ marginBottom: 'var(--mcms-space-4)' }}>
         <Col xs={12} lg={8}>
           <StatCard
             title="Tổng thông báo"
-            value={pagination?.total ?? items.length}
+            value={businessItems.length}
             tone="neutral"
-            description="Theo bộ lọc của tài khoản"
+            description="Thông báo nghiệp vụ của tài khoản"
           />
         </Col>
         <Col xs={12} lg={8}>
           <StatCard
             title="Chưa đọc"
-            value={data?.unreadCount ?? 0}
-            tone="info"
+            value={unreadCount}
+            tone="danger"
             highlightValue
-            description="Thông báo chưa đọc của tài khoản"
+            description="Thông báo nghiệp vụ chưa đọc"
           />
         </Col>
         <Col xs={24} lg={8}>
@@ -196,20 +256,14 @@ export function NotificationsPage() {
               <Select<ReadFilter>
                 value={readFilter}
                 options={READ_OPTIONS}
-                onChange={(value) => {
-                  setReadFilter(value)
-                  setPage(1)
-                }}
+                onChange={(value) => setReadFilter(value)}
                 style={{ width: 140 }}
               />
               <Select<TypeFilter>
                 value={typeFilter}
                 options={TYPE_FILTER_OPTIONS}
-                onChange={(value) => {
-                  setTypeFilter(value)
-                  setPage(1)
-                }}
-                style={{ width: 200 }}
+                onChange={(value) => setTypeFilter(value)}
+                style={{ width: 220 }}
               />
             </Flex>
           </Flex>
@@ -221,29 +275,27 @@ export function NotificationsPage() {
       ) : (
         <DataTable<AppNotification>
           rowKey="notification_id"
-          rowClassName={(item) => {
-            const classes: string[] = []
-            if (!item.is_read) classes.push('mcms-notification-row-unread')
-            // ⚠ Chỉ cảnh báo IoT mới tô nền hàng — các loại khác nền trắng.
-            if (isIotDangerAlert(item.notification_type)) {
-              classes.push('mcms-notification-row-iot')
-            }
-            return classes.join(' ')
-          }}
+          /*
+           * ⚠ Chuẩn hoá trạng thái đọc — **1 nguồn quyết định duy nhất**:
+           *   - `is_read === false` → `mcms-center-row-unread` (nền đỏ nhạt
+           *     + viền trái đỏ đậm).
+           *   - `is_read === true`  → `mcms-center-row-read` (nền xám nhạt
+           *     trung tính, KHÔNG viền đỏ).
+           *
+           * Trước đây nhóm `iot` được tô nền đỏ **vô điều kiện** ⇒ thông báo
+           * đã đọc vẫn giữ nền đỏ ⇒ gây hiểu nhầm là còn việc chưa xử lý.
+           */
+          rowClassName={(item) =>
+            item.is_read ? 'mcms-center-row-read' : 'mcms-center-row-unread'
+          }
           dataSource={filteredItems}
           loading={false}
           scrollX={860}
           pagination={{
-            current: page,
-            pageSize,
-            total: pagination?.total ?? filteredItems.length,
+            pageSize: 20,
             showSizeChanger: true,
             pageSizeOptions: ['10', '20', '50', '100'],
             showTotal: (total) => `Tổng ${total} thông báo`,
-            onChange: (nextPage, nextPageSize) => {
-              setPage(nextPageSize !== pageSize ? 1 : nextPage)
-              setPageSize(nextPageSize)
-            },
           }}
           columns={[
             {
@@ -253,7 +305,7 @@ export function NotificationsPage() {
               width: 120,
               render: (isRead: boolean) => (
                 <StatusBadge
-                  tone={isRead ? 'muted' : 'info'}
+                  tone={isRead ? 'muted' : 'danger'}
                   label={isRead ? 'Đã đọc' : 'Chưa đọc'}
                 />
               ),
@@ -304,7 +356,11 @@ export function NotificationsPage() {
               render: (value: string | null) => {
                 const relative = formatRelativeTime(value)
                 return (
-                  <Tooltip title={value ? formatDate(value, 'HH:mm DD/MM/YYYY') : undefined}>
+                  <Tooltip
+                    title={
+                      value ? formatDate(value, 'HH:mm DD/MM/YYYY') : undefined
+                    }
+                  >
                     <Typography.Text
                       type="secondary"
                       className="mcms-notification-mono"
@@ -331,7 +387,7 @@ export function NotificationsPage() {
                     icon={<CheckCircleOutlined />}
                     label="Đánh dấu đã đọc"
                     disabled={item.is_read || pending}
-                    onClick={() => read.mutate(item.notification_id)}
+                    onClick={() => markRead(item.notification_id)}
                   />
                 </Flex>
               ),
@@ -357,7 +413,7 @@ export function NotificationsPage() {
         onClose={() => setDetail(null)}
         title="Chi tiết thông báo"
         width={520}
-        className="mcms-notification-drawer"
+        className="mcms-alert-center-drawer"
         footer={
           <Flex justify="end" gap={8}>
             <Button onClick={() => setDetail(null)}>Đóng</Button>
@@ -367,9 +423,8 @@ export function NotificationsPage() {
               loading={read.isPending}
               onClick={() => {
                 if (!detail) return
-                read.mutate(detail.notification_id, {
-                  onSuccess: () => setDetail(null),
-                })
+                markRead(detail.notification_id)
+                setDetail(null)
               }}
             >
               Đánh dấu đã đọc
@@ -381,7 +436,7 @@ export function NotificationsPage() {
           <Flex vertical gap="var(--mcms-space-4)">
             <Flex gap={8} wrap align="center">
               <StatusBadge
-                tone={detail.is_read ? 'muted' : 'info'}
+                tone={detail.is_read ? 'muted' : 'danger'}
                 label={detail.is_read ? 'Đã đọc' : 'Chưa đọc'}
               />
               {detailMeta && (
@@ -403,7 +458,7 @@ export function NotificationsPage() {
               <Typography.Title level={5} style={{ marginTop: 0 }}>
                 {detail.title ?? 'Thông báo'}
               </Typography.Title>
-              <div className="mcms-notification-detail-body">
+              <div className="mcms-alert-center-detail-body">
                 {detail.message ?? '—'}
               </div>
             </div>
@@ -429,7 +484,9 @@ export function NotificationsPage() {
                   label: 'Thời gian đọc',
                   children: (
                     <span className="mcms-notification-mono">
-                      {detail.read_at ? formatDate(detail.read_at, 'HH:mm DD/MM/YYYY') : '—'}
+                      {detail.read_at
+                        ? formatDate(detail.read_at, 'HH:mm DD/MM/YYYY')
+                        : '—'}
                     </span>
                   ),
                 },

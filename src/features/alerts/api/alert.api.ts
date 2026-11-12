@@ -1,5 +1,4 @@
 import { autoMistingApi } from '../../devices/api/iot.api'
-import { notificationApi } from '../../notifications/api/notification.api'
 import { OPERATIONAL_NOTIFICATION_TYPES } from '../../notifications/types/notification.types'
 import type { AutoControlLogEntry, CultivationFloorMapping } from '../../../types/iot'
 import type {
@@ -57,13 +56,15 @@ const EVENT_CATEGORY: Record<string, OperationalAlertCategory> = {
 const NOTIFICATION_CATEGORY: Record<string, OperationalAlertCategory> = {
   MUSHROOM_DISEASE: 'MUSHROOM_DISEASE',
   DEVICE_ISSUE: 'DEVICE_ISSUE',
+  SENSOR_ALERT: 'SENSOR_ALERT',
   OPERATOR_MESSAGE: 'OPERATOR_MESSAGE',
 }
 
 /** Ánh xạ `notification_type` → mức độ. */
 const NOTIFICATION_SEVERITY: Record<string, OperationalAlertSeverity> = {
   MUSHROOM_DISEASE: 'CRITICAL',
-  DEVICE_ISSUE: 'WARNING',
+  DEVICE_ISSUE: 'CRITICAL',
+  SENSOR_ALERT: 'WARNING',
   OPERATOR_MESSAGE: 'INFO',
 }
 
@@ -80,6 +81,7 @@ const EVENT_LABELS: Record<string, string> = {
 const NOTIFICATION_LABELS: Record<string, string> = {
   MUSHROOM_DISEASE: 'Cảnh báo nấm bệnh',
   DEVICE_ISSUE: 'Sự cố thiết bị',
+  SENSOR_ALERT: 'Cảnh báo cảm biến',
   OPERATOR_MESSAGE: 'Thông báo từ nhân viên',
 }
 
@@ -164,6 +166,10 @@ export function buildOperationalAlerts(
         thresholdValue: null,
         referenceId: entry.id ?? null,
         referenceType: 'IOT_AUTO_CONTROL_LOG',
+        // Nhật ký auto-control không có trạng thái đọc riêng ở BE.
+        notificationId: null,
+        // Nhật ký auto-control không đến từ thông báo ⇒ không có type BE.
+        notificationType: null,
       })
     }
   }
@@ -192,6 +198,10 @@ export function buildOperationalAlerts(
       thresholdValue: null,
       referenceId: notification.reference_id ?? notification.notification_id,
       referenceType: notification.reference_type ?? 'NOTIFICATION',
+      // ID thông báo gốc — dùng để đánh dấu đã đọc.
+      notificationId: notification.notification_id,
+      // Type gốc của BE — dùng để tách tab 1 (kỹ thuật) / tab 2 (nghiệp vụ).
+      notificationType: type,
     })
   }
 
@@ -243,16 +253,4 @@ export async function fetchAutoControlLogs(
   )
 
   return results
-}
-
-/**
- * Tải thông báo nghiệp vụ liên quan vận hành.
- */
-export async function fetchOperationalNotifications(pageSize = 50) {
-  const result = await notificationApi.list({ page: 1, pageSize })
-  return result.items.filter((item) =>
-    OPERATIONAL_NOTIFICATION_TYPES.includes(
-      (item.notification_type ?? '').toUpperCase(),
-    ),
-  )
 }

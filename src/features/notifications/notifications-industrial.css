@@ -62,21 +62,26 @@
   outline: none;
 }
 
-.mcms-notification-popover-item[data-unread='true'] {
-  border-left: 3px solid var(--mcms-primary-strong);
-}
-
 /*
- * Cảnh báo — CHỈ nhóm `iot` (thiết bị & cảm biến) được nền cảnh báo.
- * Các nhóm khác giữ nền trắng bình thường để bảng không bị "nhiễu" màu.
+ * ⚠ Chuẩn hoá trạng thái đọc — giống hệt bảng trong trung tâm:
+ *   - CHƯA ĐỌC → nền đỏ nhạt + viền trái đỏ đậm.
+ *   - ĐÃ ĐỌC   → nền xám nhạt trung tính, KHÔNG viền đỏ.
+ *
+ * Trước đây nhóm `iot` được tô đỏ **vô điều kiện** ⇒ thông báo đã đọc vẫn
+ * giữ nền đỏ ⇒ gây hiểu nhầm là còn việc chưa xử lý.
  */
-.mcms-notification-popover-item[data-alert-kind='iot'] {
+.mcms-notification-popover-item[data-unread='true'] {
   background: var(--mcms-tone-danger-bg);
-  border-left-color: var(--mcms-tone-danger-solid);
+  border-left: 3px solid var(--mcms-tone-danger-solid);
 }
 
-.mcms-notification-popover-item[data-alert='true']:hover,
-.mcms-notification-popover-item[data-alert='true']:focus-visible {
+.mcms-notification-popover-item[data-unread='false'] {
+  background: var(--mcms-surface-hover);
+  border-left: 3px solid transparent;
+}
+
+.mcms-notification-popover-item[data-unread='true']:hover,
+.mcms-notification-popover-item[data-unread='true']:focus-visible {
   /* Giữ nguyên nền cảnh báo khi hover (đừng đổi về nền thường). */
   filter: brightness(0.98);
 }
@@ -84,9 +89,14 @@
 .mcms-notification-popover-title {
   display: block;
   font-size: var(--mcms-font-body);
-  font-weight: 600;
+  /* ⚠ CHƯA ĐỌC → in đậm (gây chú ý). ĐÃ ĐỌC → chữ thường xám đậm. */
+  font-weight: 400;
   color: var(--mcms-text);
   overflow-wrap: anywhere;
+}
+
+.mcms-notification-popover-item[data-unread='true'] .mcms-notification-popover-title {
+  font-weight: 700;
 }
 
 .mcms-notification-popover-message {
@@ -103,68 +113,17 @@
   background: var(--mcms-surface-muted);
 }
 
-/* --- Trang danh sách thông báo ---------------------------------------- */
-
-.mcms-notifications-view .ant-table-tbody > tr > td {
-  vertical-align: top;
-}
-
-/* Hàng chưa đọc — nền nhạt + gạch trái (KHÔNG dùng viền màu đậm). */
-.mcms-notifications-view .mcms-notification-row-unread > td {
-  background: var(--mcms-surface-hover);
-}
-
-.mcms-notifications-view .mcms-notification-row-unread > td:first-child {
-  box-shadow: inset 3px 0 0 var(--mcms-primary-strong);
-}
+/* --- Danh sách trong trung tâm Cảnh báo & Thông báo -------------------- */
 
 /*
- * Hàng cảnh báo — CHỈ nhóm `iot` (thiết bị & cảm biến) được tô nền.
- * Các nhóm khác (canh tác / bệnh hại, hệ thống) giữ nền trắng bình thường.
- *
- * ⚠ Nền + gạch trái luôn khớp với Tag ở cột "Loại"
- *   (xem `NOTIFICATION_CATEGORY_META`).
+ * ⚠ Nền dòng theo trạng thái đọc KHÔNG nằm ở file này nữa — đã chuyển
+ *   sang `features/alert-center/alert-center-industrial.css` để áp dụng
+ *   đồng nhất cho **cả 2** tab (cảnh báo + thông báo):
+ *     - `.mcms-center-row-unread` → nền đỏ nhạt + viền trái đỏ đậm.
+ *     - `.mcms-center-row-read`   → nền xám nhạt trung tính.
  */
-
-/* Thiết bị & cảm biến — nền cảnh báo + gạch trái đỏ. */
-.mcms-notifications-view .mcms-notification-row-iot > td {
-  background: var(--mcms-tone-danger-bg);
-}
-
-.mcms-notifications-view .mcms-notification-row-iot > td:first-child {
-  box-shadow: inset 3px 0 0 var(--mcms-tone-danger-text);
-}
 
 .mcms-notification-mono {
   font-family: var(--mcms-font-mono);
   font-variant-numeric: tabular-nums;
-}
-
-/* --- Drawer chi tiết --------------------------------------------------- */
-
-.mcms-notification-drawer .ant-drawer-header,
-.mcms-notification-drawer .ant-drawer-body {
-  background: var(--mcms-surface);
-  box-shadow: none;
-}
-
-.mcms-notification-drawer .ant-drawer-header {
-  border-bottom: 1px solid var(--mcms-border);
-}
-
-.mcms-notification-drawer .ant-drawer-footer {
-  border-top: 1px solid var(--mcms-border);
-}
-
-/* Khối nội dung thông báo — dùng đọc dễ, không viền màu sặc sỡ. */
-.mcms-notification-detail-body {
-  padding: var(--mcms-space-4);
-  border: 1px solid var(--mcms-border);
-  border-radius: var(--mcms-radius-md);
-  background: var(--mcms-surface-muted);
-  color: var(--mcms-text);
-  font-size: var(--mcms-font-body);
-  line-height: 1.6;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
