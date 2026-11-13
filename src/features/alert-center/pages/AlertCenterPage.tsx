@@ -7,13 +7,14 @@ import { useAllNotifications } from '../../notifications/hooks/useNotifications'
 import { isBusinessNotificationType } from '../../notifications/utils/notification-classification'
 import { AlertsPanel } from '../components/AlertsPanel'
 import { NotificationsPanel } from '../components/NotificationsPanel'
+import {
+  ALERT_CENTER_TAB_ALERTS,
+  ALERT_CENTER_TAB_NOTIFICATIONS,
+  alertCenterTabParam,
+  resolveAlertCenterTab,
+  type AlertCenterTabKey,
+} from '../utils/alert-center-navigation'
 import '../alert-center-industrial.css'
-
-/** 2 tab của trung tâm cảnh báo. */
-export type AlertCenterTab = 'alerts' | 'notifications'
-
-const TAB_ALERTS: AlertCenterTab = 'alerts'
-const TAB_NOTIFICATIONS: AlertCenterTab = 'notifications'
 
 /**
  * Trung tâm **"Cảnh báo & Thông báo"** — gộp 2 phân hệ cũ:
@@ -25,16 +26,41 @@ const TAB_NOTIFICATIONS: AlertCenterTab = 'notifications'
  *   niệm trạng thái đọc (`is_read`). Tách làm 2 mục menu ⇒ người dùng phải
  *   mở 2 trang để biết "còn việc gì cần xem".
  *
- * ⚠ Deep-link: hỗ trợ `?tab=alerts|notifications` để các liên kết cũ
- *   (quả chuông trên Header, nút "Xem tất cả" ở Dashboard) mở đúng tab.
+ * ⚠ Deep-link: hỗ trợ
+ *   - `?tab=iot|alerts`           → tab "Cảnh báo vi khí hậu & IoT".
+ *   - `?tab=notifications`        → tab "Thông báo hệ thống".
+ *   - `?notification=<id>`        → mở thẳng Drawer chi tiết của thông báo đó.
+ *   - `?alert=<alertId>`          → mở thẳng Drawer chi tiết của cảnh báo đó.
+ *
+ *   ⇒ Chuông thông báo (Header) & widget "Cảnh báo gần đây" (Dashboard) đều
+ *   điều hướng tới **đúng tab** + **đúng item** (xem
+ *   `features/alert-center/utils/alert-center-navigation.ts`).
  */
 export function AlertCenterPage() {
   const [searchParams, setSearchParams] = useSearchParams()
 
-  const activeTab = useMemo<AlertCenterTab>(() => {
-    const raw = searchParams.get('tab')
-    return raw === TAB_NOTIFICATIONS ? TAB_NOTIFICATIONS : TAB_ALERTS
+  const activeTab = useMemo<AlertCenterTabKey>(
+    () => resolveAlertCenterTab(searchParams.get('tab')),
+    [searchParams],
+  )
+
+  /**
+   * Item cần mở thẳng khi vào trang (deep-link từ chuông / Dashboard).
+   *
+   * ⚠ `notification` là **ID thông báo của BE** (`notification_id`).
+   * ⚠ `alert` là **ID cảnh báo vận hành** (`OperationalAlert.id`, vd `notif:12`).
+   */
+  const focusNotificationId = useMemo(() => {
+    const raw = searchParams.get('notification')
+    if (!raw) return null
+    const parsed = Number(raw)
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null
   }, [searchParams])
+
+  const focusAlertId = useMemo(
+    () => searchParams.get('alert')?.trim() || null,
+    [searchParams],
+  )
 
   /**
    * Badge đếm số chưa đọc cho từng tab.
@@ -65,9 +91,15 @@ export function AlertCenterPage() {
     ).length
   }, [notificationsQuery.data])
 
+  /**
+   * Đổi tab — luôn **ghi rõ** `?tab=` để link chia sẻ luôn mở đúng tab.
+   *
+   * ⚠ Xóa luôn `notification` / `alert` ⇒ chuyển tab thủ công không bị "mở
+   *   nhầm" Drawer của item ở tab trước.
+   */
   const handleChange = (key: string) => {
-    const next = key === TAB_NOTIFICATIONS ? TAB_NOTIFICATIONS : TAB_ALERTS
-    setSearchParams(next === TAB_ALERTS ? {} : { tab: next }, { replace: true })
+    const next = resolveAlertCenterTab(key)
+    setSearchParams({ tab: alertCenterTabParam(next) }, { replace: true })
   }
 
   return (
@@ -82,7 +114,7 @@ export function AlertCenterPage() {
         onChange={handleChange}
         items={[
           {
-            key: TAB_ALERTS,
+            key: ALERT_CENTER_TAB_ALERTS,
             label: (
               <Badge
                 count={unreadAlerts}
@@ -93,10 +125,15 @@ export function AlertCenterPage() {
                 <span>Cảnh báo vi khí hậu &amp; IoT</span>
               </Badge>
             ),
-            children: <AlertsPanel />,
+            children: (
+              <AlertsPanel
+                focusNotificationId={focusNotificationId}
+                focusAlertId={focusAlertId}
+              />
+            ),
           },
           {
-            key: TAB_NOTIFICATIONS,
+            key: ALERT_CENTER_TAB_NOTIFICATIONS,
             label: (
               <Badge
                 count={unreadNotifications}
@@ -107,7 +144,9 @@ export function AlertCenterPage() {
                 <span>Thông báo hệ thống</span>
               </Badge>
             ),
-            children: <NotificationsPanel />,
+            children: (
+              <NotificationsPanel focusNotificationId={focusNotificationId} />
+            ),
           },
         ]}
       />

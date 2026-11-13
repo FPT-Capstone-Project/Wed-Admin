@@ -10,6 +10,7 @@ import {
   useAllNotifications,
 } from '../../notifications/hooks/useNotifications'
 import { OPERATIONAL_NOTIFICATION_TYPES } from '../../notifications/types/notification.types'
+import { isTechnicalNotificationType } from '../../notifications/utils/notification-classification'
 import { filterTechnicalAlerts } from '../utils/filter-technical-alerts'
 
 /**
@@ -47,13 +48,35 @@ export function useOperationalAlerts(
   const notificationsQuery = useAllNotifications()
 
   const floors = floorsQuery.data
+  /**
+   * Thông báo được dựng thành **cảnh báo vận hành**.
+   *
+   * ⚠ Gồm 2 nhóm:
+   *   1. Nhóm vận hành cố định (`OPERATIONAL_NOTIFICATION_TYPES`) — bệnh hại,
+   *      sự cố thiết bị, cảm biến, thông báo nhân viên.
+   *   2. **Mọi** thông báo thuộc nhóm **kỹ thuật** (`isTechnicalNotificationType`)
+   *      — vd `MICROCLIMATE_ALERT`, `CLIMATE_ALERT`, `IOT_FAULT`…
+   *
+   * ⚠ Vì sao cần nhóm 2?
+   *   `isTechnicalNotificationType()` là nguồn phân loại **duy nhất** quyết
+   *   định "tab nào chứa thông báo này" (tab 1 = IoT, tab 2 = nghiệp vụ).
+   *   Nếu một type kỹ thuật **không** được đưa vào danh sách cảnh báo thì
+   *   nó sẽ:
+   *     - bị tab 2 loại trừ (vì là type kỹ thuật),
+   *     - không xuất hiện ở tab 1 (vì không có trong danh sách này)
+   *   ⇒ **mất hẳn** khỏi trung tâm cảnh báo.
+   *
+   *   ⇒ Danh sách này phải bao phủ **mọi** type kỹ thuật.
+   */
   const notifications = useMemo(
     () =>
-      (notificationsQuery.data?.items ?? []).filter((item) =>
-        OPERATIONAL_NOTIFICATION_TYPES.includes(
-          (item.notification_type ?? '').toUpperCase(),
-        ),
-      ),
+      (notificationsQuery.data?.items ?? []).filter((item) => {
+        const type = (item.notification_type ?? '').toUpperCase()
+        return (
+          OPERATIONAL_NOTIFICATION_TYPES.includes(type) ||
+          isTechnicalNotificationType(type)
+        )
+      }),
     [notificationsQuery.data],
   )
 

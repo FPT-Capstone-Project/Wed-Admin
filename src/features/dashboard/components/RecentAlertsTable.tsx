@@ -19,6 +19,11 @@ import {
   ALERT_SEVERITY_CONFIG,
 } from '../../alerts/components/alert-status.config'
 import type { OperationalAlert } from '../../alerts/types/alert.types'
+import {
+  ALERT_CENTER_TAB_ALERTS,
+  buildAlertCenterHref,
+  tabForAlert,
+} from '../../alert-center/utils/alert-center-navigation'
 import { ActionButton, DataTable, StatusBadge } from '../../../shared/ui'
 
 /** Số cảnh báo hiển thị tối đa trong widget trên Dashboard. */
@@ -94,14 +99,30 @@ export function RecentAlertsTable() {
       key: 'actions',
       className: 'ant-table-cell-action',
       width: 96,
-      render: () => (
+      /*
+       * ⚠ Điều hướng tới **đúng tab** + **đúng item** trong trung tâm
+       *   "Cảnh báo & Thông báo".
+       *
+       *   Trước đây luôn `navigate('/alerts')` ⇒ mở tab mặc định ("Cảnh báo
+       *   vi khí hậu & IoT") **không phải** item đang bấm ⇒ người dùng phải
+       *   tự tìm lại trong danh sách.
+       */
+      render: (_, alert) => (
         <ActionButton
           variant="text"
           icon={<ArrowRightOutlined />}
           label="Xem"
           description="Xem chi tiết tại trung tâm Cảnh báo & Thông báo"
           hideLabel
-          onClick={() => navigate('/alerts')}
+          onClick={() =>
+            navigate(
+              buildAlertCenterHref({
+                tab: tabForAlert(alert),
+                notificationId: alert.notificationId,
+                alertId: alert.source === 'NOTIFICATION' ? null : alert.id,
+              }),
+            )
+          }
         />
       ),
     },
@@ -124,7 +145,16 @@ export function RecentAlertsTable() {
           variant="text"
           icon={<ArrowRightOutlined />}
           label="Xem tất cả"
-          onClick={() => navigate('/alerts')}
+          /*
+           * ⚠ Widget này hiển thị **cảnh báo vận hành** (đa số là nhóm kỹ
+           *   thuật: IoT / vi khí hậu / thiết bị) ⇒ mở tab "Cảnh báo vi khí
+           *   hậu & IoT" thay vì để trang tự chọn tab mặc định.
+           */
+          onClick={() =>
+            navigate(
+              buildAlertCenterHref({ tab: ALERT_CENTER_TAB_ALERTS }),
+            )
+          }
         />
       </div>
       <DataTable<OperationalAlert>

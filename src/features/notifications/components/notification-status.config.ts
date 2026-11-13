@@ -116,6 +116,7 @@ export const NOTIFICATION_CATEGORY_META: Record<
 const TYPE_TO_CATEGORY: Record<string, NotificationCategory> = {
   DEVICE_ISSUE: 'iot',
   SENSOR_ALERT: 'iot',
+  MICROCLIMATE_ALERT: 'iot',
   MUSHROOM_DISEASE: 'cultivation',
 }
 

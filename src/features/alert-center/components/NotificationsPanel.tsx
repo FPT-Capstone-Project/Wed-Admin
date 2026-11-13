@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   BellOutlined,
@@ -100,13 +100,23 @@ function CategoryIcon({ category }: { category: string }) {
  *     Trước đây chỉ nhóm `iot` được tô nền đỏ ⇒ thông báo đã đọc vẫn giữ
  *     nền đỏ. Nay **mọi** dòng đã đọc đều chuyển về nền xám trung tính.
  */
-export function NotificationsPanel() {
+export interface NotificationsPanelProps {
+  /**
+   * ID thông báo (BE) cần **mở thẳng Drawer chi tiết** khi vào trang.
+   *
+   * ⚠ Deep-link từ chuông thông báo (`?notification=<id>`).
+   */
+  focusNotificationId?: number | null
+}
+
+export function NotificationsPanel({
+  focusNotificationId = null,
+}: NotificationsPanelProps = {}) {
   const { read, readMany, pending } = useNotificationActions()
   const queryClient = useQueryClient()
   const [searchText, setSearchText] = useState('')
   const [readFilter, setReadFilter] = useState<ReadFilter>('ALL')
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL')
-  const [detail, setDetail] = useState<AppNotification | null>(null)
 
     /**
      * Đánh dấu đã đọc — **optimistic** trên CẢ 2 cache.
@@ -171,8 +181,40 @@ export function NotificationsPanel() {
     [businessItems],
   )
 
+  /**
+   * Item cần mở thẳng Drawer khi vào trang (deep-link `?notification=<id>`).
+   *
+   * ⚠ Tính **trong lúc render** (không dùng `useEffect` + `setState`) ⇒
+   *   tuân thủ React 19 (`react-hooks/set-state-in-effect`) và không gây
+   *   "cascading render".
+   */
+  const focusTarget = useMemo(
+    () =>
+      focusNotificationId == null
+        ? null
+        : (businessItems.find(
+            (item) => item.notification_id === focusNotificationId,
+          ) ?? null),
+    [businessItems, focusNotificationId],
+  )
+
+  /**
+   * Drawer đang mở.
+   *
+   * ⚠ Ưu tiên `focusTarget` (deep-link) — nhưng **chỉ 1 lần** cho mỗi focus
+   *   id ⇒ sau khi user đóng Drawer, refetch cache không mở lại.
+   */
+  const [dismissedFocusKey, setDismissedFocusKey] = useState<number | null>(null)
+  const [manualDetail, setManualDetail] = useState<AppNotification | null>(null)
+  const detail =
+    focusTarget && dismissedFocusKey !== focusNotificationId
+      ? focusTarget
+      : manualDetail
+
   const openDetail = (item: AppNotification) => {
-    setDetail(item)
+    // Mở thủ công ⇒ bỏ deep-link đang giữ Drawer mở.
+    setDismissedFocusKey(focusNotificationId)
+    setManualDetail(item)
     // Mở chi tiết ⇒ coi như đã đọc (giống hành vi app khách hàng).
     if (!item.is_read && !pending) markRead(item.notification_id)
   }
@@ -207,6 +249,34 @@ export function NotificationsPanel() {
     markAlertsAsRead(queryClient, ids)
     readMany.mutate(ids)
   }
+
+  /**
+   * Đánh dấu đọc cho item vừa mở Drawer từ deep-link.
+   *
+   * ⚠ Dùng `useEffect` (không setState) ⇒ chỉ gọi API, không render lại.
+   * ⚠ `handledMarkRef` chống gọi lặp ⇒ mỗi thông báo chỉ đánh dấu đọc
+   *   **1 lần** cho mỗi lần deep-link (tránh vòng lặp khi cache refetch).
+   */
+  const handledMarkRef = useRef<Set<number>>(new Set())
+
+  useEffect(() => {
+    if (!focusTarget) return
+    if (dismissedFocusKey === focusNotificationId) return
+    if (focusTarget.is_read) return
+    if (pending) return
+    if (handledMarkRef.current.has(focusTarget.notification_id)) return
+
+    handledMarkRef.current.add(focusTarget.notification_id)
+    markAlertsAsRead(queryClient, [focusTarget.notification_id])
+    read.mutate(focusTarget.notification_id)
+  }, [
+    focusTarget,
+    dismissedFocusKey,
+    focusNotificationId,
+    pending,
+    queryClient,
+    read,
+  ])
 
   return (
     <div>
@@ -410,13 +480,23 @@ export function NotificationsPanel() {
 
       <Drawer
         open={detail !== null}
-        onClose={() => setDetail(null)}
+        onClose={() => {
+          setDismissedFocusKey(focusNotificationId)
+          setManualDetail(null)
+        }}
         title="Chi tiết thông báo"
         width={520}
         className="mcms-alert-center-drawer"
         footer={
           <Flex justify="end" gap={8}>
-            <Button onClick={() => setDetail(null)}>Đóng</Button>
+            <Button
+              onClick={() => {
+                setDismissedFocusKey(focusNotificationId)
+                setManualDetail(null)
+              }}
+            >
+              Đóng
+            </Button>
             <Button
               type="primary"
               disabled={!detail || detail.is_read || pending}
@@ -424,7 +504,8 @@ export function NotificationsPanel() {
               onClick={() => {
                 if (!detail) return
                 markRead(detail.notification_id)
-                setDetail(null)
+                setDismissedFocusKey(focusNotificationId)
+                setManualDetail(null)
               }}
             >
               Đánh dấu đã đọc

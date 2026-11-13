@@ -28,11 +28,14 @@ export type NotificationTypeKey =
   | 'CULTIVATION_PROGRESS'
   | 'CULTIVATION_COMPLETED'
   | 'CULTIVATION_CANCELLED'
+  | 'CULTIVATION_STATUS'
   | 'MUSHROOM_DISEASE'
   | 'DEVICE_ISSUE'
+  | 'SENSOR_ALERT'
+  | 'MICROCLIMATE_ALERT'
   | 'OPERATOR_MESSAGE'
   | 'PAYMENT_STATUS'
-  | 'SENSOR_ALERT'
+  | 'PAYMENT_REFUND_REQUIRED'
 
 /** Mức độ cảnh báo vận hành. */
 export type AlertSeverityKey = 'CRITICAL' | 'WARNING' | 'INFO'
@@ -46,6 +49,8 @@ export type AlertCategoryKey =
   | 'MUSHROOM_DISEASE'
   | 'DEVICE_ISSUE'
   | 'SENSOR_ALERT'
+  | 'MICROCLIMATE_ALERT'
+  | 'IOT_ALERT'
   | 'OPERATOR_MESSAGE'
 
 /** Nguồn phát sinh cảnh báo. */
@@ -76,11 +81,14 @@ export const NOTIFICATION_TYPE_DICTIONARY: StatusDictionary = {
   CULTIVATION_PROGRESS: { tone: 'info', label: 'Tiến độ canh tác' },
   CULTIVATION_COMPLETED: { tone: 'success', label: 'Hoàn thành canh tác' },
   CULTIVATION_CANCELLED: { tone: 'danger', label: 'Hủy canh tác' },
+  CULTIVATION_STATUS: { tone: 'info', label: 'Cập nhật trạng thái canh tác' },
   MUSHROOM_DISEASE: { tone: 'warning', label: 'Nấm bệnh / mốc' },
   DEVICE_ISSUE: { tone: 'danger', label: 'Sự cố cảm biến & thiết bị' },
   SENSOR_ALERT: { tone: 'danger', label: 'Cảnh báo cảm biến' },
+  MICROCLIMATE_ALERT: { tone: 'warning', label: 'Cảnh báo vi khí hậu' },
   OPERATOR_MESSAGE: { tone: 'neutral', label: 'Thông báo từ nhân viên' },
   PAYMENT_STATUS: { tone: 'info', label: 'Trạng thái thanh toán' },
+  PAYMENT_REFUND_REQUIRED: { tone: 'warning', label: 'Cần hoàn tiền đơn hàng' },
 }
 
 /**
@@ -110,6 +118,8 @@ export const ALERT_CATEGORY_DICTIONARY: Record<
   MUSHROOM_DISEASE: { tone: 'warning', label: 'Nấm bệnh / mốc' },
   DEVICE_ISSUE: { tone: 'danger', label: 'Sự cố thiết bị' },
   SENSOR_ALERT: { tone: 'danger', label: 'Cảnh báo cảm biến' },
+  MICROCLIMATE_ALERT: { tone: 'warning', label: 'Cảnh báo vi khí hậu' },
+  IOT_ALERT: { tone: 'danger', label: 'Cảnh báo thiết bị & vi khí hậu' },
   OPERATOR_MESSAGE: { tone: 'neutral', label: 'Thông báo từ nhân viên' },
 }
 

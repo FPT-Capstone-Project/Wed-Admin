@@ -8,12 +8,20 @@
  *
  * ⚠ Popover chỉ tải danh sách khi **mở** (`enabled: open`) ⇒ không dội
  *   request khi admin chỉ đang làm việc ở trang khác.
+ *
+ * ⚠ **Điều hướng đúng tab** (yêu cầu UX):
+ *   - Click 1 item ⇒ mở **đúng tab** chứa item đó
+ *     (IoT → "Cảnh báo vi khí hậu & IoT", nghiệp vụ → "Thông báo hệ thống")
+ *     **và** mở thẳng Drawer chi tiết của item (`?notification=<id>`).
+ *   - Click "Xem tất cả" ⇒ mở tab **đang có nhiều việc chưa đọc nhất**
+ *     (mặc định trước đây luôn nhảy vào "Thông báo hệ thống" ⇒ sai).
  */
 import { Alert, Badge, Button, Empty, Flex, Popover, Spin, Typography } from 'antd'
 import { BellOutlined } from '@ant-design/icons'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  useAllNotifications,
   useNotifications,
   useNotificationActions,
   useUnreadNotificationCount,
@@ -25,6 +33,13 @@ import {
   notificationTypeLabel,
 } from './notification-status.config'
 import { formatRelativeTime } from '../../../shared/utils/date'
+import {
+  ALERT_CENTER_TAB_ALERTS,
+  ALERT_CENTER_TAB_NOTIFICATIONS,
+  buildAlertCenterHref,
+  tabForNotificationType,
+  type AlertCenterTabKey,
+} from '../../alert-center/utils/alert-center-navigation'
 import '../notifications-industrial.css'
 
 /** Số thông báo tóm tắt trong popover. */
@@ -56,11 +71,67 @@ export function NotificationBell() {
 
   const items = query.data?.items ?? []
 
+  /**
+   * Nhóm tab nào đang có **nhiều việc chưa đọc nhất**?
+   *
+   * ⚠ Nguồn: `useUnreadNotificationCount` chỉ cho tổng số chưa đọc (mọi
+   *   nhóm) ⇒ không biết phân bổ theo tab.
+   *   ⇒ Dùng `useAllNotifications()` (cùng query key với trung tâm cảnh
+   *   báo ⇒ **1 request cho cả trang**, không tốn thêm request).
+   */
+  const allNotificationsQuery = useAllNotifications({ enabled: open })
+
+  const unreadByTab = useMemo(() => {
+    const all = allNotificationsQuery.data?.items ?? []
+    let iot = 0
+    let system = 0
+
+    for (const item of all) {
+      if (item.is_read) continue
+      if (tabForNotificationType(item.notification_type) === ALERT_CENTER_TAB_ALERTS) {
+        iot += 1
+      } else {
+        system += 1
+      }
+    }
+
+    return { iot, system }
+  }, [allNotificationsQuery.data])
+
+  /**
+   * "Xem tất cả" ⇒ mở tab **có nhiều việc chưa đọc nhất**.
+   *
+   * ⚠ Trước đây luôn nhảy vào "Thông báo hệ thống" ⇒ người dùng phải tự
+   *   chuyển sang tab IoT mới thấy cảnh báo thiết bị của mình.
+   */
   const handleOpenAll = () => {
     setOpen(false)
-    // ⚠ Trung tâm gộp "Cảnh báo & Thông báo" — mở thẳng tab "Thông báo hệ
-    //   thống" để không bắt người dùng tự chọn lại.
-    navigate('/alerts?tab=notifications')
+
+    const targetTab: AlertCenterTabKey =
+      unreadByTab.iot > unreadByTab.system
+        ? ALERT_CENTER_TAB_ALERTS
+        : ALERT_CENTER_TAB_NOTIFICATIONS
+
+    navigate(buildAlertCenterHref({ tab: targetTab }))
+  }
+
+  /** Click 1 item ⇒ mở đúng tab + mở thẳng Drawer chi tiết của item đó. */
+  const handleOpenItem = (
+    notificationId: number,
+    type: string,
+    isRead: boolean,
+  ) => {
+    setOpen(false)
+
+    // Đánh dấu đã đọc (optimistic) — badge chuông giảm ngay.
+    if (!isRead) read.mutate(notificationId)
+
+    navigate(
+      buildAlertCenterHref({
+        tab: tabForNotificationType(type),
+        notificationId,
+      }),
+    )
   }
 
   return (
@@ -110,6 +181,9 @@ export function NotificationBell() {
                 const category = notificationCategory(item.notification_type)
                 const meta = notificationCategoryMeta(item.notification_type)
                 const relative = formatRelativeTime(item.created_at)
+                const isIotTab =
+                  tabForNotificationType(item.notification_type) ===
+                  ALERT_CENTER_TAB_ALERTS
 
                 return (
                   <button
@@ -119,23 +193,36 @@ export function NotificationBell() {
                     data-unread={item.is_read ? 'false' : 'true'}
                     data-alert-kind={category}
                     disabled={pending}
-                    onClick={() => {
-                      if (!item.is_read) read.mutate(item.notification_id)
-                    }}
+                    onClick={() =>
+                      handleOpenItem(
+                        item.notification_id,
+                        item.notification_type,
+                        item.is_read,
+                      )
+                    }
                   >
                     <Flex vertical gap={2}>
                       <Flex align="center" gap={6} wrap>
                         <span className="mcms-notification-popover-title">
                           {item.title ?? notificationTypeLabel(item.notification_type)}
                         </span>
-                        {category === 'iot' && (
+                        {/*
+                          * ⚠ Nhãn nhóm cho item thuộc tab "Cảnh báo vi khí
+                          *   hậu & IoT" — giúp user biết **click vào sẽ mở
+                          *   tab nào**.
+                          *
+                          * ⚠ `meta.label` = "Thiết bị IoT" (nhóm `iot`); các
+                          *   type kỹ thuật khác (vd `CLIMATE_ALERT`) rơi về
+                          *   nhóm `system` ⇒ gắn nhãn "Vi khí hậu & IoT".
+                          */}
+                        {isIotTab ? (
                           <Typography.Text
                             type="danger"
                             style={{ fontSize: 'var(--mcms-font-small)', fontWeight: 600 }}
                           >
-                            {meta.label}
+                            {category === 'iot' ? meta.label : 'Vi khí hậu & IoT'}
                           </Typography.Text>
-                        )}
+                        ) : null}
                       </Flex>
                       <span className="mcms-notification-popover-message">
                         {item.message ?? '—'}

@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import {
+  BellOutlined,
   CheckCircleOutlined,
   ExclamationCircleOutlined,
   EyeOutlined,
@@ -72,18 +73,36 @@ const READ_OPTIONS: Array<{ value: AlertReadFilter; label: string }> = [
  *   - Nút "Đánh dấu đã đọc" cho cảnh báo có nguồn `NOTIFICATION`
  *     (cảnh báo từ nhật ký auto-control không có trạng thái đọc ở BE).
  */
-export function AlertsPanel() {
+export interface AlertsPanelProps {
+  /**
+   * ID thông báo (BE) cần **mở thẳng Drawer chi tiết** khi vào trang.
+   *
+   * ⚠ Deep-link từ chuông thông báo / Dashboard (`?notification=<id>`).
+   */
+  focusNotificationId?: number | null
+  /**
+   * ID cảnh báo vận hành (`OperationalAlert.id`) cần **mở thẳng Drawer**.
+   *
+   * ⚠ Deep-link (`?alert=<id>`) — dùng cho cảnh báo từ nhật ký auto-control
+   *   (không có `notification_id`).
+   */
+  focusAlertId?: string | null
+}
+
+export function AlertsPanel({
+  focusNotificationId = null,
+  focusAlertId = null,
+}: AlertsPanelProps = {}) {
   const [searchText, setSearchText] = useState('')
   const [severityFilter, setSeverityFilter] =
     useState<OperationalAlertSeverity | undefined>()
   const [categoryFilter, setCategoryFilter] =
     useState<OperationalAlertCategory | undefined>()
   const [readFilter, setReadFilter] = useState<AlertReadFilter>('ALL')
-  const [detail, setDetail] = useState<OperationalAlert | null>(null)
 
   const queryClient = useQueryClient()
   const { data, isLoading, isError, error, refetch } = useTechnicalAlerts()
-  const { read, pending } = useNotificationActions()
+  const { read, readMany, pending } = useNotificationActions()
 
   /**
    * Đánh dấu đã đọc — **optimistic**.
@@ -130,8 +149,119 @@ export function AlertsPanel() {
   const isMarkable = (alert: OperationalAlert) =>
     alert.source === 'NOTIFICATION' && !alert.isRead
 
+  /**
+   * Cảnh báo **chưa đọc** mà BE có thể đánh dấu đã đọc.
+   *
+   * ⚠ Cảnh báo từ **nhật ký auto-control** (`IOT_AUTO_CONTROL`) không có
+   *   trạng thái đọc riêng ở BE (`notificationId === null`) ⇒ **loại khỏi**
+   *   danh sách này, tránh gọi API với ID không tồn tại.
+   */
+  const markableUnread = useMemo(
+    () => alerts.filter((alert) => isMarkable(alert) && alert.notificationId != null),
+    [alerts],
+  )
+
+  /**
+   * Đánh dấu đọc **tất cả** cảnh báo IoT chưa đọc của tab này.
+   *
+   * ⚠ KHÔNG dùng `readAll` (đánh dấu đọc toàn bộ tài khoản) vì sẽ xoá luôn
+   *   thông báo nghiệp vụ của tab 2 ⇒ mất việc chưa xem ở tab kia.
+   *   Chỉ đánh dấu đọc **đúng các ID** thuộc tab 1 (nhóm IoT / vi khí hậu).
+   *
+   * ⚠ `markAlertsAsRead` cập nhật **optimistic** cache cảnh báo ⇒ nền dòng
+   *   chuyển ngay; `readMany` cập nhật cache thông báo + **badge chuông**
+   *   trên Header ngay lập tức (xem `useNotificationActions`).
+   */
+  const markAllVisibleRead = () => {
+    const ids = markableUnread
+      .map((alert) => alert.notificationId)
+      .filter((id): id is number => id != null)
+    if (ids.length === 0) return
+
+    markAlertsAsRead(queryClient, ids)
+    readMany.mutate(ids)
+  }
+
+  /**
+   * Item cần mở thẳng Drawer khi vào trang (deep-link `?notification=` /
+   * `?alert=`).
+   *
+   * ⚠ Tính **trong lúc render** (không dùng `useEffect` + `setState`) ⇒
+   *   tuân thủ React 19 (`react-hooks/set-state-in-effect`) và không gây
+   *   "cascading render".
+   */
+  const focusTarget = useMemo(() => {
+    if (focusAlertId) {
+      return alerts.find((alert) => alert.id === focusAlertId) ?? null
+    }
+    if (focusNotificationId != null) {
+      return (
+        alerts.find((alert) => alert.notificationId === focusNotificationId) ??
+        null
+      )
+    }
+    return null
+  }, [alerts, focusAlertId, focusNotificationId])
+
+  /**
+   * Drawer đang mở.
+   *
+   * ⚠ Ưu tiên `focusTarget` (deep-link) — nhưng **chỉ 1 lần** cho mỗi focus
+   *   key ⇒ sau khi user đóng Drawer, refetch cache không mở lại.
+   */
+  const [dismissedFocusKey, setDismissedFocusKey] = useState<string | null>(null)
+  const focusKey = focusAlertId ?? `notification:${focusNotificationId}`
+
+  const [manualDetail, setManualDetail] = useState<OperationalAlert | null>(null)
+  const detail = focusTarget && dismissedFocusKey !== focusKey ? focusTarget : manualDetail
+
+  /**
+   * Đánh dấu đọc cho item vừa mở Drawer từ deep-link.
+   *
+   * ⚠ Dùng `useEffect` (không setState) ⇒ chỉ gọi API, không render lại.
+   * ⚠ `handledMarkRef` chống gọi lặp ⇒ mỗi thông báo chỉ đánh dấu đọc
+   *   **1 lần** cho mỗi lần deep-link (tránh vòng lặp khi cache refetch).
+   */
+  const handledMarkRef = useRef<Set<number>>(new Set())
+
+  useEffect(() => {
+    if (!focusTarget) return
+    if (dismissedFocusKey === focusKey) return
+    if (focusTarget.source !== 'NOTIFICATION') return
+    if (focusTarget.notificationId == null) return
+    if (focusTarget.isRead) return
+    if (pending) return
+    if (handledMarkRef.current.has(focusTarget.notificationId)) return
+
+    handledMarkRef.current.add(focusTarget.notificationId)
+    markAlertsAsRead(queryClient, [focusTarget.notificationId])
+    read.mutate(focusTarget.notificationId)
+  }, [focusTarget, dismissedFocusKey, focusKey, pending, queryClient, read])
+
   return (
     <div>
+      {/*
+        * Thanh công cụ: badge "chưa đọc" + nút "Đánh dấu tất cả đã đọc".
+        *
+        * ⚠ Giống hệt tab "Thông báo hệ thống" (xem `NotificationsPanel`).
+        * ⚠ Chỉ đánh dấu đọc **cảnh báo thuộc tab này** (nhóm IoT / vi khí
+        *   hậu) — KHÔNG dùng `readAll` (đánh dấu đọc toàn bộ tài khoản) vì
+        *   sẽ xoá luôn việc chưa xem ở tab "Thông báo hệ thống".
+        */}
+      <Flex gap={8} align="center" wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
+        <MetadataBadge
+          label={`${counts?.unread ?? 0} chưa đọc`}
+          icon={<BellOutlined />}
+        />
+        <Button
+          loading={readMany.isPending}
+          disabled={pending || markableUnread.length === 0}
+          onClick={markAllVisibleRead}
+        >
+          Đánh dấu tất cả đã đọc
+        </Button>
+      </Flex>
+
       <Flex gap={12} wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
         <Input
           allowClear
@@ -227,7 +357,11 @@ export function AlertsPanel() {
                   <ActionButton
                     icon={<EyeOutlined />}
                     label="Xem chi tiết"
-                    onClick={() => setDetail(alert)}
+                    onClick={() => {
+                      // Mở thủ công ⇒ bỏ deep-link đang giữ Drawer mở.
+                      setDismissedFocusKey(focusKey)
+                      setManualDetail(alert)
+                    }}
                   />
                   {isMarkable(alert) && (
                     <ActionButton
@@ -261,13 +395,23 @@ export function AlertsPanel() {
 
       <Drawer
         open={detail !== null}
-        onClose={() => setDetail(null)}
+        onClose={() => {
+          setDismissedFocusKey(focusKey)
+          setManualDetail(null)
+        }}
         title="Chi tiết cảnh báo"
         width={520}
         className="mcms-alert-center-drawer"
         footer={
           <Flex justify="end" gap={8}>
-            <Button onClick={() => setDetail(null)}>Đóng</Button>
+            <Button
+              onClick={() => {
+                setDismissedFocusKey(focusKey)
+                setManualDetail(null)
+              }}
+            >
+              Đóng
+            </Button>
             {detail && isMarkable(detail) && (
               <Button
                 type="primary"
@@ -275,7 +419,8 @@ export function AlertsPanel() {
                 onClick={() => {
                   if (detail.notificationId == null) return
                   markRead(detail.notificationId)
-                  setDetail(null)
+                  setDismissedFocusKey(focusKey)
+                  setManualDetail(null)
                 }}
               >
                 Đánh dấu đã đọc

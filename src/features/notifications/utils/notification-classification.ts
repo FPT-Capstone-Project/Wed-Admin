@@ -26,10 +26,12 @@ import type { NotificationType } from '../types/notification.types'
  *   - `DEVICE_ISSUE` → `deviceIncident.model.js` (sự cố master / node /
  *     cảm biến, phục hồi thiết bị).
  *   - `SENSOR_ALERT` → cảnh báo cảm biến / vi khí hậu.
+ *   - `MICROCLIMATE_ALERT` → cảnh báo vi khí hậu tầng (nhiệt độ / độ ẩm).
  */
 export const TECHNICAL_NOTIFICATION_TYPES: readonly string[] = [
   'DEVICE_ISSUE',
   'SENSOR_ALERT',
+  'MICROCLIMATE_ALERT',
 ]
 
 /**

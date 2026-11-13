@@ -42,6 +42,8 @@ export type OperationalAlertCategory =
   | 'MUSHROOM_DISEASE'
   | 'DEVICE_ISSUE'
   | 'SENSOR_ALERT'
+  | 'MICROCLIMATE_ALERT'
+  | 'IOT_ALERT'
   | 'OPERATOR_MESSAGE'
 
 /** Bộ lọc trạng thái đọc. */

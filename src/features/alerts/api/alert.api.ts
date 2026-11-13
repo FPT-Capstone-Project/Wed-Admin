@@ -1,5 +1,5 @@
 import { autoMistingApi } from '../../devices/api/iot.api'
-import { OPERATIONAL_NOTIFICATION_TYPES } from '../../notifications/types/notification.types'
+import { isTechnicalNotificationType } from '../../notifications/utils/notification-classification'
 import type { AutoControlLogEntry, CultivationFloorMapping } from '../../../types/iot'
 import type {
   OperationalAlert,
@@ -57,6 +57,7 @@ const NOTIFICATION_CATEGORY: Record<string, OperationalAlertCategory> = {
   MUSHROOM_DISEASE: 'MUSHROOM_DISEASE',
   DEVICE_ISSUE: 'DEVICE_ISSUE',
   SENSOR_ALERT: 'SENSOR_ALERT',
+  MICROCLIMATE_ALERT: 'MICROCLIMATE_ALERT',
   OPERATOR_MESSAGE: 'OPERATOR_MESSAGE',
 }
 
@@ -65,8 +66,26 @@ const NOTIFICATION_SEVERITY: Record<string, OperationalAlertSeverity> = {
   MUSHROOM_DISEASE: 'CRITICAL',
   DEVICE_ISSUE: 'CRITICAL',
   SENSOR_ALERT: 'WARNING',
+  MICROCLIMATE_ALERT: 'WARNING',
   OPERATOR_MESSAGE: 'INFO',
 }
+
+/**
+ * Nhóm cảnh báo **mặc định** cho thông báo kỹ thuật chưa có trong bảng.
+ *
+ * ⚠ VD `CLIMATE_ALERT`, `IOT_FAULT`… — BE có thể thêm type mới ⇒ không để
+ *   type lạ rơi về `OPERATOR_MESSAGE` (nghệp vụ) vì như vậy nó sẽ bị gán
+ *   nhãn sai nhóm trong tab "Cảnh báo vi khí hậu & IoT".
+ */
+const TECHNICAL_DEFAULT_CATEGORY: OperationalAlertCategory = 'IOT_ALERT'
+
+/**
+ * Mức độ **mặc định** cho thông báo kỹ thuật chưa có trong bảng.
+ *
+ * ⚠ `WARNING` (cảnh báo) — thay vì `INFO` (thông tin) vì type lạ hầu như
+ *   luôn là cảnh báo cần theo dõi.
+ */
+const TECHNICAL_DEFAULT_SEVERITY: OperationalAlertSeverity = 'WARNING'
 
 /** Tên tiếng Việt của `event_type`. */
 const EVENT_LABELS: Record<string, string> = {
@@ -82,6 +101,7 @@ const NOTIFICATION_LABELS: Record<string, string> = {
   MUSHROOM_DISEASE: 'Cảnh báo nấm bệnh',
   DEVICE_ISSUE: 'Sự cố thiết bị',
   SENSOR_ALERT: 'Cảnh báo cảm biến',
+  MICROCLIMATE_ALERT: 'Cảnh báo vi khí hậu',
   OPERATOR_MESSAGE: 'Thông báo từ nhân viên',
 }
 
@@ -174,16 +194,33 @@ export function buildOperationalAlerts(
     }
   }
 
-  // ── 2. Thông báo nghiệp vụ ────────────────────────────────────────────
+  // ── 2. Thông báo vận hành ────────────────────────────────────────────
   for (const notification of input.notifications) {
     const type = (notification.notification_type ?? '').toUpperCase()
-    if (!OPERATIONAL_NOTIFICATION_TYPES.includes(type)) continue
+    /*
+     * ⚠ Danh sách thông báo đã được lọc ở tầng hook
+     *   (`useOperationalAlerts`) ⇒ ở đây **không** chặn thêm theo
+     *   `OPERATIONAL_NOTIFICATION_TYPES`, vì sẽ **loại mất** các type
+     *   kỹ thuật khác (vd `MICROCLIMATE_ALERT`) khỏi tab "Cảnh báo vi khí
+     *   hậu & IoT" ⇒ chúng sẽ biến mất khỏi trung tâm cảnh báo.
+     */
+    if (!type) continue
+
+    /*
+     * ⚠ Type lạ (BE thêm mới) ⇒ dùng nhóm/mức độ **mặc định theo nhóm kỹ
+     *   thuật** ⇒ không bị gán nhãn "thông báo từ nhân viên" (nghệp vụ).
+     */
+    const isTechnical = isTechnicalNotificationType(type)
 
     alerts.push({
       id: `notif:${notification.notification_id}`,
       source: 'NOTIFICATION',
-      category: NOTIFICATION_CATEGORY[type] ?? 'OPERATOR_MESSAGE',
-      severity: NOTIFICATION_SEVERITY[type] ?? 'INFO',
+      category:
+        NOTIFICATION_CATEGORY[type] ??
+        (isTechnical ? TECHNICAL_DEFAULT_CATEGORY : 'OPERATOR_MESSAGE'),
+      severity:
+        NOTIFICATION_SEVERITY[type] ??
+        (isTechnical ? TECHNICAL_DEFAULT_SEVERITY : 'INFO'),
       title: notification.title ?? NOTIFICATION_LABELS[type] ?? type,
       message:
         notification.message ??
