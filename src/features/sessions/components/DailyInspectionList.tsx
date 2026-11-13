@@ -68,7 +68,13 @@ export function DailyInspectionCard({ inspection }: DailyInspectionCardProps) {
           )}
         </Flex>
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-          Tiến độ: {formatSessionProgress(inspection.growth_progress)}
+          {/*
+           * ⚠ `growth_progress` là **quan sát tại thời điểm kiểm tra khay**
+           *   ⇒ KHÔNG phải tiến độ của Phiên canh tác. Tiến độ phiên lấy từ
+           *   `progress_percent` của phiên (Farm OP cập nhật) — xem
+           *   `features/sessions/utils/session-progress.utils.ts`.
+           */}
+          Tiến độ quan sát: {formatSessionProgress(inspection.growth_progress)}
         </Typography.Text>
       </Flex>
 

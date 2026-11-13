@@ -83,6 +83,13 @@ export interface TrayRental {
   harvestStatus: HarvestStatus
   customerContactStatus: CustomerContactStatus
   careLogs: TrayCareLog[]
+  /**
+   * Tiến độ 0–100 của Phiên canh tác (`progress_percent`).
+   *
+   * ⚠ **Nguồn duy nhất**: giá trị Farm OP cập nhật qua API của phiên.
+   *   KHÔNG suy ra từ số ngày trôi qua.
+   */
+  progressPercent?: number | null
 }
 
 export interface Tray {

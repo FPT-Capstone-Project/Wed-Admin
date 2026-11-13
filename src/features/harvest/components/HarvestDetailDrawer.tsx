@@ -1,6 +1,11 @@
 import { Descriptions, Drawer } from 'antd'
 import type { ReactNode } from 'react'
+import { useMemo } from 'react'
 import { useHarvest } from '../api/harvest.queries'
+import {
+  resolveStaffName,
+  useHarvestStaffNames,
+} from '../hooks/useHarvestStaffNames'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { auditDate, auditWeight } from '../../../shared/ui/audit-format'
 import { cleanText } from '../../../shared/utils/text'
@@ -20,6 +25,18 @@ import { StatusBadge } from '../../../shared/ui'
 export function HarvestDetailDrawer({ id, onClose }: { id: number; onClose: () => void }) {
   const query = useHarvest(id)
   const h = query.data
+
+  /**
+   * ⚠ BE chỉ trả ID (`confirmed_by` / `harvested_by`) ⇒ tra cứu tên nhân viên
+   *   qua `GET /api/users` (dùng chung cache với `useConfiguratorNames`).
+   */
+  const staffNames = useHarvestStaffNames(
+    useMemo(() => [h?.confirmed_by, h?.harvested_by], [h]),
+  )
+  const staffName = (
+    userId: number | null | undefined,
+    inlineName?: string | null,
+  ) => inlineName?.trim() || resolveStaffName(staffNames, userId)
 
   /**
    * ⚠ Mọi trường trạng thái đều tra qua từ điển trung tâm
@@ -75,10 +92,10 @@ export function HarvestDetailDrawer({ id, onClose }: { id: number; onClose: () =
       label: 'Trạng thái bàn giao',
       children: <StatusBadge {...requestStatus} title="Trạng thái bàn giao (yêu cầu thu hoạch)" />,
     },
-    { key: 'confirmed-by', label: 'Người xác nhận', children: h.confirmed_by == null ? '—' : `#${h.confirmed_by}` },
+    { key: 'confirmed-by', label: 'Người xác nhận', children: h.confirmed_by == null && !h.confirmed_by_name ? '—' : staffName(h.confirmed_by, h.confirmed_by_name) },
     { key: 'confirmed-at', label: 'Thời điểm xác nhận', children: auditDate(h.confirmed_at) },
     { key: 'completed-at', label: 'Hoàn tất bàn giao', children: auditDate(h.completed_at) },
-    { key: 'harvested-by', label: 'Người thu hoạch (ID)', children: h.harvested_by },
+    { key: 'harvested-by', label: 'Người thu hoạch', children: h.harvested_by == null && !h.harvested_by_name ? '—' : staffName(h.harvested_by, h.harvested_by_name) },
     { key: 'request-id', label: 'Yêu cầu thu hoạch', children: h.harvest_request_id },
     { key: 'session-tray', label: 'Khay phiên', children: h.session_tray_id },
     { key: 'notes', label: 'Ghi chú đối soát', children: cleanText(h.notes) },

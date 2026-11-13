@@ -149,7 +149,7 @@ export async function fetchTrayHistory(
       })
 
       const stageName =
-        mapStageToGrowthStageName(session.status) ?? 'Ủ tơ / Nuôi sợi'
+        mapStageToGrowthStageName(session.status) ?? 'Ủ tơ'
 
       const telemetry = buildTelemetryPoints(readings, {
         id: rentalSession.id,

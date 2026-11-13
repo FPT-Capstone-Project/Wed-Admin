@@ -10,7 +10,6 @@
 
 import type { CultivationSessionStatus } from '../types/session.types'
 import {
-  SESSION_DEFAULT_PROGRESS as SESSION_DEFAULT_PROGRESS_CENTRAL,
   SESSION_GROUP_DICTIONARY,
   SESSION_STATUS_DICTIONARY,
   SPAWN_CONDITION_DICTIONARY,
@@ -41,13 +40,11 @@ export const resolveSessionGroup = (
 ): SessionStatusGroup => resolveSessionGroupCentral(status)
 
 /**
- * Nhãn tiến độ mặc định theo trạng thái — dùng khi BE chưa trả
- * `progress_percent` (suy ra từ bước trong vòng đời).
+ * ⚠ KHÔNG còn bảng tiến độ mặc định theo trạng thái (`SESSION_DEFAULT_PROGRESS`).
+ *
+ *   Tiến độ nay **chỉ** lấy từ `progress_percent` của Phiên canh tác —
+ *   Farm OP cập nhật qua API của phiên ⇒ không có con số "nhẩm" theo ngày.
  */
-export const SESSION_DEFAULT_PROGRESS: Record<
-  CultivationSessionStatus,
-  number
-> = SESSION_DEFAULT_PROGRESS_CENTRAL
 
 /** Nhãn cho tình trạng sức khoẻ phôi khi kiểm tra. */
 export const SPAWN_CONDITION_CONFIG = SPAWN_CONDITION_DICTIONARY

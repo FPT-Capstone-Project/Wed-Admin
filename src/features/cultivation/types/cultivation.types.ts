@@ -66,6 +66,14 @@ export interface CultivationBatch {
   mushroomType: string
   /** Giai đoạn hiện tại (theo trạng thái phiên BE). */
   currentStage: GrowthStage
+  /**
+   * Giai đoạn WF-03 do Farm OP ghi nhận (`current_stage` / `growth_status`) —
+   * `FRUITING_INITIATION` / `PINNING` / `YOUNG_FRUITING` / `MATURATION`.
+   *
+   * ⚠ Có thể `null` (Farm OP chưa ghi nhận) ⇒ phiên `CULTIVATING` mặc định
+   *   hiển thị **"Kéo tơ"** — xem `resolveGrowthPhase`.
+   */
+  growthStage: string | null
   /** Tiến độ 0–100 (BE trả `progress_percent`). */
   progressPercent: number
   /** Ngày bắt đầu canh tác. */

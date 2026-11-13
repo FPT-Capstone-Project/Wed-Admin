@@ -28,43 +28,41 @@ import type {
 } from '../../../types/iot'
 import type { CultivationSession } from '../../sessions/types/session.types'
 import type { CustomerCultivationProgressEntry } from '../../orders/types/customer.types'
+import {
+  MUSHROOM_GROWTH_PHASE_DICTIONARY,
+  resolveGrowthPhase,
+} from '../../../shared/i18n/status/session'
 
 /** Bảng màu giai đoạn sinh trưởng (dùng cho band trên biểu đồ). */
 export const STAGE_COLORS: Record<GrowthStageName, string> = {
-  'Ủ tơ / Nuôi sợi': 'rgba(22, 119, 255, 0.12)',
-  'Kích nụ / Ra ghim': 'rgba(0, 201, 160, 0.14)',
-  'Phát triển thể quả': 'rgba(250, 140, 22, 0.14)',
+  'Ủ tơ': 'rgba(22, 119, 255, 0.12)',
+  'Kéo tơ': 'rgba(0, 201, 160, 0.14)',
+  'Nấm đang phát triển': 'rgba(250, 140, 22, 0.14)',
   'Sẵn sàng thu hoạch': 'rgba(19, 194, 194, 0.16)',
 }
 
 /**
  * Ánh xạ giai đoạn của BE → nhãn giai đoạn dùng trong biểu đồ.
  *
- * ⚠ BE trả 8 trạng thái (`CultivationSessionStatus`); biểu đồ lịch sử dùng 4
- * mốc sinh trưởng → gộp các trạng thái tương đương.
+ * ⚠ Dùng **chung** `resolveGrowthPhase` với các màn hình khác ⇒ biểu đồ
+ *   lịch sử IoT hiển thị **cùng 4 giai đoạn trồng nấm**:
+ *   "Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch".
+ *
+ * ⚠ Giai đoạn WF-03 (`FRUITING_INITIATION` / `PINNING` / `YOUNG_FRUITING` /
+ *   `FRUITING` / `MATURATION`) được ưu tiên hơn trạng thái phiên — đúng như
+ *   Farm OP ghi nhận trên thực tế.
+ *
+ * ⚠ Phiên `COMPLETED` không thuộc 4 giai đoạn ⇒ `null` (không vẽ band).
  */
 export function mapStageToGrowthStageName(
   stage: string | null | undefined,
 ): GrowthStageName | null {
-  switch ((stage ?? '').toUpperCase()) {
-    case 'SPAWN_RESTING':
-    case 'MYCELIAL_DEVELOPMENT':
-    case 'INCUBATION':
-      return 'Ủ tơ / Nuôi sợi'
-    case 'READY_FOR_CULTIVATION':
-    case 'FRUITING':
-    case 'PINNING':
-      return 'Kích nụ / Ra ghim'
-    case 'CULTIVATING':
-    case 'FRUIT_DEVELOPMENT':
-      return 'Phát triển thể quả'
-    case 'HARVESTING':
-    case 'COMPLETED':
-    case 'HARVEST':
-      return 'Sẵn sàng thu hoạch'
-    default:
-      return null
-  }
+  const phase = resolveGrowthPhase(stage, stage)
+  if (!phase) return null
+  if (phase === 'COMPLETED') return null
+
+  const label = MUSHROOM_GROWTH_PHASE_DICTIONARY[phase].label
+  return label as GrowthStageName
 }
 
 /** Trạng thái phiên BE → trạng thái lịch sử thuê. */

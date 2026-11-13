@@ -1,9 +1,16 @@
 export type RentalSessionStatus = 'COMPLETED' | 'ACTIVE' | 'OVERDUE'
 
+/**
+ * Nhãn giai đoạn sinh trưởng dùng trong biểu đồ lịch sử IoT.
+ *
+ * ⚠ **Đồng bộ** với 4 giai đoạn trồng nấm chuẩn
+ *   (`MUSHROOM_GROWTH_PHASE_DICTIONARY` — `src/shared/i18n/status/session.ts`):
+ *   "Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch".
+ */
 export type GrowthStageName =
-  | 'Ủ tơ / Nuôi sợi'
-  | 'Kích nụ / Ra ghim'
-  | 'Phát triển thể quả'
+  | 'Ủ tơ'
+  | 'Kéo tơ'
+  | 'Nấm đang phát triển'
   | 'Sẵn sàng thu hoạch'
 
 export interface StageTimelineItem {

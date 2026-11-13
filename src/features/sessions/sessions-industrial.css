@@ -27,6 +27,25 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ── Bảng "Quản lý phiên canh tác" — gọn, vừa 1 màn hình desktop ─────────
+ * Không cuộn ngang: bảng co theo bề rộng cột đã khai báo.
+ */
+.mcms-session-table .ant-table-thead > tr > th,
+.mcms-session-table .ant-table-tbody > tr > td {
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.mcms-session-table .ant-table-thead > tr > th {
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.mcms-session-table .ant-progress {
+  margin: 0;
+  line-height: 1;
+}
+
 /* ── Tab "Lịch sử IoT" ──────────────────────────────────────────────────
  * Biểu đồ nhiệt độ / độ ẩm + bảng nhật ký lệnh thiết bị.
  */

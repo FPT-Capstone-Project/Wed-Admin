@@ -11,7 +11,7 @@ import {
 } from '../../../shared/i18n/status/session'
 import { presentStatus, selectOptions, statusLabel } from '../../../shared/i18n/status/registry'
 import { calculateHarvestMetrics } from '../api/harvest-metrics'
-import { Suspense, useState } from 'react'
+import { Suspense, useMemo, useState } from 'react'
 import { Button, Descriptions, Col, DatePicker, Flex, InputNumber, Row, Select, Tooltip, Typography } from 'antd'
 import { PageHeader, StatusBadge, StatCard } from '../../../shared/ui'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
@@ -20,6 +20,10 @@ import { useMushroomTypes } from '../../packages/hooks/useMushroomTypes'
 import { useHarvests } from '../api/harvest.queries'
 import type { Harvest, HarvestQuery } from '../api/harvest.api'
 import { HarvestDetailDrawer } from '../../../app/router/lazy-modals'
+import {
+  resolveStaffName,
+  useHarvestStaffNames,
+} from '../hooks/useHarvestStaffNames'
 
 /**
  * ⚠ Thứ tự bộ lọc phải khớp với vòng đời vụ thu hoạch
@@ -34,6 +38,20 @@ export function HarvestManagementPage() {
   const mushrooms = useMushroomTypes()
   const rows = query.data?.data
   const metrics = rows ? calculateHarvestMetrics(rows) : null
+
+  /**
+   * ⚠ BE chỉ trả ID cho `confirmed_by` / `harvested_by` ⇒ tra cứu tên
+   *   nhân viên qua `GET /api/users` (chỉ Admin mới gọi được).
+   */
+  const staffIds = useMemo(
+    () =>
+      (rows ?? []).flatMap((h) => [h.confirmed_by, h.harvested_by]),
+    [rows],
+  )
+  const staffNames = useHarvestStaffNames(staffIds)
+  const staffName = (id: number | null | undefined, inlineName?: string | null) =>
+    inlineName?.trim() || resolveStaffName(staffNames, id)
+
   return <div style={{ fontVariantNumeric: 'tabular-nums' }}><PageHeader title="Quản lý Thu hoạch" description="Đối soát sản lượng và bàn giao · Chỉ xem. KPI theo bộ lọc; tỷ lệ A/B tính từ khối lượng thương phẩm của các đợt có phẩm cấp A/B." />
     <Flex gap={12} wrap style={{ marginBottom: 16 }}>
       <Select aria-label="Trạng thái thu hoạch" allowClear placeholder="Trạng thái" style={{ width: 180 }} options={selectOptions(HARVEST_STATUS_DICTIONARY, HARVEST_STATUS_FILTER_VALUES)} onChange={status => setFilters({ ...filters, status })} />
@@ -54,7 +72,8 @@ export function HarvestManagementPage() {
         { key: 'method', label: 'Hình thức nhận', children: <><StatusBadge {...presentStatus(HARVEST_METHOD_DICTIONARY, h.harvest_method, 'Chưa chọn')} /><Typography.Paragraph>{h.harvest_method === 'PICKUP' ? auditDate(h.scheduled_at) : h.customer_note ?? '—'}</Typography.Paragraph></> },
         { key: 'grade', label: 'Phẩm cấp', children: statusLabel(HARVEST_QUALITY_DICTIONARY, h.quality_grade, 'Chưa ghi nhận') },
         { key: 'rejected', label: 'Loại bỏ (kg)', children: auditWeight(h.rejected_weight_kg) },
-        { key: 'confirmed', label: 'Người xác nhận', children: h.confirmed_by == null ? '—' : `#${h.confirmed_by}` },
+        { key: 'confirmed', label: 'Người xác nhận', children: h.confirmed_by == null && !h.confirmed_by_name ? '—' : staffName(h.confirmed_by, h.confirmed_by_name) },
+        { key: 'harvested', label: 'Người thu hoạch', children: h.harvested_by == null && !h.harvested_by_name ? '—' : staffName(h.harvested_by, h.harvested_by_name) },
         { key: 'completed', label: 'Hoàn tất bàn giao', children: auditDate(h.completed_at) },
       ]} /> }} columns={[
       { title: 'Đợt / Phiên', width: 230, render: (_, h) => <Tooltip title={`Đợt thu hoạch #${h.harvest_id} thuộc phiên canh tác #${h.session_id}`}><Typography.Text code tabIndex={0}>{`Đợt #${h.harvest_id} · Phiên #${h.session_id}`}</Typography.Text></Tooltip> },

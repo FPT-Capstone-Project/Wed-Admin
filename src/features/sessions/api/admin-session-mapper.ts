@@ -30,6 +30,8 @@ export function toCultivationSession(
     status: dto.status,
     harvest_status: dto.harvest_status,
     progress_percent: dto.progress_percent,
+    current_stage: dto.current_stage,
+    growth_status: dto.growth_status,
     start_date: dto.start_at,
     end_date: dto.end_at,
     duration_days: dto.duration_days,

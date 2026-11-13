@@ -8,11 +8,15 @@ import {
 import { Button, Card, Flex, Popover, Progress, Tooltip, Typography } from 'antd'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
-import { calculateSessionProgress } from '../../../shared/utils/date'
+import { resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
 import {
   GROWTH_STAGE_META,
   type CultivationBatch,
 } from '../types/cultivation.types'
+import {
+  MUSHROOM_GROWTH_PHASE_DICTIONARY,
+  resolveGrowthPhase,
+} from '../../../shared/i18n/status/session'
 import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
 import { GrowthStageMilestones } from './GrowthStageMilestones'
 import { tokens } from '../../../app/theme/tokens'
@@ -46,6 +50,28 @@ export function CultivationBatchCard({
   const stageMeta = GROWTH_STAGE_META[batch.currentStage]
   const healthConfig = HEALTH_CONFIG[batch.healthStatus]
 
+  /**
+   * ⚠ Giai đoạn hiển thị thuộc **1 trong 4 giai đoạn trồng nấm**
+   *   ("Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch").
+   *
+   * ⚠ `batch.currentStage` là **trạng thái vòng đời phiên**; `batch.growthStage`
+   *   là giai đoạn WF-03 do Farm OP ghi nhận (có thể `null`).
+   *
+   * ⚠ Phiên `CULTIVATING` mặc định là **"Kéo tơ"** — chỉ khi Farm OP ghi nhận
+   *   giai đoạn ra quả mới hiển thị "Nấm đang phát triển".
+   *
+   * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành" (tiến độ 100 %), KHÔNG phải
+   *   "Sẵn sàng thu hoạch" — `resolveGrowthPhase` đã map
+   *   `COMPLETED` → `COMPLETED`.
+   */
+  const growthPhase = resolveGrowthPhase(
+    batch.growthStage,
+    batch.currentStage,
+  )
+  const growthPhaseLabel = growthPhase
+    ? MUSHROOM_GROWTH_PHASE_DICTIONARY[growthPhase].label
+    : stageMeta?.label ?? 'Chưa xác định'
+
   // Ảnh thực tế từ Cloudinary — lấy từ lần kiểm tra phôi gần nhất.
   const photos = batch.inspections
     .flatMap((inspection) => inspection.images ?? [])
@@ -58,17 +84,15 @@ export function CultivationBatchCard({
   const isCompleted = batch.currentStage === 'COMPLETED'
 
   /**
-   * ⚠ Tiến độ dùng **công thức chuẩn dùng chung**
-   *   (`src/shared/utils/date.ts` → `calculateSessionProgress`) — truyền trực
-   *   tiếp `startDate` + `estimatedHarvestDate` của phiên ⇒ cùng 1 phiên luôn
-   *   cho cùng 1 con số với trang "Phiên canh tác" & Drawer "Chi tiết khay".
+   * ⚠ Tiến độ lấy **trực tiếp** từ Phiên canh tác (`progress_percent`) —
+   *   giá trị do Farm OP cập nhật qua API của phiên.
    *
-   *   Trước đây chỗ này hardcode theo giai đoạn (`CULTIVATING` → 70 %) trong
-   *   khi trang "Phiên canh tác" hiển thị 0 % ⇒ lệch pha.
+   *   KHÔNG tính nhẩm theo số ngày trôi qua (`startDate` /
+   *   `estimatedHarvestDate`) ⇒ cùng 1 phiên luôn cho cùng 1 con số với
+   *   trang "Phiên canh tác" & Drawer "Chi tiết phiên".
    */
-  const progressPercent = calculateSessionProgress(
-    batch.startDate,
-    batch.estimatedHarvestDate ?? batch.endDate,
+  const progressPercent = resolveSessionProgress(
+    batch.progressPercent,
     batch.currentStage === 'CANCELLED' ? 'CANCELLED' : batch.currentStage,
   )
 
@@ -83,8 +107,10 @@ export function CultivationBatchCard({
       extra={
         <Flex gap={8} wrap>
           <StatusBadge
-            tone={isAbnormal ? 'danger' : isCompleted ? 'muted' : 'ok'}
-            label={stageMeta.label}
+            tone={
+              isAbnormal ? 'danger' : isCompleted ? 'success' : 'ok'
+            }
+            label={growthPhaseLabel}
           />
           <StatusBadge tone={healthConfig.tone} label={healthConfig.label} />
         </Flex>
@@ -206,7 +232,7 @@ export function CultivationBatchCard({
               justify="space-between"
               style={{ marginBottom: 4 }}
             >
-              <MetadataBadge label={stageMeta.shortLabel} />
+              <MetadataBadge label={growthPhaseLabel} />
               <Typography.Text type="secondary">
                 {progressPercent}% hoàn thành
               </Typography.Text>

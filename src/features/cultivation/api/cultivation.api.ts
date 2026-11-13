@@ -62,28 +62,17 @@ export function buildCultivationBatches(
     const stage = (session.status ?? 'PENDING') as GrowthStage
 
     /**
-     * Tiến độ — dùng **công thức chuẩn dùng chung** với trang "Phiên canh
-     * tác" (xem `features/sessions/utils/session-progress.utils.ts`).
+     * Tiến độ — **chỉ lấy từ Phiên canh tác** (`progress_percent` do Farm OP
+     * cập nhật qua API của phiên).
      *
      * ⚠ Trước đây chỗ này hardcode theo giai đoạn (`CULTIVATING` → 70 %),
      *   còn trang "Phiên canh tác" dùng giá trị khác ⇒ cùng 1 phiên hiển thị
-     *   2 con số khác nhau. Nay cả hai cùng gọi `resolveSessionProgress`,
-     *   và hàm đó lại gọi `calculateSessionProgress` (shared/utils/date.ts) —
-     *   công thức theo **thời gian thực**.
+     *   2 con số khác nhau. Nay cả hai cùng đọc **cùng một nguồn**: trường
+     *   `progress_percent` của phiên.
      */
     const progressPercent = resolveSessionProgress(
       session.progress_percent,
       session.status,
-      0,
-      {
-        startDate: session.start_date ?? farmSession?.start_date ?? null,
-        endDate:
-          session.expected_harvest_date ??
-          session.end_date ??
-          farmSession?.end_date ??
-          null,
-        durationDays: session.duration_days ?? null,
-      },
     )
 
     const photos = inspections.flatMap((inspection) => inspection.images ?? [])
@@ -98,6 +87,11 @@ export function buildCultivationBatches(
       mushroomType:
         session.mushroom_name ?? farmSession?.mushroom_name ?? 'Chưa xác định',
       currentStage: stage,
+      /*
+       * ⚠ Giai đoạn WF-03 do Farm OP ghi nhận (`current_stage` / `growth_status`).
+       *   Có thể `null` ⇒ phiên `CULTIVATING` mặc định hiển thị "Kéo tơ".
+       */
+      growthStage: session.current_stage ?? session.growth_status ?? null,
       progressPercent,
       startDate: session.start_date ?? farmSession?.start_date ?? null,
       estimatedHarvestDate: session.expected_harvest_date ?? null,

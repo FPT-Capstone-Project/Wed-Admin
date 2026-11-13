@@ -1,51 +1,33 @@
-import { calculateSessionProgress, addDaysToIso } from '../../../shared/utils/date'
-import type { CultivationSessionStatus } from '../types/session.types'
-
 /**
- * Công thức **duy nhất** cho tiến độ sinh trưởng (0–100 %) trên toàn bộ
- * Web Admin.
+ * Tiến độ sinh trưởng (0–100 %) — **chỉ lấy từ Phiên canh tác (Session)**.
  *
- * ⚠ Vì sao cần 1 nguồn sự thật?
- *   Trước đây mỗi trang tự tính tiến độ theo cách khác nhau:
- *     - Trang "Phiên canh tác" dùng `progress_percent` của BE, fallback
- *       theo bảng `SESSION_DEFAULT_PROGRESS` (CULTIVATING → 65 %).
- *     - Trang "Sinh trưởng & thu hoạch" dùng `GROWTH_STAGE_META.defaultProgress`
- *       (CULTIVATING → **70 %** — hardcode).
- *     - Drawer chi tiết khay dùng `growthDay / expectedHarvestDay`.
+ * ## Nguồn duy nhất
  *
- *   ⇒ Cùng 1 phiên (trồng 2 ngày / 16 ngày) hiển thị **0 %** ở một trang và
- *     **70 %** ở trang khác. Người dùng mất niềm tin vào số liệu.
+ * Trường `progress_percent` (hoặc `progress`) của **Phiên canh tác** —
+ * giá trị do Farm OP cập nhật qua API của phiên
+ * (`PATCH /api/cultivation-sessions/admin/{id}/growth`).
  *
- * ⚠ Nguồn sự thật duy nhất hiện nằm ở
- *   `src/shared/utils/date.ts` → `calculateSessionProgress()` (công thức
- *   theo **thời gian thực**: `(now - start) / (end - start) * 100`).
- *   Module này chỉ là **lớp adapter** gọi hàm đó + bổ sung fallback khi BE
- *   thiếu dữ liệu ngày.
+ * ## Đã loại bỏ (và KHÔNG được khôi phục)
  *
- * Thứ tự ưu tiên:
- *   1. `COMPLETED` / `HARVESTED` → 100 %; `CANCELLED` → 0 %.
- *   2. Công thức theo thời gian (khi biết ngày bắt đầu + ngày kết thúc).
- *   3. `progress_percent` do BE ghi nhận — dùng khi thiếu dữ liệu ngày.
- *   4. Bảng tiến độ mặc định theo trạng thái (fallback cuối cùng).
+ * 1. ❌ Công thức "nhẩm" % theo số ngày trôi qua
+ *    (`start_date` / `harvest_date` / `duration_days`) — trước đây nằm ở
+ *    `calculateSessionProgress()` (`src/shared/utils/date.ts`) và
+ *    `calculateTimeBasedProgress()` (file này).
+ *    ⇒ Lý do: cùng 1 phiên hiển thị **0 %** ở một trang và **70 %** ở trang
+ *    khác ⇒ người dùng mất niềm tin vào số liệu.
+ * 2. ❌ `%` lấy từ **báo cáo khay** (tray inspection) —
+ *    `growth_progress` của `cultivation_inspections` chỉ là **quan sát tại
+ *    thời điểm kiểm tra**, KHÔNG phải tiến độ của phiên.
+ *    ⇒ Vì vậy `DailyInspectionList` hiển thị nó dưới dạng
+ *    "Tiến độ quan sát" (nhãn riêng), **không** dùng làm tiến độ phiên.
+ * 3. ❌ Bảng tiến độ mặc định theo trạng thái (`SESSION_DEFAULT_PROGRESS`).
+ *
+ * ## Hợp đồng
+ *
+ * - `resolveSessionProgress()` → **luôn** trả về `number` 0–100.
+ *   Khi BE chưa có `progress_percent` ⇒ trả `0` (không bịa giá trị).
+ * - `formatSessionProgress()` → chuỗi hiển thị (`'—'` khi chưa có dữ liệu).
  */
-
-/** Số ngày tối đa dùng để suy ra tổng ngày khi BE không trả. */
-const DEFAULT_TOTAL_DAYS = 16
-
-/** Ngày hiện tại theo lịch (không tính giờ) — tránh lệch do múi giờ. */
-function toCalendarTimestamp(value: string | Date): number | null {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
-}
-
-/** Hiệu số ngày lịch giữa 2 mốc thời gian. */
-export function differenceInDays(later: string | Date, earlier: string | Date): number {
-  const a = toCalendarTimestamp(later)
-  const b = toCalendarTimestamp(earlier)
-  if (a === null || b === null) return 0
-  return Math.round((a - b) / (24 * 60 * 60 * 1000))
-}
 
 /** Kẹp về khoảng 0–100. */
 export function clampPercent(value: number): number {
@@ -53,117 +35,41 @@ export function clampPercent(value: number): number {
   return Math.min(100, Math.max(0, Math.round(value)))
 }
 
-/** Format recorded progress without inventing a value for missing data. */
-export function formatSessionProgress(value: number | string | null | undefined): string {
-  if (value == null || (typeof value === 'string' && value.trim() === '')) return '—'
-  return `${clampPercent(Number(value))}%`
-}
-
-/** Thông tin cần thiết để tính tiến độ theo thời gian. */
-export interface SessionProgressInput {
-  /** Ngày bắt đầu canh tác (ISO). */
-  startDate?: string | null
-  /** Ngày kết thúc / dự kiến thu hoạch (ISO). */
-  endDate?: string | null
-  /** Thời lượng gói (ngày) nếu BE đã trả. */
-  durationDays?: number | null
-}
-
 /**
- * Suy ra ngày kết thúc chu kỳ khi BE không trả `expected_harvest_date`.
+ * Format tiến độ đã ghi nhận — **không** tự suy ra giá trị khi thiếu dữ liệu.
  *
- * ⚠ Ưu tiên `duration_days` (15 / 20 ngày — đúng gói khách đã mua).
+ * @param value `progress_percent` / `progress` của Phiên canh tác.
  */
-export function resolveEndDate(input: SessionProgressInput): string | null {
-  if (input.endDate) return input.endDate
-  if (
-    input.startDate &&
-    typeof input.durationDays === 'number' &&
-    input.durationDays > 0
-  ) {
-    return addDaysToIso(input.startDate, input.durationDays)
+export function formatSessionProgress(
+  value: number | string | null | undefined,
+): string {
+  if (value == null || (typeof value === 'string' && value.trim() === '')) {
+    return '—'
   }
-  return null
+  const parsed = Number(value)
+  if (!Number.isFinite(parsed)) return '—'
+  return `${clampPercent(parsed)}%`
 }
 
 /**
- * Tổng số ngày của chu kỳ (dùng làm mẫu số của công thức tiến độ).
+ * Tiến độ cuối cùng của 1 phiên — **nguồn duy nhất: Phiên canh tác**.
  *
- * ⚠ Quy ước **bao gồm cả ngày đầu & ngày cuối** (inclusive):
- *   gói 15 ngày (03/11 → 18/11) ⇒ hiệu số = 15 ⇒ tổng = **16 ngày**.
- */
-export function resolveTotalDays(input: SessionProgressInput): number {
-  const endDate = resolveEndDate(input)
-  if (input.startDate && endDate) {
-    const diff = differenceInDays(endDate, input.startDate)
-    if (diff > 0) return diff + 1
-  }
-
-  if (typeof input.durationDays === 'number' && input.durationDays > 0) {
-    // Cùng quy ước inclusive: gói 15 ngày ⇒ 16 mốc ngày (ngày 1 … ngày 16).
-    return Math.round(input.durationDays) + 1
-  }
-
-  return DEFAULT_TOTAL_DAYS
-}
-
-/**
- * Ngày canh tác hiện tại (1-based).
- *
- * Ngày 1 = ngày bắt đầu. Ngày 2 = sau 1 ngày ⇒ `2/16` ⇒ 13 %.
- */
-export function resolveCurrentDay(input: SessionProgressInput): number {
-  if (!input.startDate) return 1
-  const elapsed = differenceInDays(new Date(), input.startDate)
-  return Math.max(1, elapsed + 1)
-}
-
-/**
- * Tiến độ theo **thời gian** — công thức chuẩn dùng chung.
- *
- * ⚠ Ủy quyền cho `calculateSessionProgress` (shared/utils/date.ts) để mọi
- *   màn hình luôn cho cùng 1 kết quả.
- */
-export function calculateTimeBasedProgress(
-  input: SessionProgressInput,
-  status?: string,
-): number {
-  return calculateSessionProgress(
-    input.startDate,
-    resolveEndDate(input),
-    status,
-  )
-}
-
-/**
- * Tiến độ cuối cùng của 1 phiên — dùng chung cho **mọi** màn hình.
+ * ⚠ KHÔNG suy ra từ ngày bắt đầu / ngày thu hoạch / số ngày trôi qua.
  *
  * @param progressPercent Tiến độ do BE trả (`progress_percent`), nếu có.
- * @param status Trạng thái phiên — dùng cho fallback theo bảng mặc định.
- * @param defaultProgress Bảng tiến độ mặc định theo trạng thái.
- * @param input Thông tin ngày bắt đầu / ngày kết thúc / duration để tính
- *             theo thời gian.
+ * @param status Trạng thái phiên — `COMPLETED` ⇒ 100 %, `CANCELLED` ⇒ 0 %.
+ *   (2 trường hợp này là **sự thật** về vòng đời, không phải số liệu bịa.)
  */
 export function resolveSessionProgress(
-  progressPercent: number | null | undefined,
-  status: CultivationSessionStatus,
-  defaultProgress: number,
-  input: SessionProgressInput,
+  progressPercent: number | string | null | undefined,
+  status?: string,
 ): number {
-  // 1. Phiên đã đóng.
+  // Phiên đã đóng — trạng thái vòng đời là sự thật, không phải "nhẩm".
   if (status === 'COMPLETED') return 100
   if (status === 'CANCELLED') return 0
 
-  // 2. Công thức chuẩn theo thời gian (khi đủ dữ liệu ngày).
-  if (input.startDate && resolveEndDate(input)) {
-    return calculateTimeBasedProgress(input, status)
-  }
-
-  // 3. BE đã ghi nhận tiến độ.
-  if (typeof progressPercent === 'number' && Number.isFinite(progressPercent)) {
-    return clampPercent(progressPercent)
-  }
-
-  // 4. Fallback cuối cùng theo trạng thái.
-  return clampPercent(defaultProgress)
+  if (progressPercent == null) return 0
+  const parsed = Number(progressPercent)
+  if (!Number.isFinite(parsed)) return 0
+  return clampPercent(parsed)
 }

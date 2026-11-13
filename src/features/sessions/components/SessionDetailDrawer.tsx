@@ -18,9 +18,11 @@ import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import { useAdminCultivationSession } from '../hooks/useAdminCultivationSessions'
 import { toCultivationSession } from '../api/admin-session-mapper'
 import {
-  SESSION_DEFAULT_PROGRESS,
-} from './session-status.config'
-import { SESSION_HARVEST_STATUS_DICTIONARY, SESSION_STATUS_DICTIONARY } from '../../../shared/i18n/status/session'
+  MUSHROOM_GROWTH_PHASE_DICTIONARY,
+  SESSION_STATUS_DICTIONARY,
+  resolveGrowthPhase,
+  resolveSessionHarvestStatus,
+} from '../../../shared/i18n/status/session'
 import { PAYMENT_STATUS_DICTIONARY } from '../../../shared/i18n/status/order'
 import { presentStatus } from '../../../shared/i18n/status/registry'
 import { resolveSessionProgress } from '../utils/session-progress.utils'
@@ -81,18 +83,10 @@ export function SessionDetailDrawer({
 
   const progressPercent = useMemo(() => {
     if (!session) return 0
-    // ⚠ Cùng công thức chuẩn với các trang khác — xem
-    //   `utils/session-progress.utils.ts`.
-    return resolveSessionProgress(
-      session.progress_percent,
-      session.status,
-      SESSION_DEFAULT_PROGRESS[session.status] ?? 0,
-      {
-        startDate: session.start_date,
-        endDate: session.expected_harvest_date ?? session.end_date,
-        durationDays: session.duration_days,
-      },
-    )
+    // ⚠ Tiến độ **chỉ** lấy từ Phiên canh tác (`progress_percent` do Farm OP
+    //   cập nhật) — không suy ra từ ngày bắt đầu / ngày thu hoạch.
+    //   Xem `utils/session-progress.utils.ts`.
+    return resolveSessionProgress(session.progress_percent, session.status)
   }, [session])
 
   return (
@@ -171,6 +165,26 @@ function SessionDetailContent({
 }: SessionDetailContentProps) {
   // ⚠ `presentStatus` ⇒ không bao giờ lộ enum lạ của BE.
   const statusConfig = presentStatus(SESSION_STATUS_DICTIONARY, session.status)
+
+  /**
+   * ⚠ Giai đoạn hiển thị thuộc **1 trong 4 giai đoạn trồng nấm**
+   *   ("Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch").
+   *
+   * ⚠ Phiên `CULTIVATING` mặc định là **"Kéo tơ"** (phôi đã lên khay, chưa
+   *   có ghi nhận ra quả của Farm OP) — chỉ khi `current_stage` ∈
+   *   `FRUITING_INITIATION` / `PINNING` / `YOUNG_FRUITING` / `FRUITING` thì
+   *   mới hiển thị "Nấm đang phát triển".
+   *
+   * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành" (tiến độ 100 %), KHÔNG phải
+   *   "Sẵn sàng thu hoạch" — `resolveGrowthPhase` ưu tiên trạng thái kết thúc.
+   */
+  const growthPhase = resolveGrowthPhase(
+    session.current_stage ?? session.growth_status,
+    session.status,
+  )
+  const growthPhaseLabel = growthPhase
+    ? MUSHROOM_GROWTH_PHASE_DICTIONARY[growthPhase].label
+    : statusConfig.label
 
   /**
    * Tab đang active.
@@ -258,7 +272,7 @@ function SessionDetailContent({
             Tiến độ canh tác
           </Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {statusConfig.label} · {progressPercent}%
+            {growthPhaseLabel} · {progressPercent}%
           </Typography.Text>
         </Flex>
         <Progress
@@ -352,7 +366,19 @@ function SessionDetailContent({
                       ),
                     },
                     { key: 'spawnRequested', label: 'Số phôi yêu cầu', children: session.spawn_quantity ?? '—' },
-                    { key: 'harvestStatus', label: 'Trạng thái thu hoạch', children: presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, session.harvest_status).label },
+                    {
+                      key: 'harvestStatus',
+                      label: 'Trạng thái thu hoạch',
+                      /*
+                       * ⚠ Phiên đã `COMPLETED` ⇒ **"Đã thu hoạch"** (xanh lá),
+                       *   KHÔNG phải badge cam "Sẵn sàng thu hoạch" (BE vẫn giữ
+                       *   `harvest_status = 'HARVEST_READY'` sau khi kết thúc).
+                       */
+                      children: resolveSessionHarvestStatus(
+                        session.status,
+                        session.harvest_status,
+                      )?.label ?? '—',
+                    },
                     {
                       key: 'spawn',
                       label: 'Phôi đã cấp',

@@ -14,10 +14,10 @@ import {
   HARVEST_STATUS_DICTIONARY,
 } from '../../../shared/i18n/status/harvest'
 import {
-  SESSION_HARVEST_STATUS_DICTIONARY,
   SESSION_PROGRESS_STAGE_DICTIONARY,
   SESSION_STATUS_DICTIONARY,
   SESSION_TRAY_ASSIGNMENT_DICTIONARY,
+  resolveSessionHarvestStatus,
 } from '../../../shared/i18n/status/session'
 import {
   ORDER_STATUS_DICTIONARY,
@@ -95,7 +95,14 @@ function CultivationAudit({
     />
     {!query.isError && query.data && (query.data.sessions?.length ? query.data.sessions.map(session => <Card key={session.session_id} size="small" title={`Phiên #${session.session_id} · ${session.mushroom_name}`}><Descriptions column={1} size="small" bordered items={[
       { key: 'status', label: 'Trạng thái', children: <StatusBadge {...presentStatus(SESSION_STATUS_DICTIONARY, session.status)} title="Trạng thái phiên canh tác" /> },
-      { key: 'harvest-status', label: 'Sẵn sàng thu hoạch', children: <StatusBadge {...presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, session.harvest_status)} title="Trạng thái sẵn sàng thu hoạch của phiên" /> },
+      { key: 'harvest-status', label: 'Sẵn sàng thu hoạch', children: (() => {
+        // ⚠ Phiên đã `COMPLETED` ⇒ "Đã thu hoạch" (xanh lá), KHÔNG phải badge
+        //   cam "Sẵn sàng thu hoạch" (BE vẫn giữ `harvest_status = 'HARVEST_READY'`).
+        const harvest = resolveSessionHarvestStatus(session.status, session.harvest_status)
+        return harvest
+          ? <StatusBadge {...harvest} title="Trạng thái thu hoạch của phiên" />
+          : <span>—</span>
+      })() },
       { key: 'stage', label: 'Sinh trưởng', children: `${statusLabel(SESSION_PROGRESS_STAGE_DICTIONARY, session.current_stage, 'Chưa ghi nhận')} · ${formatSessionProgress(session.progress_percent)}` },
       { key: 'harvest', label: 'Dự kiến thu hoạch', children: auditDate(session.expected_harvest_date) },
       { key: 'spawn', label: 'Số phôi', children: session.spawn_quantity },

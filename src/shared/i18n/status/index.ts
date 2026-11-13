@@ -28,11 +28,16 @@ export {
   SESSION_GROUP_DICTIONARY,
   SESSION_GROWTH_STAGE_DICTIONARY,
   SESSION_HARVEST_STATUS_DICTIONARY,
+  SESSION_HARVESTED_PRESENTATION,
   SESSION_PROGRESS_STAGE_DICTIONARY,
   SESSION_TRAY_ASSIGNMENT_DICTIONARY,
   SPAWN_CONDITION_DICTIONARY,
-  SESSION_DEFAULT_PROGRESS,
+  MUSHROOM_GROWTH_PHASE_DICTIONARY,
   resolveSessionGroup,
+  resolveGrowthPhase,
+  resolveGrowthPhaseFromStage,
+  resolveGrowthPhaseFromStatus,
+  resolveSessionHarvestStatus,
 } from './session'
 export type {
   SessionStatusKey,
@@ -42,6 +47,7 @@ export type {
   SessionTrayAssignmentStatusKey,
   SpawnConditionKey,
   SessionStatusPresentation,
+  MushroomGrowthPhaseKey,
 } from './session'
 
 export {

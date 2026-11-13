@@ -1,6 +1,6 @@
 import type { HarvestStatus, TrayRental } from '../../../types/room.types'
 import type { CultivationSession } from '../../sessions/types/session.types'
-import { calculateSessionProgress } from '../../../shared/utils/date'
+import { resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
@@ -116,26 +116,19 @@ export function calculateRentalLifecycle(
     totalAmount: rental.basePrice + overdueFee,
     packageDurationDays,
     /**
-     * ⚠ Tiến độ dùng **công thức chuẩn dùng chung**
-     *   (`src/shared/utils/date.ts` → `calculateSessionProgress`) ⇒ thanh
-     *   "Tiến độ chu kỳ" trong drawer khớp đúng với bảng "Phiên canh tác" và
-     *   thẻ "Sinh trưởng & thu hoạch" (cùng 1 phiên, cùng 1 con số).
+     * ⚠ Tiến độ lấy **trực tiếp** từ Phiên canh tác (`progress_percent`) —
+     *   cùng nguồn với bảng "Phiên canh tác" và Drawer "Chi tiết phiên" ⇒
+     *   cùng 1 phiên, cùng 1 con số.
+     *
+     *   KHÔNG tính nhẩm theo `startDate` / `expectedHarvestDate`.
      */
-    progressPercent: calculateSessionProgress(
-      toIsoDateString(rental.startDate),
-      toIsoDateString(rental.expectedHarvestDate),
+    progressPercent: resolveSessionProgress(
+      rental.progressPercent,
       isAlreadyHarvested ? 'COMPLETED' : rental.harvestStatus,
     ),
     harvestMarkerPercent: 100,
     effectiveHarvestStatus,
   }
-}
-
-/** Chuyển `string | Date` thành chuỗi ISO (null nếu không hợp lệ). */
-function toIsoDateString(value: string | Date): string | null {
-  const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return date.toISOString()
 }
 
 export function formatRentalDate(value: string | Date) {
@@ -212,5 +205,9 @@ export function sessionToTrayRental(session: CultivationSession): TrayRental {
     harvestStatus,
     customerContactStatus: 'NOT_CONTACTED',
     careLogs: [],
+    /**
+     * Tiến độ do Farm OP cập nhật trên Phiên canh tác — nguồn duy nhất.
+     */
+    progressPercent: session.progress_percent ?? null,
   }
 }

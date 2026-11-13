@@ -39,18 +39,12 @@ import {
 } from '../types/session.types'
 import { SessionStatusTag } from '../components/SessionStatusTag'
 import {
-  SESSION_DEFAULT_PROGRESS,
-} from '../components/session-status.config'
-import {
-  SESSION_GROWTH_STAGE_DICTIONARY,
-  SESSION_HARVEST_STATUS_DICTIONARY,
+  MUSHROOM_GROWTH_PHASE_DICTIONARY,
   SESSION_STATUS_DICTIONARY,
+  resolveGrowthPhase,
+  resolveSessionHarvestStatus,
 } from '../../../shared/i18n/status/session'
-import {
-  presentStatus,
-  selectOptions,
-  statusLabel,
-} from '../../../shared/i18n/status/registry'
+import { selectOptions } from '../../../shared/i18n/status/registry'
 import { resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionDetailDrawer } from '../../../app/router/lazy-modals'
 
@@ -126,23 +120,14 @@ function matchesGroup(
 }
 
 /**
- * Tiến độ sinh trưởng — dùng **công thức chuẩn dùng chung** với các trang
- * khác (xem `utils/session-progress.utils.ts` → `calculateSessionProgress`).
+ * Tiến độ sinh trưởng — **chỉ lấy từ Phiên canh tác**.
  *
- * ⚠ Không hardcode 70 % cho `CULTIVATING` — cùng 1 phiên phải hiển thị giống
- *   nhau trên "Phiên canh tác" và "Sinh trưởng & thu hoạch".
+ * ⚠ Không tính nhẩm theo số ngày trôi qua (`start_at` / `harvest_date`) và
+ *   không lấy từ báo cáo khay — giá trị `%` là `progress_percent` mà Farm OP
+ *   cập nhật qua API của phiên.
  */
 function resolveProgress(session: AdminCultivationSessionDto): number {
-  return resolveSessionProgress(
-    session.progress_percent,
-    session.status,
-    SESSION_DEFAULT_PROGRESS[session.status] ?? 0,
-    {
-      startDate: session.start_at,
-      endDate: session.harvest_date ?? session.end_at,
-      durationDays: session.duration_days,
-    },
-  )
+  return resolveSessionProgress(session.progress_percent, session.status)
 }
 
 
@@ -248,7 +233,7 @@ export function SessionListPage() {
         dataIndex: 'session_id',
         key: 'session_id',
         className: 'mcms-session-mono',
-        width: 100,
+        width: 72,
         render: (value: number) => (
           <Typography.Text strong>#{value}</Typography.Text>
         ),
@@ -256,9 +241,9 @@ export function SessionListPage() {
       {
         title: 'Khách hàng',
         key: 'customer',
-        width: 200,
+        width: 124,
         render: (_, session) => (
-          <Flex vertical style={{ width: 168, maxWidth: '100%', minWidth: 0 }}>
+          <Flex vertical style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
             <Typography.Text strong ellipsis={{ tooltip: true }} style={{ width: '100%' }}>
               {session.customer_name ?? '—'}
             </Typography.Text>
@@ -271,11 +256,13 @@ export function SessionListPage() {
       {
         title: 'Gói / Giống nấm',
         key: 'package',
-        width: 200,
+        width: 120,
         render: (_, session) => (
-          <Flex vertical>
-            <Typography.Text>{session.package_name ?? '—'}</Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Flex vertical style={{ minWidth: 0 }}>
+            <Typography.Text ellipsis={{ tooltip: true }}>
+              {session.package_name ?? '—'}
+            </Typography.Text>
+            <Typography.Text type="secondary" style={{ fontSize: 12 }} ellipsis={{ tooltip: true }}>
               {session.mushroom_name ?? '—'}
               {session.order_id ? ` · Đơn #${session.order_id}` : ''}
             </Typography.Text>
@@ -285,12 +272,12 @@ export function SessionListPage() {
       {
         title: 'Khay / Tầng',
         key: 'trays',
-        width: 170,
+        width: 104,
         render: (_, session) => {
           if (session.trays.length === 0) {
             return (
-              <Typography.Text type="secondary">
-                Xem phân bổ trong chi tiết
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                Xem trong chi tiết
               </Typography.Text>
             )
           }
@@ -321,23 +308,36 @@ export function SessionListPage() {
         },
       },
       {
-        title: 'Số khay',
-        dataIndex: 'tray_quantity',
-        key: 'tray_quantity',
-        width: 90,
-        render: (value: number | null) => value ?? '—',
-      },
-      {
-        title: 'Số phôi yêu cầu',
-        dataIndex: 'spawn_quantity',
-        key: 'spawn_quantity',
-        width: 110,
-        render: (value: number | null) => value ?? '—',
+        /*
+         * ⚠ Gộp "Số khay" + "Số phôi yêu cầu" thành **1 cột gọn**
+         *   ("Khay / Phôi") ⇒ bảng vừa 1 màn hình desktop, không cần cuộn ngang.
+         */
+        title: 'Khay / Phôi',
+        key: 'tray_spawn',
+        width: 100,
+        render: (_, session) => {
+          const trays = session.tray_quantity
+          const spawns = session.spawn_quantity
+          if (trays == null && spawns == null) {
+            return (
+              <Typography.Text type="secondary">—</Typography.Text>
+            )
+          }
+          return (
+            <Typography.Text style={{ whiteSpace: 'nowrap' }}>
+              {trays ?? '—'} khay
+              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+                {' · '}
+                {spawns ?? '—'} phôi
+              </Typography.Text>
+            </Typography.Text>
+          )
+        },
       },
       {
         title: 'Giai đoạn sinh trưởng',
         key: 'growth_stage',
-        width: 180,
+        width: 160,
         render: (_, session) => {
           const stage: SessionGrowthStage | null =
             session.current_stage ?? session.growth_status
@@ -349,12 +349,30 @@ export function SessionListPage() {
               </Typography.Text>
             )
           }
+          /*
+           * ⚠ Giai đoạn hiển thị luôn thuộc **1 trong 4 giai đoạn trồng nấm**
+           *   ("Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch"),
+           *   gộp từ cả `current_stage` (WF-03) lẫn `status` (vòng đời phiên).
+           *
+           * ⚠ Phiên `CULTIVATING` mặc định là **"Kéo tơ"** — chỉ khi Farm OP
+           *   ghi nhận giai đoạn ra quả (`current_stage` ∈ `FRUITING_INITIATION` /
+           *   `PINNING` / `YOUNG_FRUITING` / `FRUITING`) thì mới nhảy sang
+           *   "Nấm đang phát triển".
+           *
+           * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành" (tiến độ 100 %), KHÔNG
+           *   phải "Sẵn sàng thu hoạch" — `resolveGrowthPhase` đã ưu tiên
+           *   trạng thái kết thúc.
+           */
+          const phase = resolveGrowthPhase(stage, session.status)
           return (
-            <Flex vertical gap={2} style={{ width: '100%', maxWidth: 150 }}>
+            <Flex vertical gap={2} style={{ width: '100%', maxWidth: 160 }}>
               <Flex justify="space-between" align="center" gap={8}>
-                <Typography.Text style={{ fontSize: 12, fontWeight: 600 }}>
-                  {stage
-                    ? statusLabel(SESSION_GROWTH_STAGE_DICTIONARY, stage)
+                <Typography.Text
+                  style={{ fontSize: 12, fontWeight: 600, minWidth: 0 }}
+                  ellipsis={{ tooltip: true }}
+                >
+                  {phase
+                    ? MUSHROOM_GROWTH_PHASE_DICTIONARY[phase].label
                     : (SESSION_STATUS_DICTIONARY[session.status]?.shortLabel ??
                       session.status)}
                 </Typography.Text>
@@ -375,14 +393,17 @@ export function SessionListPage() {
       {
         title: 'Thu hoạch',
         key: 'harvest',
-        width: 170,
+        width: 128,
         render: (_, session) => {
-          const harvestConfig = session.harvest_status
-            ? presentStatus(
-                SESSION_HARVEST_STATUS_DICTIONARY,
-                session.harvest_status,
-              )
-            : null
+          /*
+           * ⚠ Phiên đã `COMPLETED` ⇒ hiển thị **"Đã thu hoạch"** (xanh lá),
+           *   KHÔNG phải badge cam "Sẵn sàng thu hoạch" — BE vẫn giữ
+           *   `harvest_status = 'HARVEST_READY'` sau khi phiên kết thúc.
+           */
+          const harvestConfig = resolveSessionHarvestStatus(
+            session.status,
+            session.harvest_status,
+          )
           return (
             <Flex vertical gap={2}>
               {harvestConfig ? (
@@ -407,7 +428,7 @@ export function SessionListPage() {
         dataIndex: 'start_at',
         key: 'start_at',
         className: 'mcms-session-mono',
-        width: 110,
+        width: 92,
         render: (value: string | null) => (
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             {formatDate(value)}
@@ -418,8 +439,7 @@ export function SessionListPage() {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',
-        fixed: 'right',
-        width: 160,
+        width: 124,
         render: (status: CultivationSessionStatus) => (
           <SessionStatusTag status={status} />
         ),
@@ -427,8 +447,7 @@ export function SessionListPage() {
       {
         title: 'Thao tác',
         key: 'actions',
-        width: 100,
-        fixed: 'right',
+        width: 68,
         align: 'center',
         render: (_, session) => (
           <ActionButton
@@ -437,6 +456,7 @@ export function SessionListPage() {
             description={`Xem chi tiết phiên canh tác #${session.session_id}`}
             variant="text"
             size="small"
+            hideLabel
             onClick={() => setSelectedSessionId(session.session_id)}
           />
         ),
@@ -563,7 +583,17 @@ export function SessionListPage() {
           dataSource={filteredItems}
           loading={isLoading}
           isFetching={isFetching}
-          scrollX={1180}
+          /*
+           * ⚠ `scrollX` = **tổng bề rộng các cột** (1092px).
+           *   - Màn hình desktop 1440px (vùng nội dung ≈ 1112px) ⇒ bảng
+           *     được `min-width: 100%` co giãn vừa khít ⇒ **KHÔNG** thanh
+           *     cuộn ngang.
+           *   - Màn hình hẹp hơn ⇒ bảng giữ bề rộng cố định và cuộn ngang
+           *     (không bẻ cột làm khó đọc).
+           */
+          scrollX={1092}
+          tableLayout="fixed"
+          className="mcms-session-table"
           pagination={{
             pageSize: 20,
             showSizeChanger: true,

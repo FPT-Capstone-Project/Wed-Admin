@@ -13,6 +13,7 @@
  * Mọi field không chắc chắn đều `optional` + `null` vì BE chưa công khai
  * schema chi tiết (Swagger chỉ mô tả query params + response 200 rỗng).
  */
+import type { SessionGrowthStage } from './admin-session.types'
 
 /**
  * Trạng thái phiên canh tác — **8 trạng thái** của BE.
@@ -36,8 +37,7 @@ export type CultivationSessionStatus =
 /** Danh sách đầy đủ 8 trạng thái — dùng cho bộ lọc & thống kê. */
 export const CULTIVATION_SESSION_STATUSES: readonly CultivationSessionStatus[] =
   [
-    'PENDING',
-    'SPAWN_RESTING',
+    'PENDING',    'SPAWN_RESTING',
     'MYCELIAL_DEVELOPMENT',
     'READY_FOR_CULTIVATION',
     'CULTIVATING',
@@ -104,6 +104,13 @@ export interface CultivationSession {
   status: CultivationSessionStatus
   /** Tiến độ 0–100 (BE có thể trả ở record progress mới nhất). */
   progress_percent?: number | null
+  /**
+   * Giai đoạn sinh trưởng hiện tại theo WF-03 (`cultivation_progress.current_stage`)
+   * — Farm OP ghi nhận.
+   */
+  current_stage?: SessionGrowthStage | null
+  /** Alias của `current_stage` (BE trả cả 2). */
+  growth_status?: SessionGrowthStage | null
   /** Ngày bắt đầu canh tác (ISO). */
   start_date?: string | null
   /** Ngày kết thúc dự kiến / thực tế (ISO). */
