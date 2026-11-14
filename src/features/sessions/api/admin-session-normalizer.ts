@@ -2,14 +2,9 @@ import { ensureArray, ensureObject } from '../../../shared/api/response-normaliz
 import type {
   AdminCultivationSessionDto,
   AdminSessionTray,
-  SessionGrowthStage,
   SessionHarvestStatus,
 } from '../types/admin-session.types'
-import {
-  SESSION_GROWTH_STAGES,
-} from '../types/admin-session.types'
-import type { CultivationSessionStatus } from '../types/session.types'
-import { CULTIVATION_SESSION_STATUSES } from '../types/session.types'
+import { normalizeSessionStage, normalizeSessionStatus } from '../utils/session-state.utils'
 
 /**
  * Chuẩn hoá 1 phiên từ `GET /api/cultivation-sessions/admin`.
@@ -47,10 +42,10 @@ export function normalizeAdminSession(
       'expected_harvest_date',
       'expectedHarvestDate',
     ),
-    status: pickSessionStatus(obj),
+    status: normalizeSessionStatus(obj.status),
     harvest_status: pickHarvestStatus(obj),
-    current_stage: pickGrowthStage(obj, 'current_stage', 'currentStage'),
-    growth_status: pickGrowthStage(obj, 'growth_status', 'growthStatus'),
+    current_stage: normalizeSessionStage(obj),
+    growth_status: normalizeSessionStage(obj),
     progress_percent: pickNumber(
       obj,
       'progress_percent',
@@ -99,15 +94,6 @@ function normalizeAdminTray(raw: unknown): AdminSessionTray {
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 /** Trạng thái phiên — chỉ nhận 9 giá trị hợp lệ của BE. */
-function pickSessionStatus(
-  obj: Record<string, unknown>,
-): CultivationSessionStatus {
-  const status = pickString(obj, 'status')?.toUpperCase()
-  return status && (CULTIVATION_SESSION_STATUSES as readonly string[]).includes(status)
-    ? (status as CultivationSessionStatus)
-    : 'PENDING'
-}
-
 /** Trạng thái thu hoạch — BE chỉ dùng `NOT_READY` / `HARVEST_READY`. */
 function pickHarvestStatus(
   obj: Record<string, unknown>,
@@ -119,16 +105,6 @@ function pickHarvestStatus(
 }
 
 /** Giai đoạn sinh trưởng — chỉ nhận 4 giá trị hợp lệ của BE. */
-function pickGrowthStage(
-  obj: Record<string, unknown>,
-  ...keys: string[]
-): SessionGrowthStage | null {
-  const stage = pickString(obj, ...keys)?.toUpperCase()
-  return stage && (SESSION_GROWTH_STAGES as readonly string[]).includes(stage)
-    ? (stage as SessionGrowthStage)
-    : null
-}
-
 function pickString(obj: Record<string, unknown>, ...keys: string[]) {
   for (const key of keys) {
     const value = obj[key]

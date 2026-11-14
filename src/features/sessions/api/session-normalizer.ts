@@ -1,3 +1,4 @@
+import { normalizeSessionStage, normalizeSessionStatus } from '../utils/session-state.utils'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
 import type { CultivationSession, SessionTray } from '../types/session.types'
 export function normalizeSession(raw: unknown): CultivationSession {
@@ -18,10 +19,9 @@ export function normalizeSession(raw: unknown): CultivationSession {
     package_name: pickString(obj, 'package_name', 'packageName'),
     mushroom_type_id: pickNumber(obj, 'mushroom_type_id', 'mushroomTypeId'),
     mushroom_name: pickString(obj, 'mushroom_name', 'mushroomName'),
-    status: pickString(
-      obj,
-      'status',
-    ) as CultivationSession['status'] ?? 'PENDING',
+    status: normalizeSessionStatus(obj.status),
+    current_stage: normalizeSessionStage(obj),
+    growth_status: normalizeSessionStage(obj),
     progress_percent: pickNumber(
       obj,
       'progress_percent',

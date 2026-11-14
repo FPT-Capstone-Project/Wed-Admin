@@ -1,3 +1,4 @@
+import { withFarmGrowth } from './farm-growth.api'
 import { apiClient } from '../../../shared/api/client'
 import { cleanQueryParams, unwrapListResponse } from '../../../shared/api/list-response'
 import { ensureObject } from '../../../shared/api/response-normalizer'
@@ -55,7 +56,7 @@ export async function fetchAdminCultivationSessions(
   const unwrapped = unwrapListResponse<unknown>(response.data)
 
   return {
-    items: unwrapped.data.map(normalizeAdminSession),
+    items: await withFarmGrowth(unwrapped.data.map(normalizeAdminSession)),
     pagination: {
       page: unwrapped.pagination.page,
       pageSize: unwrapped.pagination.pageSize,
@@ -163,7 +164,7 @@ export async function fetchAdminCultivationSession(
     if (!body) return null
 
     // BE bọc `{ data: {...} }` ⇒ `ensureObject` đã bóc 1 cấp.
-    return normalizeAdminSession(body)
+    return (await withFarmGrowth([normalizeAdminSession(body)]))[0]
   } catch (error) {
     if (isNotFoundError(error)) return null
     throw error

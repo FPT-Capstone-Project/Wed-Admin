@@ -1,3 +1,4 @@
+import { resolveSessionPhase } from '../utils/session-state.utils'
 import { formatDate } from '../../../shared/utils/date'
 import '../sessions-industrial.css'
 import { ExperimentOutlined, PictureOutlined, ShopOutlined } from '@ant-design/icons'
@@ -19,13 +20,11 @@ import { useAdminCultivationSession } from '../hooks/useAdminCultivationSessions
 import { toCultivationSession } from '../api/admin-session-mapper'
 import {
   MUSHROOM_GROWTH_PHASE_DICTIONARY,
-  SESSION_STATUS_DICTIONARY,
-  resolveGrowthPhase,
   resolveSessionHarvestStatus,
 } from '../../../shared/i18n/status/session'
 import { PAYMENT_STATUS_DICTIONARY } from '../../../shared/i18n/status/order'
 import { presentStatus } from '../../../shared/i18n/status/registry'
-import { resolveSessionProgress } from '../utils/session-progress.utils'
+import { formatSessionProgress, resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionStatusTag } from './SessionStatusTag'
 import { useFarmSession, useSpawnInspections } from '../../farm/hooks/useFarm'
 import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
@@ -82,11 +81,11 @@ export function SessionDetailDrawer({
   const isError = adminError
 
   const progressPercent = useMemo(() => {
-    if (!session) return 0
+    if (!session) return null
     // ⚠ Tiến độ **chỉ** lấy từ Phiên canh tác (`progress_percent` do Farm OP
     //   cập nhật) — không suy ra từ ngày bắt đầu / ngày thu hoạch.
     //   Xem `utils/session-progress.utils.ts`.
-    return resolveSessionProgress(session.progress_percent, session.status)
+    return resolveSessionProgress(session.progress_percent, session.status, session.current_stage ?? session.growth_status)
   }, [session])
 
   return (
@@ -154,7 +153,7 @@ export function SessionDetailDrawer({
 
 interface SessionDetailContentProps {
   session: CultivationSession
-  progressPercent: number
+  progressPercent: number | null
   spawnIssued: number | null
 }
 
@@ -164,7 +163,6 @@ function SessionDetailContent({
   spawnIssued,
 }: SessionDetailContentProps) {
   // ⚠ `presentStatus` ⇒ không bao giờ lộ enum lạ của BE.
-  const statusConfig = presentStatus(SESSION_STATUS_DICTIONARY, session.status)
 
   /**
    * ⚠ Giai đoạn hiển thị thuộc **1 trong 4 giai đoạn trồng nấm**
@@ -178,13 +176,13 @@ function SessionDetailContent({
    * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành" (tiến độ 100 %), KHÔNG phải
    *   "Sẵn sàng thu hoạch" — `resolveGrowthPhase` ưu tiên trạng thái kết thúc.
    */
-  const growthPhase = resolveGrowthPhase(
+  const growthPhase = resolveSessionPhase(
     session.current_stage ?? session.growth_status,
     session.status,
   )
   const growthPhaseLabel = growthPhase
     ? MUSHROOM_GROWTH_PHASE_DICTIONARY[growthPhase].label
-    : statusConfig.label
+    : 'Chưa cập nhật'
 
   /**
    * Tab đang active.
@@ -272,11 +270,11 @@ function SessionDetailContent({
             Tiến độ canh tác
           </Typography.Text>
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            {growthPhaseLabel} · {progressPercent}%
+            {growthPhaseLabel} · {formatSessionProgress(progressPercent)}
           </Typography.Text>
         </Flex>
         <Progress
-          percent={progressPercent}
+          percent={progressPercent ?? 0}
           strokeColor="var(--mcms-primary)"
           showInfo={false}
         />

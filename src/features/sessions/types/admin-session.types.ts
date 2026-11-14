@@ -25,6 +25,9 @@ import type { CultivationSessionStatus } from './session.types'
  * → `growthStatus.enum`.
  */
 export type SessionGrowthStage =
+  | 'SPAWNING'
+  | 'RUNNING'
+  | 'FRUITING'
   | 'FRUITING_INITIATION'
   | 'PINNING'
   | 'YOUNG_FRUITING'

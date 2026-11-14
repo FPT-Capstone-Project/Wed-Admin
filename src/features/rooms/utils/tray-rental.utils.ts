@@ -16,7 +16,7 @@ export interface RentalLifecycleMetrics {
   overdueFee: number
   totalAmount: number
   packageDurationDays: number
-  progressPercent: number
+  progressPercent: number | null
   harvestMarkerPercent: number
   effectiveHarvestStatus: HarvestStatus
 }

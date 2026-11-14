@@ -1,3 +1,7 @@
+import { formatSessionProgress } from '../../sessions/utils/session-progress.utils'
+import { Progress } from 'antd'
+import { resolveSessionPhase } from '../../sessions/utils/session-state.utils'
+import { MUSHROOM_GROWTH_PHASE_DICTIONARY } from '../../../shared/i18n/status/session'
 import {
   CalendarOutlined,
   ClockCircleOutlined,
@@ -17,6 +21,8 @@ interface RentalLifecycleSectionProps {
   batchId: string | null
   rental: TrayRental
   lifecycle: RentalLifecycleMetrics
+  growthStage?: string | null
+  growthProgress?: number | null
 }
 
 interface LifecycleStatusPresentation {
@@ -87,8 +93,13 @@ export function RentalLifecycleSection({
   batchId,
   rental,
   lifecycle,
+  growthStage,
+  growthProgress,
 }: RentalLifecycleSectionProps) {
   const status = getStatusPresentation(lifecycle)
+  const phase = resolveSessionPhase(growthStage)
+  const label = phase ? MUSHROOM_GROWTH_PHASE_DICTIONARY[phase].label : 'Chưa cập nhật'
+  const percent = growthProgress ?? null
 
   return (
     <section
@@ -136,42 +147,10 @@ export function RentalLifecycleSection({
 
       <div className="lifecycle-progress-block">
         <div className="lifecycle-progress-copy">
-          <span>Tiến độ chu kỳ</span>
-          <strong>
-            Ngày {lifecycle.growthDay}/{lifecycle.expectedHarvestDay}
-          </strong>
+          <span>Giai đoạn sinh trưởng từ Farm OP</span>
+          <strong>{label} · {formatSessionProgress(percent)}</strong>
         </div>
-        <div
-          className="lifecycle-track"
-          role="progressbar"
-          aria-label="Tiến độ chu kỳ thuê"
-          aria-valuemin={1}
-          aria-valuemax={lifecycle.expectedHarvestDay}
-          aria-valuenow={Math.min(
-            lifecycle.growthDay,
-            lifecycle.expectedHarvestDay,
-          )}
-        >
-          <span
-            className="lifecycle-track-fill"
-            style={{ width: `${lifecycle.progressPercent}%` }}
-          />
-          <span
-            className="lifecycle-harvest-marker"
-            style={{ left: `${lifecycle.harvestMarkerPercent}%` }}
-            aria-hidden="true"
-          />
-        </div>
-        <div className="lifecycle-track-labels" aria-hidden="true">
-          <span>
-            <small>Bắt đầu</small>
-            {formatRentalDate(rental.startDate)}
-          </span>
-          <span>
-            <small>Chín tiêu chuẩn</small>
-            {formatRentalDate(rental.expectedHarvestDate)}
-          </span>
-        </div>
+        <Progress percent={percent ?? 0} showInfo={false} aria-label={`${label}: ${formatSessionProgress(percent)}`} />
       </div>
 
       <dl className="rental-detail-grid">
@@ -191,6 +170,7 @@ export function RentalLifecycleSection({
               {formatRentalDate(rental.expectedHarvestDate)})
             </strong>
             <span>
+              Ngày {lifecycle.growthDay}/{lifecycle.expectedHarvestDay}{' · '}
               {rental.packageName && rental.packageName !== '—'
                 ? `Gói: ${rental.packageName}`
                 : '—'}

@@ -1,4 +1,5 @@
-﻿import dayjs from 'dayjs'
+import { resolveSessionPhase } from '../../sessions/utils/session-state.utils'
+import dayjs from 'dayjs'
 import {
   CalendarOutlined,
   ExperimentOutlined,
@@ -8,17 +9,14 @@ import {
 import { Button, Card, Flex, Popover, Progress, Tooltip, Typography } from 'antd'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
-import { resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
+import { formatSessionProgress, resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
 import {
-  GROWTH_STAGE_META,
   type CultivationBatch,
 } from '../types/cultivation.types'
 import {
   MUSHROOM_GROWTH_PHASE_DICTIONARY,
-  resolveGrowthPhase,
 } from '../../../shared/i18n/status/session'
 import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
-import { GrowthStageMilestones } from './GrowthStageMilestones'
 import { tokens } from '../../../app/theme/tokens'
 
 interface CultivationBatchCardProps {
@@ -47,7 +45,6 @@ export function CultivationBatchCard({
   batch,
   onOpenGallery,
 }: CultivationBatchCardProps) {
-  const stageMeta = GROWTH_STAGE_META[batch.currentStage]
   const healthConfig = HEALTH_CONFIG[batch.healthStatus]
 
   /**
@@ -64,13 +61,13 @@ export function CultivationBatchCard({
    *   "Sẵn sàng thu hoạch" — `resolveGrowthPhase` đã map
    *   `COMPLETED` → `COMPLETED`.
    */
-  const growthPhase = resolveGrowthPhase(
+  const growthPhase = resolveSessionPhase(
     batch.growthStage,
     batch.currentStage,
   )
   const growthPhaseLabel = growthPhase
     ? MUSHROOM_GROWTH_PHASE_DICTIONARY[growthPhase].label
-    : stageMeta?.label ?? 'Chưa xác định'
+    : 'Chưa cập nhật'
 
   // Ảnh thực tế từ Cloudinary — lấy từ lần kiểm tra phôi gần nhất.
   const photos = batch.inspections
@@ -234,16 +231,15 @@ export function CultivationBatchCard({
             >
               <MetadataBadge label={growthPhaseLabel} />
               <Typography.Text type="secondary">
-                {progressPercent}% hoàn thành
+                {formatSessionProgress(progressPercent)} hoàn thành
               </Typography.Text>
             </Flex>
             <Progress
-              percent={progressPercent}
+              percent={progressPercent ?? 0}
               showInfo={false}
               status={isAbnormal ? 'exception' : isCompleted ? 'normal' : 'active'}
               strokeColor={isAbnormal ? tokens.tone.danger.solid : tokens.tone.info.solid}
             />
-            <GrowthStageMilestones />
           </div>
 
           {/* Dải ảnh kiểm tra phôi (thực tế từ Cloudinary) */}

@@ -15,9 +15,16 @@ export interface RentalPackage {
   /**
    * Số đơn hàng đang tham chiếu gói này.
    *
-   * ⚠ BE trả 409 ("Rental package is referenced by an order...") khi xoá gói
-   *   đã phát sinh đơn ⇒ FE dùng số này để **làm mờ nút Xóa** kèm giải
-   *   thích, thay vì để user bấm rồi mới nhận lỗi.
+   * ⚠ **BE hiện KHÔNG trả trường này** cho `GET /api/rental-packages` (model
+   *   chỉ SELECT `package_id, package_name, description, duration_days, price,
+   *   status`; OpenAPI schema `RentalPackage` cũng không khai báo) ⇒ luôn
+   *   `undefined`.
+   *
+   * ⇒ FE tự đếm từ `GET /api/orders/admin` (khớp theo tên gói) — xem
+   *   `features/packages/utils/package-order-count.utils.ts` và
+   *   `features/packages/hooks/useRentalPackageOrderCounts.ts`.
+   *
+   * ⚠ Field này được giữ lại làm **fallback** phòng khi BE bổ sung sau này.
    */
   order_count?: number | null
 }

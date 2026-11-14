@@ -311,6 +311,8 @@ export function TrayDetailDrawer({
               batchId={`Phiên #${session.session_id}`}
               rental={trayRental}
               lifecycle={lifecycle}
+              growthStage={session.current_stage ?? session.growth_status}
+              growthProgress={session.progress_percent}
             />
           </InfoCard>
 

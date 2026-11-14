@@ -31,6 +31,7 @@ import {
   useRentalPackages,
   useUpdateRentalPackage,
 } from '../../../features/packages/hooks/useRentalPackages'
+import { useRentalPackageOrderCounts } from '../../../features/packages/hooks/useRentalPackageOrderCounts'
 import {
   ActionButton,
   StatusBadge,
@@ -76,6 +77,20 @@ export function RentalPackageCatalog({
     error,
     refetch,
   } = useRentalPackages()
+
+  /**
+   * ⚠ **Số đơn hàng thực tế theo gói** — tự đếm từ `GET /api/orders/admin`.
+   *
+   *   Lý do: `GET /api/rental-packages` **không** trả `order_count` (BE chỉ
+   *   SELECT `package_id, package_name, description, duration_days, price,
+   *   status`) ⇒ cột "Đơn hàng" luôn hiện 0 và nút Xóa không bị disable ⇒
+   *   user bấm xoá ⇒ BE ném lỗi khoá ngoại.
+   */
+  const {
+    counts: orderCounts,
+    isLoading: countsLoading,
+    isError: countsFailed,
+  } = useRentalPackageOrderCounts(packages)
 
   const updateMutation = useUpdateRentalPackage({
     onSuccess: (updated) => {
@@ -186,17 +201,23 @@ export function RentalPackageCatalog({
       key: 'order_count',
       width: 100,
       render: (_, record) => {
-        const count = record.order_count ?? 0
+        /*
+         * ⚠ **Số đơn thực tế** — tự đếm từ `GET /api/orders/admin` (BE không
+         *   trả `order_count` trong danh sách gói thuê).
+         */
+        const count = orderCounts.get(record.package_id) ?? 0
         return (
           <Tooltip
             title={
-              count > 0
-                ? `Gói này đã có ${count} đơn hàng sử dụng ⇒ không thể xoá, chỉ chuyển trạng thái sang Tạm ngưng.`
-                : 'Gói chưa phát sinh đơn hàng nào.'
+              countsFailed
+                ? 'Không tải được số liệu đơn hàng — có thể gói đã có đơn mà chưa hiển thị.'
+                : count > 0
+                  ? `Gói này đã có ${count} đơn hàng sử dụng ⇒ không thể xoá, chỉ chuyển trạng thái sang Tạm ngưng.`
+                  : 'Gói chưa phát sinh đơn hàng nào.'
             }
           >
             <MetadataBadge
-              label={`${count} đơn`}
+              label={countsLoading ? '…' : `${count} đơn`}
             />
           </Tooltip>
         )
@@ -272,8 +293,13 @@ export function RentalPackageCatalog({
                *      bật/tắt trạng thái.
                *
                * → Làm mờ nút + kèm Tooltip giải thích rõ lý do.
+               *
+               * ⚠ **Số đơn lấy từ bộ đếm thực tế** (đếm từ
+               *   `GET /api/orders/admin`) vì BE **không** trả `order_count`
+               *   trong danh sách gói thuê ⇒ nếu dựa vào field đó thì nút Xóa
+               *   luôn bật ⇒ user gặp lỗi khoá ngoại 500 từ BE.
                */
-              const orderCount = record.order_count ?? 0
+              const orderCount = orderCounts.get(record.package_id) ?? 0
               const isInactive = record.status === 'INACTIVE'
               const deleteDisabledReason = orderCount
                 ? RENTAL_PACKAGE_IN_USE_MESSAGE

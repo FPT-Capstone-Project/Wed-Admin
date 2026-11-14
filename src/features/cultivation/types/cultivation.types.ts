@@ -75,7 +75,7 @@ export interface CultivationBatch {
    */
   growthStage: string | null
   /** Tiến độ 0–100 (BE trả `progress_percent`). */
-  progressPercent: number
+  progressPercent: number | null
   /** Ngày bắt đầu canh tác. */
   startDate: string | null
   /** Ngày dự kiến thu hoạch. */

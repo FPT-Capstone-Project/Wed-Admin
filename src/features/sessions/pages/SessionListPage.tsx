@@ -1,3 +1,4 @@
+import { summarizeSessions, resolveSessionPhase } from '../utils/session-state.utils'
 import { formatDate } from '../../../shared/utils/date'
 import { Popover, Button } from 'antd'
 import { PageHeader } from '../../../shared/ui/PageHeader'
@@ -31,19 +32,14 @@ import type {
   SessionGrowthStage,
 } from '../types/admin-session.types'
 import {
-  ACTIVE_SESSION_STATUSES,
-  CULTIVATION_SESSION_STATUSES,
   type CultivationSessionStatus,
 } from '../types/session.types'
 import { SessionStatusTag } from '../components/SessionStatusTag'
 import {
   MUSHROOM_GROWTH_PHASE_DICTIONARY,
-  SESSION_STATUS_DICTIONARY,
-  resolveGrowthPhase,
   resolveSessionHarvestStatus,
 } from '../../../shared/i18n/status/session'
-import { selectOptions } from '../../../shared/i18n/status/registry'
-import { resolveSessionProgress } from '../utils/session-progress.utils'
+import { formatSessionProgress, resolveSessionProgress } from '../utils/session-progress.utils'
 import { SessionDetailDrawer } from '../../../app/router/lazy-modals'
 
 /**
@@ -58,10 +54,12 @@ import { SessionDetailDrawer } from '../../../app/router/lazy-modals'
  * nhân viên (staff) thực hiện trên app.
  */
 
-const STATUS_OPTIONS = selectOptions(
-  SESSION_STATUS_DICTIONARY,
-  CULTIVATION_SESSION_STATUSES,
-)
+const STATUS_OPTIONS = [
+  { value: 'PENDING', label: 'Chờ xử lý' },
+  { value: 'CULTIVATING', label: 'Đang canh tác' },
+  { value: 'COMPLETED', label: 'Hoàn thành' },
+  { value: 'CANCELLED', label: 'Đã hủy' },
+]
 
 /**
  * Nhóm bộ lọc nhanh ở đầu bảng.
@@ -124,8 +122,8 @@ function matchesGroup(
  *   không lấy từ báo cáo khay — giá trị `%` là `progress_percent` mà Farm OP
  *   cập nhật qua API của phiên.
  */
-function resolveProgress(session: AdminCultivationSessionDto): number {
-  return resolveSessionProgress(session.progress_percent, session.status)
+function resolveProgress(session: AdminCultivationSessionDto): number | null {
+  return resolveSessionProgress(session.progress_percent, session.status, session.current_stage ?? session.growth_status)
 }
 
 
@@ -188,7 +186,7 @@ export function SessionListPage() {
   // ⚠ BE hỗ trợ lọc theo `status` (server-side) nhưng **không** hỗ trợ tìm
   //   kiếm theo từ khóa ⇒ kéo toàn bộ trang để lọc client.
   const { data, isLoading, isFetching, isError, error, refetch } =
-    useAllAdminCultivationSessions(statusFilter)
+    useAllAdminCultivationSessions()
 
   const items = useMemo(() => data ?? [], [data])
 
@@ -196,6 +194,7 @@ export function SessionListPage() {
     const keyword = searchText.trim().toLowerCase()
 
     const matched = items.filter((session) => {
+      if (statusFilter && session.status !== statusFilter) return false
       if (!matchesGroup(session.status, groupFilter)) return false
       if (!keyword) return true
 
@@ -212,15 +211,10 @@ export function SessionListPage() {
     // ⚠ Sắp xếp mặc định — gom nhóm "Đang canh tác" lên trước để bảng
     //   không bị đan xen các trạng thái.
     return [...matched].sort(compareSessions)
-  }, [groupFilter, items, searchText])
+  }, [groupFilter, items, searchText, statusFilter])
 
   const summary = useMemo(
-    () => ({
-      total: items.length,
-      active: items.filter((s) => ACTIVE_SESSION_STATUSES.has(s.status)).length,
-      waiting: items.filter((s) => PENDING_STATUSES.has(s.status)).length,
-      cancelled: items.filter((s) => s.status === 'CANCELLED').length,
-    }),
+    () => summarizeSessions(items),
     [items],
   )
 
@@ -340,28 +334,7 @@ export function SessionListPage() {
           const stage: SessionGrowthStage | null =
             session.current_stage ?? session.growth_status
           const percent = resolveProgress(session)
-          if (session.status === 'CANCELLED') {
-            return (
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                Đã hủy
-              </Typography.Text>
-            )
-          }
-          /*
-           * ⚠ Giai đoạn hiển thị luôn thuộc **1 trong 4 giai đoạn trồng nấm**
-           *   ("Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch"),
-           *   gộp từ cả `current_stage` (WF-03) lẫn `status` (vòng đời phiên).
-           *
-           * ⚠ Phiên `CULTIVATING` mặc định là **"Kéo tơ"** — chỉ khi Farm OP
-           *   ghi nhận giai đoạn ra quả (`current_stage` ∈ `FRUITING_INITIATION` /
-           *   `PINNING` / `YOUNG_FRUITING` / `FRUITING`) thì mới nhảy sang
-           *   "Nấm đang phát triển".
-           *
-           * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành" (tiến độ 100 %), KHÔNG
-           *   phải "Sẵn sàng thu hoạch" — `resolveGrowthPhase` đã ưu tiên
-           *   trạng thái kết thúc.
-           */
-          const phase = resolveGrowthPhase(stage, session.status)
+          const phase = resolveSessionPhase(stage, session.status)
           return (
             <Flex vertical gap={2} style={{ width: '100%', maxWidth: 160 }}>
               <Flex justify="space-between" align="center" gap={8}>
@@ -371,15 +344,14 @@ export function SessionListPage() {
                 >
                   {phase
                     ? MUSHROOM_GROWTH_PHASE_DICTIONARY[phase].label
-                    : (SESSION_STATUS_DICTIONARY[session.status]?.shortLabel ??
-                      session.status)}
+                    : 'Chưa cập nhật'}
                 </Typography.Text>
                 <Typography.Text type="secondary" style={{ fontSize: 11 }}>
-                  {percent}%
+                  {formatSessionProgress(percent)}
                 </Typography.Text>
               </Flex>
               <Progress
-                percent={percent}
+                percent={percent ?? 0}
                 size="small"
                 strokeColor="var(--mcms-primary)"
                 showInfo={false}
@@ -528,7 +500,7 @@ export function SessionListPage() {
           tone="ok"
           highlightValue
           icon={<CheckCircleOutlined />}
-          description="Phiên chưa kết thúc / chưa hủy"
+          description="Phiên đang canh tác"
         />
         <StatCard
           title="Chờ xử lý"
@@ -537,6 +509,12 @@ export function SessionListPage() {
           highlightValue
           icon={<ClockCircleOutlined />}
           description="Phiên chờ cấp phôi / gán khay"
+        />
+        <StatCard
+          title="Hoàn thành"
+          value={summary.completed}
+          tone="ok"
+          icon={<CheckCircleOutlined />}
         />
         <StatCard
           title="Đã hủy"
