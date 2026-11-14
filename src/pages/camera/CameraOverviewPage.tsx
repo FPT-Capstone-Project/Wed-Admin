@@ -44,20 +44,21 @@ export function CameraOverviewPage() {
         title: 'Mã camera',
         dataIndex: 'id',
         key: 'id',
-        width: 110,
+        width: 100,
       },
       {
         title: 'Tên camera',
         dataIndex: 'cameraName',
         key: 'cameraName',
-        width: 200,
+        width: 170,
+        ellipsis: true,
         render: (name: string) => name || '—',
       },
       {
         title: 'Imou device ID',
         dataIndex: 'cameraCode',
         key: 'cameraCode',
-        width: 180,
+        width: 160,
         render: (code: string) => (
           <Typography.Text code style={{ fontSize: 12 }}>
             {code || '—'}
@@ -68,7 +69,7 @@ export function CameraOverviewPage() {
         title: 'Phòng',
         dataIndex: 'roomId',
         key: 'roomId',
-        width: 90,
+        width: 80,
         render: (roomId: number | null) =>
           roomId ?? <Typography.Text type="secondary">—</Typography.Text>,
       },
@@ -76,10 +77,11 @@ export function CameraOverviewPage() {
         title: 'Stream URL',
         dataIndex: 'streamUrl',
         key: 'streamUrl',
+        width: 180,
         ellipsis: true,
         render: (url: string | null) =>
           url ? (
-            <Typography.Text ellipsis style={{ maxWidth: 260, fontSize: 12 }}>
+            <Typography.Text ellipsis={{ tooltip: url }} style={{ fontSize: 12 }}>
               {url}
             </Typography.Text>
           ) : (
@@ -94,22 +96,26 @@ export function CameraOverviewPage() {
         key: 'status',
         width: 130,
         render: (status: CameraStatus) => (
-          <StatusBadge {...presentStatus(CAMERA_STATUS_DICTIONARY, status)} />
+          <StatusBadge
+            {...presentStatus(CAMERA_STATUS_DICTIONARY, status)}
+            style={{ whiteSpace: 'nowrap' }}
+          />
         ),
       },
       {
         title: 'Hành động',
         key: 'actions',
-        width: 150,
+        width: 120,
         align: 'right',
         render: (_: unknown, camera: Camera) => (
-          <Space size={8} wrap>
+          <Space size={4} wrap>
             <CameraRowActions camera={camera} />
             <ActionButton
               icon={<PlayCircleOutlined />}
               label="Xem live stream"
               description={`Xem trực tiếp ${camera.cameraName || camera.cameraCode}`}
               variant="text"
+              hideLabel
               onClick={() => setStreamingCamera(camera)}
             />
           </Space>
@@ -222,7 +228,8 @@ export function CameraOverviewPage() {
             : null
         }
         onRetry={() => void refetch()}
-        scrollX={1100}
+        scrollX={940}
+        tableLayout="fixed"
         emptyTitle={
           statusFilter
             ? `Không có camera ${statusLabel(CAMERA_STATUS_DICTIONARY, statusFilter).toLowerCase()}`

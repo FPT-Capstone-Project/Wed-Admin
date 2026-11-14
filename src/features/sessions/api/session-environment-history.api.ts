@@ -215,6 +215,93 @@ export async function fetchAllSessionEnvironmentRecords(
   return collected
 }
 
+/**
+ * Lấy **bản ghi mới nhất** của phiên — theo thứ tự thời gian **giảm dần**.
+ *
+ * ⚠ **Vì sao cần hàm riêng?**
+ *
+ *   BE sắp xếp `ORDER BY period_start ASC` ⇒ **trang 1 là bản ghi CŨ NHẤT**.
+ *   Ta cần bản ghi **MỚI NHẤT** ⇒ phải đi từ **trang cuối** ngược lại.
+ *
+ * ⚠ Cách tính:
+ *   - Trang cuối chứa `total - (totalPages - 1) * pageSize` bản ghi.
+ *   - Mỗi trang trước đó chứa đúng `pageSize` bản ghi.
+ *   ⇒ Cần bao nhiêu trang cuối thì cộng dồn cho tới khi đủ `limit`.
+ *
+ * @returns Bản ghi đã sort giảm dần (mới nhất trước) + phân trang gốc của BE.
+ */
+export async function fetchNewestSessionEnvironmentRecords(
+  sessionId: number,
+  options: { limit?: number } = {},
+): Promise<SessionEnvironmentHistoryResult | null> {
+  const limit = Math.max(1, options.limit ?? 200)
+  const pageSize = SAFE_PAGE_SIZE
+
+  const first = await fetchSessionEnvironmentHistory(sessionId, {
+    page: 1,
+    pageSize,
+  })
+  if (!first) return null
+
+  const { total, totalPages } = first.pagination
+  if (total === 0 || totalPages <= 1) {
+    return {
+      records: sortRecordsByPeriodDesc(first.records).slice(0, limit),
+      pagination: first.pagination,
+    }
+  }
+
+  // Số bản ghi nằm ở trang cuối (trang cuối có thể **không đầy**).
+  const lastPageCount = total - (totalPages - 1) * pageSize
+  let neededPages = 1
+  let collected = lastPageCount
+  while (collected < limit && neededPages < totalPages) {
+    neededPages += 1
+    collected += pageSize
+  }
+
+  const startPage = Math.max(1, totalPages - neededPages + 1)
+  const targetPages = Array.from(
+    { length: totalPages - startPage + 1 },
+    (_, index) => startPage + index,
+  )
+
+  const results = await Promise.all(
+    targetPages.map((page) =>
+      fetchSessionEnvironmentHistory(sessionId, { page, pageSize }),
+    ),
+  )
+
+  const records: SessionEnvironmentRecord[] = []
+  for (const result of results) records.push(...(result?.records ?? []))
+
+  return {
+    records: sortRecordsByPeriodDesc(records).slice(0, limit),
+    pagination: first.pagination,
+  }
+}
+
+/** Sort bản ghi theo `period_start` **giảm dần** (mới nhất trước). */
+function sortRecordsByPeriodDesc(
+  records: readonly SessionEnvironmentRecord[],
+): SessionEnvironmentRecord[] {
+  return [...records].sort((left, right) => {
+    const leftTime = Date.parse(left.period_start ?? '')
+    const rightTime = Date.parse(right.period_start ?? '')
+    const leftValid = Number.isFinite(leftTime)
+    const rightValid = Number.isFinite(rightTime)
+
+    // Bản ghi không có mốc thời gian ⇒ đẩy xuống cuối.
+    if (leftValid !== rightValid) return leftValid ? -1 : 1
+    if (leftValid && rightValid && leftTime !== rightTime) {
+      return rightTime - leftTime
+    }
+
+    // Tie-break theo `floor_id` tăng dần ⇒ thứ tự **ổn định**.
+    return (left.floor_id ?? 0) - (right.floor_id ?? 0)
+  })
+}
+
 // ─── Helpers ─────────────────────────────────────────────────────────────
 
 /** Chuẩn hoá 1 bản ghi lịch sử môi trường. */

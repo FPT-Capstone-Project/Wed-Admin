@@ -40,8 +40,12 @@ export interface DataTableProps<T> {
    *
    * ⚠ Truyền `null` ⇒ **KHÔNG** cuộn ngang: bảng co lại vừa bề rộng cột
    *   (dùng cho bảng gọn 1 màn hình desktop — xem `SessionListPage.tsx`).
+   *
+   * ⚠ Truyền `'max-content'` ⇒ bảng tự co theo **nội dung** thực tế
+   *   (không bị ép theo `width` khai báo) ⇒ hữu ích khi cột có nội dung
+   *   biến động rất khác nhau. Kết hợp `tableLayout="auto"`.
    */
-  scrollX?: number | null
+  scrollX?: number | 'max-content' | null
   /** Phân trang (mặc định tắt — nhiều bảng dùng "Xem thêm"). */
   pagination?: TableProps<T>['pagination']
   size?: TableProps<T>['size']

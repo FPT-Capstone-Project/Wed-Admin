@@ -2,6 +2,7 @@ import { DataTable } from '../../../shared/ui/DataTable'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App, Button, Flex, Form, Input, Modal, Popconfirm, Select } from 'antd'
+import { DeleteOutlined, EditOutlined } from '@ant-design/icons'
 import { useDeleteCamera, useRegisterCamera, useUpdateCamera } from '../hooks/useCameras'
 import { cameraApi } from '../api/camera.api'
 import { useCultivationRooms } from '../../rooms/hooks/useCultivation'
@@ -10,7 +11,7 @@ import { getApiErrorMessage } from '../../../shared/api/error'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { CAMERA_STATUS_DICTIONARY, LIVE_SESSION_STATUS_DICTIONARY } from '../../../shared/i18n/status/camera'
 import { presentStatus, selectOptions, statusLabel } from '../../../shared/i18n/status/registry'
-import { StatusBadge } from '../../../shared/ui'
+import { ActionButton, StatusBadge } from '../../../shared/ui'
 
 /**
  * Nhãn trạng thái **phiên live** (Imou).
@@ -52,7 +53,38 @@ export function CameraRowActions({ camera }: { camera: Camera }) {
   const [editing, setEditing] = useState(false)
   const { message } = App.useApp()
   const remove = useDeleteCamera({ onSuccess: () => { void message.success('Đã xóa camera') }, onError: error => { void message.error(getApiErrorMessage(error)) } })
-  return <Flex gap={8}><Button onClick={() => setEditing(true)}>Sửa</Button><Popconfirm title="Xóa camera khỏi hệ thống?" description="Camera sẽ không còn khả dụng trong danh sách giám sát." onConfirm={() => remove.mutateAsync(camera.id).catch(() => undefined)}><Button danger loading={remove.isPending}>Xóa</Button></Popconfirm>{editing && <CameraFormModal camera={camera} onClose={() => setEditing(false)} />}</Flex>
+  /*
+   * ⚠ Nút **icon-only** (đồng bộ bảng Accounts / Orders / Devices) ⇒ cột
+   *   "Hành động" chỉ cần ~70px thay vì 150px ⇒ bảng camera vừa khít
+   *   1 màn hình laptop 1280–1536px, không còn thanh cuộn ngang.
+   */
+  return <Flex gap={4}>
+    <ActionButton
+      icon={<EditOutlined />}
+      label={`Sửa ${camera.cameraName || camera.cameraCode || 'camera'}`}
+      description="Mở form cập nhật camera"
+      variant="text"
+      hideLabel
+      onClick={() => setEditing(true)}
+    />
+    <Popconfirm
+      title="Xóa camera khỏi hệ thống?"
+      description="Camera sẽ không còn khả dụng trong danh sách giám sát."
+      onConfirm={() => remove.mutateAsync(camera.id).catch(() => undefined)}
+    >
+      <span className="mcms-action-button-tooltip">
+        <ActionButton
+          icon={<DeleteOutlined />}
+          label={`Xóa ${camera.cameraName || camera.cameraCode || 'camera'}`}
+          description="Xóa vĩnh viễn camera khỏi hệ thống"
+          variant="dangerText"
+          hideLabel
+          loading={remove.isPending}
+        />
+      </span>
+    </Popconfirm>
+    {editing && <CameraFormModal camera={camera} onClose={() => setEditing(false)} />}
+  </Flex>
 }
 export function CameraRegistrationButton() {
   const [open, setOpen] = useState(false)

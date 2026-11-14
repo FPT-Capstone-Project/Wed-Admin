@@ -10,12 +10,10 @@ import {
 } from '@ant-design/icons'
 import {
   Button,
-  Col,
   Descriptions,
   Drawer,
   Flex,
   Input,
-  Row,
   Select,
   Skeleton,
   Tag,
@@ -27,6 +25,7 @@ import {
   DataTable,
   MetadataBadge,
   StatCard,
+  StatGrid,
   StatusBadge,
 } from '../../../shared/ui'
 import { formatDate, formatRelativeTime } from '../../../shared/utils/date'
@@ -294,51 +293,46 @@ export function NotificationsPanel({
         </Button>
       </Flex>
 
-      <Row gutter={[12, 12]} style={{ marginBottom: 'var(--mcms-space-4)' }}>
-        <Col xs={12} lg={8}>
-          <StatCard
-            title="Tổng thông báo"
-            value={businessItems.length}
-            tone="neutral"
-            description="Thông báo nghiệp vụ của tài khoản"
+      <StatGrid columns={2} style={{ marginBottom: 'var(--mcms-space-4)' }}>
+        <StatCard
+          title="Tổng thông báo"
+          value={businessItems.length}
+          tone="neutral"
+          description="Thông báo nghiệp vụ của tài khoản"
+        />
+        <StatCard
+          title="Chưa đọc"
+          value={unreadCount}
+          tone="danger"
+          highlightValue
+          description="Thông báo nghiệp vụ chưa đọc"
+        />
+      </StatGrid>
+
+      <Flex vertical gap={8} style={{ marginBottom: 'var(--mcms-space-4)' }}>
+        <Input
+          allowClear
+          prefix={<SearchOutlined />}
+          placeholder="Tìm nội dung thông báo"
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
+          style={{ width: '100%', maxWidth: 320 }}
+        />
+        <Flex gap={8} wrap>
+          <Select<ReadFilter>
+            value={readFilter}
+            options={READ_OPTIONS}
+            onChange={(value) => setReadFilter(value)}
+            style={{ width: 140 }}
           />
-        </Col>
-        <Col xs={12} lg={8}>
-          <StatCard
-            title="Chưa đọc"
-            value={unreadCount}
-            tone="danger"
-            highlightValue
-            description="Thông báo nghiệp vụ chưa đọc"
+          <Select<TypeFilter>
+            value={typeFilter}
+            options={TYPE_FILTER_OPTIONS}
+            onChange={(value) => setTypeFilter(value)}
+            style={{ width: 220 }}
           />
-        </Col>
-        <Col xs={24} lg={8}>
-          <Flex vertical gap={8} style={{ marginBottom: 12 }}>
-            <Input
-              allowClear
-              prefix={<SearchOutlined />}
-              placeholder="Tìm nội dung thông báo"
-              value={searchText}
-              onChange={(event) => setSearchText(event.target.value)}
-              style={{ width: '100%', maxWidth: 320 }}
-            />
-            <Flex gap={8} wrap>
-              <Select<ReadFilter>
-                value={readFilter}
-                options={READ_OPTIONS}
-                onChange={(value) => setReadFilter(value)}
-                style={{ width: 140 }}
-              />
-              <Select<TypeFilter>
-                value={typeFilter}
-                options={TYPE_FILTER_OPTIONS}
-                onChange={(value) => setTypeFilter(value)}
-                style={{ width: 220 }}
-              />
-            </Flex>
-          </Flex>
-        </Col>
-      </Row>
+        </Flex>
+      </Flex>
 
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 8 }} />

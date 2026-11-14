@@ -352,35 +352,48 @@ export function DeviceControlPanel() {
 
   const floorColumns: ColumnsType<CultivationFloorMapping> = [
     {
+      /*
+       * ⚠ Gộp "Tầng" + "Tên tầng" thành **1 cột duy nhất**.
+       *
+       *   Trước đây 2 cột hiển thị **trùng nội dung** (badge "Tầng 1" ở
+       *   cột 1 và tên tầng ở cột 2) ⇒ 290px chiếm chỗ vô ích ⇒ bảng
+       *   tràn ngang trên laptop 1280–1536px.
+       *
+       *   ⇒ Gộp lại: badge "Tầng N" + tên tầng (ellipsis) trong cùng ô.
+       */
       title: 'Tầng',
       key: 'floor',
       width: 110,
-      align: 'center',
       render: (_, record) => (
         <Tooltip title="Xem môi trường thực tế của tầng">
           <Button
             type="text"
             size="small"
-            style={{ padding: 0, height: 'auto' }}
+            style={{ padding: 0, height: 'auto', maxWidth: '100%' }}
             onClick={() => setSelectedFloor(record)}
           >
-            <MetadataBadge style={{ fontSize: 13, padding: '2px 8px' }} label={<>
-              Tầng {record.floor_number}
-            </>} />
+            <Flex vertical gap={0} align="flex-start" style={{ minWidth: 0 }}>
+              <MetadataBadge style={{ fontSize: 13, padding: '2px 8px' }} label={<>
+                Tầng {record.floor_number}
+              </>} />
+              {record.floor_name && (
+                <Typography.Text
+                  type="secondary"
+                  style={{ fontSize: 11 }}
+                  ellipsis={{ tooltip: record.floor_name }}
+                >
+                  {record.floor_name}
+                </Typography.Text>
+              )}
+            </Flex>
           </Button>
         </Tooltip>
       ),
     },
     {
-      title: 'Tên tầng',
-      dataIndex: 'floor_name',
-      key: 'floor_name',
-      width: 180,
-    },
-    {
       title: 'Bộ điều khiển',
       key: 'master',
-      width: 160,
+      width: 150,
       render: (_, record) => {
         const master = masters.find((m) => m.id === record.master_id)
         if (!master) return <Typography.Text type="secondary">—</Typography.Text>
@@ -407,7 +420,7 @@ export function DeviceControlPanel() {
       dataIndex: 'node_address',
       key: 'node_address',
       className: 'mcms-iot-mono',
-      width: 120,
+      width: 110,
       align: 'center',
       render: (addr: number) => (
         <MetadataBadge  label={<>Cụm {addr}</>} />
@@ -418,7 +431,7 @@ export function DeviceControlPanel() {
       dataIndex: 'misting_ssr_channel',
       key: 'misting_ssr_channel',
       className: 'mcms-iot-mono',
-      width: 140,
+      width: 110,
       align: 'center',
       // ⚠ Chỉ hiển thị **số kênh** cấu hình của tầng. Trạng thái ON/OFF
       //   thật của rơ-le đã được gỡ khỏi trang (không gọi
@@ -433,19 +446,25 @@ export function DeviceControlPanel() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      width: 110,
+      width: 145,
       align: 'center',
       render: (status: FloorStatus) => (
         <StatusBadge
           {...presentStatus(FLOOR_STATUS_DICTIONARY, status, 'Chưa ghi nhận')}
           title={`Trạng thái tầng: ${floorStatusLabel(status)}`}
+          /*
+           * ⚠ `white-space: nowrap` ⇒ "Đang hoạt động" hiển thị trên **1 hàng**,
+           *   không gãy dòng ("Đang hoạt" / "động") làm hàng bị cao lệch.
+           */
+          style={{ whiteSpace: 'nowrap' }}
         />
       ),
     },
     {
       title: 'Chế độ / Điều kiện kích hoạt',
       key: 'triggerCondition',
-      width: 220,
+      width: 210,
+      ellipsis: true,
       render: (_, record) => {
         const config = configByFloorId.get(record.floor_id)
         const condition = formatTriggerCondition(config)
@@ -458,11 +477,16 @@ export function DeviceControlPanel() {
         }
         const profileName = formatProfileName(config)
         return (
-          <Flex vertical gap={2}>
-            <MetadataBadge style={{ fontSize: 12, width: 'fit-content' }} label={<>
-              {condition}
-            </>} />
-            <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+          <Flex vertical gap={2} style={{ minWidth: 0 }}>
+            <MetadataBadge
+              style={{ fontSize: 12, width: 'fit-content', maxWidth: '100%' }}
+              label={<span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{condition}</span>}
+            />
+            <Typography.Text
+              type="secondary"
+              style={{ fontSize: 11 }}
+              ellipsis={{ tooltip: profileName ?? 'Tự động theo độ ẩm' }}
+            >
               {profileName ?? 'Tự động theo độ ẩm'}
             </Typography.Text>
           </Flex>
@@ -472,7 +496,7 @@ export function DeviceControlPanel() {
     {
       title: 'Thời lượng phun',
       key: 'pulseDuration',
-      width: 140,
+      width: 110,
       align: 'right',
       render: (_, record) => {
         const config = configByFloorId.get(record.floor_id)
@@ -498,9 +522,12 @@ export function DeviceControlPanel() {
       // Có 2 nút **chỉ đọc**:
       //   1. "Xem chi tiết"  → modal cấu hình + nhật ký tưới tự động.
       //   2. "Xem camera"    → modal live stream ImouPlayer của tầng đó.
+      //
+      // ⚠ Cả 2 nút đều **icon-only** (đồng bộ bảng Accounts / Orders) ⇒
+      //   cột này chỉ cần 70px thay vì 240px ⇒ bảng vừa khít 1 màn hình.
       title: 'Hành động',
       key: 'actions',
-      width: 240,
+      width: 70,
       align: 'center',
       render: (_, record) => {
         const resolution = floorCameraMap.byFloorId.get(record.floor_id)
@@ -518,12 +545,13 @@ export function DeviceControlPanel() {
               : 'Tầng này chưa được lắp camera'
 
         return (
-          <Space size={4}>
+          <Flex gap={4} justify="center">
             <ActionButton
               variant="text"
               icon={<EyeOutlined />}
               label="Xem chi tiết"
               description="Xem cấu hình tự động và nhật ký kích hoạt của tầng này"
+              hideLabel
               onClick={() => setAutoControlFloor(record)}
             />
             <ActionButton
@@ -535,7 +563,7 @@ export function DeviceControlPanel() {
               disabled={cameraDisabled}
               onClick={() => handleOpenCamera(record)}
             />
-          </Space>
+          </Flex>
         )
       },
     },
@@ -622,7 +650,8 @@ export function DeviceControlPanel() {
           loading={floorsLoading || configsLoading}
           size="small"
           pagination={{ pageSize: 10, showSizeChanger: false }}
-          scrollX={1400}
+          scrollX={1015}
+          tableLayout="fixed"
           emptyTitle="Chưa cấu hình tầng nào. Nhân viên có thể thiết lập trên mobile app."
         />
       </Card>

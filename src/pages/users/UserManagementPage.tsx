@@ -13,14 +13,11 @@ import {
 import {
   Avatar,
   Button,
-  Col,
   Empty,
   Flex,
   Input,
-  Row,
   Select,
   Skeleton,
-  Space,
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
@@ -37,7 +34,7 @@ import type {
   UserStatus,
   UserWithRole,
 } from '../../types/user.types'
-import { ActionButton, MetadataBadge, StatCard, StatusBadge, DataTable } from '../../shared/ui'
+import { ActionButton, MetadataBadge, StatCard, StatGrid, StatusBadge, DataTable } from '../../shared/ui'
 import { UserDetailDrawer } from '../../app/router/lazy-modals'
 
 const PAGE_SIZE = 20
@@ -104,7 +101,7 @@ export function UserManagementPage() {
         title: 'Mã',
         dataIndex: 'user_id',
         key: 'user_id',
-        width: 80,
+        width: 72,
         render: (value: number) => (
           <Typography.Text strong>#{value}</Typography.Text>
         ),
@@ -113,7 +110,7 @@ export function UserManagementPage() {
         title: 'Họ và tên',
         dataIndex: 'full_name',
         key: 'full_name',
-        width: 240,
+        width: 210,
         render: (value: string, user) => {
           const trimmed = value?.trim() ?? ''
           const initial = trimmed ? trimmed.charAt(0).toUpperCase() : 'U'
@@ -154,13 +151,14 @@ export function UserManagementPage() {
         title: 'Email',
         dataIndex: 'email',
         key: 'email',
-        width: 240,
+        width: 200,
+        ellipsis: true,
       },
       {
         title: 'Số điện thoại',
         dataIndex: 'phone',
         key: 'phone',
-        width: 150,
+        width: 130,
         render: (value: string | null) =>
           value ?? <Typography.Text type="secondary">—</Typography.Text>,
       },
@@ -168,30 +166,25 @@ export function UserManagementPage() {
         title: 'Vai trò',
         dataIndex: 'role_id',
         key: 'role_id',
-        width: 200,
+        width: 130,
         render: (roleId: number, user) => {
           const roleLabel = getRoleLabel(roleId, user.role_name)
-          return (
-            <Space direction="vertical" size={2}>
-              <MetadataBadge label={roleLabel} />
-              {user.role_description && (
-                <Typography.Text
-                  type="secondary"
-                  style={{ fontSize: 12 }}
-                  ellipsis={{ tooltip: user.role_description }}
-                >
-                  {user.role_description}
-                </Typography.Text>
-              )}
-            </Space>
-          )
+          /*
+           * ⚠ KHÔNG hiển thị `role_description` (mô tả tiếng Anh dài) ở đây.
+           *
+           *   Lý do: cột này bị đẩy rộng ⇒ cột "Ngày tạo" bị đẩy ra khỏi
+           *   khung hình trên laptop 1280–1536px. Mô tả vai trò là thông tin
+           *   **tham chiếu**, không phải thông tin cần đọc ở bảng danh sách
+           *   ⇒ chỉ hiện trong Drawer chi tiết (xem `UserDetailDrawer`).
+           */
+          return <MetadataBadge label={roleLabel} />
         },
       },
       {
         title: 'Trạng thái',
         dataIndex: 'status',
         key: 'status',
-        width: 140,
+        width: 110,
         render: (status: UserStatus) => (
           <StatusBadge {...presentStatus(USER_STATUS_DICTIONARY, status)} />
         ),
@@ -200,7 +193,7 @@ export function UserManagementPage() {
         title: 'Ngày tạo',
         dataIndex: 'created_at',
         key: 'created_at',
-        width: 160,
+        width: 110,
         render: (value: string | null | undefined) => formatDate(value),
       },
       {
@@ -208,7 +201,7 @@ export function UserManagementPage() {
         // không tạo tài khoản, không khoá / mở khoá (việc này thuộc staff).
         title: 'Hành động',
         key: 'actions',
-        width: 110,
+        width: 70,
         align: 'right',
         fixed: 'right',
         render: (_, user) => (
@@ -235,37 +228,31 @@ export function UserManagementPage() {
           </Typography.Text>
         </Flex>} />
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={24} sm={8}>
-          <StatCard
-            title="Tổng tài khoản"
-            value={stats.total}
-            tone="info"
-            icon={<UserOutlined />}
-            description="Tất cả tài khoản trong hệ thống"
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <StatCard
-            title="Đang hoạt động"
-            value={stats.active}
-            tone="ok"
-            highlightValue
-            icon={<CheckCircleOutlined />}
-            description="Tài khoản đang được phép đăng nhập"
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <StatCard
-            title="Đã khoá"
-            value={stats.blocked}
-            tone="danger"
-            highlightValue
-            icon={<LockOutlined />}
-            description="Tài khoản bị tạm khoá hoặc đình chỉ"
-          />
-        </Col>
-      </Row>
+      <StatGrid columns={3}>
+        <StatCard
+          title="Tổng tài khoản"
+          value={stats.total}
+          tone="info"
+          icon={<UserOutlined />}
+          description="Tất cả tài khoản trong hệ thống"
+        />
+        <StatCard
+          title="Đang hoạt động"
+          value={stats.active}
+          tone="ok"
+          highlightValue
+          icon={<CheckCircleOutlined />}
+          description="Tài khoản đang được phép đăng nhập"
+        />
+        <StatCard
+          title="Đã khoá"
+          value={stats.blocked}
+          tone="danger"
+          highlightValue
+          icon={<LockOutlined />}
+          description="Tài khoản bị tạm khoá hoặc đình chỉ"
+        />
+      </StatGrid>
 
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
         <Input
@@ -350,7 +337,8 @@ export function UserManagementPage() {
             showTotal: (total, range) => `${range[0]}-${range[1]} / ${total}`,
             onChange: setCurrentPage,
           }}
-          scrollX={1280}
+          scrollX={1032}
+          tableLayout="fixed"
         />
       )}
 

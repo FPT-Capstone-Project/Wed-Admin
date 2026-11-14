@@ -13,11 +13,9 @@ import {
 } from '@ant-design/icons'
 import {
   Card,
-  Col,
   Flex,
   Input,
   Progress,
-  Row,
   Segmented,
   Select,
   Skeleton,
@@ -26,7 +24,7 @@ import {
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Suspense, useMemo, useState } from 'react'
-import { ActionButton, DataTable, StatCard, StatusBadge } from '../../../shared/ui'
+import { ActionButton, DataTable, StatCard, StatGrid, StatusBadge } from '../../../shared/ui'
 import { useAllAdminCultivationSessions } from '../hooks/useAdminCultivationSessions'
 import type {
   AdminCultivationSessionDto,
@@ -516,47 +514,39 @@ export function SessionListPage() {
         }
       />
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 20 }}>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Tổng phiên"
-            value={summary.total}
-            tone="neutral"
-            icon={<FileTextOutlined />}
-            description="Tất cả phiên canh tác trong hệ thống"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Đang chạy"
-            value={summary.active}
-            tone="ok"
-            highlightValue
-            icon={<CheckCircleOutlined />}
-            description="Phiên chưa kết thúc / chưa hủy"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Chờ xử lý"
-            value={summary.waiting}
-            tone="warning"
-            highlightValue
-            icon={<ClockCircleOutlined />}
-            description="Phiên chờ cấp phôi / gán khay"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Đã hủy"
-            value={summary.cancelled}
-            tone="danger"
-            highlightValue
-            icon={<CloseCircleOutlined />}
-            description="Phiên đã bị hủy"
-          />
-        </Col>
-      </Row>
+      <StatGrid columns={4}>
+        <StatCard
+          title="Tổng phiên"
+          value={summary.total}
+          tone="neutral"
+          icon={<FileTextOutlined />}
+          description="Tất cả phiên canh tác trong hệ thống"
+        />
+        <StatCard
+          title="Đang chạy"
+          value={summary.active}
+          tone="ok"
+          highlightValue
+          icon={<CheckCircleOutlined />}
+          description="Phiên chưa kết thúc / chưa hủy"
+        />
+        <StatCard
+          title="Chờ xử lý"
+          value={summary.waiting}
+          tone="warning"
+          highlightValue
+          icon={<ClockCircleOutlined />}
+          description="Phiên chờ cấp phôi / gán khay"
+        />
+        <StatCard
+          title="Đã hủy"
+          value={summary.cancelled}
+          tone="danger"
+          highlightValue
+          icon={<CloseCircleOutlined />}
+          description="Phiên đã bị hủy"
+        />
+      </StatGrid>
 
       <Card styles={{ body: { padding: 0 } }}>
         {/* ── Bộ lọc nhóm ở đầu bảng ─────────────────────────────── */}

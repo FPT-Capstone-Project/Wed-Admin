@@ -194,6 +194,39 @@ textarea {
   border-bottom-color: var(--mcms-border-soft);
 }
 
+/*
+ * ── Bảng gọn trên màn hình laptop (1280–1536px @ scale 125%–150%) ──
+ *
+ * ⚠ Vì sao? Mặc định antd để padding ngang cell là 16px ⇒ bảng 8 cột
+ *   mất 8 × 32 = 256px chỉ cho padding ⇒ cột bên phải bị đẩy ra khỏi
+ *   khung hình (đặc biệt cột "Ngày tạo" và "Hành động").
+ *
+ *   Giảm xuống 12px ⇒ tiết kiệm 8 × 8 = 64px ⇒ bảng vừa khít mà
+ *   **không** cần cuộn ngang.
+ *
+ * ⚠ Chỉ áp dụng dưới 1600px — trên màn rộng giữ padding 16px cho thoáng.
+ */
+@media (max-width: 1599px) {
+  .ant-table-wrapper .ant-table-thead > tr > th,
+  .ant-table-wrapper .ant-table-tbody > tr > td {
+    padding-inline: 12px;
+  }
+
+  /* Header dạng "fixed" bên phải cũng phải khớp padding để không lệch. */
+  .ant-table-wrapper .ant-table-cell-fix-right,
+  .ant-table-wrapper .ant-table-cell-fix-left {
+    padding-inline: 12px;
+  }
+}
+
+/*
+ * Ô chứa nội dung dài (email, tên, địa chỉ) ⇒ **tự cắt bằng ellipsis**
+ * thay vì đẩy bề rộng cột.
+ */
+.ant-table-wrapper .ant-table-cell .ant-typography {
+  min-width: 0;
+}
+
 .ant-statistic-content,
 .summary-card-value strong,
 .environment-card-value strong {
@@ -265,6 +298,40 @@ textarea {
   min-width: 0;
   flex-direction: column;
   background: var(--mcms-surface);
+}
+
+/*
+ * ── Sidebar thu gọn (72px) ────────────────────────────────────────────
+ *
+ * ⚠ Khi thu gọn, chỉ giữ **icon** — ẩn chữ thương hiệu, chữ menu, và
+ *   thẻ "Giám sát trang trại" ⇒ sidebar đúng 72px, không tràn.
+ *
+ * ⚠ Nội dung bị ẩn dùng `display: none` (không dùng `opacity`) để
+ *   không chừa khoảng trống trong layout.
+ *
+ * ⚠ KHÔNG override `padding-inline` của `.ant-menu-item`: antd tự tính
+ *   `calc(50% - iconSize/2)` để **canh giữa icon** trong sidebar 72px.
+ *   Ghi đè sẽ làm icon lệch trái.
+ */
+.mcms-sider.ant-layout-sider-collapsed .mcms-brand {
+  justify-content: center;
+  padding: 16px 0;
+}
+
+.mcms-sider.ant-layout-sider-collapsed .mcms-brand-copy,
+.mcms-sider.ant-layout-sider-collapsed .sidebar-health {
+  display: none;
+}
+
+.mcms-sider.ant-layout-sider-collapsed .mcms-menu .ant-menu-item-group-title {
+  /* Nhóm menu không còn ý nghĩa khi chỉ còn icon ⇒ ẩn đi tiết kiệm
+     chiều cao và tránh dòng trống giữa các icon. */
+  display: none;
+}
+
+/* Menu icon-only của antd: giữ tooltip gốc (tên mục) khi hover. */
+.mcms-sider.ant-layout-sider-collapsed .mcms-menu .ant-menu-item .anticon {
+  font-size: 18px;
 }
 
 .mcms-brand {
@@ -529,6 +596,26 @@ textarea {
 
 .mobile-menu-trigger {
   display: none;
+}
+
+/*
+ * Nút thu gọn / mở rộng sidebar.
+ *
+ * ⚠ Chỉ hiện trên desktop (≥ 992px). Dưới ngưỡng đó sidebar nằm trong
+ *   Drawer ⇒ nút toggle vô nghĩa ⇒ ẩn đi (xem media query 991px).
+ */
+.sidebar-toggle-trigger {
+  display: inline-flex;
+  width: 36px !important;
+  height: 36px !important;
+  flex-shrink: 0;
+  font-size: 17px;
+  color: var(--mcms-text-muted);
+}
+
+.sidebar-toggle-trigger:hover {
+  color: var(--mcms-text);
+  background: var(--mcms-surface-muted);
 }
 
 .header-online-status {
@@ -3411,6 +3498,11 @@ textarea {
 
   .mobile-menu-trigger {
     display: inline-flex;
+  }
+
+  /* Sidebar nằm trong Drawer ⇒ nút toggle thu gọn không áp dụng. */
+  .sidebar-toggle-trigger {
+    display: none;
   }
 
   .mcms-header {

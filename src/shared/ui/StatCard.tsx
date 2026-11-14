@@ -95,11 +95,11 @@ export function StatCard({
             </Typography.Text>
           </Flex>
 
-          <Flex align="baseline" gap="var(--mcms-space-1)">
+          <Flex align="baseline" gap="var(--mcms-space-1)" style={{ minWidth: 0 }}>
             <Typography.Text
               strong
+              className="mcms-stat-card-value"
               style={{
-                fontSize: tokens.components.kpi.valueSize,
                 fontWeight: 700,
                 lineHeight: 1.2,
                 color:
@@ -111,7 +111,7 @@ export function StatCard({
               {value}
             </Typography.Text>
             {suffix && (
-              <Typography.Text type="secondary" style={{ fontSize: 13 }}>
+              <Typography.Text type="secondary" style={{ fontSize: 13, flexShrink: 0 }}>
                 {suffix}
               </Typography.Text>
             )}

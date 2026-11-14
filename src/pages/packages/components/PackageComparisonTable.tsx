@@ -63,11 +63,15 @@ export function PackageComparisonTable({
       title: 'Gói cước',
       key: 'package',
       fixed: 'left',
-      width: 220,
+      width: 150,
       render: (_, rentalPackage) => (
-        <Flex vertical gap={2}>
-          <Typography.Text strong>{rentalPackage.name}</Typography.Text>
-          <Typography.Text type="secondary">{rentalPackage.code}</Typography.Text>
+        <Flex vertical gap={2} style={{ minWidth: 0 }}>
+          <Typography.Text strong ellipsis={{ tooltip: rentalPackage.name }}>
+            {rentalPackage.name}
+          </Typography.Text>
+          <Typography.Text type="secondary" ellipsis={{ tooltip: rentalPackage.code }}>
+            {rentalPackage.code}
+          </Typography.Text>
           {rentalPackage.isPopular && (
             <MetadataBadge label="Phổ biến nhất" />
           )}
@@ -78,7 +82,7 @@ export function PackageComparisonTable({
       title: 'Giá cước',
       dataIndex: 'price',
       key: 'price',
-      width: 150,
+      width: 115,
       render: (price: number) => (
         <Typography.Text strong>{VND_FORMATTER.format(price)}</Typography.Text>
       ),
@@ -87,7 +91,7 @@ export function PackageComparisonTable({
       title: 'Chu kỳ',
       dataIndex: 'billingCycle',
       key: 'billingCycle',
-      width: 130,
+      width: 90,
       render: (cycle: BillingCycle) =>
         statusLabel(BILLING_CYCLE_DICTIONARY, cycle),
     },
@@ -95,7 +99,7 @@ export function PackageComparisonTable({
       title: 'Thời hạn',
       dataIndex: 'durationDays',
       key: 'durationDays',
-      width: 120,
+      width: 90,
       render: (duration: number) => (
         <MetadataBadge label={`${duration} ngày`} title="Thời lượng gói thuê" />
       ),
@@ -104,16 +108,16 @@ export function PackageComparisonTable({
       title: 'Số khay tối đa',
       dataIndex: 'maxTrays',
       key: 'maxTrays',
-      width: 120,
+      width: 95,
       render: (maxTrays: number) => `${maxTrays} khay`,
     },
     {
       title: 'Giống nấm hỗ trợ',
       dataIndex: 'supportedMushrooms',
       key: 'supportedMushrooms',
-      width: 250,
+      width: 105,
       render: (mushrooms: string[]) => (
-        <Flex gap={4} wrap>
+        <Flex gap={4} wrap style={{ maxHeight: 44, overflow: 'hidden' }}>
           {mushrooms.length > 0 ? (
             mushrooms.map((mushroom) => (
               <MetadataBadge key={mushroom} label={mushroom} />
@@ -131,16 +135,16 @@ export function PackageComparisonTable({
       title: 'Dịch vụ đi kèm',
       dataIndex: 'features',
       key: 'features',
-      width: 280,
+      width: 115,
       render: (features: string[]) => (
-        <Space direction="vertical" size={4}>
+        <Space direction="vertical" size={4} style={{ maxHeight: 44, overflow: 'hidden' }}>
           {features.length > 0 ? (
             features.map((feature) => (
               <Flex key={feature} align="flex-start" gap={6}>
                 <CheckCircleOutlined
                   style={{ color: 'var(--mcms-text-muted)', marginTop: 3 }}
                 />
-                <Typography.Text>{feature}</Typography.Text>
+                <Typography.Text ellipsis>{feature}</Typography.Text>
               </Flex>
             ))
           ) : (
@@ -158,23 +162,26 @@ export function PackageComparisonTable({
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      width: 140,
+      width: 120,
       render: (status: PackageStatus) => (
-        <StatusBadge {...presentStatus(PACKAGE_STATUS_DICTIONARY, status)} />
+        <StatusBadge
+          {...presentStatus(PACKAGE_STATUS_DICTIONARY, status)}
+          style={{ whiteSpace: 'nowrap' }}
+        />
       ),
     },
     {
       title: 'Đăng ký',
       dataIndex: 'totalSubscribers',
       key: 'totalSubscribers',
-      width: 100,
+      width: 85,
       render: (total: number) => `${total} khách`,
     },
     {
       title: 'Hành động',
       key: 'actions',
       fixed: 'right',
-      width: canManage ? 190 : 130,
+      width: canManage ? 130 : 80,
       align: 'right',
       render: (_, rentalPackage) =>
         canManage ? (
@@ -257,7 +264,8 @@ export function PackageComparisonTable({
       columns={columns}
       dataSource={packages}
       pagination={false}
-      scrollX={1700}
+      scrollX={1085}
+      tableLayout="fixed"
     />
   )
 }

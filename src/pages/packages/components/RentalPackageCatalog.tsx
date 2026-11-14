@@ -151,7 +151,7 @@ export function RentalPackageCatalog({
     {
       title: 'Tên gói thuê',
       key: 'name',
-      width: 320,
+      width: 250,
       render: (_, record) => {
         // Hiển thị nguyên bản tên gói thuê từ DB (`rental_packages.package_name`).
         const name = record.package_name
@@ -176,7 +176,7 @@ export function RentalPackageCatalog({
     {
       title: 'Thời lượng',
       key: 'duration_days',
-      width: 140,
+      width: 100,
       render: (_, record) => (
         <MetadataBadge label={`${record.duration_days} ngày`} title="Thời lượng gói thuê tính bằng ngày." />
       ),
@@ -184,7 +184,7 @@ export function RentalPackageCatalog({
     {
       title: 'Đơn hàng',
       key: 'order_count',
-      width: 130,
+      width: 100,
       render: (_, record) => {
         const count = record.order_count ?? 0
         return (
@@ -205,7 +205,7 @@ export function RentalPackageCatalog({
     {
       title: 'Đơn giá gói',
       key: 'price',
-      width: 180,
+      width: 150,
       align: 'right',
       render: (_, record) => (
         <Tooltip title={`Đơn giá gói = ${VND.format(record.price)}`}>
@@ -218,7 +218,7 @@ export function RentalPackageCatalog({
     {
       title: 'Trạng thái',
       key: 'status',
-      width: 170,
+      width: 140,
       render: (_, record) => {
         const isActive = record.status === 'ACTIVE'
         const badge = (
@@ -261,7 +261,7 @@ export function RentalPackageCatalog({
           {
             title: 'Hành động',
             key: 'actions',
-            width: 160,
+            width: 120,
             fixed: 'right' as const,
             render: (_: unknown, record: RentalPackage) => {
               /**
@@ -297,11 +297,13 @@ export function RentalPackageCatalog({
               )
 
               return (
-                <Space size={6}>
+                <Space size={4}>
                   <ActionButton
                     icon={<EditOutlined />}
                     label="Sửa"
                     description={`Sửa gói ${record.package_name}`}
+                    variant="text"
+                    hideLabel
                     onClick={() => handleOpenEdit(record)}
                   />
 
@@ -407,8 +409,9 @@ export function RentalPackageCatalog({
           loading={isLoading}
           isFetching={isFetching}
           pagination={false}
-          scrollX={1000}
+          scrollX={960}
           size="small"
+          tableLayout="fixed"
         />
       )}
 

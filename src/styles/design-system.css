@@ -64,6 +64,110 @@
   letter-spacing: 0.04em;
 }
 
+/*
+ * Số liệu KPI — cỡ chữ **co theo bề rộng thẻ**.
+ *
+ * ⚠ Vì sao? Giá trị tiền (vd "1.234.567.000 ₫") rất dài. Với cỡ chữ cố
+ *   định 32px, thẻ hẹp (2 cột trên laptop) ⇒ số bị cắt hoặc tràn ra ngoài.
+ *
+ *   `clamp()` ⇒ co dần theo bề rộng container, nhưng không nhỏ quá 20px
+ *   ⇒ vẫn đọc được trên màn hình 125%–150%.
+ */
+.mcms-stat-card-value {
+  font-size: clamp(20px, 2.2vw, 32px);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+/*
+ * Lưới KPI — **CSS Grid** (không dùng `Row/Col` flex của antd).
+ *
+ * ⚠ Vì sao? `Row/Col` dùng `width: 25%` cứng ⇒ khi vùng nội dung hẹp
+ *   (sidebar mở + laptop 1280px @ scale 125%), số tiền dài (vd
+ *   "Tổng giá trị: 1.234.567.000 ₫") tràn ra ngoài thẻ ⇒ bị cắt chữ.
+ *
+ *   `grid` + `minmax(0, 1fr)` ⇒ mỗi cột co lại **đúng bằng nhau** và
+ *   không vượt container ⇒ không bao giờ tràn ngang.
+ *
+ * ⚠ Breakpoint (CSS px — đã tính cả Windows Scale 125%–150%):
+ *   - `< 640px`   → 1 cột (mobile).
+ *   - `≥ 640px`   → 2 cột (tablet / laptop nhỏ).
+ *   - `≥ 1280px`  → 3 cột (desktop — laptop 1280–1536px).
+ *   - `≥ 1536px`  → 4 cột (desktop rộng / màn 2K).
+ *
+ *   ⇒ Trên laptop 1280–1536px, 4 thẻ KPI nằm gọn mà **không** cần
+ *   cuộn ngang, và số tiền dài vẫn còn chỗ.
+ */
+.mcms-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: var(--mcms-stat-grid-gap, 16px);
+  margin-bottom: var(--mcms-space-5);
+}
+
+@media (min-width: 640px) {
+  .mcms-stat-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .mcms-stat-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1536px) {
+  .mcms-stat-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/*
+ * `data-columns` = số cột **tối đa** trên desktop rộng.
+ *   - `2` → không bao giờ vượt 2 cột.
+ *   - `3` → tối đa 3 cột (bỏ bước 4 cột của mặc định).
+ */
+.mcms-stat-grid[data-columns='2'] {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .mcms-stat-grid[data-columns='2'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.mcms-stat-grid[data-columns='3'] {
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+}
+
+@media (min-width: 640px) {
+  .mcms-stat-grid[data-columns='3'] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1280px) {
+  .mcms-stat-grid[data-columns='3'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* Thẻ KPI không được co lại quá mức ⇒ nội dung bên trong co giãn. */
+.mcms-stat-grid > * {
+  min-width: 0;
+}
+
+/*
+ * Số liệu dài (vd "1.234.567.000 ₫") ⇒ **tự co chữ** thay vì tràn.
+ *
+ * ⚠ `clamp()` ⇒ co theo bề rộng thẻ, nhưng không nhỏ quá 20px (đọc được).
+ */
+.mcms-stat-grid .mcms-stat-card-value {
+  overflow-wrap: anywhere;
+}
+
 /* --- StatusBadge ------------------------------------------------------ */
 
 /*
@@ -102,8 +206,28 @@
 
 /* --- DataTable -------------------------------------------------------- */
 
+/*
+ * ⚠ Bảng **không được tràn** ra ngoài vùng nội dung.
+ *
+ *   `min-width: 0` cho wrapper ⇒ vùng nội dung co lại đúng bề rộng
+ *   khả dụng thay vì bị con (bảng) đẩy rộng ⇒ không xuất hiện thanh
+ *   cuộn ngang ở cấp trang (chỉ cuộn ngang *bên trong* bảng khi thật sự
+ *   cần).
+ */
+.mcms-data-table {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .mcms-data-table .ant-table-wrapper {
+  max-width: 100%;
   border-radius: var(--mcms-radius-lg);
+}
+
+/* Bảng cuộn ngang bên trong ⇒ cuộn êm, không nhảy layout ngoài. */
+.mcms-data-table .ant-table-content,
+.mcms-data-table .ant-table-body {
+  overscroll-behavior-x: contain;
 }
 
 .mcms-data-table .ant-table.ant-table-small .ant-table-thead > tr > th,

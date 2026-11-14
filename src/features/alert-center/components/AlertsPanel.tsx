@@ -23,6 +23,7 @@ import {
   DataTable,
   MetadataBadge,
   StatCard,
+  StatGrid,
 } from '../../../shared/ui'
 import { formatDate } from '../../../shared/utils/date'
 import { AlertItemRow } from '../../alerts/components/AlertItemRow'
@@ -299,7 +300,7 @@ export function AlertsPanel({
         />
       </Flex>
 
-      <Flex gap={12} wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
+      <StatGrid columns={4} style={{ marginBottom: 'var(--mcms-space-4)' }}>
         <StatCard
           title="Tổng cảnh báo"
           value={counts?.total ?? 0}
@@ -327,7 +328,7 @@ export function AlertsPanel({
           highlightValue
           description="Cảnh báo chưa được mở xem"
         />
-      </Flex>
+      </StatGrid>
 
       {isLoading ? (
         <Skeleton active paragraph={{ rows: 8 }} />

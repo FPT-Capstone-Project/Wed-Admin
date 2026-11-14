@@ -251,3 +251,170 @@ export function buildFloorLabelMapFromKeys(
 ): Map<number, string> {
   return buildFloorLabelMap(keys)
 }
+
+/**
+ * **Phạm vi tầng** của một phiên — dùng để lọc bản ghi cảm biến.
+ *
+ * ⚠ **Vì sao cần cả 2 loại định danh?**
+ *
+ *   Bản ghi `cultivation_environment_history` gắn với **`floor_id`** (khoá
+ *   kỹ thuật trong DB — `SERIAL`, đánh số theo thứ tự tạo, **không** theo
+ *   thứ tự tầng). Trong khi đó, khay của phiên (`trays[]`) trả cả
+ *   `floor_id` **và** `floor_number` (số tầng thực tế).
+ *
+ *   ⇒ Ta dựng **cả 2 tập** để lọc:
+ *     - `floorNumbers` — theo **số tầng thực tế** (đây là nguồn chuẩn,
+ *       khớp với mong muốn "phiên #18 ở Tầng 2 ⇒ chỉ lấy Tầng 2").
+ *     - `floorIds` — theo `floor_id` (fallback khi không xác định được
+ *       `floor_number` của bản ghi).
+ */
+export interface SessionFloorScope {
+  /** Tập `floor_id` (khoá kỹ thuật) của các tầng thuộc phiên. */
+  floorIds: ReadonlySet<number>
+  /** Tập `floor_number` (số tầng thực tế) của các tầng thuộc phiên. */
+  floorNumbers: ReadonlySet<number>
+}
+
+/**
+ * Dựng **phạm vi tầng** của phiên từ danh sách khoá tầng (`trays[]`).
+ *
+ * @param keys Danh sách khoá tầng của phiên (từ `toSessionFloorKey`).
+ * @returns Tập `floor_id` + tập `floor_number` (có thể rỗng nếu phiên chưa
+ *   gán khay nào).
+ */
+export function buildSessionFloorScope(
+  keys: readonly SessionFloorKey[],
+): SessionFloorScope {
+  const floorIds = new Set<number>()
+  const floorNumbers = new Set<number>()
+
+  for (const key of keys) {
+    if (key.floorId != null && key.floorId > 0) floorIds.add(key.floorId)
+    if (key.floorNumber != null && key.floorNumber > 0) {
+      floorNumbers.add(key.floorNumber)
+    }
+  }
+
+  return { floorIds, floorNumbers }
+}
+
+/**
+ * Dựng map **`floor_id` → `floor_number`** (số tầng thực tế).
+ *
+ * ⚠ Cần map này để **suy ra số tầng** của 1 bản ghi cảm biến từ `floor_id`
+ *   ⇒ mới lọc được theo "đúng tầng của phiên" (xem
+ *   `filterRecordsBySessionFloorScope`).
+ *
+ * @param sources Danh sách nguồn (BE map `/api/iot/floors` + `trays[]` của
+ *   phiên) — **gộp lại** để luôn map được.
+ */
+export function buildFloorNumberMap(
+  sources: readonly FloorLabelSource[],
+): Map<number, number> {
+  const map = new Map<number, number>()
+  for (const source of sources) {
+    if (source.floorId == null) continue
+    if (source.floorNumber == null) continue
+    if (map.has(source.floorId)) continue
+    map.set(source.floorId, source.floorNumber)
+  }
+  return map
+}
+
+/**
+ * Lọc bản ghi môi trường theo **đúng tầng của phiên**.
+ *
+ * ⚠ **Vì sao cần lọc ở FE?**
+ *
+ *   BE ghi bản ghi vào `cultivation_environment_history` theo
+ *   `(session_id, floor_id, period_start)`. Khi **cùng 1 tầng** được dùng lại
+ *   cho phiên khác (hoặc dữ liệu cũ còn sót), endpoint
+ *   `GET /api/environment-history/sessions/{sessionId}` có thể trả về bản ghi
+ *   của **tầng khác** (vd phiên #18 ở Tầng 2 nhưng vẫn lẫn dòng Tầng 3 từ
+ *   dữ liệu cũ) ⇒ hộp "Chỉ số môi trường mới nhất" hiển thị **sai tầng**.
+ *
+ * ⚠ **Luật lọc (giữ nếu khớp BẤT KỲ điều kiện nào):**
+ *   1. `floor_id` của bản ghi thuộc tập `floor_id` của phiên ⇒ **giữ**
+ *      (đây là điều kiện **mạnh nhất** — phiên được gán tầng này ⇒ dữ liệu
+ *      thuộc tầng này).
+ *   2. Suy ra được `floor_number` (qua map `floor_id` → `floor_number`) và
+ *      `floor_number` thuộc tập `floor_number` của phiên ⇒ **giữ**.
+ *   3. Bản ghi **không** có `floor_id` ⇒ không xác định được tầng ⇒ **loại**
+ *      (an toàn — không hiển thị tầng lạ).
+ *
+ * ⚠ **Vì sao dùng "hoặc" chứ không phải "và"?**
+ *
+ *   `floor_id` là SERIAL ⇒ 1 tầng có thể có `floor_id = 3` nhưng `floor_number
+ *   = 2`. Nếu BE map (`/api/iot/floors`) và `trays[]` của phiên **mâu thuẫn**
+ *   về `floor_number` của cùng 1 `floor_id` ⇒ dùng điều kiện "và" sẽ loại
+ *   nhầm bản ghi **đúng** của phiên ⇒ hộp "chỉ số mới nhất" trống.
+ *   ⇒ Dùng "hoặc" ⇒ giữ được cả 2 trường hợp, vẫn loại được dữ liệu rác của
+ *     tầng khác (tầng khác ⇒ khác cả `floor_id` lẫn `floor_number`).
+ *
+ * @param records Bản ghi gốc (chưa lọc).
+ * @param scope Phạm vi tầng của phiên (`buildSessionFloorScope`).
+ * @param floorNumberByFloorId Map `floor_id` → `floor_number`.
+ */
+export function filterRecordsBySessionFloorScope<T extends { floor_id: number | null }>(
+  records: readonly T[],
+  scope: SessionFloorScope,
+  floorNumberByFloorId: ReadonlyMap<number, number> = new Map(),
+): T[] {
+  // ⚠ Không có thông tin tầng nào ⇒ không lọc (giữ nguyên hành vi cũ).
+  if (scope.floorIds.size === 0 && scope.floorNumbers.size === 0) {
+    return [...records]
+  }
+
+  /*
+   * ⚠ **2 điều kiện độc lập** — giữ nếu khớp **bất kỳ** điều kiện nào:
+   *   1. `floor_id` thuộc tập tầng của phiên.
+   *   2. Suy ra được `floor_number` và nó thuộc tập tầng của phiên.
+   *
+   *   ⇒ Dữ liệu rác của tầng khác (khác cả `floor_id` lẫn `floor_number`) vẫn
+   *     bị loại; còn bản ghi **đúng** của phiên không bị loại nhầm khi BE map
+   *     mâu thuẫn với `trays[]`.
+   */
+  const canCompareByNumber = scope.floorNumbers.size > 0
+
+  return records.filter((record) => {
+    const floorId = record.floor_id
+    if (floorId == null) return false
+
+    if (scope.floorIds.has(floorId)) return true
+
+    const floorNumber = floorNumberByFloorId.get(floorId)
+    if (floorNumber != null && canCompareByNumber) {
+      return scope.floorNumbers.has(floorNumber)
+    }
+
+    return false
+  })
+}
+
+/**
+ * Sắp xếp bản ghi theo thời gian **giảm dần** (mới nhất trước).
+ *
+ * ⚠ Dùng cho hộp "Chỉ số môi trường mới nhất" và dòng đầu tiên của bảng
+ *   "Dữ liệu cảm biến chi tiết" ⇒ 2 nơi **luôn khớp nhau**.
+ *
+ * ⚠ Tie-break theo `floor_id` tăng dần ⇒ thứ tự **ổn định** giữa các lần
+ *   render (không nhảy loạn khi 2 tầng có cùng mốc thời gian).
+ */
+export function sortEnvironmentRecordsByTimeDesc<
+  T extends { period_start?: string | null; floor_id?: number | null },
+>(records: readonly T[]): T[] {
+  return [...records].sort((left, right) => {
+    const leftTime = Date.parse(left.period_start ?? '')
+    const rightTime = Date.parse(right.period_start ?? '')
+    const leftValid = Number.isFinite(leftTime)
+    const rightValid = Number.isFinite(rightTime)
+
+    // Bản ghi không có mốc thời gian ⇒ đẩy xuống cuối.
+    if (leftValid !== rightValid) return leftValid ? -1 : 1
+    if (leftValid && rightValid && leftTime !== rightTime) {
+      return rightTime - leftTime
+    }
+
+    return (left.floor_id ?? 0) - (right.floor_id ?? 0)
+  })
+}

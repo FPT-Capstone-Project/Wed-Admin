@@ -13,9 +13,7 @@ import {
 } from '@ant-design/icons'
 import {
   Card,
-  Col,
   Flex,
-  Row,
   Segmented,
   Skeleton,
   Space,
@@ -40,6 +38,7 @@ import {
   MetadataBadge,
   PageHeader,
   StatCard,
+  StatGrid,
   StatusBadge,
 } from '../../shared/ui'
 import { tones } from '../../app/theme/tokens'
@@ -245,112 +244,96 @@ export function ReportsAnalyticsPage() {
         }
       />
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Doanh thu đã thu"
-            value={formatCompactVND(kpis.totalRevenue)}
-            tone="ok"
-            highlightValue
-            icon={<DollarOutlined />}
-            description="Tổng đơn đã thanh toán (mọi thời điểm)"
-            extra={
-              <StatusBadge
-                tone={revenueDelta >= 0 ? 'ok' : 'danger'}
-                label={`${revenueDelta >= 0 ? '+' : ''}${revenueDelta.toFixed(1)}% so với kỳ trước`}
-              />
-            }
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Tỷ lệ lấp đầy khay"
-            value={`${kpis.occupancyRate.toFixed(1)}%`}
-            tone="info"
-            highlightValue
-            icon={<AppstoreOutlined />}
-            description={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
-            extra={
-              <StatusBadge
-                tone={occupancyDelta >= 0 ? 'ok' : 'danger'}
-                label={`${occupancyDelta >= 0 ? '+' : ''}${occupancyDelta.toFixed(1)} điểm % so với kỳ trước`}
-              />
-            }
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Thương phẩm thu hoạch"
-            value={`${kpis.harvestedGradeAKg.toLocaleString('vi-VN')} kg`}
-            tone="warning"
-            highlightValue
-            icon={<ExperimentOutlined />}
-            description="Khối lượng thu hoạch đạt chuẩn"
-            extra={
-              <StatusBadge
-                tone={yieldDelta >= 0 ? 'ok' : 'danger'}
-                label={`${yieldDelta >= 0 ? '+' : ''}${yieldDelta.toFixed(1)}% so với kỳ trước`}
-              />
-            }
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Tỷ lệ hao hụt"
-            value={`${kpis.spoilageRate.toFixed(1)}%`}
-            tone="danger"
-            highlightValue
-            icon={<PercentageOutlined />}
-            description="Giảm = cải thiện tốt"
-            extra={
-              <StatusBadge
-                tone={spoilageDelta <= 0 ? 'ok' : 'danger'}
-                label={`${spoilageDelta >= 0 ? '+' : ''}${spoilageDelta.toFixed(1)} điểm % so với kỳ trước`}
-              />
-            }
-          />
-        </Col>
-      </Row>
+      <StatGrid columns={4}>
+        <StatCard
+          title="Doanh thu đã thu"
+          value={formatCompactVND(kpis.totalRevenue)}
+          tone="ok"
+          highlightValue
+          icon={<DollarOutlined />}
+          description="Tổng đơn đã thanh toán (mọi thời điểm)"
+          extra={
+            <StatusBadge
+              tone={revenueDelta >= 0 ? 'ok' : 'danger'}
+              label={`${revenueDelta >= 0 ? '+' : ''}${revenueDelta.toFixed(1)}% so với kỳ trước`}
+            />
+          }
+        />
+        <StatCard
+          title="Tỷ lệ lấp đầy khay"
+          value={`${kpis.occupancyRate.toFixed(1)}%`}
+          tone="info"
+          highlightValue
+          icon={<AppstoreOutlined />}
+          description={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
+          extra={
+            <StatusBadge
+              tone={occupancyDelta >= 0 ? 'ok' : 'danger'}
+              label={`${occupancyDelta >= 0 ? '+' : ''}${occupancyDelta.toFixed(1)} điểm % so với kỳ trước`}
+            />
+          }
+        />
+        <StatCard
+          title="Thương phẩm thu hoạch"
+          value={`${kpis.harvestedGradeAKg.toLocaleString('vi-VN')} kg`}
+          tone="warning"
+          highlightValue
+          icon={<ExperimentOutlined />}
+          description="Khối lượng thu hoạch đạt chuẩn"
+          extra={
+            <StatusBadge
+              tone={yieldDelta >= 0 ? 'ok' : 'danger'}
+              label={`${yieldDelta >= 0 ? '+' : ''}${yieldDelta.toFixed(1)}% so với kỳ trước`}
+            />
+          }
+        />
+        <StatCard
+          title="Tỷ lệ hao hụt"
+          value={`${kpis.spoilageRate.toFixed(1)}%`}
+          tone="danger"
+          highlightValue
+          icon={<PercentageOutlined />}
+          description="Giảm = cải thiện tốt"
+          extra={
+            <StatusBadge
+              tone={spoilageDelta <= 0 ? 'ok' : 'danger'}
+              label={`${spoilageDelta >= 0 ? '+' : ''}${spoilageDelta.toFixed(1)} điểm % so với kỳ trước`}
+            />
+          }
+        />
+      </StatGrid>
 
       {/* Cơ cấu trang trại — số liệu thật */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Tổng số phòng"
-            value={analytics.totalRooms}
-            tone="neutral"
-            icon={<DatabaseOutlined />}
-            description={`${analytics.activeRooms} phòng đang hoạt động`}
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Tổng số tầng"
-            value={analytics.totalFloors}
-            tone="neutral"
-            icon={<AppstoreOutlined />}
-            description="Từ /api/iot/floors"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Master đang online"
-            value={`${analytics.devices.online}/${analytics.devices.total}`}
-            tone={analytics.devices.offline > 0 ? 'warning' : 'ok'}
-            icon={<TeamOutlined />}
-            description={`${analytics.devices.offline} master đang offline`}
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Khay theo trạng thái"
-            value={`${analytics.trays.available}/${analytics.trays.total}`}
-            tone="info"
-            icon={<AppstoreOutlined />}
-            description={`${analytics.trays.occupied} đang thuê · ${analytics.trays.maintenance} bảo trì`}
-          />
-        </Col>
-      </Row>
+      <StatGrid columns={4}>
+        <StatCard
+          title="Tổng số phòng"
+          value={analytics.totalRooms}
+          tone="neutral"
+          icon={<DatabaseOutlined />}
+          description={`${analytics.activeRooms} phòng đang hoạt động`}
+        />
+        <StatCard
+          title="Tổng số tầng"
+          value={analytics.totalFloors}
+          tone="neutral"
+          icon={<AppstoreOutlined />}
+          description="Từ /api/iot/floors"
+        />
+        <StatCard
+          title="Master đang online"
+          value={`${analytics.devices.online}/${analytics.devices.total}`}
+          tone={analytics.devices.offline > 0 ? 'warning' : 'ok'}
+          icon={<TeamOutlined />}
+          description={`${analytics.devices.offline} master đang offline`}
+        />
+        <StatCard
+          title="Khay theo trạng thái"
+          value={`${analytics.trays.available}/${analytics.trays.total}`}
+          tone="info"
+          icon={<AppstoreOutlined />}
+          description={`${analytics.trays.occupied} đang thuê · ${analytics.trays.maintenance} bảo trì`}
+        />
+      </StatGrid>
 
       {/* COMPARATIVE FILTER BAR */}
       <Card
@@ -389,71 +372,63 @@ export function ReportsAnalyticsPage() {
       </Card>
 
       {/* KPI VARIANCE CARDS */}
-      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
-        <Col xs={24} md={12} xl={6}>
-          <KpiVarianceCard
-            icon={<DollarOutlined />}
-            iconBg={tones.ok.bg}
-            iconColor={tones.ok.solid}
-            title="Doanh thu đã thu"
-            currentLabel="Kỳ này"
-            currentValue={formatCompactVND(kpis.totalRevenue)}
-            previousLabel="Kỳ trước"
-            previousValue={formatCompactVND(kpis.previousTotalRevenue)}
-            deltaPercent={revenueDelta}
-            higherIsBetter
-            subtitle="Tổng đơn đã thanh toán"
-          />
-        </Col>
+      <StatGrid columns={4}>
+        <KpiVarianceCard
+          icon={<DollarOutlined />}
+          iconBg={tones.ok.bg}
+          iconColor={tones.ok.solid}
+          title="Doanh thu đã thu"
+          currentLabel="Kỳ này"
+          currentValue={formatCompactVND(kpis.totalRevenue)}
+          previousLabel="Kỳ trước"
+          previousValue={formatCompactVND(kpis.previousTotalRevenue)}
+          deltaPercent={revenueDelta}
+          higherIsBetter
+          subtitle="Tổng đơn đã thanh toán"
+        />
 
-        <Col xs={24} md={12} xl={6}>
-          <KpiVarianceCard
-            icon={<AppstoreOutlined />}
-            iconBg={tones.info.bg}
-            iconColor={tones.info.solid}
-            title="Tỷ lệ lấp đầy khay"
-            currentLabel="Kỳ này"
-            currentValue={`${kpis.occupancyRate.toFixed(1)}%`}
-            previousLabel="Kỳ trước"
-            previousValue={`${kpis.previousOccupancyRate.toFixed(1)}%`}
-            deltaPercent={occupancyDelta}
-            higherIsBetter
-            subtitle={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
-          />
-        </Col>
+        <KpiVarianceCard
+          icon={<AppstoreOutlined />}
+          iconBg={tones.info.bg}
+          iconColor={tones.info.solid}
+          title="Tỷ lệ lấp đầy khay"
+          currentLabel="Kỳ này"
+          currentValue={`${kpis.occupancyRate.toFixed(1)}%`}
+          previousLabel="Kỳ trước"
+          previousValue={`${kpis.previousOccupancyRate.toFixed(1)}%`}
+          deltaPercent={occupancyDelta}
+          higherIsBetter
+          subtitle={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
+        />
 
-        <Col xs={24} md={12} xl={6}>
-          <KpiVarianceCard
-            icon={<ExperimentOutlined />}
-            iconBg={tones.warning.bg}
-            iconColor={tones.warning.solid}
-            title="Thương phẩm thu hoạch"
-            currentLabel="Kỳ này"
-            currentValue={`${kpis.harvestedGradeAKg.toLocaleString('vi-VN')} kg`}
-            previousLabel="Kỳ trước"
-            previousValue={`${kpis.previousHarvestedGradeAKg.toLocaleString('vi-VN')} kg`}
-            deltaPercent={yieldDelta}
-            higherIsBetter
-            subtitle="Khối lượng thu hoạch đạt chuẩn"
-          />
-        </Col>
+        <KpiVarianceCard
+          icon={<ExperimentOutlined />}
+          iconBg={tones.warning.bg}
+          iconColor={tones.warning.solid}
+          title="Thương phẩm thu hoạch"
+          currentLabel="Kỳ này"
+          currentValue={`${kpis.harvestedGradeAKg.toLocaleString('vi-VN')} kg`}
+          previousLabel="Kỳ trước"
+          previousValue={`${kpis.previousHarvestedGradeAKg.toLocaleString('vi-VN')} kg`}
+          deltaPercent={yieldDelta}
+          higherIsBetter
+          subtitle="Khối lượng thu hoạch đạt chuẩn"
+        />
 
-        <Col xs={24} md={12} xl={6}>
-          <KpiVarianceCard
-            icon={<PercentageOutlined />}
-            iconBg={tones.danger.bg}
-            iconColor={tones.danger.solid}
-            title="Tỷ lệ phôi bất thường"
-            currentLabel="Kỳ này"
-            currentValue={`${kpis.spoilageRate.toFixed(2)}%`}
-            previousLabel="Kỳ trước"
-            previousValue={`${kpis.previousSpoilageRate.toFixed(2)}%`}
-            deltaPercent={spoilageDelta}
-            higherIsBetter={false}
-            subtitle="Giảm = cải thiện tốt"
-          />
-        </Col>
-      </Row>
+        <KpiVarianceCard
+          icon={<PercentageOutlined />}
+          iconBg={tones.danger.bg}
+          iconColor={tones.danger.solid}
+          title="Tỷ lệ phôi bất thường"
+          currentLabel="Kỳ này"
+          currentValue={`${kpis.spoilageRate.toFixed(2)}%`}
+          previousLabel="Kỳ trước"
+          previousValue={`${kpis.previousSpoilageRate.toFixed(2)}%`}
+          deltaPercent={spoilageDelta}
+          higherIsBetter={false}
+          subtitle="Giảm = cải thiện tốt"
+        />
+      </StatGrid>
 
       {/* REVENUE COMPARATIVE CHART */}
       <Card

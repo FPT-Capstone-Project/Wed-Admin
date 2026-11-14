@@ -21,9 +21,8 @@ import { formatMeasurement } from '../../../shared/utils/measurement-format'
 import { SESSION_GROWTH_STAGE_DICTIONARY } from '../../../shared/i18n/status/session'
 import { statusLabel } from '../../../shared/i18n/status/registry'
 import {
-  useLatestSessionEnvironment,
+  useNewestSessionEnvironmentRecords,
   useSessionEnvironmentChart,
-  useSessionEnvironmentHistory,
 } from '../hooks/useSessionEnvironmentHistory'
 import {
   useSessionClimateThresholds,
@@ -36,6 +35,8 @@ import type { SessionEnvironmentRecord } from '../types/session-environment-hist
 import type { CultivationSessionStatus } from '../types/session.types'
 import {
   buildFloorLabelMap,
+  buildFloorNumberMap,
+  buildSessionFloorScope,
   collectMappedFloorIds,
   filterSessionFloorMappings,
   type SessionFloorKey,
@@ -232,23 +233,69 @@ export function SessionIoTHistoryTab({
     return labels
   }, [chartFloorIds, floorMappings, floorKeys])
 
+  /**
+   * ⚠ **Phạm vi tầng của phiên** — nguồn chuẩn để lọc bản ghi cảm biến.
+   *
+   *   Gồm **cả** `floor_id` (khoá kỹ thuật) **và** `floor_number` (số tầng
+   *   thực tế) của các khay được gán cho phiên.
+   *
+   *   ⇒ Mọi bản ghi cảm biến của **tầng khác** (dữ liệu cũ còn sót) sẽ bị
+   *   loại khỏi biểu đồ, hộp "Chỉ số môi trường mới nhất" và bảng chi tiết.
+   */
+  const floorScope = useMemo(
+    () => buildSessionFloorScope(floorKeys),
+    [floorKeys],
+  )
+
+  /**
+   * ⚠ **Map `floor_id` → `floor_number`** — dùng để **suy ra số tầng thực tế**
+   *   của 1 bản ghi cảm biến từ `floor_id` ⇒ mới lọc được theo "đúng tầng".
+   *
+   *   Gộp **cả** BE map (`/api/iot/floors`) lẫn tầng của các khay được gán
+   *   (`floorKeys`) ⇒ luôn map được.
+   */
+  const floorNumberByFloorId = useMemo(
+    () =>
+      buildFloorNumberMap([
+        ...(floorMappings ?? []),
+        ...floorKeys,
+      ]),
+    [floorMappings, floorKeys],
+  )
+
   // ─── Cảm biến (biểu đồ) ────────────────────────────────────────────────
-  /*
-   * ⚠ **Thứ tự gọi API** — `latest` phải **đi trước** `chart` vì mốc neo của
-   *   biểu đồ (cho phiên đã kết thúc) lấy từ bản ghi mới nhất.
+  /**
+   * ⚠ **Nguồn dữ liệu DUY NHẤT** cho hộp "Chỉ số môi trường mới nhất" **và**
+   *   bảng "Dữ liệu cảm biến chi tiết".
    *
-   *   ⇒ Với phiên **đã kết thúc**, ta **chờ** `latest` resolve rồi mới bật
-   *     `chart` ⇒ không phải fetch 2 lần (lần đầu neo nhầm, lần 2 neo đúng).
+   *   Lý do: BE sắp xếp `ORDER BY period_start ASC` ⇒ trang 1 là bản ghi **CŨ
+   *   NHẤT**; hộp "chỉ số mới nhất" lại lấy từ endpoint `/latest` (bản ghi mới
+   *   nhất **của mọi tầng**) ⇒ 2 nơi này có thể lệch nhau (hộp báo Tầng 3
+   *   trong khi bảng đang ở Tầng 2).
    *
-   *   Với phiên **đang chạy**, mốc neo là `now` ⇒ không cần chờ ⇒ `chart` bật
-   *   luôn ⇒ không bị chậm.
+   *   ⇒ Ta lấy **1 lô** bản ghi mới nhất → **lọc** theo đúng tầng của phiên →
+   *     **sort giảm dần** ⇒ dùng chung cho cả hộp (`records[0]`) và bảng ⇒
+   *     **luôn khớp nhau** (khớp cả biểu đồ).
    */
   const {
-    data: latestRecord,
-    isPending: latestPending,
-  } = useLatestSessionEnvironment(sessionId, {
-    enabled: view === 'sensors',
-  })
+    data: newestRecords,
+    isLoading: newestLoading,
+    isPending: newestPending,
+    isError: newestFailed,
+    error: newestError,
+    refetch: refetchNewest,
+  } = useNewestSessionEnvironmentRecords(
+    sessionId,
+    {
+      floorIds: floorScope.floorIds,
+      floorNumbers: floorScope.floorNumbers,
+      floorNumberByFloorId,
+    },
+    { enabled: view === 'sensors' },
+  )
+
+  /** Bản ghi mới nhất **của đúng tầng của phiên** — dùng cho hộp chỉ số. */
+  const latestRecord = newestRecords?.[0] ?? null
 
   /**
    * ⚠ **Mốc neo của biểu đồ** — phiên đã kết thúc thì lùi về cuối phiên.
@@ -267,12 +314,12 @@ export function SessionIoTHistoryTab({
   )
 
   /**
-   * ⚠ Phiên đã kết thúc ⇒ chờ `latest` xong rồi mới vẽ biểu đồ.
+   * ⚠ Phiên đã kết thúc ⇒ chờ `newest` xong rồi mới vẽ biểu đồ.
    *
    *   ⇒ trục thời gian luôn khớp đúng vùng dữ liệu thực tế, chỉ 1 request.
    */
   const chartReady =
-    view !== 'sensors' || !sessionEnded || !latestPending
+    view !== 'sensors' || !sessionEnded || !newestPending
 
   const {
     data: chartPoints,
@@ -286,23 +333,17 @@ export function SessionIoTHistoryTab({
     timeRange,
     floorLabels,
     chartAnchorEnd,
+    {
+      floorIds: floorScope.floorIds,
+      floorNumbers: floorScope.floorNumbers,
+      floorNumberByFloorId,
+    },
     { enabled: view === 'sensors' && chartReady },
   )
 
-  // ─── Cảm biến (bảng — phân trang server-side) ──────────────────────────
+  // ─── Cảm biến (bảng — phân trang client-side trên lô bản ghi đã lọc) ──
   const [sensorPage, setSensorPage] = useState(1)
   const [sensorPageSize, setSensorPageSize] = useState(20)
-  const {
-    data: sensorPageData,
-    isLoading: sensorLoading,
-    isError: sensorFailed,
-    error: sensorError,
-    refetch: refetchSensors,
-  } = useSessionEnvironmentHistory(
-    sessionId,
-    { page: sensorPage, pageSize: sensorPageSize },
-    { enabled: view === 'sensors' },
-  )
 
   // ─── Lệnh thiết bị (nhật ký theo tầng — lọc client-side) ─────────────
   const sessionWindow = useMemo(() => {
@@ -378,9 +419,16 @@ export function SessionIoTHistoryTab({
     },
   )
 
+  /**
+   * ⚠ **Bản ghi cho bảng "Dữ liệu cảm biến chi tiết"**.
+   *
+   *   ⚠ Đã **lọc** theo đúng tầng của phiên (loại bản ghi của tầng khác) và
+   *     **sort giảm dần** theo thời gian ⇒ dòng đầu tiên là bản ghi **MỚI
+   *     NHẤT** ⇒ khớp với hộp "Chỉ số môi trường mới nhất" và biểu đồ.
+   */
   const records = useMemo(
-    () => sensorPageData?.records ?? [],
-    [sensorPageData?.records],
+    () => newestRecords ?? [],
+    [newestRecords],
   )
 
   /**
@@ -528,44 +576,62 @@ export function SessionIoTHistoryTab({
                 {
                   key: 'floor',
                   label: 'Tầng',
+                  /*
+                   * ⚠ Dùng map `floorLabels` để hiện **số tầng thực tế**
+                   *   ("Tầng 2") thay vì `floor_id` kỹ thuật ("Tầng 3") ⇒
+                   *   khớp đúng với thẻ tầng ở tab "Tổng quan".
+                   */
                   children:
                     latestRecord.floor_id != null
-                      ? `Tầng ${latestRecord.floor_id}`
+                      ? (floorLabels.get(latestRecord.floor_id) ??
+                        `Tầng ${latestRecord.floor_id}`)
                       : '—',
                 },
                 {
                   key: 'temp',
                   label: 'Nhiệt độ TB',
+                  /*
+                   * ⚠ `whiteSpace: 'nowrap'` ⇒ đơn vị "°C" / "%RH" không bị
+                   *   rớt xuống dòng (chữ "C" / "H" nằm lọt dưới).
+                   */
                   children:
-                    latestRecord.temperature_avg != null
-                      ? `${formatMeasurement(latestRecord.temperature_avg)}°C`
-                      : '—',
+                    latestRecord.temperature_avg != null ? (
+                      <Typography.Text style={{ whiteSpace: 'nowrap' }}>
+                        {formatMeasurement(latestRecord.temperature_avg)}°C
+                      </Typography.Text>
+                    ) : (
+                      '—'
+                    ),
                 },
                 {
                   key: 'humidity',
                   label: 'Độ ẩm TB',
                   children:
-                    latestRecord.humidity_avg != null
-                      ? `${formatMeasurement(latestRecord.humidity_avg)}%RH`
-                      : '—',
+                    latestRecord.humidity_avg != null ? (
+                      <Typography.Text style={{ whiteSpace: 'nowrap' }}>
+                        {formatMeasurement(latestRecord.humidity_avg)}%RH
+                      </Typography.Text>
+                    ) : (
+                      '—'
+                    ),
                 },
               ]}
             />
           )}
 
-          {sensorFailed && (
+          {newestFailed && (
             <Alert
               type="warning"
               showIcon
               message="Không tải được bảng dữ liệu cảm biến."
-              description={sensorError?.message}
+              description={newestError?.message}
             />
           )}
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Bảng hiển thị tối đa {MAX_SENSOR_TABLE_RECORDS} bản ghi mới nhất.
-            Mỗi bản ghi là trung bình của các lần đo hợp lệ trong 10 phút tại
-            tầng đó. Để theo dõi toàn bộ chu kỳ, vui lòng quan sát biểu đồ phía
-            trên.
+            Bảng hiển thị tối đa {MAX_SENSOR_TABLE_RECORDS} bản ghi mới nhất
+            (đã lọc theo đúng tầng của phiên). Mỗi bản ghi là trung bình của các
+            lần đo hợp lệ trong 10 phút tại tầng đó. Để theo dõi toàn bộ chu
+            kỳ, vui lòng quan sát biểu đồ phía trên.
           </Typography.Text>
           {/*
             ⚠ **Phiên đã kết thúc** — biểu đồ neo về cuối phiên thay vì `now`
@@ -589,34 +655,23 @@ export function SessionIoTHistoryTab({
             description="Nhiệt độ và độ ẩm trung bình theo tầng, đã gộp sẵn theo nhóm 10 phút."
             columns={recordColumns}
             dataSource={records}
-            loading={sensorLoading}
+            loading={newestLoading}
             pagination={{
               current: sensorPage,
               pageSize: sensorPageSize,
               /*
-               * ⚠ **Giới hạn cứng 10 trang** (~100–200 bản ghi mới nhất).
+               * ⚠ **Phân trang client-side** trên lô bản ghi đã lọc theo tầng.
+               *
+               *   ⇒ Dòng đầu tiên của trang 1 **luôn là** bản ghi mới nhất ⇒
+               *     khớp với hộp "Chỉ số môi trường mới nhất".
                */
-              total: Math.min(
-                sensorPageData?.pagination.total ?? records.length,
-                MAX_SENSOR_TABLE_RECORDS,
-              ),
+              total: records.length,
               showSizeChanger: true,
               pageSizeOptions: ['10', '20', '50', '100'],
               showTotal: (total) => `Tổng ${total} bản ghi`,
               onChange: (nextPage, nextPageSize) => {
-                /*
-                 * ⚠ Chặn bước sang trang > 10 — bảng chỉ dẫn tới 200 bản ghi
-                 *   mới nhất.
-                 */
-                const maxPage = Math.max(
-                  1,
-                  Math.ceil(MAX_SENSOR_TABLE_RECORDS / nextPageSize),
-                )
                 setSensorPage(
-                  Math.min(
-                    nextPageSize !== sensorPageSize ? 1 : nextPage,
-                    maxPage,
-                  ),
+                  nextPageSize !== sensorPageSize ? 1 : nextPage,
                 )
                 setSensorPageSize(nextPageSize)
               },
@@ -680,11 +735,11 @@ export function SessionIoTHistoryTab({
           type="text"
           size="small"
           icon={<ReloadOutlined />}
-          loading={chartLoading || sensorLoading || deviceLoading}
+          loading={chartLoading || newestLoading || deviceLoading}
           onClick={() => {
             if (view === 'sensors') {
               void refetchChart()
-              void refetchSensors()
+              void refetchNewest()
             } else {
               void refetchDevices()
             }

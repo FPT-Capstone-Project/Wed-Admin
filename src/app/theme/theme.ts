@@ -11,6 +11,7 @@ import {
   typography,
   gridBreakpoint,
 } from './tokens'
+import { SIDEBAR_COLLAPSED_WIDTH } from '../layouts/store/sidebar.store'
 
 /**
  * `boxShadowCard` **có thật** trong antd v6 (xem `theme/util/alias.js` → `boxShadowCard`,
@@ -146,6 +147,21 @@ export const mcmsTheme: McmsThemeConfig = {
       itemHoverColor: componentTokens.menu.sidebarText,
       groupTitleColor: componentTokens.menu.sidebarMuted,
       colorBgContainer: componentTokens.menu.sidebarBg,
+      /**
+       * Bề rộng menu khi sidebar thu gọn — **72px**.
+       *
+       * ⚠ Mặc định của antd = `controlHeightLG * 2` ≈ 80px ⇒ lệch với
+       *   `collapsedWidth` của `Sider` (72px) ⇒ icon bị lệch trái.
+       *   Ép khớp cả hai để icon luôn **canh giữa** sidebar.
+       */
+      collapsedWidth: SIDEBAR_COLLAPSED_WIDTH,
+      /**
+       * Cỡ icon khi thu gọn — 18px (khớp icon menu mở rộng).
+       *
+       * ⚠ antd dùng token này để tính `padding-inline` canh giữa icon ⇒
+       *   phải khớp với CSS `.mcms-menu .ant-menu-item .anticon` (18px).
+       */
+      collapsedIconSize: 18,
     },
     Button: {
       colorPrimary: componentTokens.button.background,
@@ -174,7 +190,20 @@ export const mcmsTheme: McmsThemeConfig = {
       rowHoverBg: surface.surfaceHover,
       /** Mật độ công nghiệp — padding ô gọn. */
       cellPaddingBlock: 8,
+      /**
+       * Padding ngang ô = **12px** cho **mọi** cỡ bảng.
+       *
+       * ⚠ Mặc định của antd: `cellPaddingInline` = 16px, còn `cellPaddingInlineSM/MD`
+       *   = 8px ⇒ cùng một bảng nhưng 3 cỡ khác nhau có padding khác nhau
+       *   ⇒ không nhất quán và khó kiểm soát bề rộng tổng thể.
+       *
+       *   Ép tất cả về 12px ⇒ bảng 8 cột tiết kiệm 8 × 8 = 64px so với
+       *   mặc định ⇒ vừa khít trên laptop 1280–1536px (Windows scale
+       *   125%–150%) mà không cần thanh cuộn ngang.
+       */
       cellPaddingInline: 12,
+      cellPaddingInlineMD: 12,
+      cellPaddingInlineSM: 12,
     },
     Input: {
       colorBgContainer: componentTokens.input.background,

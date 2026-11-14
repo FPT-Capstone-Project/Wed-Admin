@@ -14,12 +14,10 @@ import {
   ShoppingCartOutlined,
 } from '@ant-design/icons'
 import {
-  Col,
   Descriptions,
   Drawer,
   Flex,
   Input,
-  Row,
   Segmented,
   Skeleton,
   Space,
@@ -43,6 +41,7 @@ import {
   EmptyState,
   PageHeader,
   StatCard,
+  StatGrid,
   StatusBadge,
   MetadataBadge,
   UserAvatar,
@@ -174,7 +173,7 @@ export function OrderManagementPage() {
       dataIndex: 'orderCode',
       key: 'orderCode',
       className: 'mcms-session-mono',
-      width: 150,
+      width: 130,
       render: (code: string) => (
         <Typography.Text code style={{ fontSize: 13 }}>
           {code}
@@ -184,13 +183,19 @@ export function OrderManagementPage() {
     {
       title: 'Khách hàng',
       key: 'tenant',
-      width: 230,
+      width: 190,
       render: (_, record) => (
         <Flex align="center" gap={8}>
           <UserAvatar name={record.customerName} size={32} />
-          <Flex vertical gap={0}>
-            <Typography.Text strong>{record.customerName}</Typography.Text>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+          <Flex vertical gap={0} style={{ minWidth: 0 }}>
+            <Typography.Text strong ellipsis={{ tooltip: record.customerName }}>
+              {record.customerName}
+            </Typography.Text>
+            <Typography.Text
+              type="secondary"
+              style={{ fontSize: 12 }}
+              ellipsis={{ tooltip: record.customerEmail }}
+            >
               {record.customerEmail}
             </Typography.Text>
           </Flex>
@@ -200,11 +205,17 @@ export function OrderManagementPage() {
     {
       title: 'Gói / Dịch vụ thuê',
       key: 'package',
-      width: 210,
+      width: 170,
       render: (_, record) => (
-        <Flex vertical gap={4}>
-          <Typography.Text>{record.packageName}</Typography.Text>
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
+        <Flex vertical gap={4} style={{ minWidth: 0 }}>
+          <Typography.Text ellipsis={{ tooltip: record.packageName }}>
+            {record.packageName}
+          </Typography.Text>
+          <Typography.Text
+            type="secondary"
+            style={{ fontSize: 12 }}
+            ellipsis={{ tooltip: record.mushroomName }}
+          >
             {record.mushroomName}
           </Typography.Text>
           {record.quantity != null && (
@@ -221,7 +232,7 @@ export function OrderManagementPage() {
     {
       title: 'Phiên canh tác',
       key: 'session',
-      width: 180,
+      width: 150,
       render: (_, record) =>
         record.sessionStatus ? (
           <Flex vertical gap={4}>
@@ -241,7 +252,7 @@ export function OrderManagementPage() {
     {
       title: 'Thanh toán',
       key: 'payment',
-      width: 150,
+      width: 140,
       render: (_, record) => {
         // ⚠ Tra qua từ điển trung tâm ⇒ **không bao giờ** lộ `payment_status`
         //   thô của BE (vd `REFUND_PENDING`) khi BE trả giá trị lạ.
@@ -270,7 +281,7 @@ export function OrderManagementPage() {
       title: 'Trạng thái',
       dataIndex: 'status',
       key: 'status',
-      width: 140,
+      width: 120,
       render: (status: AdminOrderStatus, record) => {
         const order = presentStatus(ORDER_STATUS_DICTIONARY, status)
         const badge = <StatusBadge tone={order.tone} label={order.label} />
@@ -290,7 +301,7 @@ export function OrderManagementPage() {
       dataIndex: 'createdAt',
       key: 'createdAt',
       className: 'mcms-session-mono',
-      width: 140,
+      width: 120,
       render: (date: string | null) => (
         <Typography.Text type="secondary" style={{ fontSize: 12 }}>
           {formatDate(date)}
@@ -300,7 +311,8 @@ export function OrderManagementPage() {
     {
       title: 'Hành động',
       key: 'actions',
-      width: 130,
+      width: 70,
+      align: 'right',
       fixed: 'right',
       render: (_, record) => (
         <ActionButton
@@ -309,6 +321,7 @@ export function OrderManagementPage() {
           description={`Xem chi tiết đơn ${record.orderCode}`}
           variant="text"
           size="small"
+          hideLabel
           onClick={() => setDetailOrder(record)}
         />
       ),
@@ -361,44 +374,36 @@ export function OrderManagementPage() {
 
       {sourceErrors.map(item => <div key={item.source} style={{ marginBottom: 12 }}><LoadErrorAlert error={item.error} resource={item.source} onRetry={refetch} /></div>)}
 
-      <Row gutter={[16, 16]} style={{ marginBottom: 'var(--mcms-space-5)' }}>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Tổng đơn"
-            value={summary.total}
-            tone="neutral"
-            icon={<ShoppingCartOutlined />}
-            description="Tất cả đơn từ ứng dụng khách hàng"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Chờ xử lý"
-            value={summary.pending}
-            tone="warning"
-            highlightValue
-            description="Đơn chờ khởi tạo phiên canh tác"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Đang xử lý"
-            value={summary.processing}
-            tone="ok"
-            highlightValue
-            description="Phiên đang trong quá trình canh tác"
-          />
-        </Col>
-        <Col xs={12} lg={6}>
-          <StatCard
-            title="Tổng giá trị"
-            value={formatVND(summary.totalAmount)}
-            tone="info"
-            icon={<CreditCardOutlined />}
-            description="Tổng tiền của các đơn đã tạo"
-          />
-        </Col>
-      </Row>
+      <StatGrid columns={4}>
+        <StatCard
+          title="Tổng đơn"
+          value={summary.total}
+          tone="neutral"
+          icon={<ShoppingCartOutlined />}
+          description="Tất cả đơn từ ứng dụng khách hàng"
+        />
+        <StatCard
+          title="Chờ xử lý"
+          value={summary.pending}
+          tone="warning"
+          highlightValue
+          description="Đơn chờ khởi tạo phiên canh tác"
+        />
+        <StatCard
+          title="Đang xử lý"
+          value={summary.processing}
+          tone="ok"
+          highlightValue
+          description="Phiên đang trong quá trình canh tác"
+        />
+        <StatCard
+          title="Tổng giá trị"
+          value={formatVND(summary.totalAmount)}
+          tone="info"
+          icon={<CreditCardOutlined />}
+          description="Tổng tiền của các đơn đã tạo"
+        />
+      </StatGrid>
 
       <Flex gap={12} wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
         <Input
@@ -448,7 +453,8 @@ export function OrderManagementPage() {
           showSizeChanger: true,
           showTotal: (total) => `${total} đơn`,
         }}
-        scrollX={1250}
+        scrollX={1090}
+        tableLayout="fixed"
       />
 
       {/* ── Drawer chi tiết đơn (read-only) ───────────────────────────── */}

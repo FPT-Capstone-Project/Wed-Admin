@@ -1,4 +1,5 @@
 import { DataTable } from '../../../shared/ui/DataTable'
+import { AuditOutlined } from '@ant-design/icons'
 import {
   HARVEST_METHOD_DICTIONARY,
   HARVEST_QUALITY_DICTIONARY,
@@ -12,8 +13,8 @@ import {
 import { presentStatus, selectOptions, statusLabel } from '../../../shared/i18n/status/registry'
 import { calculateHarvestMetrics } from '../api/harvest-metrics'
 import { Suspense, useMemo, useState } from 'react'
-import { Button, Descriptions, Col, DatePicker, Flex, InputNumber, Row, Select, Tooltip, Typography } from 'antd'
-import { PageHeader, StatusBadge, StatCard } from '../../../shared/ui'
+import { Descriptions, DatePicker, Flex, InputNumber, Select, Tooltip, Typography } from 'antd'
+import { PageHeader, StatCard, StatGrid, StatusBadge, ActionButton } from '../../../shared/ui'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { auditDate, auditWeight } from '../../../shared/ui/audit-format'
 import { useMushroomTypes } from '../../packages/hooks/useMushroomTypes'
@@ -61,12 +62,12 @@ export function HarvestManagementPage() {
     </Flex>
     {mushrooms.isError && <QueryFeedback query={mushrooms} />}
     <QueryFeedback query={query} />
-    {!query.isError && <><Row gutter={[12, 12]} style={{ marginBottom: 16 }}>
-      <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Tổng sản lượng thu hoạch (kg)" value={metrics?.totalWeightKg == null ? '—' : metrics.totalWeightKg.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /></Col>
-      <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Tỷ lệ thương phẩm A/B (%)" value={metrics?.gradeABPercent == null ? '—' : metrics.gradeABPercent.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} /></Col>
-      <Col xs={24} md={8}><StatCard loading={query.isLoading} title="Đợt thu hoạch đang chờ giao" value={metrics?.pendingHandover ?? '—'} /></Col>
-    </Row>
-    <DataTable<Harvest> size="small" rowKey="harvest_id" dataSource={rows} loading={query.isLoading} isFetching={query.isFetching} scrollX={1050} pagination={{ hideOnSinglePage: false, pageSize: 20, showSizeChanger: true }} emptyTitle="Chưa có đợt thu hoạch phù hợp" emptyDescription="Thử thay đổi bộ lọc để xem các đợt thu hoạch khác." expandable={{ expandedRowRender: h => <Descriptions size="small" column={{ xs: 1, md: 2 }} items={[
+    {!query.isError && <><StatGrid columns={3} style={{ marginBottom: 16 }}>
+      <StatCard loading={query.isLoading} title="Tổng sản lượng thu hoạch (kg)" value={metrics?.totalWeightKg == null ? '—' : metrics.totalWeightKg.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
+      <StatCard loading={query.isLoading} title="Tỷ lệ thương phẩm A/B (%)" value={metrics?.gradeABPercent == null ? '—' : metrics.gradeABPercent.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
+      <StatCard loading={query.isLoading} title="Đợt thu hoạch đang chờ giao" value={metrics?.pendingHandover ?? '—'} />
+    </StatGrid>
+    <DataTable<Harvest> size="small" rowKey="harvest_id" dataSource={rows} loading={query.isLoading} isFetching={query.isFetching} scrollX={1000} tableLayout="fixed" pagination={{ hideOnSinglePage: false, pageSize: 20, showSizeChanger: true }} emptyTitle="Chưa có đợt thu hoạch phù hợp" emptyDescription="Thử thay đổi bộ lọc để xem các đợt thu hoạch khác." expandable={{ expandedRowRender: h => <Descriptions size="small" column={{ xs: 1, md: 2 }} items={[
         { key: 'session', label: 'Trạng thái phiên', children: <StatusBadge {...presentStatus(SESSION_STATUS_DICTIONARY, h.cultivation_status)} title="Trạng thái phiên canh tác" /> },
         { key: 'readiness', label: 'Độ sẵn sàng thu hoạch', children: <StatusBadge {...presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, h.harvest_status)} title="Trạng thái sẵn sàng thu hoạch của phiên" /> },
         { key: 'method', label: 'Hình thức nhận', children: <><StatusBadge {...presentStatus(HARVEST_METHOD_DICTIONARY, h.harvest_method, 'Chưa chọn')} /><Typography.Paragraph>{h.harvest_method === 'PICKUP' ? auditDate(h.scheduled_at) : h.customer_note ?? '—'}</Typography.Paragraph></> },
@@ -76,27 +77,30 @@ export function HarvestManagementPage() {
         { key: 'harvested', label: 'Người thu hoạch', children: h.harvested_by == null && !h.harvested_by_name ? '—' : staffName(h.harvested_by, h.harvested_by_name) },
         { key: 'completed', label: 'Hoàn tất bàn giao', children: auditDate(h.completed_at) },
       ]} /> }} columns={[
-      { title: 'Đợt / Phiên', width: 230, render: (_, h) => <Tooltip title={`Đợt thu hoạch #${h.harvest_id} thuộc phiên canh tác #${h.session_id}`}><Typography.Text code tabIndex={0}>{`Đợt #${h.harvest_id} · Phiên #${h.session_id}`}</Typography.Text></Tooltip> },
-      { title: 'Khách hàng / Đơn', width: 220, render: (_, h) => <Flex vertical style={{ width: 188, maxWidth: '100%', minWidth: 0 }}><Typography.Text ellipsis={{ tooltip: true }} style={{ width: '100%' }}>{h.customer_name ?? '—'}</Typography.Text><code>{h.order_code}</code></Flex> },
-      { title: 'Loại nấm', dataIndex: 'mushroom_type' },
-      { title: 'Tổng (kg)', dataIndex: 'total_weight_kg', render: auditWeight },
-      { title: 'Thương phẩm (kg)', dataIndex: 'usable_weight_kg', render: auditWeight },
+      { title: 'Đợt / Phiên', width: 200, ellipsis: true, render: (_, h) => <Tooltip title={`Đợt thu hoạch #${h.harvest_id} thuộc phiên canh tác #${h.session_id}`}><Typography.Text code tabIndex={0} ellipsis={{ tooltip: `Đợt #${h.harvest_id} · Phiên #${h.session_id}` }}>{`Đợt #${h.harvest_id} · Phiên #${h.session_id}`}</Typography.Text></Tooltip> },
+      { title: 'Khách hàng / Đơn', width: 190, render: (_, h) => <Flex vertical style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}><Typography.Text ellipsis={{ tooltip: true }} style={{ width: '100%' }}>{h.customer_name ?? '—'}</Typography.Text><code>{h.order_code}</code></Flex> },
+      { title: 'Loại nấm', dataIndex: 'mushroom_type', width: 130, ellipsis: true },
+      { title: 'Tổng (kg)', dataIndex: 'total_weight_kg', width: 100, align: 'right', render: auditWeight },
+      { title: 'Thương phẩm (kg)', dataIndex: 'usable_weight_kg', width: 120, align: 'right', render: auditWeight },
       {
         title: 'Thu hoạch / Bàn giao',
+        width: 140,
         render: (_, h) => (
-          <Flex vertical gap={4}>
+          <Flex vertical gap={4} style={{ minWidth: 0 }}>
             <StatusBadge
               {...presentStatus(HARVEST_STATUS_DICTIONARY, h.status)}
               title="Trạng thái vụ thu hoạch"
+              style={{ whiteSpace: 'nowrap' }}
             />
             <StatusBadge
               {...presentStatus(HARVEST_REQUEST_STATUS_DICTIONARY, h.harvest_request_status, 'Chưa có yêu cầu')}
               title="Trạng thái bàn giao (yêu cầu thu hoạch)"
+              style={{ whiteSpace: 'nowrap' }}
             />
           </Flex>
         ),
       },
-      { title: 'Thao tác', key: 'actions', fixed: 'right', width: 110, render: (_, h) => <Button onClick={() => setSelected(h.harvest_id)}>Đối soát</Button> },
+      { title: 'Thao tác', key: 'actions', fixed: 'right', width: 90, align: 'center', render: (_, h) => <ActionButton icon={<AuditOutlined />} label={`Đối soát đợt #${h.harvest_id}`} description="Mở bảng đối soát sản lượng & bàn giao" variant="text" hideLabel onClick={() => setSelected(h.harvest_id)} /> },
     ]} /></>}
     {selected !== null && (
       <Suspense fallback={null}>

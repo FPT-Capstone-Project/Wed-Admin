@@ -75,6 +75,15 @@ export function StatusBadge({
   }
 
   // Dạng đầy đủ — chấm tròn trạng thái + chữ đậm trên nền rất nhạt, không viền.
+  /*
+   * ⚠ `whiteSpace` được truyền xuống **cả span nhãn** bên trong.
+   *
+   *   Mặc định badge cho phép xuống dòng (`normal`) vì nhãn dài có thể
+   *   cần 2 dòng trong các bảng hẹp. Nhưng ở cột "Trạng thái" của bảng
+   *   thiết bị, "Đang hoạt động" bị gãy thành 2 dòng làm hàng lệch ⇒
+   *   truyền `whiteSpace: 'nowrap'` để giữ nhãn trên **1 hàng ngang**.
+   */
+  const labelWrap = style?.whiteSpace
   const badge = (
     <span
       className={className ? `mcms-status-badge ${className}` : 'mcms-status-badge'}
@@ -108,7 +117,15 @@ export function StatusBadge({
         }}
       />
       {icon && <span aria-hidden="true">{icon}</span>}
-      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{label}</span>
+      <span
+        style={{
+          minWidth: 0,
+          overflowWrap: 'anywhere',
+          ...(labelWrap ? { whiteSpace: labelWrap } : null),
+        }}
+      >
+        {label}
+      </span>
     </span>
   )
 
@@ -121,6 +138,9 @@ export function StatusBadge({
 export type MetadataBadgeProps = Omit<StatusBadgeProps, 'tone' | 'dot'>
 
 export function MetadataBadge({ label, icon, title, className, style }: MetadataBadgeProps) {
+  // ⚠ `whiteSpace` truyền xuống span nhãn ⇒ cho phép siết nhãn dài về 1
+  //   dòng (xem `StatusBadge`).
+  const labelWrap = style?.whiteSpace
   const badge = (
     <span
       className={['mcms-metadata-badge', className].filter(Boolean).join(' ')}
@@ -128,7 +148,15 @@ export function MetadataBadge({ label, icon, title, className, style }: Metadata
       style={style}
     >
       {icon && <span aria-hidden="true">{icon}</span>}
-      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{label}</span>
+      <span
+        style={{
+          minWidth: 0,
+          overflowWrap: 'anywhere',
+          ...(labelWrap ? { whiteSpace: labelWrap } : null),
+        }}
+      >
+        {label}
+      </span>
     </span>
   )
 

@@ -148,7 +148,7 @@ export function AutoControlDetailModal({
       dataIndex: 'created_at',
       key: 'created_at',
       className: 'mcms-iot-mono',
-      width: 170,
+      width: 145,
       // Ghim cột đầu để ngày giờ luôn nhìn thấy khi cuộn ngang.
       fixed: 'left',
       render: (value?: string) => (
@@ -161,7 +161,7 @@ export function AutoControlDetailModal({
       title: 'Sự kiện',
       dataIndex: 'event_type',
       key: 'event_type',
-      width: 140,
+      width: 120,
       render: (eventType: string) => (
         <MetadataBadge style={{ fontSize: 12 }} label={<>
           {formatEventType(eventType)}
@@ -171,7 +171,7 @@ export function AutoControlDetailModal({
     {
       title: 'Cụm cảm biến kích hoạt',
       key: 'sensors',
-      width: 130,
+      width: 110,
       render: (_, row) => (
         <Typography.Text style={{ fontSize: 12, overflowWrap: 'break-word' }}>
           {formatLogSensors(row, floor?.node_address)}
@@ -182,7 +182,7 @@ export function AutoControlDetailModal({
       title: 'Giá trị đo lúc kích hoạt',
       key: 'measurements',
       className: 'mcms-iot-mono',
-      width: 180,
+      width: 150,
       render: (_, row) => (
         <Typography.Text style={{ fontSize: 12, overflowWrap: 'break-word' }}>
           {formatLogMeasurements(row)}
@@ -192,7 +192,7 @@ export function AutoControlDetailModal({
     {
       title: 'Kênh rơ-le',
       key: 'channel',
-      width: 110,
+      width: 100,
       align: 'center',
       render: () => (
         <MetadataBadge style={{ fontSize: 12 }} label={<>
@@ -217,7 +217,7 @@ export function AutoControlDetailModal({
       title: 'Thời lượng chạy',
       key: 'duration',
       className: 'mcms-iot-mono',
-      width: 130,
+      width: 110,
       align: 'right',
       render: (_, row) => {
         const duration = formatLogDuration(row, config?.misting_pulse_ms)
@@ -239,7 +239,7 @@ export function AutoControlDetailModal({
        */
       title: 'Kết quả',
       key: 'outcome',
-      width: 130,
+      width: 120,
       align: 'center',
       render: (_, row) => {
         const outcome = resolveLogOutcome(row)
@@ -290,8 +290,8 @@ export function AutoControlDetailModal({
       // ⚠ Bắt buộc phải có `width` (không chỉ `minWidth`): khi có cột
       // `fixed` + cuộn ngang, rc-table ép `table-layout: fixed` và chỉ đọc
       // `width` trong `<colgroup>` — `minWidth` bị bỏ qua.
-      width: 260,
-      minWidth: 260,
+      width: 200,
+      minWidth: 200,
       ellipsis: true,
       render: (_, row) => {
         const explanation = explainSkippedDecision(row)
@@ -666,7 +666,8 @@ export function AutoControlDetailModal({
       loading={logsLoading}
       size="small"
       pagination={{ pageSize: 10, showSizeChanger: false }}
-      scrollX={1000}
+      scrollX={1055}
+      tableLayout="fixed"
       emptyTitle="Chưa có lần kích hoạt tự động nào được ghi nhận."
     />
   )

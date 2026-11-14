@@ -6,12 +6,11 @@ import {
   ReloadOutlined,
   ToolOutlined,
 } from '@ant-design/icons'
-import { Col, Row } from 'antd'
 import { Suspense, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import type { Tier, Tray } from '../../../types/room.types'
 import { tokens } from '../../../app/theme/tokens'
-import { ActionButton, EmptyState, PageHeader, StatCard } from '../../../shared/ui'
+import { ActionButton, EmptyState, PageHeader, StatCard, StatGrid } from '../../../shared/ui'
 import { getApiErrorMessage } from '../../../shared/api/error'
 import { RackView } from '../components/RackView'
 import { TrayAttentionBanner, type AttentionTray } from '../components/TrayAttentionBanner'
@@ -161,39 +160,33 @@ export function RoomListPage() {
       )}
 
       {/* ── Stat cards (bỏ "Cần chú ý" — đã lên dải cảnh báo) ───────── */}
-      <Row gutter={[12, 12]}>
-        <Col xs={12} sm={8}>
-          <StatCard
-            title="Tổng khay"
-            value={summary.total}
-            suffix="khay"
-            tone="neutral"
-            icon={<ToolOutlined />}
-            description="Toàn bộ khay của các tầng nuôi"
-          />
-        </Col>
-        <Col xs={12} sm={8}>
-          <StatCard
-            title="Đang thuê"
-            value={summary.occupied}
-            suffix="khay"
-            tone="ok"
-            highlightValue
-            icon={<CheckCircleOutlined />}
-            description="Đang có phiên canh tác chạy"
-          />
-        </Col>
-        <Col xs={12} sm={8}>
-          <StatCard
-            title="Còn trống"
-            value={summary.empty}
-            suffix="khay"
-            tone="muted"
-            icon={<InboxOutlined />}
-            description="Sẵn sàng gán cho vụ thuê mới"
-          />
-        </Col>
-      </Row>
+      <StatGrid columns={3}>
+        <StatCard
+          title="Tổng khay"
+          value={summary.total}
+          suffix="khay"
+          tone="neutral"
+          icon={<ToolOutlined />}
+          description="Toàn bộ khay của các tầng nuôi"
+        />
+        <StatCard
+          title="Đang thuê"
+          value={summary.occupied}
+          suffix="khay"
+          tone="ok"
+          highlightValue
+          icon={<CheckCircleOutlined />}
+          description="Đang có phiên canh tác chạy"
+        />
+        <StatCard
+          title="Còn trống"
+          value={summary.empty}
+          suffix="khay"
+          tone="muted"
+          icon={<InboxOutlined />}
+          description="Sẵn sàng gán cho vụ thuê mới"
+        />
+      </StatGrid>
 
       {/* ── Rack / Error ──────────────────────────────────────────────── */}
       {tiersError ? (

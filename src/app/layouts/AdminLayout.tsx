@@ -2,6 +2,8 @@
   CloseOutlined,
   KeyOutlined,
   LogoutOutlined,
+  MenuFoldOutlined,
+  MenuUnfoldOutlined,
   MenuOutlined,
   WifiOutlined,
 } from '@ant-design/icons'
@@ -22,6 +24,11 @@ import { AUTH_EXPIRED_EVENT } from '../../shared/api/client'
 import { NotificationBell } from '../../features/notifications/components/NotificationBell'
 import { resolveUserRole, ROLE_LABELS } from '../../routes/access-policy'
 import { buildMenuItems } from './navigation-menu'
+import {
+  SIDEBAR_COLLAPSED_WIDTH,
+  SIDEBAR_EXPANDED_WIDTH,
+  useSidebarStore,
+} from './store/sidebar.store'
 
 const { Content, Header, Sider } = Layout
 
@@ -65,11 +72,13 @@ function getSelectedMenuKey(pathname: string) {
 
 interface BrandProps {
   onClose?: () => void
+  /** Sidebar đang thu gọn ⇒ ẩn chữ thương hiệu, chỉ giữ logo. */
+  collapsed?: boolean
 }
 
-function Brand({ onClose }: BrandProps) {
+function Brand({ onClose, collapsed = false }: BrandProps) {
   return (
-    <div className="mcms-brand">
+    <div className="mcms-brand" data-collapsed={collapsed ? 'true' : undefined}>
       {/*
         Logo nấm — dùng **cùng** file `mcms-mark.svg` với trang Login
         (`features/auth/pages/LoginPage.tsx`) để nhận diện thương hiệu
@@ -103,6 +112,8 @@ interface NavigationPanelProps {
   onClose?: () => void
   /** Menu đã lọc theo vai trò hiện tại. */
   items: MenuProps['items']
+  /** Sidebar đang thu gọn ⇒ menu chỉ còn icon. */
+  collapsed?: boolean
 }
 
 function NavigationPanel({
@@ -110,13 +121,15 @@ function NavigationPanel({
   onNavigate,
   onClose,
   items,
+  collapsed = false,
 }: NavigationPanelProps) {
   return (
     <div className="sidebar-panel">
-      <Brand onClose={onClose} />
+      <Brand onClose={onClose} collapsed={collapsed} />
       <Menu
         className="mcms-menu"
         mode="inline"
+        inlineCollapsed={collapsed}
         items={items}
         selectedKeys={[selectedKey]}
         onClick={({ key }) => {
@@ -144,6 +157,32 @@ export function AdminLayout() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+
+  // ── Sidebar thu gọn / mở rộng ────────────────────────────────────────
+  // `collapsed` lưu trong zustand (+ localStorage) ⇒ lựa chọn của user
+  // giữ nguyên sau khi F5, và không bị reset khi đổi route.
+  const collapsed = useSidebarStore((state) => state.collapsed)
+  const toggleSidebar = useSidebarStore((state) => state.toggle)
+  const syncSidebarWithViewport = useSidebarStore(
+    (state) => state.syncWithViewport,
+  )
+
+  // Tự động thu gọn khi viewport < 1550px (laptop 1280–1536px @ scale
+  // 125%–150%) ⇒ vùng nội dung rộng hơn ≈ 200px ⇒ bảng vừa khít.
+  //
+  // ⚠ `resize` listener thuần là đủ — không cần `matchMedia` vì ngưỡng
+  //   đã được tính theo CSS px.
+  useEffect(() => {
+    const handleResize = () => {
+      syncSidebarWithViewport(window.innerWidth)
+    }
+
+    // Gọi 1 lần ngay khi mount để áp đúng trạng thái ban đầu.
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [syncSidebarWithViewport])
+
   // Badge chuông — số thông báo chưa đọc từ `GET /api/notifications`
   // (`meta.unread_count`). Đọc trực tiếp API, không qua mock store.
 
@@ -241,15 +280,24 @@ export function AdminLayout() {
       <Layout className="mcms-app-shell">
         <Sider
           className="mcms-sider"
-          width={272}
-          breakpoint="lg"
-          collapsedWidth={0}
+          width={SIDEBAR_EXPANDED_WIDTH}
+          collapsedWidth={SIDEBAR_COLLAPSED_WIDTH}
+          collapsed={collapsed}
+          /*
+           * ⚠ KHÔNG dùng `breakpoint` của antd ở đây.
+           *
+           *   `breakpoint="lg"` sẽ tự ép `collapsed` khi viewport < 992px —
+           *   xung đột với store của chúng ta (auto-collapse ở 1550px).
+           *   Dưới 992px sidebar đã bị ẩn bằng CSS và dùng Drawer ⇒ không
+           *   cần antd tự quản lý.
+           */
           trigger={null}
         >
           <NavigationPanel
             selectedKey={selectedMenuKey}
             onNavigate={navigate}
             items={menuItems}
+            collapsed={collapsed}
           />
         </Sider>
 
@@ -279,6 +327,22 @@ export function AdminLayout() {
                 icon={<MenuOutlined />}
                 aria-label="Mở menu điều hướng"
                 onClick={() => setIsNavigationOpen(true)}
+              />
+              {/*
+                Nút thu gọn / mở rộng sidebar (chỉ hiện trên desktop —
+                dưới 992px sidebar nằm trong Drawer nên không cần).
+              */}
+              <Button
+                type="text"
+                className="sidebar-toggle-trigger"
+                icon={collapsed ? <MenuUnfoldOutlined /> : <MenuFoldOutlined />}
+                aria-label={
+                  collapsed
+                    ? 'Mở rộng menu điều hướng'
+                    : 'Thu gọn menu điều hướng'
+                }
+                aria-expanded={!collapsed}
+                onClick={toggleSidebar}
               />
               <div className="header-title-block">
                 <span>MCMS ADMIN</span>
