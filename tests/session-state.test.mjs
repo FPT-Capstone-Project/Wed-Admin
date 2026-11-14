@@ -114,3 +114,30 @@ test('session status can provide a stage without fabricating a percentage', () =
     stage: 'RUNNING', progress: null, updatedAt: null,
   })
 })
+
+const { buildCultivationBatches } = await import(await load(new URL('../cultivation/utils/cultivation-batches.utils.ts', root).pathname.replace(/^\/(\w:)/, '$1')))
+const { SESSION_PROGRESS_STAGE_DICTIONARY } = await import(await load(new URL('../../shared/i18n/status/session.ts', root).pathname.replace(/^\/(\w:)/, '$1')))
+test('cultivation keeps all 13 sessions, newest first, with explicit assigned trays and recorded progress', () => {
+  const sessions = Array.from({ length: 13 }, (_, index) => normalizeSession({
+    session_id: 12 + index, order_id: 11 + index, status: index === 0 ? 'PENDING' : 'ACTIVE',
+    progress_percent: 30,
+    trays: [{ tray_id: 3, tray_code: 'R1-C3', floor_number: 1, status: 'ACTIVE' }],
+  }))
+  const result = buildCultivationBatches({ sessions, farmSessions: [], inspectionsBySessionId: new Map() })
+  assert.equal(result.batches.length, 13)
+  assert.deepEqual(result.batches.slice(0, 3).map(batch => batch.id), [24, 23, 22])
+  assert.equal(result.batches[0].progressPercent, 30)
+  assert.equal(result.batches[0].trays.length, 1)
+  assert.equal(result.batches[0].trays[0].name, 'T\u1ea7ng 1')
+  assert.equal(sessions[0].session_id, 12)
+})
+test('released tray assignments never appear as current assigned trays', () => {
+  const result = buildCultivationBatches({
+    sessions: [normalizeSession({ session_id: 20, trays: [{ tray_id: 1, status: 'RELEASED' }] })],
+    farmSessions: [], inspectionsBySessionId: new Map(),
+  })
+  assert.equal(result.batches[0].trays.length, 0)
+})
+test('order audit recognizes the normalized FRUITING phase', () => {
+  assert.equal(SESSION_PROGRESS_STAGE_DICTIONARY.FRUITING.label, 'N\u1ea5m \u0111ang ph\u00e1t tri\u1ec3n')
+})

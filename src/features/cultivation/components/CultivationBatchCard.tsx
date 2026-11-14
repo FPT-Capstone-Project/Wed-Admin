@@ -8,7 +8,6 @@ import {
 } from '@ant-design/icons'
 import { Button, Card, Flex, Popover, Progress, Tooltip, Typography } from 'antd'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
-import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
 import { formatSessionProgress, resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
 import {
   type CultivationBatch,
@@ -168,7 +167,7 @@ export function CultivationBatchCard({
                   </div>
                 }>
                   <Button type="link" aria-label={`Xem danh sách ${batch.trays.length} khay`}>
-                    {batch.trays.length > 1 ? `${batch.trays.length} khay` : <TrayCodeText code={batch.trays[0].code} focusable={false} />}
+                    {batch.trays.length} khay{batch.trays.length === 1 ? ` · ${batch.trays[0].name}` : ''}
                   </Button>
                 </Popover>
               ) : (

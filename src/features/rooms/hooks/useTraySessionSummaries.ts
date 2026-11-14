@@ -1,22 +1,7 @@
-/**
- * Tóm tắt phiên canh tác theo khay — dùng để hiển thị "khách + phiên đang
- * chạy" ngay trên ô khay (thay cho chữ "Sẵn sàng vào vụ" lặp lại).
- *
- * ⚠ Nguồn dữ liệu: `GET /api/farm/sessions` (đã có sẵn, không
- *   thêm endpoint mới). Endpoint này yêu cầu role Admin (1) hoặc Farm
- *   Operator (2) → hook tự tắt khi người dùng không có quyền, tránh gọi
- *   API và luôn nhận 403.
- *
- * ⚠ BE chỉ có 3 trạng thái khay thật (`AVAILABLE` / `OCCUPIED` /
- *   `MAINTENANCE`) → trạng thái "chờ thu hoạch" không bao giờ được BE trả về.
- *   Ta suy ra ở tầng hiển thị: một phiên đang chạy mà đã tới mốc thu hoạch
- *   → khay cần người dùng xử lý. Đây là **suy luận hiển thị**, không thay
- *   đổi logic/API của BE.
- *
- * ⚠ Thay thế `useTrayRentalSummaries` (đã gỡ cùng module `features/rentals`).
- */
+/** Tray summaries use the same complete admin session list and Farm OP mapper as Sessions. */
 import { useMemo } from 'react'
-import { useSessions } from '../../sessions/hooks/useSessions'
+import { useAllAdminCultivationSessions } from '../../sessions/hooks/useAdminCultivationSessions'
+import { toCultivationSession } from '../../sessions/api/admin-session-mapper'
 import { SESSION_MANAGE } from '../../auth/permissions'
 import { useHasPermission } from '../../auth/hooks/usePermission'
 import {
@@ -31,7 +16,9 @@ export interface TraySessionSummary {
   sessionId: number
   /** Tên khách thuê. */
   customerName: string
-  /** Ngày bắt đầu canh tác (ISO) — mốc để tính tiến độ sinh trưởng. */
+  /** Recorded Farm OP percentage; null means unavailable. */
+  progressPercent: number | null
+  /** Rental start date, independent of biological progress. */
   startDate: string | null
   /** Ngày thu hoạch dự kiến (ISO). */
   expectedHarvestDate: string | null
@@ -62,20 +49,20 @@ function daysUntil(value: string | null): number | null {
 export function useTraySessionSummaries(): TraySessionSummaryMap {
   const canViewSessions = useHasPermission(SESSION_MANAGE)
 
-  const { data } = useSessions(
-    { includeTrays: true },
+  const { data } = useAllAdminCultivationSessions(
+    undefined,
     { enabled: canViewSessions, staleTime: 60_000 },
   )
 
   return useMemo(() => {
     const map: TraySessionSummaryMap = new Map()
-    const items: CultivationSession[] = data?.items ?? []
+    const items: CultivationSession[] = (data ?? []).map(toCultivationSession).sort((a, b) => b.session_id - a.session_id)
 
     for (const session of items) {
       if (!ACTIVE_SESSION_STATUSES.has(session.status)) continue
 
       for (const tray of session.trays) {
-        if (tray.tray_id == null) continue
+        if (tray.tray_id == null || tray.status === 'RELEASED') continue
         // Một khay chỉ có 1 phiên đang chạy — giữ phiên đầu tiên.
         if (map.has(tray.tray_id)) continue
 
@@ -85,6 +72,7 @@ export function useTraySessionSummaries(): TraySessionSummaryMap {
 
         map.set(tray.tray_id, {
           sessionId: session.session_id,
+          progressPercent: session.progress_percent ?? null,
           customerName: session.customer_name ?? '—',
           startDate: session.start_date ?? null,
           expectedHarvestDate:
@@ -97,5 +85,5 @@ export function useTraySessionSummaries(): TraySessionSummaryMap {
     }
 
     return map
-  }, [data?.items])
+  }, [data])
 }

@@ -1,3 +1,4 @@
+import { formatSessionProgress } from '../../sessions/utils/session-progress.utils'
 import { buildTrayLayout, type FloorLayout, type TrayGrid } from '../utils/tray-layout.utils'
 import { getClimateTone, getClimateDirection } from '../utils/climate-tone.utils'
 import { TrayCodeText } from '../../../shared/ui/TrayCodeText'
@@ -90,37 +91,10 @@ const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
   },
 }
 
-// ── Tính tiến độ sinh trưởng ─────────────────────────────────────────────
-/**
- * Tiến độ canh tác — dựa trên VỤ THUÊ THẬT.
- *
- * ⚠ `tray.rental` luôn là `null` khi dữ liệu đến từ BE
- * (`toUiTray` không map rental) → thanh tiến độ trước đây không bao giờ
- * hiện. Nay tính từ `TraySessionSummary` (đọc `GET /api/rentals/admin`).
- *
- * @returns `{ percent, dayLabel }` hoặc `null` khi không có vụ thuê.
- */
-function growthProgress(
-  summary: TraySessionSummary | null,
-): { percent: number; dayLabel: string } | null {
-  if (!summary?.startDate || !summary.expectedHarvestDate) return null
-
-  const start = new Date(summary.startDate).getTime()
-  const end = new Date(summary.expectedHarvestDate).getTime()
-  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return null
-
-  const now = Date.now()
-  const totalDays = Math.max(1, Math.round((end - start) / 86_400_000))
-  const elapsedDays = Math.max(
-    0,
-    Math.round((now - start) / 86_400_000),
-  )
-  const day = Math.min(elapsedDays + 1, totalDays)
-
-  return {
-    percent: Math.min(100, Math.max(0, ((now - start) / (end - start)) * 100)),
-    dayLabel: `Ngày ${day}/${totalDays}`,
-  }
+/** Use the same recorded percentage as the tray drawer; rental dates are unrelated. */
+function growthProgress(summary: TraySessionSummary | null): { percent: number } | null {
+  if (summary?.progressPercent == null) return null
+  return { percent: summary.progressPercent }
 }
 
 /** Định dạng ngày thu hoạch dự kiến — "25/10". */
@@ -242,7 +216,7 @@ function TrayCard({ tray, isSelected, onClick, summary, unplaced = false }: Tray
   const detail = [
     tray.code, ...(unplaced ? [trayFloorLabel(tray)] : []), TRAY_STATUS_CONFIG[effectiveStatus].label, mushroomName, customerName,
     harvestDate ? `Dự kiến thu hoạch ${harvestDate}` : null,
-    progress ? `${progress.dayLabel}, ${Math.round(progress.percent)}%` : null,
+    summary ? `Tiến độ Farm OP: ${formatSessionProgress(summary.progressPercent)}` : null,
   ].filter(Boolean).join(' · ')
 
   return <Tooltip title={detail} trigger={['hover', 'focus']}>

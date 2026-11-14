@@ -485,6 +485,7 @@ export const SESSION_TRAY_ASSIGNMENT_DICTIONARY: Record<
  */
 export const SESSION_PROGRESS_STAGE_DICTIONARY: StatusDictionary = {
   ...SESSION_GROWTH_STAGE_DICTIONARY,
+  FRUITING: { tone: 'ok', label: 'Nấm đang phát triển' },
   SPAWN_PENDING: { tone: 'warning', label: 'Chờ xử lý phôi' },
   PENDING: { tone: 'warning', label: 'Chờ xử lý' },
   SPAWN_RESTING: { tone: 'info', label: 'Ủ tơ' },
