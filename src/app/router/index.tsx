@@ -13,6 +13,7 @@ import { AppErrorBoundary } from '../../shared/ui/AppErrorBoundary'
 import {
   IssueManagementPage,
   HarvestManagementPage,
+  HarvestRequestManagementPage,
   AlertCenterPage,
   CameraOverviewPage,
   ChangePasswordPage,
@@ -87,6 +88,20 @@ export const router = createBrowserRouter([
         element: (
           <RoleGuard allowedRoles={ADMIN_ONLY}>
             {withSuspense(<HarvestManagementPage />)}
+          </RoleGuard>
+        ),
+      },
+      /*
+       * **Yêu cầu nhận nấm** (WF-04) — `GET /api/harvest-requests/admin`.
+       *
+       * ⚠ BE yêu cầu role Admin (1) **hoặc** Farm Operator (2) ⇒ route cho
+       *   phép cả hai (Farm Operator cần xem lịch hẹn khách đến nhận nấm).
+       */
+      {
+        path: 'harvest-requests',
+        element: (
+          <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>
+            {withSuspense(<HarvestRequestManagementPage />)}
           </RoleGuard>
         ),
       },

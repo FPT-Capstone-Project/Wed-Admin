@@ -1199,7 +1199,7 @@ export interface paths {
         put?: never;
         /**
          * Create a cultivation order for a mushroom type, package, and tray quantity
-         * @description The selected active package must cover the selected active mushroom's growing days. One ACTIVE floor with an approved matching mushroom profile must have enough AVAILABLE trays with ACTIVE positions in the same floor and room, after unexpired HELD reservations. Capacity is never combined across floors. Each tray requires three spawn units. Reservations are consumed after successful payment; Farm Operator selects physical trays later in WF-03.
+         * @description The selected active package must cover the selected active mushroom's growing days. One ACTIVE floor with an approved matching mushroom profile must have enough AVAILABLE trays with ACTIVE positions in the same floor and room, after unexpired HELD reservations. Capacity is never combined across floors. Each tray requires two spawn units. Reservations are consumed after successful payment; Farm Operator selects physical trays later in WF-03.
          */
         post: {
             parameters: {
@@ -1271,8 +1271,9 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Farm Operator confirms a sensor, node or master repair from their notification
-         * @description Requires fresh recovery evidence for the device type. Repeated confirmation is idempotent. GET notifications includes device_incident with device_type (SENSOR, NODE, MASTER), status, resolved_by, resolved_at and can_confirm_repair.
+         * Legacy compatibility endpoint for automatic device recovery
+         * @deprecated
+         * @description All device types recover automatically with fresh live evidence. This endpoint runs the same recovery check for legacy clients; repairNote is ignored. GET notifications returns auto_resolved and can_confirm_repair=false. Repeated calls do not duplicate notifications.
          */
         patch: {
             parameters: {
@@ -1291,7 +1292,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Repair confirmed; Admin and original Customer recipients notified */
+                /** @description Recovery confirmed automatically; active staff and original recipients notified once */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -2170,6 +2171,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/harvest-requests/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List customer receiving requests for Admin and Farm Operators
+         * @description Returns requests newest first, including order ID and code, customer ID, name, phone and email, receiving method, saved delivery address, pickup schedule, note, and request and session status. Includes requests even when a harvest record has not been created.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Receiving requests in data array and total count */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Admin or Farm Operator role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/harvest-requests": {
         parameters: {
             query?: never;
@@ -2181,7 +2233,7 @@ export interface paths {
         put?: never;
         /**
          * Choose a receiving method for a harvest-ready cultivation session
-         * @description Select PICKUP or DELIVERY from Examples. Replace sessionId with your own harvest-ready session ID. PICKUP requires scheduledAt; DELIVERY does not. customerNote is optional. Schedule examples use Vietnam time (UTC+07:00); adjust the date and time before testing.
+         * @description Select PICKUP or DELIVERY from Examples. Replace sessionId with your own harvest-ready session ID. PICKUP requires scheduledAt; DELIVERY does not. customerNote is optional. For DELIVERY, blank or omitted deliveryAddress uses the customer profile address. If the profile has no address, enter deliveryAddress. Schedule examples use Vietnam time (UTC+07:00); adjust the date and time before testing.
          */
         post: {
             parameters: {
@@ -2205,6 +2257,8 @@ export interface paths {
                          * @description Required for PICKUP; optional for DELIVERY
                          */
                         scheduledAt?: string;
+                        /** @description Optional for DELIVERY; blank or omitted uses the customer profile address. Saved on this request only. */
+                        deliveryAddress?: string;
                         /** @description Optional receiving instructions */
                         customerNote?: string;
                     };
@@ -2291,6 +2345,8 @@ export interface paths {
                         harvestMethod: "PICKUP" | "DELIVERY";
                         /** Format: date-time */
                         scheduledAt?: string;
+                        /** @description Optional for DELIVERY; blank or omitted uses the customer profile address. Saved on this request only. */
+                        deliveryAddress?: string;
                         customerNote?: string;
                     };
                 };
@@ -2966,7 +3022,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Session is not in an inspectable stage or replacement stock is insufficient */
+                /** @description Session is not in an inspectable stage, already has a spawn inspection today, or replacement stock is insufficient */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -2975,6 +3031,82 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/farm/sessions/{id}/spawn-inspections/{inspectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update a spawn inspection in a session
+         * @description Replaces the inspection's recorded counts, condition, notes, replacement quantity, and next check time. If replacement quantity changes, spawn inventory is adjusted transactionally. The inspection date and images are unchanged.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                    inspectionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        totalChecked: number;
+                        normalQuantity: number;
+                        warningQuantity: number;
+                        abnormalQuantity: number;
+                        /** @enum {string} */
+                        condition: "NORMAL" | "WARNING" | "ABNORMAL";
+                        replacementQuantity: number;
+                        notes?: string;
+                        /** Format: date-time */
+                        nextCheckAt?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Spawn inspection updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid inspection data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session or inspection not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session is not paid or inventory update failed */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -4098,7 +4230,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Customer-visible session status, harvest readiness, latest growth progress, and assigned trays */
+                /** @description Customer-visible session status, harvest readiness, latest growth progress, assigned trays, and receiving method/status/schedule when selected */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4192,6 +4324,146 @@ export interface paths {
                     content?: never;
                 };
                 /** @description Order not found or not accessible to this user */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/customer/sessions/{sessionId}/iot-history/sensors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get sensor readings recorded while the customer's session occupied its assigned floor
+         * @description Customers may access their own session; Admins and Farm Operators may access any session. Readings are scoped to the floor assignment and session period.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path: {
+                    sessionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Sensor readings with sensor */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid session ID or pagination */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unsupported role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session not found or not accessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/customer/sessions/{sessionId}/iot-history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get device command history for the customer's cultivation session
+         * @description Customers may access their own session; Admins and Farm Operators may access any session. Commands are scoped to devices mapped to the assigned floor during the session period.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                };
+                header?: never;
+                path: {
+                    sessionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Device command events and mapped floors */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid session ID or pagination */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unsupported role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session not found or not accessible */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -4764,7 +5036,7 @@ export interface paths {
         put?: never;
         /**
          * Record a daily tray inspection with optional images
-         * @description Records tray observations and up to 10 optional images in one request. Images are uploaded to Cloudinary and linked to this inspection. Use the session progress API to update cultivation progress and lifecycle status.
+         * @description Records at most one inspection per assigned tray per Vietnam calendar day, with up to 10 optional images. Images are uploaded to Cloudinary and linked to this inspection. Use the session progress API to update cultivation progress and lifecycle status.
          */
         post: {
             parameters: {
@@ -4778,13 +5050,6 @@ export interface paths {
             requestBody: {
                 content: {
                     "multipart/form-data": {
-                        /**
-                         * @example PINNING
-                         * @enum {string}
-                         */
-                        growthStage: "FRUITING_INITIATION" | "PINNING" | "YOUNG_FRUITING" | "MATURATION";
-                        /** @example 60 */
-                        growthProgress: number;
                         trayCondition?: string;
                         mushroomCondition?: string;
                         notes?: string;
@@ -4802,7 +5067,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Invalid stage or inspection input */
+                /** @description Invalid inspection input */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -4816,7 +5081,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Session tray is not active */
+                /** @description Session tray is not active or already has an inspection today */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -4825,6 +5090,68 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cultivation-sessions/admin/session-trays/{sessionTrayId}/inspections/{inspectionId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Update an existing daily tray inspection
+         * @description Replaces the observation fields for an inspection belonging to this assigned tray. The inspection date and existing images are unchanged. Historical observations can be edited even after the session is no longer active.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionTrayId: number;
+                    inspectionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        trayCondition?: string;
+                        mushroomCondition?: string;
+                        notes?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Daily tray inspection updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid inspection data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session tray or inspection not found for that tray */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5615,6 +5942,66 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/environment-history/sessions/{sessionId}/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get full-session environment chart, averages, and threshold exceedance counts
+         * @description Returns grouped 10-minute buckets from tray assignment (start_at) through session end. Buckets shared by multiple floors are averaged into one point. Thresholds use the mushroom type's configured temperature and humidity ranges. Customers may access only their own session.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Full-session points */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unsupported role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session not found or not accessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -7161,7 +7548,7 @@ export interface paths {
         };
         /**
          * Chart-ready temperature and humidity history for every active floor
-         * @description Reads only cultivation_environment_history, never raw sensor readings. Default window is 24h ending at the latest 5-minute boundary, with chart points grouped into 96 15-minute buckets from stored 10-minute session/floor averages. Custom from/to must be supplied together, with a positive range at most 24h. Range is [from,to). Missing values are null. Thresholds are the current configured floor thresholds, not historical thresholds.
+         * @description Reads iot_sensor_readings using the current master/node mapping of each active floor, independently of cultivation sessions. Default window is 24h ending at the latest 5-minute boundary, with 96 15-minute buckets based on received_at. Each bucket averages valid, non-retained readings per sensor, then averages sensors equally; temperature must be within [-40,125] and humidity within [0,100]. Custom from/to must be supplied together, with a positive range at most 24h. Range is [from,to). Missing values are null. Thresholds are the current configured floor thresholds, not historical thresholds.
          */
         get: {
             parameters: {
@@ -7943,6 +8330,91 @@ export interface paths {
                     content: {
                         "application/json": components["schemas"]["Error"];
                     };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/iot/floors/{floorId}/fan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Configure the manual fan channel for a floor
+         * @description Requires iot.automation.manage. Null removes the mapping. Does not publish MQTT. Rejects channels used by fans, valves or the room light on the same master. GET /api/iot/floors returns fan_ssr_channel even when null. Use the existing master SSR endpoints for state and manual ON/OFF.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    floorId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "channel": 4
+                     *     }
+                     */
+                    "application/json": {
+                        channel: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Updated floor in data, including nullable fan_ssr_channel */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid floor ID or channel */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing iot.automation.manage permission */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Floor not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Channel already assigned */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
                 };
             };
         };
@@ -10257,7 +10729,15 @@ export interface components {
             sensorId?: number;
             temperature?: number | null;
             humidity?: number | null;
+            /** @description Current health: valid, non-retained reading within 60 seconds and a live master. */
             ok?: boolean;
+            /** @description Validity of the last received packet, independent of current connectivity. */
+            readingValid?: boolean;
+            /**
+             * @description Null when healthy.
+             * @enum {string|null}
+             */
+            healthReason?: "MASTER_OFFLINE" | "RETAINED" | "STALE" | "INVALID" | null;
             /** Format: date-time */
             lastReceivedAt?: string | null;
             /** Format: date-time */
@@ -10283,6 +10763,7 @@ export interface components {
                 id?: string;
                 temperature?: number | null;
                 humidity?: number | null;
+                /** @description Validity of this historical packet. */
                 ok?: boolean;
                 /** Format: date-time */
                 receivedAt?: string | null;

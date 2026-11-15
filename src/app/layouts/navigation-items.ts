@@ -103,6 +103,16 @@ export const MENU_GROUPS: MenuGroupDef[] = [
         adminOnly: true,
       },
       {
+        /*
+         * ⚠ **Yêu cầu nhận nấm** (WF-04) — `GET /api/harvest-requests/admin`
+         *   cho phép **Admin + Farm Operator** ⇒ KHÔNG đánh dấu `adminOnly`
+         *   (Farm Operator cần xem lịch hẹn khách đến nhận nấm).
+         */
+        key: '/harvest-requests',
+        icon: 'harvests',
+        label: 'Yêu cầu nhận nấm',
+      },
+      {
         key: '/reports',
         icon: 'reports',
         label: 'Báo cáo & phân tích',

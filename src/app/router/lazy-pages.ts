@@ -105,3 +105,4 @@ export const UnauthorizedPage = lazy(() =>
 
 export const IssueManagementPage = lazy(() => import('../../features/disease-management/pages/IssueManagementPage').then(m => ({ default: m.IssueManagementPage })))
 export const HarvestManagementPage = lazy(() => import('../../features/harvest/pages/HarvestManagementPage').then(m => ({ default: m.HarvestManagementPage })))
+export const HarvestRequestManagementPage = lazy(() => import('../../features/harvest-requests/pages/HarvestRequestManagementPage').then(m => ({ default: m.HarvestRequestManagementPage })))
