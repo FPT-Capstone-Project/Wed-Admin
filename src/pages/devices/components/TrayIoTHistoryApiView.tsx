@@ -357,7 +357,7 @@ export function TrayIoTHistoryApiView() {
         <Alert
           type="info"
           showIcon
-          message={`Master ${primaryMaster?.masterId ?? '—'} · Node ${nodeId} · Sensor ${sensorId} · ${effectiveLimit} readings gần nhất`}
+          title={`Hiển thị tối đa ${effectiveLimit} lần đo gần nhất của cảm biến được chọn`}
         />
       </Card>
 

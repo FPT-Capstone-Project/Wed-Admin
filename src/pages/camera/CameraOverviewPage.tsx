@@ -112,7 +112,7 @@ export function CameraOverviewPage() {
             <CameraRowActions camera={camera} />
             <ActionButton
               icon={<PlayCircleOutlined />}
-              label="Xem live stream"
+              label="Xem trực tiếp"
               description={`Xem trực tiếp ${camera.cameraName || camera.cameraCode}`}
               variant="text"
               hideLabel

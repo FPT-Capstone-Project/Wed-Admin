@@ -51,7 +51,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
       {
         key: '/',
         icon: 'dashboard',
-        label: 'Dashboard',
+        label: 'Tổng quan',
       },
     ],
   },

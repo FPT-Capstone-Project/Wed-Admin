@@ -51,7 +51,7 @@ export function ConfirmActionButton({
       cancelText,
       centered: true,
       okButtonProps: { danger: true },
-      maskClosable: false,
+      mask: { closable: false },
       onOk: async () => {
         // `onOk` trả promise ⇒ nút "Xác nhận" tự hiện loading + chỉ đóng
         // modal sau khi promise resolve ⇒ user thấy trạng thái rõ ràng.

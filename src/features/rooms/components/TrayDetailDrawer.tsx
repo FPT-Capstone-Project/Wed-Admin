@@ -231,7 +231,7 @@ export function TrayDetailDrawer({
       )
     }
 
-    const occupiedNotice = <Alert type="info" showIcon message="Khay đang trong chu kỳ nuôi trồng" description="Hệ thống đã ghi nhận khay được phân bổ. Dữ liệu tiến độ phiên canh tác chi tiết đang được cập nhật từ máy chủ." />
+    const occupiedNotice = <Alert type="info" showIcon title="Khay đang trong chu kỳ nuôi trồng" description="Hệ thống đã ghi nhận khay được phân bổ. Dữ liệu tiến độ phiên canh tác chi tiết đang được cập nhật từ máy chủ." />
     const isLoadingAny = traysLoading || sessionsLoading
 
     if (isLoadingAny) {

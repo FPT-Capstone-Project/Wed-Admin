@@ -60,7 +60,7 @@
 .mcms-session-floor-mapping {
   padding: 12px;
   border: 1px solid var(--mcms-border-soft);
-  border-radius: 12px;
+  border-radius: 6px;
   background: var(--mcms-surface-muted);
 }
 

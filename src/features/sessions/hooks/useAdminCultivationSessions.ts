@@ -114,7 +114,7 @@ export function useAdminCultivationSession(
   return useQuery<AdminCultivationSessionDto | null, Error>({
     queryKey: adminSessionKeys.detail(sessionId ?? -1),
     queryFn: () => fetchAdminCultivationSession(sessionId as number),
-    enabled: sessionId !== null && sessionId > 0,
     ...options,
+    enabled: Boolean(sessionId && sessionId > 0) && (options?.enabled ?? true),
   })
 }

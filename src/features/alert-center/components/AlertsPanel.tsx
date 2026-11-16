@@ -401,7 +401,7 @@ export function AlertsPanel({
           setManualDetail(null)
         }}
         title="Chi tiết cảnh báo"
-        width={520}
+        size={520}
         className="mcms-alert-center-drawer"
         footer={
           <Flex justify="end" gap={8}>

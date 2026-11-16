@@ -119,7 +119,7 @@ export function RentalPackageFormModal({
       confirmLoading={isSubmitting}
       cancelButtonProps={{ disabled: isSubmitting }}
       closable={!isSubmitting}
-      maskClosable={!isSubmitting}
+      mask={{ closable: !isSubmitting }}
       keyboard={!isSubmitting}
       destroyOnHidden
       width={680}
@@ -177,7 +177,7 @@ export function RentalPackageFormModal({
               precision={0}
               style={{ width: '100%' }}
               placeholder="30"
-              addonAfter="ngày"
+              suffix="ngày"
             />
           </Form.Item>
 
@@ -196,7 +196,7 @@ export function RentalPackageFormModal({
               precision={0}
               style={{ width: '100%' }}
               placeholder="500000"
-              addonAfter="VND"
+              suffix="₫"
               formatter={(value) =>
                 value != null
                   ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')

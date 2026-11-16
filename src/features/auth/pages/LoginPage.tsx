@@ -16,7 +16,7 @@ import '../styles/auth.css'
  * Form panel: Card form sang trọng, cân đối, nút Đăng nhập đạt chiều cao tối thiểu 44px.
  *
  * ⚠ Ảnh nền cột trái lấy từ `src/assets/Login.jpg` (Vite tự hash + emit).
- *   Lớp gradient tối phía trên giữ chữ trắng đủ tương phản (WCAG AA).
+ *   Lớp nền tối phẳng giữ chữ trắng đủ tương phản (WCAG AA).
  */
 export function LoginPage() {
   const navigate = useNavigate()
@@ -34,12 +34,13 @@ export function LoginPage() {
           /*
            * Ảnh nền + overlay tối xanh rêu.
            *
-           * ⚠ Gradient đứng **trước** trong `background-image` ⇒ nằm TRÊN
-           *   ảnh ⇒ chữ trắng luôn đủ tương phản.
+           * Nền tối hòa trộn với ảnh để giữ tương phản, không dùng gradient.
            * ⚠ `background-color` (xanh rêu) vẫn giữ trong CSS ⇒ nếu ảnh lỗi
            *   / chưa tải được thì panel vẫn có nền đặc, không trong suốt.
            */
-          backgroundImage: `linear-gradient(rgba(10, 25, 20, 0.75), rgba(10, 25, 20, 0.85)), url(${loginBg})`,
+          backgroundImage: `url(${loginBg})`,
+          backgroundColor: '#142b23',
+          backgroundBlendMode: 'multiply',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           backgroundRepeat: 'no-repeat',

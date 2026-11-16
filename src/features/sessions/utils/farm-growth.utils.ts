@@ -54,7 +54,7 @@ export function resolveFarmGrowth(input: FarmGrowthInput): FarmGrowthSnapshot {
     resolveSessionProgress(record.progress_percent) !== null,
   )
   return {
-    stage: phase === 'HARVESTING' ? 'MATURATION' : phase,
+    stage: phase === 'HARVESTING' ? 'MATURATION' : phase === 'COMPLETED' ? null : phase,
     progress: latestProgress ? resolveSessionProgress(latestProgress.record.progress_percent) : null,
     updatedAt: latestStage?.updatedAt ?? null,
   }

@@ -92,7 +92,7 @@ function Brand({ onClose, collapsed = false }: BrandProps) {
       </span>
       <div className="mcms-brand-copy">
         <strong>MCMS</strong>
-        <span>INDUSTRIAL TELEMETRY</span>
+        <span>GIÁM SÁT TRANG TRẠI</span>
       </div>
       {onClose && (
         <Button

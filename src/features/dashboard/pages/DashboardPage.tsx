@@ -229,7 +229,7 @@ export function DashboardPage() {
             tone={structure.devices.offline > 0 ? 'warning' : 'ok'}
             label={
               structure.devices.total > 0
-                ? `${structure.devices.online}/${structure.devices.total} Master online`
+                ? `${structure.devices.online}/${structure.devices.total} bộ điều khiển trực tuyến`
                 : 'Chưa có dữ liệu thiết bị'
             }
           />

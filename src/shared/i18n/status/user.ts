@@ -7,14 +7,14 @@
  *     tĩnh ở FE, đồng bộ với seed hiện tại).
  *
  * ⚠ Mapping `role_id` đã verify thực nghiệm với BE (2026-10-22):
- *   1 = ADMIN, 2 = OPERATOR, 3 = CUSTOMER.
+ *   1 = ADMIN, 2 = OPERATOR, 3 = CUSTOMER, 4 = EXPERT.
  *   Swagger mô tả sai ("1 = Farm Operator, 2 = Admin") — đã báo BE sửa.
  */
 
 import type { StatusPresentation } from './types'
 
 /** Vai trò của tài khoản (chuẩn hoá về UPPERCASE ở tầng UI). */
-export type UserRoleKey = 'ADMIN' | 'OPERATOR' | 'CUSTOMER'
+export type UserRoleKey = 'ADMIN' | 'OPERATOR' | 'CUSTOMER' | 'EXPERT'
 
 /** Trạng thái tài khoản (`users.status`). */
 export type UserStatusKey = 'ACTIVE' | 'INACTIVE' | 'BLOCKED'
@@ -47,6 +47,12 @@ export const ROLE_OPTIONS: readonly RoleOption[] = [
     label: 'Khách thuê khay',
     description: 'Đặt gói thuê, theo dõi tiến độ canh tác.',
   },
+  {
+    roleId: 4,
+    role: 'EXPERT',
+    label: 'Chuyên gia',
+    description: 'Tư vấn chẩn đoán và điều trị bệnh nấm.',
+  },
 ]
 
 /** roleId → option, dùng để map nhanh khi render bảng. */
@@ -62,13 +68,14 @@ export function getRoleOption(roleId: number): RoleOption | undefined {
 /**
  * Nhãn tiếng Việt của vai trò.
  *
- * ⚠ Fallback theo thứ tự: tên đã dịch → `role_name` từ BE → "Vai trò #id".
+ * Tên role và ID đều được tra qua registry; không in enum hoặc ID lạ.
  */
 export function getRoleLabel(
   roleId: number,
   roleName?: string | null,
 ): string {
-  return getRoleOption(roleId)?.label ?? roleName ?? `Vai trò #${roleId}`
+  const namedRole = ROLE_OPTIONS.find(option => option.role === roleName?.trim().toUpperCase())
+  return namedRole?.label ?? getRoleOption(roleId)?.label ?? 'Vai trò chưa xác định'
 }
 
 /**

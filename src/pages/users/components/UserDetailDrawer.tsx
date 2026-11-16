@@ -72,7 +72,7 @@ export function UserDetailDrawer({
             </Typography.Text>
             {status && (
               <StatusBadge tone={status === 'ACTIVE' ? 'ok' : status === 'BLOCKED' ? 'danger' : 'muted'} label={<>
-                {USER_STATUS_CONFIG[status]?.label ?? status}
+                {USER_STATUS_CONFIG[status]?.label ?? 'Trạng thái chưa xác định'}
               </>} />
             )}
           </Flex>
@@ -105,7 +105,7 @@ export function UserDetailDrawer({
               <Alert
                 type="info"
                 showIcon
-                message="Đây là tài khoản bạn đang đăng nhập — không thể tự khoá."
+                title="Đây là tài khoản bạn đang đăng nhập — không thể tự khoá."
               />
             )}
 

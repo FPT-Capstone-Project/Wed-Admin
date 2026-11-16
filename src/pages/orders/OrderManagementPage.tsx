@@ -474,7 +474,7 @@ export function OrderManagementPage() {
         }
         open={Boolean(detailOrder)}
         onClose={() => setDetailOrder(null)}
-        width={620}
+        size={620}
         destroyOnHidden
       >
         {detailOrder && (

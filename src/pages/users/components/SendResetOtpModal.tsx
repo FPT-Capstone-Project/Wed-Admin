@@ -65,7 +65,7 @@ export function SendResetOtpModal({
         </Button>,
       ]}
       closable={!isSending}
-      maskClosable={!isSending}
+      mask={{ closable: !isSending }}
       keyboard={!isSending}
       destroyOnHidden
     >
@@ -75,7 +75,7 @@ export function SendResetOtpModal({
             type="info"
             showIcon
             style={{ marginBottom: 16 }}
-            message="Mã OTP sẽ được gửi tới email đăng ký"
+            title="Mã OTP sẽ được gửi tới email đăng ký"
             description={
               <Typography.Text type="secondary">
                 Người dùng nhận mã sẽ tự đặt mật khẩu mới tại màn hình đăng nhập.

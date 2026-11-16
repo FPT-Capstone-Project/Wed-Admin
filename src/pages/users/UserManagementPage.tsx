@@ -224,7 +224,7 @@ export function UserManagementPage() {
       <PageHeader title="Quản lý tài khoản"  actions={<Flex align="center" gap={8} wrap>
           <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Việc tạo / khoá tài khoản do nhân viên thực hiện trên mobile app.
+            Việc tạo / khoá tài khoản do nhân viên thực hiện trên ứng dụng nhân viên.
           </Typography.Text>
         </Flex>} />
 

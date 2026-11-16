@@ -75,9 +75,9 @@
   --mcms-shadow-md: 0 8px 24px rgb(15 42 36 / 10%);
   --mcms-shadow-focus: 0 0 0 2px rgb(124 139 158 / 24%);
   --mcms-radius-sm: 4px;
-  --mcms-radius-md: 8px;
-  --mcms-radius-lg: 10px;
-  --mcms-radius-xl: 12px;
+  --mcms-radius-md: 4px;
+  --mcms-radius-lg: 6px;
+  --mcms-radius-xl: 6px;
   --mcms-space-1: 4px;
   --mcms-space-2: 8px;
   --mcms-space-3: 12px;

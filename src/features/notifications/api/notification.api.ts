@@ -1,5 +1,6 @@
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
+import { presentNotificationContent } from '../../../shared/i18n/notification-content'
 import type {
   AppNotification,
   NotificationListQuery,
@@ -143,8 +144,11 @@ function normalizeNotification(raw: unknown): AppNotification {
     notification_id: pickNumber(obj, 'notification_id', 'notificationId', 'id') ?? 0,
     notification_type:
       pickString(obj, 'notification_type', 'notificationType', 'type') ?? 'OPERATOR_MESSAGE',
-    title: pickString(obj, 'title'),
-    message: pickString(obj, 'message', 'body', 'content'),
+    ...presentNotificationContent(
+      pickString(obj, 'notification_type', 'notificationType', 'type') ?? 'OPERATOR_MESSAGE',
+      pickString(obj, 'title'),
+      pickString(obj, 'message', 'body', 'content'),
+    ),
     is_read: pickBoolean(obj, 'is_read', 'isRead') ?? false,
     created_at: pickString(obj, 'created_at', 'createdAt'),
     read_at: pickString(obj, 'read_at', 'readAt'),

@@ -49,9 +49,9 @@ export function summarizeSessions(items: readonly { status: CultivationSessionSt
   }, { total: 0, active: 0, waiting: 0, cancelled: 0, completed: 0 })
 }
 
-export function resolveSessionPhase(stage: string | null | undefined, _status?: string) {
-  // Operational status never supplies a biological stage.
-  void _status
+export function resolveSessionPhase(stage: string | null | undefined, status?: string) {
+  // A finished lifecycle takes precedence over the last recorded biological stage.
+  if (keyOf(status) === 'COMPLETED') return 'COMPLETED'
   const value = STAGES[keyOf(stage)]
   if (value === 'SPAWNING') return 'SPAWNING'
   if (value === 'RUNNING') return 'RUNNING'

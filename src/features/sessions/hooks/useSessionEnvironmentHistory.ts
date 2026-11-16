@@ -1,5 +1,4 @@
 import { keepPreviousData, useQuery, type UseQueryOptions } from '@tanstack/react-query'
-import { useMemo } from 'react'
 import {
   fetchAllSessionEnvironmentRecords,
   fetchNewestSessionEnvironmentRecords,
@@ -192,65 +191,25 @@ export function useNewestSessionEnvironmentRecords(
     UseQueryOptions<SessionEnvironmentRecord[], Error>
   > & { limit?: number },
 ) {
-  /*
-   * ⚠ **Chữ ký phạm vi tầng** — dùng làm phần của query key.
-   *
-   *   `Set`/`Map` là object ⇒ tạo mới mỗi lần render ⇒ ta dùng chuỗi đã sắp
-   *   xếp làm key ⇒ ổn định, cache không bị phá khi component render lại.
-   */
-  const scopeFloorIds = scope?.floorIds
-  const scopeFloorNumbers = scope?.floorNumbers
-  const scopeFloorNumberByFloorId = scope?.floorNumberByFloorId
-
-  const scopeSignature = useMemo(
-    () =>
-      buildFloorScopeSignature({
-        floorIds: scopeFloorIds,
-        floorNumbers: scopeFloorNumbers,
-        floorNumberByFloorId: scopeFloorNumberByFloorId,
-      }),
-    [scopeFloorIds, scopeFloorNumbers, scopeFloorNumberByFloorId],
-  )
-
   const limit = options?.limit ?? NEWEST_RECORDS_LIMIT
 
   return useQuery<SessionEnvironmentRecord[], Error>({
-    queryKey: [
-      ...sessionEnvironmentHistoryKeys.newest(sessionId ?? -1),
-      scopeSignature,
-      limit,
-    ],
+    // Only inputs sent to the server belong in the network cache key.
+    queryKey: [...sessionEnvironmentHistoryKeys.newest(sessionId ?? -1), limit],
     queryFn: async () => {
-      const result = await fetchNewestSessionEnvironmentRecords(
-        sessionId as number,
-        { limit },
-      )
-      if (!result || result.records.length === 0) return []
-
-      /*
-       * ⚠ **Lọc theo đúng tầng của phiên** — loại bản ghi của tầng khác
-       *   (dữ liệu cũ còn sót) ⇒ hộp "chỉ số mới nhất", biểu đồ và bảng chi
-       *   tiết đều chỉ có dữ liệu **đúng tầng của phiên**.
-       */
-      const filtered = filterRecordsBySessionFloorScope(
-        result.records,
-        {
-          floorIds: scope?.floorIds ?? new Set<number>(),
-          floorNumbers: scope?.floorNumbers ?? new Set<number>(),
-        },
-        scope?.floorNumberByFloorId ?? new Map<number, number>(),
-      )
-
-      // ⚠ Sort giảm dần ⇒ `records[0]` là bản ghi **mới nhất**.
-      return sortEnvironmentRecordsByTimeDesc(filtered)
+      const result = await fetchNewestSessionEnvironmentRecords(sessionId as number, { limit })
+      return result?.records ?? []
     },
     staleTime: 30_000,
     ...options,
-    // ⚠ `enabled` phải đặt **SAU** `...options` để không bị caller ghi đè.
-    enabled:
-      sessionId !== null &&
-      sessionId > 0 &&
-      (options?.enabled ?? true),
+    select: (records) => sortEnvironmentRecordsByTimeDesc(
+      filterRecordsBySessionFloorScope(
+        records,
+        { floorIds: scope?.floorIds ?? new Set<number>(), floorNumbers: scope?.floorNumbers ?? new Set<number>() },
+        scope?.floorNumberByFloorId ?? new Map<number, number>(),
+      ),
+    ),
+    enabled: Boolean(sessionId && sessionId > 0) && (options?.enabled ?? true),
   })
 }
 
@@ -279,95 +238,29 @@ export function useSessionEnvironmentChart(
   floorLabels: ReadonlyMap<number, string> = new Map(),
   anchorEnd: number | null = null,
   scope?: SessionFloorScopeOptions,
-  options?: Partial<UseQueryOptions<SessionClimatePoint[], Error>>,
+  options?: Partial<Omit<UseQueryOptions<SessionEnvironmentRecord[], Error, SessionClimatePoint[]>, 'queryKey' | 'queryFn' | 'select'>>,
 ) {
-  /*
-   * ⚠ **Chữ ký nội dung map tầng** — dùng làm phần của query key.
-   *
-   *   `Map` là object ⇒ tạo mới mỗi lần render. Ta dùng chuỗi đã sắp xếp làm
-   *   key ⇒ ổn định, và cache không bị phá khi component render lại.
-   */
-  const floorSignature = useMemo(
-    () =>
-      [...floorLabels.entries()]
-        .sort(([left], [right]) => left - right)
-        .map(([id, label]) => `${id}:${label}`)
-        .join(','),
-    [floorLabels],
-  )
-
-  /*
-   * ⚠ **Chữ ký phạm vi tầng** — dùng làm phần của query key.
-   *
-   *   ⇒ Đổi phạm vi tầng (session mới) sẽ kích hoạt fetch lại.
-   */
-  const scopeFloorIds = scope?.floorIds
-  const scopeFloorNumbers = scope?.floorNumbers
-  const scopeFloorNumberByFloorId = scope?.floorNumberByFloorId
-
-  const scopeSignature = useMemo(
-    () =>
-      buildFloorScopeSignature({
-        floorIds: scopeFloorIds,
-        floorNumbers: scopeFloorNumbers,
-        floorNumberByFloorId: scopeFloorNumberByFloorId,
-      }),
-    [scopeFloorIds, scopeFloorNumbers, scopeFloorNumberByFloorId],
-  )
-
-  return useQuery<SessionClimatePoint[], Error>({
+  return useQuery<SessionEnvironmentRecord[], Error, SessionClimatePoint[]>({
     queryKey: [
       ...sessionEnvironmentHistoryKeys.chart(sessionId ?? -1, timeRange),
-      floorSignature,
-      scopeSignature,
-      /*
-       * ⚠ Mốc neo là **phần của query key** ⇒ đổi mốc neo (phiên đóng ⇒
-       *   cuối phiên) sẽ kích hoạt fetch lại với cửa sổ mới.
-       */
       anchorEnd ?? 'now',
     ],
-    queryFn: async () => {
+    queryFn: () => {
       const window = resolveTimeRangeWindow(timeRange, new Date(), anchorEnd)
-      const fetched = await fetchAllSessionEnvironmentRecords(
-        sessionId as number,
-        { from: window.start, to: window.end },
-      )
-      if (fetched.length === 0) return []
-
-      /*
-       * ⚠ **Lọc theo đúng tầng của phiên** — loại bản ghi của tầng khác
-       *   (dữ liệu cũ còn sót) ⇒ biểu đồ chỉ thể hiện đúng tầng của phiên.
-       */
-      const records = filterRecordsBySessionFloorScope(
-        fetched,
-        {
-          floorIds: scope?.floorIds ?? new Set<number>(),
-          floorNumbers: scope?.floorNumbers ?? new Set<number>(),
-        },
-        scope?.floorNumberByFloorId ?? new Map<number, number>(),
-      )
-      if (records.length === 0) return []
-
-      return environmentRecordsToClimatePoints(records, floorLabels)
+      return fetchAllSessionEnvironmentRecords(sessionId as number, { from: window.start, to: window.end })
     },
-    /*
-     * ⚠ **`keepPreviousData`** — giữ dữ liệu của mốc cũ trong lúc tải mốc mới.
-     *
-     *   Vì sao KHÔNG dùng `placeholderData: () => []`?
-     *   → Xóa sạch dữ liệu khiến biểu đồ nhấp nháy / trống trơn, và mất
-     *     ngữ cảnh xu hướng trong lúc chờ ⇒ trải nghiệm tệ hơn.
-     *
-     *   → Thay vào đó: giữ đường cũ + hiển thị trạng thái mờ (opacity) và
-     *     spinner ở góc biểu đồ (xem prop `loading` của `SessionSensorChart`),
-     *     rồi **mượt chuyển** sang trục thời gian mới khi fetch xong.
-     */
+    // Metadata changes reselect cached records without another HTTP request.
+    select: (records) => environmentRecordsToClimatePoints(
+      filterRecordsBySessionFloorScope(
+        records,
+        { floorIds: scope?.floorIds ?? new Set<number>(), floorNumbers: scope?.floorNumbers ?? new Set<number>() },
+        scope?.floorNumberByFloorId ?? new Map<number, number>(),
+      ),
+      floorLabels,
+    ),
     placeholderData: keepPreviousData,
     staleTime: 60_000,
     ...options,
-    // ⚠ `enabled` phải đặt **SAU** `...options` để không bị caller ghi đè.
-    enabled:
-      sessionId !== null &&
-      sessionId > 0 &&
-      (options?.enabled ?? true),
+    enabled: Boolean(sessionId && sessionId > 0) && (options?.enabled ?? true),
   })
 }

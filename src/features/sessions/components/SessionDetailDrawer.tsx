@@ -61,11 +61,12 @@ export function SessionDetailDrawer({
     data: adminSession,
     isLoading: adminLoading,
     isError: adminError,
-  } = useAdminCultivationSession(sessionId)
+  } = useAdminCultivationSession(sessionId, { enabled: Boolean(sessionId) })
 
   // Nguồn bổ sung (luồng farm) — chỉ dùng cho các trường endpoint quản trị
   // không trả: SĐT khách, trạng thái thanh toán, số phôi đã cấp.
-  const { data: farmSession } = useFarmSession(sessionId)
+  const farmQuery = useFarmSession(sessionId, { enabled: Boolean(sessionId) })
+  const farmSession = farmQuery.data
 
   const session = useMemo<CultivationSession | null>(() => {
     if (!adminSession) return null
@@ -134,18 +135,22 @@ export function SessionDetailDrawer({
           </Typography.Text>
         </Flex>
       ) : (
-        /*
-         * ⚠ `key={session.session_id}` ⇒ remount toàn bộ nội dung khi đổi
-         *   phiên ⇒ `activeTab` reset về `'overview'` (pattern "reset state
-         *   bằng key" của React) ⇒ mở phiên mới **không** kế thừa tab "Lịch sử
-         *   IoT" của phiên cũ ⇒ không kéo request nặng ngầm.
-         */
-        <SessionDetailContent
-          key={session.session_id}
-          session={session}
-          progressPercent={progressPercent}
-          spawnIssued={farmSession?.spawn_issued ?? null}
-        />
+        <>
+          {farmQuery.isError && (
+            <LoadErrorAlert
+              error={farmQuery.error}
+              resource="thông tin bổ sung của phiên"
+              onRetry={farmQuery.refetch}
+            />
+          )}
+          {/* Reset tab về Tổng quan khi chọn phiên khác, tránh tải lịch sử ngầm. */}
+          <SessionDetailContent
+            key={session.session_id}
+            session={session}
+            progressPercent={progressPercent}
+            spawnIssued={farmSession?.spawn_issued ?? null}
+          />
+        </>
       )}
     </Drawer>
   )
@@ -173,8 +178,8 @@ function SessionDetailContent({
    *   `FRUITING_INITIATION` / `PINNING` / `YOUNG_FRUITING` / `FRUITING` thì
    *   mới hiển thị "Nấm đang phát triển".
    *
-   * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành" (tiến độ 100 %), KHÔNG phải
-   *   "Sẵn sàng thu hoạch" — `resolveGrowthPhase` ưu tiên trạng thái kết thúc.
+   * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành", giữ nguyên tiến độ đã ghi nhận.
+   * Không hiển thị "Sẵn sàng thu hoạch" cho phiên đã kết thúc.
    */
   const growthPhase = resolveSessionPhase(
     session.current_stage ?? session.growth_status,
@@ -197,10 +202,10 @@ function SessionDetailContent({
    * ⚠ **Lazy loading**: lịch sử kiểm tra phôi chỉ tải khi user thực sự mở
    *   tab "Kiểm tra phôi" ⇒ mở Drawer không bị chặn bởi request này.
    */
-  const { data: inspections, isLoading: inspectionsLoading } =
-    useSpawnInspections(session.session_id, {
-      enabled: activeTab === 'inspections',
-    })
+  const inspectionsQuery = useSpawnInspections(session.session_id, {
+    enabled: activeTab === 'inspections',
+  })
+  const { data: inspections, isLoading: inspectionsLoading } = inspectionsQuery
 
   /*
    * ⚠ **Lazy loading**: kiểm tra khay (giai đoạn 2) + thư viện ảnh tổng hợp
@@ -405,8 +410,14 @@ function SessionDetailContent({
           {
             key: 'inspections',
             label: 'Kiểm tra phôi',
-            children: inspectionsLoading ? (
+            children: activeTab !== 'inspections' ? null : inspectionsLoading ? (
               <Skeleton active paragraph={{ rows: 4 }} />
+            ) : inspectionsQuery.isError ? (
+              <LoadErrorAlert
+                error={inspectionsQuery.error}
+                resource="lịch sử kiểm tra phôi"
+                onRetry={inspectionsQuery.refetch}
+              />
             ) : (
               <SpawnInspectionList
                 inspections={inspections?.inspections ?? []}

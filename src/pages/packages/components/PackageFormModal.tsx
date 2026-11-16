@@ -90,7 +90,7 @@ export function PackageFormModal({
       confirmLoading={isSubmitting}
       cancelButtonProps={{ disabled: isSubmitting }}
       closable={!isSubmitting}
-      maskClosable={!isSubmitting}
+      mask={{ closable: !isSubmitting }}
       keyboard={!isSubmitting}
       destroyOnHidden
       afterClose={() => form.resetFields()}

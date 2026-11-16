@@ -316,16 +316,16 @@ export const radius = {
   /** 3px — chip nhỏ, tag nhỏ, thanh tiến trình. */
   sm: '4px',
   /** 4px — input, button, badge, table row. */
-  md: '8px',
+  md: '4px',
   /** 6px — card, panel, modal, dropdown. */
-  lg: '10px',
+  lg: '6px',
   /**
    * 6px — hộp thoại / khối nổi bật.
    *
    * ⚠ Vẫn **6px**, không phải 8px: yêu cầu là "4px - 6px" cho toàn bộ.
    *   `xl` chỉ là tên tương thích ngược để không phải sửa hàng loạt chỗ gọi.
    */
-  xl: '12px',
+  xl: '6px',
 } as const
 
 /* ─── Đổ bóng ─────────────────────────────────────────────────────────── */

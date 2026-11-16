@@ -330,3 +330,12 @@
   color: var(--mcms-text);
   background: var(--mcms-surface-muted);
 }
+.ant-skeleton.ant-skeleton-active .ant-skeleton-title,
+.ant-skeleton.ant-skeleton-active .ant-skeleton-paragraph > li,
+.ant-skeleton.ant-skeleton-active .ant-skeleton-avatar,
+.ant-skeleton.ant-skeleton-active .ant-skeleton-button,
+.ant-skeleton.ant-skeleton-active .ant-skeleton-input,
+.ant-skeleton.ant-skeleton-active .ant-skeleton-image {
+  background-image: none;
+  background-color: var(--mcms-surface-muted);
+}

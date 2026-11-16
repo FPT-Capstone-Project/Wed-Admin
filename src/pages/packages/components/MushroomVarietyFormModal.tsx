@@ -346,7 +346,7 @@ export function MushroomVarietyFormModal({
       confirmLoading={isSubmitting}
       cancelButtonProps={{ disabled: isSubmitting }}
       closable={!isSubmitting}
-      maskClosable={!isSubmitting}
+      mask={{ closable: !isSubmitting }}
       keyboard={!isSubmitting}
       width={680}
       afterClose={() => {
@@ -410,7 +410,7 @@ export function MushroomVarietyFormModal({
               precision={0}
               style={{ width: '100%' }}
               placeholder="VD: 30"
-              addonAfter="ngày"
+              suffix="ngày"
             />
           </Form.Item>
 
@@ -430,7 +430,7 @@ export function MushroomVarietyFormModal({
               precision={0}
               style={{ width: '100%' }}
               placeholder="VD: 120000"
-              addonAfter="VND"
+              suffix="₫"
               formatter={(value) =>
                 value != null
                   ? `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, '.')

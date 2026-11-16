@@ -84,7 +84,7 @@ export function HarvestRequestManagementPage() {
   /**
    * ⚠ BE chỉ trả **ID** cho `confirmed_by` ⇒ tra cứu tên nhân viên qua
    *   `GET /api/users` (chỉ Admin gọi được — Farm Operator sẽ thấy
-   *   fallback `Nhân viên #<id>`).
+   *   hiển thị trạng thái tra cứu nếu chưa có tên).
    */
   const staffIds = useMemo(
     () => rows.map((row) => row.confirmed_by),
@@ -283,7 +283,7 @@ export function HarvestRequestManagementPage() {
               {
                 title: 'Đơn hàng',
                 key: 'order',
-                width: 150,
+                width: 140,
                 render: (_, row) => (
                   <Flex vertical gap={2} style={{ minWidth: 0 }}>
                     <Typography.Text
@@ -305,7 +305,7 @@ export function HarvestRequestManagementPage() {
               {
                 title: 'Khách hàng',
                 key: 'customer',
-                width: 200,
+                width: 190,
                 render: (_, row) => (
                   <Flex vertical gap={2} style={{ minWidth: 0 }}>
                     <Typography.Text
@@ -377,7 +377,7 @@ export function HarvestRequestManagementPage() {
               {
                 title: 'Bàn giao',
                 key: 'handover',
-                width: 150,
+                width: 160,
                 render: (_, row) => (
                   <Flex vertical gap={2} style={{ minWidth: 0 }}>
                     <Typography.Text
@@ -390,7 +390,7 @@ export function HarvestRequestManagementPage() {
                       type="secondary"
                       style={{ fontSize: 12, whiteSpace: 'nowrap' }}
                     >
-                      {row.completed_at
+                      {formatVietnamDateTime(row.completed_at) !== '—'
                         ? `Xong ${formatVietnamDateTime(row.completed_at)}`
                         : 'Chưa hoàn tất'}
                     </Typography.Text>

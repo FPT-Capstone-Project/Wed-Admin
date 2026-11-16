@@ -140,7 +140,7 @@ export function AutoControlDetailModal({
     config?.configured_by == null
       ? '—'
       : (configuratorNames.get(config.configured_by) ??
-        `Nhân viên #${config.configured_by}`)
+        'Chưa có thông tin nhân viên')
 
   const logColumns: ColumnsType<AutoControlLogEntry> = [
     {

@@ -237,6 +237,11 @@ export const mcmsTheme: McmsThemeConfig = {
     Tag: {
       borderRadiusSM: Number.parseInt(radius.sm, 10),
     },
+    Pagination: {
+      colorPrimary: palette.primaryStrong,
+      colorPrimaryHover: palette.primaryDark,
+      itemActiveBg: surface.surface,
+    },
   },
 }
 

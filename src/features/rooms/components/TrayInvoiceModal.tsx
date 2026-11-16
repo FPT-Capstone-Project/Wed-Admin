@@ -196,7 +196,7 @@ export function TrayInvoiceModal({
             type="info"
             showIcon
             icon={<EnvironmentOutlined />}
-            message={
+            title={
               <span>
                 Giao đến:{' '}
                 <strong>{rental.tenantAddress}</strong>

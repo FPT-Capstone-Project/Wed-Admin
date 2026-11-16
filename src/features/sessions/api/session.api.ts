@@ -1,4 +1,3 @@
-import { withFarmGrowth } from './farm-growth.api'
 import { apiClient } from '../../../shared/api/client'
 import { unwrapListResponse } from '../../../shared/api/list-response'
 import { ensureObject } from '../../../shared/api/response-normalizer'
@@ -55,13 +54,13 @@ export const sessionApi = {
       sessions = details
     }
     if (query.trayId != null || query.includeTrays) sessions = await attachTrays(sessions)
-    return selectSessions(await withFarmGrowth(sessions), query)
+    return selectSessions(sessions, query)
   },
   async getById(id: number, includeTrays = false): Promise<CultivationSession> {
     const response = await apiClient.get<unknown>(`${FARM_SESSIONS_URL}/${id}`)
     const raw = ensureObject<Record<string, unknown>>(response.data)
     if (!raw) throw new Error('Dữ liệu chi tiết phiên không đúng định dạng')
-    const session = (await withFarmGrowth([normalizeSession(raw)]))[0]
+    const session = normalizeSession(raw)
     return includeTrays ? (await attachTrays([session]))[0] : session
   },
 }

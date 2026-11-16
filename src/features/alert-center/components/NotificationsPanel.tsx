@@ -479,7 +479,7 @@ export function NotificationsPanel({
           setManualDetail(null)
         }}
         title="Chi tiết thông báo"
-        width={520}
+        size={520}
         className="mcms-alert-center-drawer"
         footer={
           <Flex justify="end" gap={8}>

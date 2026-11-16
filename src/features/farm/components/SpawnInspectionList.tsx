@@ -44,7 +44,7 @@ export function SpawnInspectionCard({ inspection }: SpawnInspectionCardProps) {
         flexDirection: 'column',
         gap: 8,
         padding: 12,
-        borderRadius: 12,
+        borderRadius: 6,
         border: '1px solid var(--mcms-border-soft)',
         background: 'var(--mcms-surface)',
       }}
@@ -93,7 +93,7 @@ export function SpawnInspectionCard({ inspection }: SpawnInspectionCardProps) {
                   alt={alt}
                   width={72}
                   height={72}
-                  style={{ objectFit: 'cover', borderRadius: 8 }}
+                  style={{ objectFit: 'cover', borderRadius: 6 }}
                 />
               </Tooltip>
             )

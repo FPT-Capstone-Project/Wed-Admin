@@ -533,7 +533,7 @@ export function SessionIoTHistoryTab({
         <Alert
           type="warning"
           showIcon
-          message="Không tải được lịch sử cảm biến."
+          title="Không tải được lịch sử cảm biến."
           description={chartError?.message}
         />
       ) : (chartLoading && !chartPoints) || (!chartReady && !chartPoints) ? (
@@ -623,7 +623,7 @@ export function SessionIoTHistoryTab({
             <Alert
               type="warning"
               showIcon
-              message="Không tải được bảng dữ liệu cảm biến."
+              title="Không tải được bảng dữ liệu cảm biến."
               description={newestError?.message}
             />
           )}
@@ -691,7 +691,7 @@ export function SessionIoTHistoryTab({
         <Alert
           type="warning"
           showIcon
-          message="Không tải được nhật ký thiết bị."
+          title="Không tải được nhật ký thiết bị."
           description={deviceError?.message}
         />
       ) : deviceLoading && !deviceCycles ? (

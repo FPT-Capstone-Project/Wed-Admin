@@ -740,7 +740,7 @@ export function DeviceControlPanel() {
         }
         open={Boolean(selectedFloor)}
         onClose={() => setSelectedFloor(null)}
-        width={520}
+        size={520}
         destroyOnHidden
       >
         {selectedFloor && (
@@ -802,7 +802,7 @@ export function DeviceControlPanel() {
               <Alert
                 type="warning"
                 showIcon
-                message="Đã kết nối dữ liệu từ Node RS485 của tầng. Khay chưa được cấu hình sensor_id trong DB."
+                title="Đã kết nối dữ liệu từ Node RS485 của tầng. Khay chưa được cấu hình sensor_id trong DB."
                 description={`Nhiệt độ / độ ẩm dưới đây là số đo thật từ Node ${
                   selectedFloor.node_address
                 }, không phải từ bản ghi khay.`}

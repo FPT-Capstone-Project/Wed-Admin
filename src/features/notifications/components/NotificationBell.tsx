@@ -163,7 +163,7 @@ export function NotificationBell() {
               <Alert
                 type="error"
                 showIcon
-                message="Không tải được thông báo"
+                title="Không tải được thông báo"
                 action={
                   <Button size="small" onClick={() => void query.refetch()}>
                     Thử lại

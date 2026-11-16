@@ -56,8 +56,8 @@ function RangeCell({
       fontFamily: 'var(--mcms-font-mono)',
       fontVariantNumeric: 'tabular-nums', fontSize: 12,
     }}>
-      <span><span style={{ color: 'var(--mcms-text-muted)' }}>Min </span>{min ?? '—'} {unit}</span>
-      <span><span style={{ color: 'var(--mcms-text-muted)' }}>Max </span>{max ?? '—'} {unit}</span>
+      <span><span style={{ color: 'var(--mcms-text-muted)' }}>Thấp nhất </span>{min ?? '—'} {unit}</span>
+      <span><span style={{ color: 'var(--mcms-text-muted)' }}>Cao nhất </span>{max ?? '—'} {unit}</span>
     </div>
   )
 }
@@ -66,7 +66,7 @@ function RangeCell({
  * Bảng hồ sơ vi khí hậu — **CHỈ XEM**.
  *
  * ⚠ Admin web không được đặt / sửa / xoá ngưỡng. Việc này do nhân viên
- * (staff) thực hiện trên mobile app (`iot.automation.manage`).
+ * (staff) thực hiện trên ứng dụng nhân viên (`iot.automation.manage`).
  *
  * Vì vậy bảng không có cột "Hành động" và không có nút "Thêm giống nấm" —
  * chỉ hiển thị dải ngưỡng đang áp dụng để admin theo dõi.
@@ -164,12 +164,12 @@ export function ThresholdProfileTab({
         type="info"
         showIcon
         icon={<EyeOutlined />}
-        message={
+        title={
           <Typography.Text style={{ fontSize: 13 }}>
             <strong>Chế độ chỉ xem:</strong> Các tầng đang bật chế độ{' '}
-            <StatusBadge tone="ok" label="AUTO" style={{ margin: '0 4px' }} />
+            <StatusBadge tone="ok" label="Tự động" style={{ margin: '0 4px' }} />
             sẽ tự động đồng bộ theo ngưỡng của giống nấm được gán trên khay.
-            Việc đặt / sửa ngưỡng do nhân viên thực hiện trên mobile app.
+            Việc đặt / sửa ngưỡng do nhân viên thực hiện trên ứng dụng nhân viên.
           </Typography.Text>
         }
         style={{ marginBottom: 16, borderRadius: 6, borderColor: 'var(--mcms-border)', background: 'var(--mcms-surface-muted)' }}
@@ -187,7 +187,7 @@ export function ThresholdProfileTab({
             Thông số canh tác theo giống nấm
           </Typography.Title>
           <Typography.Text type="secondary">
-            Dải nhiệt độ và độ ẩm áp dụng cho relay AUTO và cảnh báo cảm biến
+            Dải nhiệt độ và độ ẩm áp dụng cho thiết bị tự động và cảnh báo cảm biến
           </Typography.Text>
         </div>
 
@@ -198,7 +198,7 @@ export function ThresholdProfileTab({
             />
           ) : null}
           <MetadataBadge
-            label="Chỉ xem — nhân viên thiết lập trên mobile app"
+            label="Chỉ xem — nhân viên thiết lập trên ứng dụng nhân viên"
           />
           <Button
             size="small"

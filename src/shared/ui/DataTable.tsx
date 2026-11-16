@@ -101,7 +101,7 @@ export function DataTable<T extends object>({
       <Alert
         type="error"
         showIcon
-        message="Không tải được dữ liệu."
+        title="Không tải được dữ liệu."
         description={error.message ?? 'Đã xảy ra lỗi không xác định.'}
         action={
           onRetry ? (

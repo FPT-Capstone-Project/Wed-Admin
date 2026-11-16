@@ -22,7 +22,7 @@
  * | `''` / `'   '`         | `{ label: emptyLabel, tone: 'muted' }` |
  * | `'  pending '`         | tra cứu `PENDING` (chuẩn hoá)      |
  * | `'PENDING'`            | nhãn đúng từ từ điển                |
- * | `'FOO_BAR'` (lạ)       | `{ label: 'Chưa xác định (FOO_BAR)', tone: 'muted' }` |
+ * | `'FOO_BAR'` (lạ)       | `{ label: 'Chưa xác định', tone: 'muted' }` |
  *
  * ⚠ **Không bao giờ** throw, **không bao giờ** trả về chuỗi tiếng Anh
  *   chưa dịch cho người dùng cuối.
@@ -143,7 +143,7 @@ export function presentStatus(
   if (insensitive) return insensitive[1]
 
   // 4) Giá trị lạ (BE thêm enum mới) ⇒ **KHÔNG lộ chuỗi gốc**.
-  return { label: `${emptyLabel} (${trimmed})`, tone: 'muted' }
+  return { label: emptyLabel, tone: 'muted' }
 }
 
 /**

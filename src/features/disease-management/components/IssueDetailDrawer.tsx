@@ -22,7 +22,7 @@ function AssignExpertModal({ consultation, onClose }: { consultation: Consultati
   const [form] = Form.useForm<{ expertId: number }>()
   const query = useQuery({ queryKey: ['users', 'experts'], queryFn: issuesApi.experts })
   const { assign } = useIssueActions()
-  return <Modal open title="Phân công Chuyên gia" onCancel={onClose} onOk={() => form.submit()} confirmLoading={assign.isPending} okButtonProps={{ disabled: !query.data?.length || query.isError }} cancelButtonProps={{ disabled: assign.isPending }} closable={!assign.isPending} maskClosable={false}>
+  return <Modal open title="Phân công Chuyên gia" onCancel={onClose} onOk={() => form.submit()} confirmLoading={assign.isPending} okButtonProps={{ disabled: !query.data?.length || query.isError }} cancelButtonProps={{ disabled: assign.isPending }} closable={!assign.isPending} mask={{ closable: false }}>
     <QueryFeedback query={query} />
     <Form form={form} layout="vertical" onFinish={values => assign.mutate({ id: consultation.consultation_id, ...values }, { onSuccess: onClose })}>
       <Form.Item name="expertId" label="Chuyên gia nấm học" rules={[{ required: true, message: 'Vui lòng chọn chuyên gia' }]}><Select showSearch optionFilterProp="label" loading={query.isLoading} options={query.data?.map(user => ({ value: user.user_id, label: `${user.full_name} (${user.email})` }))} notFoundContent="Không có chuyên gia đang hoạt động" /></Form.Item>

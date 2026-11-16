@@ -113,7 +113,7 @@ export function DailyInspectionCard({ inspection }: DailyInspectionCardProps) {
                   alt={alt}
                   width={72}
                   height={72}
-                  style={{ objectFit: 'cover', borderRadius: 8 }}
+                  style={{ objectFit: 'cover', borderRadius: 6 }}
                 />
               </Tooltip>
             )

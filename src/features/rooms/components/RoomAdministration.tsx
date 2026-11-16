@@ -22,7 +22,7 @@ function useResourceAction<T>(mutationFn: (value: T) => Promise<void>) {
 function RoomForm({ room, onClose }: { room: CultivationRoom | null; onClose: () => void }) {
   const [form] = Form.useForm<RoomRequest>()
   const save = useResourceAction((payload: RoomRequest) => room ? cultivationRoomApi.update(room.room_id, payload) : cultivationRoomApi.create(payload))
-  return <Modal open title={room ? 'Cập nhật phòng' : 'Thêm phòng'} onCancel={onClose} onOk={() => form.submit()} confirmLoading={save.isPending} cancelButtonProps={{ disabled: save.isPending }} closable={!save.isPending} maskClosable={false}>
+  return <Modal open title={room ? 'Cập nhật phòng' : 'Thêm phòng'} onCancel={onClose} onOk={() => form.submit()} confirmLoading={save.isPending} cancelButtonProps={{ disabled: save.isPending }} closable={!save.isPending} mask={{ closable: false }}>
     <Form form={form} layout="vertical" initialValues={room ? { roomCode: room.room_code, roomName: room.room_name, capacity: room.capacity, description: room.description } : { capacity: 1 }} onFinish={values => save.mutate(values, { onSuccess: onClose })}>
       <Form.Item name="roomCode" label="Mã phòng" rules={[{ required: true, whitespace: true }]}><Input maxLength={50} /></Form.Item>
       <Form.Item name="roomName" label="Tên phòng" rules={[{ required: true, whitespace: true }]}><Input maxLength={100} /></Form.Item>

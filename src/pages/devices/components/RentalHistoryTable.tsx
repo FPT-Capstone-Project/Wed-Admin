@@ -85,7 +85,7 @@ export function RentalHistoryTable({
       render: (status: RentalSessionStatus) => {
         const meta = RENTAL_SESSION_STATUS_LEGACY_CONFIG[status]
         return (
-          <Tag color={meta?.color ?? 'default'}>{meta?.label ?? status}</Tag>
+          <Tag color={meta?.color ?? 'default'}>{meta?.label ?? 'Trạng thái chưa xác định'}</Tag>
         )
       },
     },

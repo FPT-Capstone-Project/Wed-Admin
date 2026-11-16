@@ -300,33 +300,6 @@ export function SessionListPage() {
         },
       },
       {
-        /*
-         * ⚠ Gộp "Số khay" + "Số phôi yêu cầu" thành **1 cột gọn**
-         *   ("Khay / Phôi") ⇒ bảng vừa 1 màn hình desktop, không cần cuộn ngang.
-         */
-        title: 'Khay / Phôi',
-        key: 'tray_spawn',
-        width: 100,
-        render: (_, session) => {
-          const trays = session.tray_quantity
-          const spawns = session.spawn_quantity
-          if (trays == null && spawns == null) {
-            return (
-              <Typography.Text type="secondary">—</Typography.Text>
-            )
-          }
-          return (
-            <Typography.Text style={{ whiteSpace: 'nowrap' }}>
-              {trays ?? '—'} khay
-              <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {' · '}
-                {spawns ?? '—'} phôi
-              </Typography.Text>
-            </Typography.Text>
-          )
-        },
-      },
-      {
         title: 'Giai đoạn sinh trưởng',
         key: 'growth_stage',
         width: 160,
@@ -346,7 +319,7 @@ export function SessionListPage() {
                     ? MUSHROOM_GROWTH_PHASE_DICTIONARY[phase].label
                     : 'Chưa cập nhật'}
                 </Typography.Text>
-                <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 11, flexShrink: 0, whiteSpace: 'nowrap' }}>
                   {formatSessionProgress(percent)}
                 </Typography.Text>
               </Flex>
@@ -386,7 +359,7 @@ export function SessionListPage() {
                   —
                 </Typography.Text>
               )}
-              <Typography.Text type="secondary" style={{ fontSize: 11 }}>
+                <Typography.Text type="secondary" style={{ fontSize: 11, flexShrink: 0, whiteSpace: 'nowrap' }}>
                 {formatDate(session.harvest_date)}
               </Typography.Text>
             </Flex>
@@ -552,14 +525,14 @@ export function SessionListPage() {
           loading={isLoading}
           isFetching={isFetching}
           /*
-           * ⚠ `scrollX` = **tổng bề rộng các cột** (1092px).
+           * ⚠ `scrollX` = **tổng bề rộng các cột** (990px).
            *   - Màn hình desktop 1440px (vùng nội dung ≈ 1112px) ⇒ bảng
            *     được `min-width: 100%` co giãn vừa khít ⇒ **KHÔNG** thanh
            *     cuộn ngang.
            *   - Màn hình hẹp hơn ⇒ bảng giữ bề rộng cố định và cuộn ngang
            *     (không bẻ cột làm khó đọc).
            */
-          scrollX={1092}
+          scrollX={990}
           tableLayout="fixed"
           className="mcms-session-table"
           pagination={{

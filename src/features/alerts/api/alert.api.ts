@@ -1,4 +1,5 @@
 import { autoMistingApi } from '../../devices/api/iot.api'
+import { presentNotificationContent } from '../../../shared/i18n/notification-content'
 import { isTechnicalNotificationType } from '../../notifications/utils/notification-classification'
 import type { AutoControlLogEntry, CultivationFloorMapping } from '../../../types/iot'
 import type {
@@ -94,15 +95,6 @@ const EVENT_LABELS: Record<string, string> = {
   DEVICE_OFFLINE: 'Thiết bị mất kết nối',
   RETRY_WAIT: 'Tạm dừng do lỗi cảm biến',
   MANUAL_OVERRIDE: 'Ghi đè thủ công',
-}
-
-/** Tên tiếng Việt của `notification_type`. */
-const NOTIFICATION_LABELS: Record<string, string> = {
-  MUSHROOM_DISEASE: 'Cảnh báo nấm bệnh',
-  DEVICE_ISSUE: 'Sự cố thiết bị',
-  SENSOR_ALERT: 'Cảnh báo cảm biến',
-  MICROCLIMATE_ALERT: 'Cảnh báo vi khí hậu',
-  OPERATOR_MESSAGE: 'Thông báo từ nhân viên',
 }
 
 export interface AlertFloorContext {
@@ -221,11 +213,7 @@ export function buildOperationalAlerts(
       severity:
         NOTIFICATION_SEVERITY[type] ??
         (isTechnical ? TECHNICAL_DEFAULT_SEVERITY : 'INFO'),
-      title: notification.title ?? NOTIFICATION_LABELS[type] ?? type,
-      message:
-        notification.message ??
-        notification.title ??
-        'Thông báo từ hệ thống.',
+      ...presentNotificationContent(type, notification.title, notification.message),
       floorId: null,
       floorName: null,
       deviceId: null,
