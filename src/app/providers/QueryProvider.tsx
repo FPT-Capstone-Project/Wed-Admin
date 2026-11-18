@@ -23,12 +23,12 @@ const queryClient = new QueryClient({
        * Thử lại **1 lần** khi request thất bại tạm thời (timeout, mạng, 5xx).
        *
        * ⚠ Mặc định của TanStack Query v5 là `retry: 3` với backoff
-       * `min(1000 * 2^n, 30_000)` → tổng thời gian chờ có thể lên tới ~7s
-       * cộng thêm 3 lần timeout 60s ⇒ người dùng bị treo gần 3 phút.
+       *   `min(1000 * 2^n, 30_000)` → tổng thời gian chờ có thể lên tới ~7s
+       *   cộng thêm 3 lần timeout 60s ⇒ người dùng bị treo gần 3 phút.
        *
        * → `retryApiErrors` chỉ retry nhóm lỗi **an toàn để thử lại**:
-       * timeout / lỗi mạng / 5xx / 429. Lỗi 4xx (401, 403, 404, 409…) thì
-       * không retry vì thử lại cũng không thành công.
+       *   * timeout / lỗi mạng / 5xx / 429. Lỗi 4xx (401, 403, 404, 409…) thì
+       *     không retry vì thử lại cũng không thành công.
        */
       retry: retryApiErrors,
       /**

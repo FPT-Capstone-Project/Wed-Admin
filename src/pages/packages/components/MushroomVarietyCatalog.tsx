@@ -37,6 +37,10 @@ import { FallbackThumbnail } from './FallbackThumbnail'
 import { MushroomVarietyFormModal } from './MushroomVarietyFormModal'
 import { CATALOG_STATUS_DICTIONARY } from '../../../shared/i18n/status/package'
 import { presentStatus } from '../../../shared/i18n/status/registry'
+import {
+  resolveApiErrorMessage,
+  showApiError,
+} from '../../../shared/api/error-mapper'
 
 const VND = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -76,12 +80,14 @@ export function MushroomVarietyCatalog({
           : `Đã tạm ngưng nhận đơn cho "${updated.name}".`,
       )
     },
-    onError: (err) => messageApi.error(err.message),
+    onError: (err) =>
+      showApiError(err, 'cập nhật giống nấm', (text) => messageApi.error(text)),
   })
 
   const deleteMutation = useDeleteMushroomType({
     onSuccess: () => messageApi.success('Đã xóa giống nấm.'),
-    onError: (err) => messageApi.error(err.message),
+    onError: (err) =>
+      showApiError(err, 'xóa giống nấm', (text) => messageApi.error(text)),
   })
 
   const [searchText, setSearchText] = useState('')
@@ -319,7 +325,7 @@ export function MushroomVarietyCatalog({
                 Không tải được danh sách giống nấm.
               </Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {error?.message ?? 'Lỗi không xác định.'}
+                {resolveApiErrorMessage(error, 'tải danh sách giống nấm')}
               </Typography.Text>
             </Flex>
           }

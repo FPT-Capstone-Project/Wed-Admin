@@ -56,6 +56,15 @@ test('KPI categories are disjoint and cover all sessions including completed', (
   assert.equal(summary.active + summary.waiting + summary.cancelled + summary.completed, summary.total)
 })
 
+test('completed lifecycle overrides missing or stale biological stages without changing recorded progress', () => {
+  for (const stage of [null, 'SPAWNING', 'RUNNING', 'PINNING', 'MATURATION']) {
+    assert.equal(resolveSessionPhase(stage, 'COMPLETED'), 'COMPLETED')
+    assert.equal(resolveSessionPhase(stage, ' completed '), 'COMPLETED')
+    assert.equal(resolveSessionProgress(20, 'COMPLETED', stage), 20)
+  }
+  assert.equal(resolveSessionPhase('MATURATION', 'CULTIVATING'), 'HARVESTING')
+})
+
 const { resolveFarmGrowth } = await import(await load(new URL('utils/farm-growth.utils.ts', root).pathname.replace(/^\/(\w:)/, '$1')))
 test('new spawn inspections update stage without resetting cultivation progress', () => {
   const progressHistory = [{ current_stage: 'PINNING', progress_percent: '50', updated_at: '2026-11-12T10:00:00Z' }]

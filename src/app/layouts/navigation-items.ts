@@ -24,6 +24,7 @@ export type MenuIconName =
   | 'sessions'
   | 'issues'
   | 'harvests'
+  | 'harvestRequests'
   | 'reports'
   | 'orders'
   | 'packages'
@@ -109,7 +110,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
          *   (Farm Operator cần xem lịch hẹn khách đến nhận nấm).
          */
         key: '/harvest-requests',
-        icon: 'harvests',
+        icon: 'harvestRequests',
         label: 'Yêu cầu nhận nấm',
       },
       {

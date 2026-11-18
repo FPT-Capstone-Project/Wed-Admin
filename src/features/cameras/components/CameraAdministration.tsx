@@ -7,7 +7,7 @@ import { useDeleteCamera, useRegisterCamera, useUpdateCamera } from '../hooks/us
 import { cameraApi } from '../api/camera.api'
 import { useCultivationRooms } from '../../rooms/hooks/useCultivation'
 import { CAMERA_STATUSES, type Camera, type CreateCameraRequest } from '../../../types/camera.types'
-import { getApiErrorMessage } from '../../../shared/api/error'
+import { showApiError } from '../../../shared/api/error-mapper'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import { CAMERA_STATUS_DICTIONARY, LIVE_SESSION_STATUS_DICTIONARY } from '../../../shared/i18n/status/camera'
 import { presentStatus, selectOptions, statusLabel } from '../../../shared/i18n/status/registry'
@@ -34,7 +34,7 @@ export function CameraFormModal({ camera, onClose }: { camera: Camera | null; on
   const [form] = Form.useForm<CreateCameraRequest>()
   const rooms = useCultivationRooms()
   const { message } = App.useApp()
-  const options = { onSuccess: () => { void message.success('Đã lưu camera'); onClose() }, onError: (error: Error) => { void message.error(getApiErrorMessage(error)) } }
+  const options = { onSuccess: () => { void message.success('Đã lưu camera'); onClose() }, onError: (error: Error) => { showApiError(error, 'lưu camera', (text) => void message.error(text)) } }
   const create = useRegisterCamera(options)
   const update = useUpdateCamera(options)
   const pending = create.isPending || update.isPending
@@ -52,7 +52,7 @@ export function CameraFormModal({ camera, onClose }: { camera: Camera | null; on
 export function CameraRowActions({ camera }: { camera: Camera }) {
   const [editing, setEditing] = useState(false)
   const { message } = App.useApp()
-  const remove = useDeleteCamera({ onSuccess: () => { void message.success('Đã xóa camera') }, onError: error => { void message.error(getApiErrorMessage(error)) } })
+  const remove = useDeleteCamera({ onSuccess: () => { void message.success('Đã xóa camera') }, onError: error => { showApiError(error, 'xóa camera', (text) => void message.error(text)) } })
   /*
    * ⚠ Nút **icon-only** (đồng bộ bảng Accounts / Orders / Devices) ⇒ cột
    *   "Hành động" chỉ cần ~70px thay vì 150px ⇒ bảng camera vừa khít
@@ -96,7 +96,7 @@ export function LiveSessionManager() {
   const client = useQueryClient()
   const { message } = App.useApp()
   const query = useQuery({ queryKey: ['live-streams', 'admin', page], queryFn: () => cameraApi.adminLiveSessions(page, 20), enabled: open, gcTime: 0 })
-  const stop = useMutation({ mutationFn: cameraApi.stopLiveSession, onSuccess: async () => { await client.invalidateQueries({ queryKey: ['live-streams'] }); void message.success('Đã dừng phiên phát trực tiếp') }, onError: (error: Error) => { void message.error(getApiErrorMessage(error)) } })
+  const stop = useMutation({ mutationFn: cameraApi.stopLiveSession, onSuccess: async () => { await client.invalidateQueries({ queryKey: ['live-streams'] }); void message.success('Đã dừng phiên phát trực tiếp') }, onError: (error: Error) => { showApiError(error, 'dừng phiên phát trực tiếp', (text) => void message.error(text)) } })
   return <><Button onClick={() => setOpen(true)}>Quản lý phiên phát trực tiếp</Button><Modal open={open} title="Phiên phát trực tiếp đang hoạt động" onCancel={() => { setOpen(false); stop.reset() }} footer={null} width={760} destroyOnHidden>
     <QueryFeedback query={query} />{!query.isError && <DataTable scrollX={700} size="small" rowKey="liveToken" loading={query.isLoading} dataSource={query.data?.lives} pagination={{ hideOnSinglePage: false, current: page, pageSize: 20, total: query.data?.count, onChange: setPage, showSizeChanger: false }} columns={[
       { title: 'Camera', render: (_, live) => live.camera?.cameraName ?? live.deviceId ?? 'Thiết bị chưa đăng ký' },

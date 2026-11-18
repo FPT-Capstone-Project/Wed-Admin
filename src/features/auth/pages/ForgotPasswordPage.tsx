@@ -10,6 +10,10 @@ import { authApi } from '../api/auth.api'
 import { AuthShell } from '../components/AuthShell'
 import { OtpField } from '../components/OtpField'
 import {
+  markApiErrorHandled,
+  resolveApiErrorMessage,
+} from '../../../shared/api/error-mapper'
+import {
   PasswordHint,
   PasswordStrength,
 } from '../components/PasswordStrength'
@@ -108,9 +112,10 @@ export function ForgotPasswordPage() {
         `Nếu email tồn tại, mã OTP đã được gửi đến ${values.email}.`,
       )
     } catch (err) {
-      const text =
-        err instanceof Error ? err.message : 'Không thể gửi yêu cầu.'
-      setErrorMessage(text)
+      markApiErrorHandled(err)
+      setErrorMessage(
+        resolveApiErrorMessage(err, 'gửi yêu cầu đặt lại mật khẩu'),
+      )
     } finally {
       setIsSending(false)
     }
@@ -125,8 +130,8 @@ export function ForgotPasswordPage() {
       countdown.start(RESEND_SECONDS)
       messageApi.success('Đã gửi lại mã OTP.')
     } catch (err) {
-      const text = err instanceof Error ? err.message : 'Không gửi lại được OTP.'
-      setErrorMessage(text)
+      markApiErrorHandled(err)
+      setErrorMessage(resolveApiErrorMessage(err, 'gửi lại mã OTP'))
     } finally {
       setIsSending(false)
     }
@@ -159,10 +164,8 @@ export function ForgotPasswordPage() {
       setStep('email')
       setEmailForReset('')
     } catch (err) {
-      const text =
-        err instanceof Error
-          ? err.message
-          : 'Không đặt lại được mật khẩu. Mã OTP có thể đã hết hạn.'
+      markApiErrorHandled(err)
+      const text = resolveApiErrorMessage(err, 'đặt lại mật khẩu')
       setErrorMessage(text)
       if (
         text.toLowerCase().includes('otp') ||

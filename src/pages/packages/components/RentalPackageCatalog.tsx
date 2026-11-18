@@ -46,6 +46,11 @@ import {
 } from '../../../features/packages/hooks/useRentalPackages'
 import { CATALOG_STATUS_DICTIONARY } from '../../../shared/i18n/status/package'
 import { presentStatus } from '../../../shared/i18n/status/registry'
+import {
+  markApiErrorHandled,
+  resolveApiErrorMessage,
+  showApiError,
+} from '../../../shared/api/error-mapper'
 
 const VND = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -100,7 +105,8 @@ export function RentalPackageCatalog({
           : `Đã tạm ngưng nhận đơn cho gói "${updated.package_name}".`,
       )
     },
-    onError: (err) => messageApi.error(err.message),
+    onError: (err) =>
+      showApiError(err, 'cập nhật gói thuê', (text) => messageApi.error(text)),
   })
 
   const deleteMutation = useDeleteRentalPackage({
@@ -109,10 +115,11 @@ export function RentalPackageCatalog({
       // ⚠ 409 — gói đã có đơn hàng: hiện message tiếng Việt có hướng dẫn
       //   hành động thay thế (chuyển sang Tạm ngưng) thay vì message kỹ thuật.
       if (isRentalPackageInUseError(err)) {
+        markApiErrorHandled(err)
         messageApi.warning(RENTAL_PACKAGE_IN_USE_MESSAGE)
         return
       }
-      messageApi.error(err.message)
+      showApiError(err, 'xóa gói thuê', (text) => messageApi.error(text))
     },
   })
 
@@ -420,7 +427,7 @@ export function RentalPackageCatalog({
                 Không tải được danh sách gói thuê.
               </Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {error?.message ?? 'Lỗi không xác định.'}
+                {resolveApiErrorMessage(error, 'tải danh sách gói thuê')}
               </Typography.Text>
             </Flex>
           }

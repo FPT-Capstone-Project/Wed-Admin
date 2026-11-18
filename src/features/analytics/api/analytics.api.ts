@@ -5,9 +5,11 @@ import { sessionApi } from '../../sessions/api/session.api'
 import { rentalPackageApi } from '../../packages/api/rental-package.api'
 import { harvestApi } from '../../harvest/api/harvest.api'
 import { fetchDashboardMetrics } from '../../dashboard/api/dashboard.api'
+import { fetchAllAdminOrders } from '../../orders/api/order.api'
 import type { CultivationRoom, CultivationTray } from '../../../types/cultivation'
 import type { CultivationFloorMapping, IotMaster } from '../../../types/iot'
 import type { RentalPackage } from '../../../types/rental-package'
+import type { AdminOrderDto } from '../../orders/types/admin-order.types'
 import type {
   CultivationSession,
   CultivationSessionStatus,
@@ -147,6 +149,7 @@ export async function fetchReportsAnalytics(): Promise<ReportsAnalytics> {
     mastersResult,
     harvestsResult,
     metricsResult,
+    ordersResult,
   ] = await Promise.allSettled([
     sessionApi.list(),
     rentalPackageApi.list({}),
@@ -156,12 +159,25 @@ export async function fetchReportsAnalytics(): Promise<ReportsAnalytics> {
     iotApi.listMasters(),
     harvestApi.list({}),
     fetchDashboardMetrics(),
+    /*
+     * ⚠ `GET /api/orders/admin` — **bắt buộc** để tính doanh thu ước tính.
+     *
+     * ⚠ Vì sao? `GET /api/farm/sessions` chỉ trả `order_id` + `order_item_id`
+     *   (**không** có `package_id` / `package_name`) ⇒ không map trực tiếp
+     *   được sang `rental-packages` để lấy giá.
+     *
+     * → Ta dùng `order_id` làm khoá nối: `orders.admin` trả `package_name`
+     *   (tên gói) ⇒ map `order_id → package_name → rental_packages.price`.
+     */
+    fetchAllAdminOrders({ pageSize: 100, maxPages: 20 }),
   ])
 
   const sessions =
     sessionsResult.status === 'fulfilled' ? sessionsResult.value.items : []
   const packages =
     packagesResult.status === 'fulfilled' ? packagesResult.value : []
+  const orders: AdminOrderDto[] =
+    ordersResult.status === 'fulfilled' ? ordersResult.value : []
   const rooms: CultivationRoom[] =
     roomsResult.status === 'fulfilled' ? roomsResult.value : []
   const trays: CultivationTray[] =
@@ -192,6 +208,7 @@ export async function fetchReportsAnalytics(): Promise<ReportsAnalytics> {
     usableRate: metrics?.harvest_quality.usable_rate ?? 0,
     wasteRate: metrics?.harvest_quality.waste_rate ?? 0,
     traysUsed: metrics?.trays_used ?? 0,
+    orders,
   })
 }
 
@@ -219,6 +236,13 @@ export interface BuildReportsInput {
   wasteRate: number
   /** Số lượt khay đã sử dụng — từ `/api/analytics/dashboard`. */
   traysUsed: number
+  /**
+   * Đơn hàng (từ `GET /api/orders/admin`) — **khoá nối** để tìm giá gói.
+   *
+   * ⚠ `GET /api/farm/sessions` **không** trả `package_id` ⇒ phải đi qua
+   *   `session.order_id` → `order.package_name` → `rental_packages.price`.
+   */
+  orders?: AdminOrderDto[]
 }
 
 export function buildReportsAnalytics(
@@ -273,20 +297,73 @@ export function buildReportsAnalytics(
 
   // ── Doanh thu ước tính theo tháng / theo giống nấm ─────────────────────
   // price = giá gói thuê (`rental-packages`) × số phiên dùng gói đó.
+  //
+  // ⚠ **BE trả `rental_packages.price` dạng CHUỖI** (Postgres `numeric`,
+  //   vd `"1300000.00"`) ⇒ **phải ép `Number()`** — nếu không, mọi phép
+  //   so sánh `typeof price === 'number'` rơi vào nhánh "không có giá" ⇒
+  //   doanh thu ra 0 đ.
   const priceByPackageId = new Map<number, number>()
+  /** Tên gói (chuẩn hoá) → giá — dùng để map qua `orders.package_name`. */
+  const priceByPackageName = new Map<string, number>()
   for (const pkg of input.packages) {
-    if (typeof pkg.price === 'number' && Number.isFinite(pkg.price)) {
-      priceByPackageId.set(pkg.package_id, pkg.price)
+    const price = toNumber(pkg.price)
+    if (price == null) continue
+    priceByPackageId.set(pkg.package_id, price)
+    const nameKey = normalizePackageName(pkg.package_name)
+    if (nameKey) priceByPackageName.set(nameKey, price)
+  }
+
+  /**
+   * ⚠ `GET /api/farm/sessions` **không** trả `package_id` ⇒ dùng
+   *   `order_id` làm khoá nối: `orders.admin` trả `package_name` ⇒ map
+   *   sang giá gói qua `rental-packages`.
+   *
+   * ⚠ BE gộp nhiều item của 1 đơn thành **1 chuỗi** `"Gói A, Gói B"`.
+   *   - Nếu đơn chỉ có **1** gói ⇒ lấy đúng giá gói đó.
+   *   - Nếu đơn có **nhiều** gói ⇒ không biết phiên nào dùng gói nào ⇒
+   *     lấy giá **nhỏ nhất** (đơn lệ, tránh cộng trùng doanh thu).
+   */
+  const priceByOrderId = new Map<number, number>()
+  for (const order of input.orders ?? []) {
+    if (!order.order_id) continue
+    const names = (order.package_name ?? '')
+      .split(',')
+      .map(normalizePackageName)
+      .filter((name): name is string => Boolean(name))
+    const prices = names
+      .map((name) => priceByPackageName.get(name))
+      .filter((price): price is number => price != null)
+    if (prices.length === 0) continue
+    priceByOrderId.set(order.order_id, Math.min(...prices))
+  }
+
+  /**
+   * Giá của 1 phiên — ưu tiên `package_id` (nếu có), fallback qua `order_id`.
+   */
+  const resolveSessionPrice = (session: CultivationSession): number => {
+    if (session.package_id) {
+      const byId = priceByPackageId.get(session.package_id)
+      if (byId != null) return byId
     }
+    if (session.order_id) {
+      const byOrder = priceByOrderId.get(session.order_id)
+      if (byOrder != null) return byOrder
+    }
+    // ⚠ Cuối cùng: thử khớp theo **tên gói** mà BE đã join sẵn vào phiên
+    //   (một số endpoint phiên có trả `package_name`).
+    if (session.package_name) {
+      const nameKey = normalizePackageName(session.package_name)
+      const byName = nameKey ? priceByPackageName.get(nameKey) : undefined
+      if (byName != null) return byName
+    }
+    return 0
   }
 
   const speciesMap = new Map<string, { count: number; revenue: number }>()
   const monthlyMap = new Map<string, { count: number; revenue: number }>()
 
   for (const session of input.sessions) {
-    const price = session.package_id
-      ? (priceByPackageId.get(session.package_id) ?? 0)
-      : 0
+    const price = resolveSessionPrice(session)
 
     const species = session.mushroom_name ?? 'Chưa xác định'
     const speciesEntry = speciesMap.get(species) ?? { count: 0, revenue: 0 }
@@ -362,6 +439,19 @@ function toNumber(value: unknown): number | null {
     if (Number.isFinite(parsed)) return parsed
   }
   return null
+}
+
+/**
+ * Chuẩn hoá tên gói thuê để so khớp giữa 2 nguồn.
+ *
+ * ⚠ `rental_packages.package_name` và `orders.package_name` đều lấy từ cùng
+ *   cột DB ⇒ giống nhau. Nhưng BE gộp nhiều item bằng `", "` ⇒ cần cắt +
+ *   trim + bỏ khoảng trắng thừa để so khớp chắc chắn.
+ */
+function normalizePackageName(value: string | null | undefined): string | null {
+  if (!value) return null
+  const trimmed = value.trim().replace(/\s+/g, ' ')
+  return trimmed ? trimmed.toLowerCase() : null
 }
 
 /** Key tháng `YYYY-MM` từ chuỗi ISO. */

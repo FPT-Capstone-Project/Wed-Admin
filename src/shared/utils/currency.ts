@@ -16,6 +16,20 @@ const compactFormatter = new Intl.NumberFormat('vi-VN', {
   notation: 'compact',
 })
 
+const compactDecimalFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  notation: 'compact',
+  maximumFractionDigits: 1,
+})
+
+/** Giữ một chữ số thập phân để các mốc gần nhau trên biểu đồ khác nhãn. */
+export function formatCompactVND(value: number | string | null | undefined): string {
+  if (value == null || (typeof value === 'string' && !value.trim())) return '—'
+  const amount = Number(value)
+  return Number.isFinite(amount) ? compactDecimalFormatter.format(amount) : '—'
+}
+
 /** Format finite amounts, preserving a legitimate zero and missing-data fallback. */
 export function formatVND(
   value: number | string | null | undefined,

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { App } from 'antd'
-import { getApiErrorMessage } from '../../../shared/api/error'
+import { showApiError } from '../../../shared/api/error-mapper'
 import {
   useQuery,
   type UseQueryOptions,
@@ -98,7 +98,11 @@ export function useNotificationActions() {
             await client.invalidateQueries({ queryKey: notificationKeys.all })
             void message.success('Đã đánh dấu thông báo đã đọc')
         },
-        onError: (error: Error) => { void message.error(getApiErrorMessage(error)) },
+        onError: (error: Error) => {
+            showApiError(error, 'đánh dấu thông báo đã đọc', (text) =>
+                void message.error(text),
+            )
+        },
     }
 
     /**
@@ -271,7 +275,11 @@ export function useSendSessionNotification() {
             )
         },
         onError: (error: Error) => {
-            void message.error(getApiErrorMessage(error))
+            showApiError(
+                error,
+                'gửi thông báo tới khách hàng',
+                (text) => void message.error(text),
+            )
         },
     })
 

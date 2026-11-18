@@ -7,20 +7,35 @@ import type {
   UpdateRentalPackageRequest,
 } from '../../../types/rental-package'
 
+/**
+ * ⚠ BE trả `rental_packages.price` dạng **chuỗi** (Postgres `numeric`,
+ *   vd `"1300000.00"`) ⇒ chuẩn hoá về `number` ngay tại biên để:
+ *   - khớp với type `RentalPackage.price: number`,
+ *   - các phép tính doanh thu (trang Báo cáo) không ra 0 đ.
+ */
+function normalizeRentalPackage(item: RentalPackage): RentalPackage {
+  return {
+    ...item,
+    price: Number(item.price),
+    duration_days: Number(item.duration_days),
+  }
+}
+
 export const rentalPackageApi = {
   async list(query: RentalPackageListQuery = {}): Promise<RentalPackage[]> {
     const response = await apiClient.get<unknown>(
       '/api/rental-packages',
       { params: query },
     )
-    return ensureArray<RentalPackage>(response.data)
+    return ensureArray<RentalPackage>(response.data).map(normalizeRentalPackage)
   },
 
   async getById(id: number): Promise<RentalPackage | null> {
     const response = await apiClient.get<unknown>(
       `/api/rental-packages/${id}`,
     )
-    return ensureObject<RentalPackage>(response.data)
+    const item = ensureObject<RentalPackage>(response.data)
+    return item ? normalizeRentalPackage(item) : null
   },
 
   async create(payload: CreateRentalPackageRequest): Promise<RentalPackage | null> {

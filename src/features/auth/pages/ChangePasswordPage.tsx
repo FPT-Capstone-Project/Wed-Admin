@@ -14,6 +14,10 @@ import {
   PasswordStrength,
 } from '../components/PasswordStrength'
 import { useAuthStore } from '../store/auth.store'
+import {
+  markApiErrorHandled,
+  resolveApiErrorMessage,
+} from '../../../shared/api/error-mapper'
 
 interface ChangePasswordFormValues {
   new_password: string
@@ -104,9 +108,8 @@ export function ChangePasswordPage() {
       countdown.start(RESEND_SECONDS)
       messageApi.success(`Đã gửi mã OTP đến ${userEmail}.`)
     } catch (err) {
-      const text =
-        err instanceof Error ? err.message : 'Không gửi được mã OTP.'
-      setErrorMessage(text)
+      markApiErrorHandled(err)
+      setErrorMessage(resolveApiErrorMessage(err, 'gửi mã OTP đổi mật khẩu'))
     } finally {
       setIsSending(false)
     }
@@ -121,9 +124,8 @@ export function ChangePasswordPage() {
       countdown.start(RESEND_SECONDS)
       messageApi.success('Đã gửi lại mã OTP.')
     } catch (err) {
-      const text =
-        err instanceof Error ? err.message : 'Không gửi lại được mã OTP.'
-      setErrorMessage(text)
+      markApiErrorHandled(err)
+      setErrorMessage(resolveApiErrorMessage(err, 'gửi lại mã OTP'))
     } finally {
       setIsSending(false)
     }
@@ -152,10 +154,8 @@ export function ChangePasswordPage() {
       logout()
       navigate('/login', { replace: true })
     } catch (err) {
-      const text =
-        err instanceof Error
-          ? err.message
-          : 'Không đổi được mật khẩu. Mã OTP có thể đã hết hạn.'
+      markApiErrorHandled(err)
+      const text = resolveApiErrorMessage(err, 'đổi mật khẩu')
       setErrorMessage(text)
     } finally {
       setIsSubmitting(false)

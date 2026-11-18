@@ -70,6 +70,15 @@
   --mcms-nav-item-selected-bg: #eaf7ee;
   --mcms-nav-item-selected-text: #0f172a;
   --mcms-nav-active-bar: #15803d;
+  --mcms-sidebar-item-text: #cfe0d6;
+  --mcms-sidebar-item-icon: #b8cbbf;
+  --mcms-sidebar-item-hover-text: #f2faf5;
+  --mcms-sidebar-item-hover-bg: #255144;
+  --mcms-sidebar-item-hover-bar: #5eead4;
+  --mcms-status-dot-online: #22c55e;
+  --mcms-status-dot-partial: #f59e0b;
+  --mcms-status-dot-offline: #ef4444;
+  --mcms-status-dot-neutral: #94a3b8;
   --mcms-shadow-xs: 0 1px 3px rgb(15 42 36 / 6%);
   --mcms-shadow-sm: 0 4px 12px rgb(15 42 36 / 8%);
   --mcms-shadow-md: 0 8px 24px rgb(15 42 36 / 10%);
@@ -329,9 +338,16 @@ textarea {
   display: none;
 }
 
-/* Menu icon-only của antd: giữ tooltip gốc (tên mục) khi hover. */
+/* Menu icon-only của antd: giữ tooltip gốc (tên mục) khi hover.
+   ⚠ Icon lucide đặt kích thước bằng thuộc tính `width`/`height` ⇒
+     `font-size` không áp dụng ⇒ ép chiều rộng/cao cố định 18px. */
 .mcms-sider.ant-layout-sider-collapsed .mcms-menu .ant-menu-item .anticon {
   font-size: 18px;
+}
+
+.mcms-sider.ant-layout-sider-collapsed .mcms-menu .ant-menu-item .anticon svg {
+  width: 18px;
+  height: 18px;
 }
 
 .mcms-brand {
@@ -442,17 +458,32 @@ textarea {
   color: var(--mcms-nav-item-icon);
 }
 
+/* Icon lucide: ép kích thước 18px (khớp icon antd cũ) + `currentColor`. */
+.mcms-menu .ant-menu-item .anticon svg {
+  width: 18px;
+  height: 18px;
+  color: currentcolor;
+}
+
 /*
  * Active menu — nền Slate-100 + **vạch nhấn 3px sát mép trái**.
  *
  * ⚠ Không dùng `border` / `outline` bo tròn quanh item; không tô màu chữ
  *   hoặc icon bằng xanh (xanh lá chỉ dành cho CTA + trạng thái Healthy).
+ *
+ * ⚠ Vạch nhấn vẽ bằng `inset box-shadow` (không phải `border-left`) để
+ *   **không đẩy nội dung dịch 3px** khi chuyển giữa item chọn / không chọn.
+ *   Để cân bằng, mọi item đều được đặt sẵn `border-left: 3px solid transparent`.
  */
+.mcms-menu .ant-menu-item {
+  border-left: 3px solid transparent;
+}
+
 .mcms-menu .ant-menu-item-selected {
   border: 0 !important;
-  border-left: 3px solid var(--mcms-nav-active-bar) !important;
+  border-left: 3px solid transparent !important;
   border-radius: 0 !important;
-  box-shadow: none;
+  box-shadow: inset 3px 0 0 var(--mcms-nav-active-bar);
   font-weight: 600;
   color: var(--mcms-nav-item-selected-text);
 }
@@ -477,7 +508,7 @@ textarea {
 
 .sidebar-health {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 8px;
+  grid-template-columns: 34px minmax(0, 1fr) 10px;
   align-items: center;
   gap: 10px;
   margin: 12px;
@@ -518,13 +549,81 @@ textarea {
   white-space: nowrap;
 }
 
+/*
+ * ⚠ **Chấm trạng thái kết nối** — to & rõ để nhìn 1 giây là biết
+ *   hệ thống còn sống hay không.
+ *
+ *   - Kích thước 10px (cũ: 6px) + quầng sáng mờ ⇒ nổi bật trên nền tối.
+ *   - Dùng `data-state` để đổi màu ⇒ không cần inline `style` trong JSX.
+ *
+ * | `data-state` | Nghĩa                            | Màu   |
+ * | ------------ | -------------------------------- | ----- |
+ * | `loading`    | Đang tải lần đầu — **chưa biết**  | Xám  |
+ * | `empty`      | Chưa gắn thiết bị IoT nào         | Xám  |
+ * | `online`     | Tất cả thiết bị đều online         | Xanh |
+ * | `partial`    | Chỉ một phần thiết bị online       | Vàng |
+ * | `offline`    | Mất kết nối                       | Đỏ   |
+ *
+ * ⚠ `loading`/`empty` **cố tình xám** — chưa đủ dữ liệu để kết luận là
+ *   mất kết nối ⇒ không được báo đỏ oán cho người dùng.
+ */
 .status-pulse {
-  width: 6px;
-  height: 6px;
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
   border: 0;
   border-radius: 50%;
-  background: var(--mcms-tone-ok-dot);
-  box-shadow: none;
+  background: var(--mcms-status-dot-neutral);
+  box-shadow: 0 0 0 3px rgb(148 163 184 / 25%);
+}
+
+/* Đang tải lần đầu / chưa có thiết bị — xám trung tính (đủ sáng để thấy). */
+.status-pulse[data-state='loading'],
+.status-pulse[data-state='empty'] {
+  background: var(--mcms-status-dot-neutral);
+  box-shadow: 0 0 0 3px rgb(148 163 184 / 25%);
+}
+
+/* Đang kiểm tra — nhịp thở nhẹ báo hiệu còn đang chờ. */
+.status-pulse[data-state='loading'] {
+  animation: status-pulse-breathe 1.4s ease-in-out infinite;
+}
+
+/* Một phần thiết bị online — vàng cảnh báo. */
+.status-pulse[data-state='partial'] {
+  background: var(--mcms-status-dot-partial);
+  box-shadow: 0 0 0 3px rgb(245 158 11 / 25%);
+}
+
+.status-pulse[data-state='online'] {
+  background: var(--mcms-status-dot-online);
+  box-shadow: 0 0 0 3px rgb(34 197 94 / 25%);
+}
+
+.status-pulse[data-state='offline'] {
+  background: var(--mcms-status-dot-offline);
+  box-shadow: 0 0 0 3px rgb(239 68 68 / 25%);
+}
+
+/* Nhịp thở nhẹ cho trạng thái "đang kiểm tra". */
+@keyframes status-pulse-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.45;
+  }
+}
+
+/*
+ * ⚠ Tôn trọng thiết lập "giảm chuyển động" của hệ điều hành ⇒ tắt nhịp thở.
+ */
+@media (prefers-reduced-motion: reduce) {
+  .status-pulse[data-state='loading'] {
+    animation: none;
+  }
 }
 
 .mcms-main-layout {
@@ -6537,11 +6636,29 @@ textarea {
   background: var(--mcms-sidebar-bg) !important;
 }
 .sidebar-panel .mcms-brand-copy strong,
-.sidebar-panel .mcms-menu .ant-menu-item,
-.sidebar-panel .mcms-menu .ant-menu-item .anticon,
 .sidebar-panel .mobile-nav-close {
   color: var(--mcms-sidebar-text);
 }
+
+/*
+ * ⚠ Item menu **chưa chọn** trên nền sidebar tối (#0f2a24).
+ *
+ *   Trước đây dùng chung `--mcms-sidebar-text` (#e6f0e8) cho cả chữ lẫn
+ *   icon ⇒ mất phân cấp thị giác, chữ không chọn "nổi" y hệt chữ đang chọn.
+ *   Nay tách riêng:
+ *     - chữ  → `--mcms-sidebar-item-text` (#cfe0d6, ≈ 9.9:1 ⇒ AAA)
+ *     - icon → `--mcms-sidebar-item-icon` (#b8cbbf, ≈ 7.6:1 ⇒ AAA)
+ *   ⇒ đủ sáng để đọc dễ trên nền xanh đen, nhưng vẫn lùi hơn item đang
+ *     chọn (nền sáng + chữ đậm).
+ */
+.sidebar-panel .mcms-menu .ant-menu-item {
+  color: var(--mcms-sidebar-item-text);
+}
+
+.sidebar-panel .mcms-menu .ant-menu-item .anticon {
+  color: var(--mcms-sidebar-item-icon);
+}
+
 .sidebar-panel .mcms-brand-copy span,
 .sidebar-panel .mcms-menu .ant-menu-item-group-title {
   color: var(--mcms-sidebar-muted);
@@ -6554,10 +6671,31 @@ textarea {
   color: var(--mcms-sidebar-text);
   border-radius: var(--mcms-radius-md);
 }
+
+/*
+ * ⚠ **Hover** — phải phân biệt rõ với trạng thái thường & với item đang
+ *   chọn:
+ *     - nền  : `--mcms-sidebar-item-hover-bg` (#255144) đậm hơn nền sidebar.
+ *     - chữ  : `--mcms-sidebar-item-hover-text` (#f2faf5) trắng mềm.
+ *     - icon : sáng theo chữ (đồng bộ, không bị xám lùi).
+ *     - vạch trái 3px `--mcms-sidebar-item-hover-bar` (teal) ⇒ dấu hiệu
+ *       "đang trỏ chuột", khác hẳn vạch xanh lá của item đang chọn.
+ *
+ * ⚠ Vạch trái dùng `box-shadow: inset` **chứ không** dùng `border-left`:
+ *   item không chọn vốn không có border ⇒ thêm `border-left: 3px` sẽ **đẩy
+ *   nội dung dịch 3px** lúc hover (rung/jitter). `inset box-shadow` vẽ
+ *   vạch mà không chiếm chỗ ⇒ không nhảy layout.
+ */
 .sidebar-panel .mcms-menu .ant-menu-item:not(.ant-menu-item-selected):hover {
-  background: var(--mcms-sidebar-hover-bg);
-  color: var(--mcms-sidebar-text);
+  background: var(--mcms-sidebar-item-hover-bg);
+  color: var(--mcms-sidebar-item-hover-text);
+  box-shadow: inset 3px 0 0 var(--mcms-sidebar-item-hover-bar);
 }
+
+.sidebar-panel .mcms-menu .ant-menu-item:not(.ant-menu-item-selected):hover .anticon {
+  color: var(--mcms-sidebar-item-hover-text);
+}
+
 .sidebar-panel .mcms-menu .ant-menu-item-selected,
 .sidebar-panel .mcms-menu .ant-menu-item-selected .anticon {
   color: var(--mcms-nav-item-selected-text);

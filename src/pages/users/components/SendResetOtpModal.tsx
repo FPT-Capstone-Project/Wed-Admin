@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MailOutlined } from '@ant-design/icons'
 import { Alert, App, Button, Modal, Typography } from 'antd'
 import { authApi } from '../../../features/auth/api/auth.api'
-import { getApiErrorMessage } from '../../../shared/api/error'
+import { showApiError } from '../../../shared/api/error-mapper'
 import type { UserWithRole } from '../../../types/user.types'
 
 interface SendResetOtpModalProps {
@@ -39,7 +39,9 @@ export function SendResetOtpModal({
       messageApi.success(`Đã gửi mã đặt lại mật khẩu tới ${user.email}.`)
       onCancel()
     } catch (error) {
-      messageApi.error(getApiErrorMessage(error))
+      showApiError(error, 'gửi mã đặt lại mật khẩu', (text) =>
+        messageApi.error(text),
+      )
     } finally {
       setIsSending(false)
     }

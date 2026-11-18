@@ -34,6 +34,7 @@ import {
   useNotificationActions,
 } from '../../notifications/hooks/useNotifications'
 import { markAlertsAsRead } from '../utils/mark-alerts-as-read'
+import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 import type { AppNotification } from '../../notifications/types/notification.types'
 import {
   NOTIFICATION_BUSINESS_GROUPS,
@@ -460,9 +461,10 @@ export function NotificationsPanel({
           error={
             isError
               ? {
-                  message:
-                    error?.message ??
-                    'Không tải được danh sách thông báo. Lỗi không xác định.',
+                  message: resolveApiErrorMessage(
+                    error,
+                    'tải danh sách thông báo',
+                  ),
                 }
               : undefined
           }

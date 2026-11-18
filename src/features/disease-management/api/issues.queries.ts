@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App } from 'antd'
-import { getApiErrorMessage } from '../../../shared/api/error'
+import { showApiError } from '../../../shared/api/error-mapper'
 import { issuesApi, type IssueQuery } from './issues.api'
 export const issueKeys = { all: ['issues'] as const }
 export const useIssues = (query: IssueQuery) => useQuery({ queryKey: ['issues', 'list', query], queryFn: () => issuesApi.list(query) })
@@ -12,7 +12,11 @@ export function useIssueActions() {
   const { message } = App.useApp()
   const options = {
     onSuccess: async () => { await client.invalidateQueries({ queryKey: issueKeys.all }); void message.success('Đã cập nhật hồ sơ bệnh học') },
-    onError: (error: Error) => { void message.error(getApiErrorMessage(error)) },
+    onError: (error: Error) => {
+      showApiError(error, 'cập nhật hồ sơ bệnh học', (text) =>
+        void message.error(text),
+      )
+    },
   }
   return {
     assign: useMutation({ mutationFn: ({ id, expertId }: { id: number; expertId: number }) => issuesApi.assign(id, { expertId }), ...options }),

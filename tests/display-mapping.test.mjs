@@ -66,7 +66,12 @@ function loadApi(relativePath, dependencies) {
   const source = readFileSync(filename, 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
   const exports = {}
-  runInNewContext(code, { exports, require: id => Object.hasOwn(dependencies, id) ? dependencies[id] : require(id), console, Map, Set, Date, URL })
+  runInNewContext(code, {
+    exports,
+    require: id => Object.hasOwn(dependencies, id) ? dependencies[id]
+      : id.startsWith('.') ? loadApi(new URL(`${id}.ts`, filename).href, dependencies) : require(id),
+    console, Map, Set, Date, URL,
+  })
   return exports
 }
 const notFound = Object.assign(new Error('Not found'), { response: { status: 404 } })
@@ -83,19 +88,26 @@ test('session list propagates the original HTTP 404 to React Query', async () =>
 test('cultivation aggregator does not swallow failed session requests', async () => {
   const { fetchCultivationBatches } = loadApi('../src/features/cultivation/api/cultivation.api.ts', {
     '../../farm/api/farm.api': { farmApi: { list: async () => [] } },
-    '../../sessions/api/session.api': { sessionApi: { list: reject404 } },
+    '../../sessions/api/admin-session.api': { fetchAllAdminCultivationSessionsDetailed: reject404 },
     '../types/cultivation.types': { GROWTH_STAGE_META: {} },
   })
   await assert.rejects(fetchCultivationBatches(), error => error === notFound)
 })
 test('reports analytics aggregator survives a session 404 without publishing zero KPIs', async () => {
   const list = async () => []
+  const orderRequests = []
   const { fetchReportsAnalytics } = loadApi('../src/features/analytics/api/analytics.api.ts', {
     '../../rooms/api/cultivation-room.api': { cultivationRoomApi: { list } },
     '../../rooms/api/cultivation-tray.api': { cultivationTrayApi: { list } },
     '../../devices/api/iot.api': { autoMistingApi: { listFloors: list }, iotApi: { listMasters: list } },
     '../../sessions/api/session.api': { sessionApi: { list: reject404 } },
     '../../packages/api/rental-package.api': { rentalPackageApi: { list } },
+    '../../orders/api/order.api': {
+      fetchAllAdminOrders: async options => {
+        orderRequests.push(options)
+        return []
+      },
+    },
     '../../harvest/api/harvest.api': { harvestApi: { list: async () => ({ data: [] }) } },
     '../../dashboard/api/dashboard.api': {
       fetchDashboardMetrics: async () => ({
@@ -106,6 +118,7 @@ test('reports analytics aggregator survives a session 404 without publishing zer
     },
   })
   const analytics = await fetchReportsAnalytics()
+  assert.deepEqual(orderRequests.map(options => ({ ...options })), [{ pageSize: 100, maxPages: 20 }])
   // Phiên lỗi chỉ làm mất dữ liệu phiên — không cascade làm hỏng cả trang.
   assert.equal(analytics.totalSessions, 0)
   assert.equal(analytics.totalRevenue, 128500000)
@@ -232,6 +245,47 @@ test('session detail uses the farm detail route', async () => {
 
 // ─── Phân quyền route & menu ────────────────────────────────────────────────
 const accessPolicy = loadApi('../src/routes/access-policy.ts', {})
+
+test('notification templates and expert roles are localized without altering human messages', () => {
+  const { presentNotificationContent, localizeNotificationText } = loadApi('../src/shared/i18n/notification-content.ts', {})
+  const { getRoleLabel } = loadApi('../src/shared/i18n/status/user.ts', {})
+  const { presentStatus } = loadApi('../src/shared/i18n/status/registry.ts', {})
+  assert.equal(presentStatus({}, 'INTERNAL_UNKNOWN_ENUM').label, 'Chưa xác định')
+  assert.equal(getRoleLabel(4, 'EXPERT'), 'Chuyên gia')
+  assert.equal(getRoleLabel(99, 'UNRECOGNIZED'), 'Vai trò chưa xác định')
+  const content = presentNotificationContent('MUSHROOM_DISEASE', 'New mushroom diagnosis request', 'New expert consultation requested for issue 2.')
+  assert.equal(content.title, 'Yêu cầu chẩn đoán bệnh nấm mới')
+  assert.equal(content.message, 'Có yêu cầu chuyên gia tư vấn cho sự cố #2.')
+  assert.equal(localizeNotificationText('Ghi chú của khách: giữ nguyên tên Gói Premium'), 'Ghi chú của khách: giữ nguyên tên Gói Premium')
+  assert.equal(localizeNotificationText('MASTER_OFFLINE. Farm Operator'), 'mất kết nối bộ điều khiển. nhân viên vận hành')
+})
+
+test('staff lookup resolves missing directory IDs through detail queries without exposing IDs', async () => {
+  const calls = []
+  let queries
+  const { useStaffNames, resolveStaffName } = loadApi('../src/features/users/hooks/useStaffNames.ts', {
+    react: { useMemo: fn => fn() },
+    '@tanstack/react-query': {
+      useQuery: () => ({ data: [{ user_id: 7, full_name: 'Nhân viên A', email: 'a@example.com' }], isSuccess: true }),
+      useQueries: options => {
+        queries = options.queries
+        return [{ data: { user_id: 8, full_name: 'Nhân viên B' } }, { data: null }]
+      },
+    },
+    '../../auth/permissions': { USER_MANAGE: 'user.manage' },
+    '../../auth/hooks/usePermission': { useHasPermission: () => true },
+    '../../users/api/user.api': { userApi: { getById: async id => { calls.push(id) } } },
+    '../../../shared/api/retry-policy': { retryApiErrors: () => false },
+  })
+  const names = useStaffNames([7, 8, 99, 8, null])
+  assert.equal(names.get(7), 'Nhân viên A')
+  assert.equal(names.get(8), 'Nhân viên B')
+  assert.equal(names.get(99), 'Chưa có thông tin nhân viên')
+  assert.equal(resolveStaffName(new Map(), 99), 'Chưa có thông tin nhân viên')
+  assert.equal(resolveStaffName(names, null), '—')
+  for (const query of queries) await query.queryFn()
+  assert.deepEqual(calls, [8, 99])
+})
 test('role normalization maps backend role_id and role strings to UI roles', () => {
   const { normalizeRole, resolveUserRole, isRoleAllowed, ADMIN_ONLY, ADMIN_AND_OPERATOR } = accessPolicy
   // role_id (nguồn sự thật của BE): 1 = Admin, 2 = Farm Operator, 3 = Customer.

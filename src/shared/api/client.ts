@@ -1,6 +1,8 @@
 import axios, { type AxiosError, type AxiosInstance } from 'axios'
+import './axios-augment'
 import { tokenStorage } from './token-storage'
 import { extractApiError } from './error'
+import { resolveApiErrorMessage } from './error-mapper'
 import { installErrorToast, cancelPendingErrorToast } from './error-toast'
 import { normalizeResponse } from './response-adapter'
 import {
@@ -185,6 +187,18 @@ apiClient.interceptors.response.use(
       tokenStorage.clear()
       notifyAuthExpired(error)
     }
+
+    /*
+     * ⚠ **Chuẩn hoá message ngay từ tầng gốc** — gắn message tiếng Việt
+     *   đã dịch vào chính lỗi axios ⇒ mọi tầng trên (hook, component) đọc
+     *   được message thân thiện mà không cần tự dịch lại.
+     *
+     *   ⚠ Giữ nguyên `error.message` gốc của axios để không mất thông tin
+     *   kỹ thuật khi debug trong console; message chuẩn hoá nằm ở
+     *   `error.friendlyMessage` (và `resolveApiErrorMessage` ưu tiên nó).
+     */
+    ;(error as AxiosError & { friendlyMessage?: string }).friendlyMessage =
+      resolveApiErrorMessage(error)
 
     // Toast thông báo lỗi từ `message` của BE (tự bỏ qua 401/403/404).
     globalErrorToast(error)

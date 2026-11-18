@@ -120,6 +120,9 @@ export function useDeleteMushroomType(
 
 /**
  * Helper: lấy error message tiếng Việt (tiện cho component message.error).
+ *
+ * ⚠ Message luôn đã được chuẩn hoá (không còn message thô của axios hay
+ *   message tiếng Anh chưa dịch của Backend).
  */
 export function friendlyError(error: unknown): string {
   return getApiErrorMessage(error)

@@ -392,6 +392,277 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/shipments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Manually create a shipment for Admin and Farm Operators
+         * @description A shipment is created or reused by order when a DELIVERY harvest request is created. Use this endpoint only to create a shipment manually when the order has no active shipment. The new shipment starts in PENDING and is linked to the order by orderId.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        orderId: number;
+                        address: string;
+                        recipientName: string;
+                        recipientPhone: string;
+                        /** @default 0 */
+                        shippingFee?: number;
+                        carrier?: string;
+                        trackingCode?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Shipment created in PENDING status */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid or missing shipment data */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Admin or Farm Operator role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Order not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description An active shipment already exists for the order */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shipments/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List shipments for Admin and Farm Operators */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Shipment list with order */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Admin or Farm Operator role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shipments/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get shipment status for one order
+         * @description Customers may view shipments for their own order. Admins and Farm Operators may view any order. An order without shipments returns an empty data array.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Shipments for the order */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid order ID */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authenticated user role is not permitted */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Order not found for this customer */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/shipments/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Update a shipment status for Admin and Farm Operators */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status: "PENDING" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED" | "RETURNED";
+                    };
+                };
+            };
+            responses: {
+                /** @description Shipment status updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid shipment ID or status */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Admin or Farm Operator role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Shipment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/rental-packages": {
         parameters: {
             query?: never;
@@ -2171,6 +2442,512 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/inventory/admin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List spawn inventory
+         * @description Admin (role_id 1) and Farm Operator (role_id 2) only.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description page */
+                    page?: number;
+                    /** @description limit */
+                    limit?: number;
+                    /** @description mushroomTypeId */
+                    mushroomTypeId?: number;
+                    /** @description search */
+                    search?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data?: {
+                                inventory_id?: number;
+                                mushroom_type_id?: number;
+                                mushroom_name?: string;
+                                /**
+                                 * @description PostgreSQL numeric serialized as a decimal string
+                                 * @example 50
+                                 */
+                                quantity?: string;
+                                updated_at?: string;
+                            }[];
+                            pagination?: {
+                                page?: number;
+                                limit?: number;
+                                total?: number;
+                                totalPages?: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Record not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Duplicate, inactive mushroom type, or deletion conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unexpected error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create inventory and IN transaction
+         * @description Admin (role_id 1) and Farm Operator (role_id 2) only.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @example 8 */
+                        mushroomTypeId: number;
+                        /** @example 50 */
+                        quantity: number;
+                        /** @example Physical stock count adjustment */
+                        notes?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data?: {
+                                inventory_id?: number;
+                                mushroom_type_id?: number;
+                                /**
+                                 * @description PostgreSQL numeric serialized as a decimal string
+                                 * @example 50
+                                 */
+                                quantity?: string;
+                                updated_at?: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Record not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Duplicate, inactive mushroom type, or deletion conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unexpected error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventory/admin/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List OUT transactions only
+         * @description Admin (role_id 1) and Farm Operator (role_id 2) only.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    /** @description page */
+                    page?: number;
+                    /** @description limit */
+                    limit?: number;
+                    /** @description mushroomTypeId */
+                    mushroomTypeId?: number;
+                    /** @description sessionId */
+                    sessionId?: number;
+                    /** @description Inclusive ISO date or timestamp. Date-only values mean midnight UTC. */
+                    fromDate?: string;
+                    /** @description Inclusive ISO date or timestamp. Date-only values mean midnight UTC. */
+                    toDate?: string;
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data?: {
+                                transaction_id?: number;
+                                inventory_id?: number;
+                                mushroom_type_id?: number;
+                                mushroom_name?: string;
+                                /** @enum {string} */
+                                transaction_type?: "OUT";
+                                /**
+                                 * @description PostgreSQL numeric serialized as a decimal string
+                                 * @example 50
+                                 */
+                                quantity?: string;
+                                /**
+                                 * @description PostgreSQL numeric serialized as a decimal string
+                                 * @example 50
+                                 */
+                                quantity_before?: string;
+                                /**
+                                 * @description PostgreSQL numeric serialized as a decimal string
+                                 * @example 50
+                                 */
+                                quantity_after?: string;
+                                session_id?: number | null;
+                                notes?: string | null;
+                                created_at?: string;
+                            }[];
+                            pagination?: {
+                                page?: number;
+                                limit?: number;
+                                total?: number;
+                                totalPages?: number;
+                            };
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Record not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Duplicate, inactive mushroom type, or deletion conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unexpected error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/inventory/admin/{inventoryId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete empty inventory without history
+         * @description Admin (role_id 1) and Farm Operator (role_id 2) only.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    inventoryId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data?: {
+                                inventory_id?: number;
+                                mushroom_type_id?: number;
+                                /**
+                                 * @description PostgreSQL numeric serialized as a decimal string
+                                 * @example 50
+                                 */
+                                quantity?: string;
+                                updated_at?: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Record not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Duplicate, inactive mushroom type, or deletion conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unexpected error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        /**
+         * Adjust inventory balance
+         * @description Admin (role_id 1) and Farm Operator (role_id 2) only.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    inventoryId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @example 50 */
+                        quantity: number;
+                        /** @example Physical stock count adjustment */
+                        notes: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Success */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": {
+                            data?: {
+                                inventory_id?: number;
+                                mushroom_type_id?: number;
+                                /**
+                                 * @description PostgreSQL numeric serialized as a decimal string
+                                 * @example 50
+                                 */
+                                quantity?: string;
+                                updated_at?: string;
+                            };
+                            message?: string;
+                        };
+                    };
+                };
+                /** @description Invalid input */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Forbidden role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Record not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Duplicate, inactive mushroom type, or deletion conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unexpected error */
+                500: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/harvest-requests/admin": {
         parameters: {
             query?: never;
@@ -2233,7 +3010,7 @@ export interface paths {
         put?: never;
         /**
          * Choose a receiving method for a harvest-ready cultivation session
-         * @description Select PICKUP or DELIVERY from Examples. Replace sessionId with your own harvest-ready session ID. PICKUP requires scheduledAt; DELIVERY does not. customerNote is optional. For DELIVERY, blank or omitted deliveryAddress uses the customer profile address. If the profile has no address, enter deliveryAddress. Schedule examples use Vietnam time (UTC+07:00); adjust the date and time before testing.
+         * @description Select PICKUP or DELIVERY from Examples. Replace sessionId with your own harvest-ready session ID. Customer PICKUP requires scheduledAt from the harvest-ready date through three calendar days later, between 07:00 and 17:00 Vietnam time. DELIVERY does not require a schedule. For DELIVERY, blank or omitted deliveryAddress uses the customer profile address. If the profile has no address, enter deliveryAddress. A shipment is created or reused at the order level and requires a phone number on the customer profile. Schedule examples use Vietnam time (UTC+07:00); adjust the date and time before testing.
          */
         post: {
             parameters: {
@@ -2328,7 +3105,10 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Update receiving method or pickup schedule */
+        /**
+         * Update receiving method or pickup schedule
+         * @description Customers may update the receiving method only on the harvest-ready date and the following calendar day. Customer PICKUP schedules must be from the current Vietnam date through three calendar days after readiness, between 07:00 and 17:00 Vietnam time. Farm staff may adjust the schedule while the session remains eligible; staff pickup must be in the future, from today through three calendar days later, between 07:00 and 17:00 Vietnam time.
+         */
         patch: {
             parameters: {
                 query?: never;
@@ -4518,6 +5298,73 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/cultivation-trays/{id}/complete-sanitation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm tray sanitation completed
+         * @description Admin or Farm Operator only. Requires MAINTENANCE with no ACTIVE tray assignment. Sets AVAILABLE and records last_cleaned_at and last_cleaned_by. Does not reactivate an inactive floor or position.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Tray ready; confirmation recorded */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Authentication required */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Staff role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Tray not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Tray not in maintenance or active assignment exists */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -9065,6 +9912,13 @@ export interface paths {
                                      */
                                     config_source: "LEGACY" | "FLOOR";
                                     /**
+                                     * @description Run fan cycles within the same AUTO run and start/stop controls.
+                                     * @default false
+                                     */
+                                    fan_enabled: boolean;
+                                    fan_run_minutes?: number | null;
+                                    fan_rest_minutes?: number | null;
+                                    /**
                                      * @description When true all temperature fields and cooling_humidity_limit are required.
                                      * @default false
                                      */
@@ -9288,6 +10142,13 @@ export interface paths {
                          * @enum {string}
                          */
                         config_source?: "LEGACY" | "FLOOR";
+                        /**
+                         * @description Run fan cycles within the same AUTO run and start/stop controls.
+                         * @default false
+                         */
+                        fan_enabled?: boolean;
+                        fan_run_minutes?: number | null;
+                        fan_rest_minutes?: number | null;
                         /**
                          * @description When true all temperature fields and cooling_humidity_limit are required.
                          * @default false
@@ -9638,6 +10499,18 @@ export interface paths {
                          */
                         "application/json": {
                             data?: {
+                                fan?: {
+                                    /** @enum {string} */
+                                    state?: "STOPPED" | "OFF_PENDING" | "READY" | "ON_PENDING" | "RUNNING" | "RESTING";
+                                    enabled?: boolean;
+                                    channel?: number | null;
+                                    runMinutes?: number | null;
+                                    restMinutes?: number | null;
+                                    remainingMs?: number;
+                                    /** Format: date-time */
+                                    deadlineAt?: string | null;
+                                    lastError?: string | null;
+                                };
                                 /** @enum {string} */
                                 mode?: "MANUAL" | "AUTO";
                                 run?: {
@@ -9704,6 +10577,13 @@ export interface paths {
                                          * @enum {string}
                                          */
                                         config_source: "LEGACY" | "FLOOR";
+                                        /**
+                                         * @description Run fan cycles within the same AUTO run and start/stop controls.
+                                         * @default false
+                                         */
+                                        fan_enabled: boolean;
+                                        fan_run_minutes?: number | null;
+                                        fan_rest_minutes?: number | null;
                                         /**
                                          * @description When true all temperature fields and cooling_humidity_limit are required.
                                          * @default false
@@ -9831,6 +10711,18 @@ export interface paths {
                          */
                         "application/json": {
                             data?: {
+                                fan?: {
+                                    /** @enum {string} */
+                                    state?: "STOPPED" | "OFF_PENDING" | "READY" | "ON_PENDING" | "RUNNING" | "RESTING";
+                                    enabled?: boolean;
+                                    channel?: number | null;
+                                    runMinutes?: number | null;
+                                    restMinutes?: number | null;
+                                    remainingMs?: number;
+                                    /** Format: date-time */
+                                    deadlineAt?: string | null;
+                                    lastError?: string | null;
+                                };
                                 /** @enum {string} */
                                 mode?: "MANUAL" | "AUTO";
                                 run?: {
@@ -9897,6 +10789,13 @@ export interface paths {
                                          * @enum {string}
                                          */
                                         config_source: "LEGACY" | "FLOOR";
+                                        /**
+                                         * @description Run fan cycles within the same AUTO run and start/stop controls.
+                                         * @default false
+                                         */
+                                        fan_enabled: boolean;
+                                        fan_run_minutes?: number | null;
+                                        fan_rest_minutes?: number | null;
                                         /**
                                          * @description When true all temperature fields and cooling_humidity_limit are required.
                                          * @default false
@@ -10837,6 +11736,13 @@ export interface components {
              * @enum {string}
              */
             config_source: "LEGACY" | "FLOOR";
+            /**
+             * @description Run fan cycles within the same AUTO run and start/stop controls.
+             * @default false
+             */
+            fan_enabled: boolean;
+            fan_run_minutes?: number | null;
+            fan_rest_minutes?: number | null;
             /**
              * @description When true all temperature fields and cooling_humidity_limit are required.
              * @default false

@@ -1,5 +1,6 @@
 import '../../../styles/catalog-industrial.css'
 import { ActionButton } from '../../../shared/ui'
+import { showApiError } from '../../../shared/api/error-mapper'
 import { useEffect } from 'react'
 import { App, Form, Input, InputNumber, Modal } from 'antd'
 import type {
@@ -96,8 +97,10 @@ export function RentalPackageFormModal({
       }
       onCancel()
     } catch (err) {
-      messageApi.error(
-        err instanceof Error ? err.message : 'Lỗi không xác định.',
+      showApiError(
+        err,
+        initialValues ? 'cập nhật gói thuê' : 'thêm gói thuê',
+        (text) => messageApi.error(text),
       )
     }
   }

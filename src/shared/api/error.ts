@@ -1,10 +1,16 @@
 import type { AxiosError } from 'axios'
+import { resolveApiErrorMessage } from './error-mapper'
 
 /**
  * Chuẩn hoá mọi error trả về từ backend thành Error message thân thiện.
  *
  * Backend Swagger thường trả `Error { message: string }` cho validation,
  * còn các case khác có thể là string hoặc object `{message, error, statusCode}`.
+ *
+ * ⚠ **Message luôn đã được dịch sang tiếng Việt** qua
+ *   {@link resolveApiErrorMessage} ⇒ không còn hiện trạng lộ message thô
+ *   của axios ("Request failed with status code 500") hay message tiếng Anh
+ *   chưa dịch của Backend.
  */
 export interface NormalizedApiError {
   status: number | null
@@ -58,7 +64,7 @@ const GENERIC_UNAUTHORIZED_MESSAGES = new Set([
  *   tiếng Việt chuẩn.
  */
 function containsVietnameseDiacritics(text: string): boolean {
-  return /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụưừứửữựỳýỷỹỵđĐÀÁẢÃẠĂÂÈÉÊÌÍÒÓÔƠÙÚƯĐ]/u.test(
+  return /[àáảãạăằắẳẵặâầấẩẫậèéẻẽẹêềếểễệìíỉĩịòóỏõọôồốổỗộơờớởỡợùúủũụừứửữựỳýỷỹỵđĐÀÁẢÃẠĂÂÈÉÊÌÍÒÓÔƠÙÚƯĐ]/u.test(
     text,
   )
 }
@@ -71,37 +77,30 @@ function readString(obj: Record<string, unknown>, key: string): string | null {
   return typeof value === 'string' && value.length > 0 ? value : null
 }
 
-export function extractApiError(error: unknown): NormalizedApiError {
-  if (!error) {
-    return { status: null, code: null, message: 'Lỗi không xác định.' }
-  }
-
-  // Plain Error → dùng message
-  if (error instanceof Error && !(error as AxiosError).isAxiosError) {
-    return { status: null, code: null, message: error.message }
-  }
+/**
+ * Trích xuất **message gốc** (chưa dịch) từ lỗi axios.
+ *
+ * ⚠ Chỉ dùng nội bộ cho logic "đăng nhập sai thông tin" — mọi thông báo
+ *   hiển thị ra UI đi qua {@link resolveApiErrorMessage}.
+ */
+function extractRawMessage(error: unknown): {
+  status: number | null
+  message: string
+} {
+  if (!error) return { status: null, message: 'Lỗi không xác định.' }
 
   const axiosError = error as AxiosError<unknown>
   const code = axiosError.code ?? null
 
-  // Timeout → thông báo riêng (message mặc định của axios rất kỹ thuật:
-  // "timeout of 60000ms exceeded").
   if (code && AXIOS_TIMEOUT_CODES.has(code)) {
-    return {
-      status: null,
-      code,
-      message: 'Máy chủ phản hồi quá lâu. Vui lòng thử lại.',
-    }
+    return { status: null, message: 'Máy chủ phản hồi quá lâu. Vui lòng thử lại.' }
   }
 
-  // Không có response (network down, CORS, ...) → fallback
   if (!axiosError.response) {
     return {
       status: null,
-      code,
       message:
-        axiosError.message ||
-        'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.',
+        axiosError.message || 'Không thể kết nối tới máy chủ. Vui lòng kiểm tra mạng.',
     }
   }
 
@@ -109,7 +108,7 @@ export function extractApiError(error: unknown): NormalizedApiError {
   const payload = axiosError.response.data as unknown
 
   if (typeof payload === 'string') {
-    return { status, code: null, message: payload }
+    return { status, message: payload }
   }
 
   if (payload && typeof payload === 'object') {
@@ -119,15 +118,10 @@ export function extractApiError(error: unknown): NormalizedApiError {
       readString(obj, 'detail') ??
       readString(obj, 'error') ??
       defaultMessageForStatus(status)
-
-    return {
-      status,
-      code: readString(obj, 'code'),
-      message,
-    }
+    return { status, message }
   }
 
-  return { status, code: null, message: defaultMessageForStatus(status) }
+  return { status, message: defaultMessageForStatus(status) }
 }
 
 /**
@@ -147,7 +141,7 @@ export function extractApiError(error: unknown): NormalizedApiError {
  * @param error Lỗi axios (hoặc Error bất kỳ) do `POST /api/auth/login` ném ra.
  */
 export function extractLoginErrorMessage(error: unknown): string {
-  const { status, message } = extractApiError(error)
+  const { status, message } = extractRawMessage(error)
 
   if (status === 401 || isLoginRequest(error)) {
     const normalized = message.trim().toLowerCase()
@@ -157,11 +151,7 @@ export function extractLoginErrorMessage(error: unknown): string {
       /^(http )?\d{3}$/.test(normalized)
 
     // Ưu tiên message BE **đã là tiếng Việt** và đủ cụ thể.
-    if (
-      message &&
-      !isGeneric &&
-      containsVietnameseDiacritics(message)
-    ) {
+    if (message && !isGeneric && containsVietnameseDiacritics(message)) {
       return message
     }
 
@@ -169,17 +159,69 @@ export function extractLoginErrorMessage(error: unknown): string {
     return INVALID_CREDENTIALS_MESSAGE
   }
 
-  return message
+  return resolveApiErrorMessage(error, 'đăng nhập')
 }
 
-/** Request này có gọi tới endpoint đăng nhập không? */
+/** Request này có gọi tới endpoint **đăng nhập** không? */
 function isLoginRequest(error: unknown): boolean {
   const url = (error as { config?: { url?: string } })?.config?.url
   return typeof url === 'string' && url.includes(LOGIN_URL_FRAGMENT)
 }
 
-export function getApiErrorMessage(error: unknown): string {
-  return extractApiError(error).message
+/**
+ * Chuẩn hoá lỗi API thành `{ status, code, message }` — message **đã dịch
+ * tiếng Việt**.
+ *
+ * @param error Lỗi cần chuẩn hoá.
+ * @param actionContext Ngữ cảnh thao tác (vd "xóa giống nấm") — dùng để
+ *   chọn thông báo phù hợp.
+ */
+export function extractApiError(
+  error: unknown,
+  actionContext?: string,
+): NormalizedApiError {
+  if (!error) {
+    return { status: null, code: null, message: 'Lỗi không xác định.' }
+  }
+
+  /*
+   * ⚠ Nhiều hook bọc lỗi gốc trong `new Error(msg, { cause })` ⇒ phải đi
+   *   theo chuỗi `cause` để lấy đúng `status` / `code` của axios.
+   */
+  let current: unknown = error
+  for (let depth = 0; depth < 5; depth += 1) {
+    if (!current) break
+
+    const axiosError = current as AxiosError<unknown>
+    if (axiosError.isAxiosError) {
+      return {
+        status: axiosError.response?.status ?? null,
+        code: axiosError.code ?? null,
+        message: resolveApiErrorMessage(error, actionContext),
+      }
+    }
+
+    current = current instanceof Error ? current.cause : undefined
+  }
+
+  // Plain Error → dùng message (đã là tiếng Việt do app ném ra).
+  if (error instanceof Error) {
+    return { status: null, code: null, message: error.message }
+  }
+
+  return {
+    status: null,
+    code: null,
+    message: resolveApiErrorMessage(error, actionContext),
+  }
+}
+
+/** Lấy message tiếng Việt đã chuẩn hoá của một lỗi API. */
+export function getApiErrorMessage(
+  error: unknown,
+  actionContext?: string,
+): string {
+  return extractApiError(error, actionContext).message
 }
 
 function defaultMessageForStatus(status: number): string {

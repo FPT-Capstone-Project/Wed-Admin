@@ -51,6 +51,7 @@ import {
   PAYMENT_STATUS_DICTIONARY,
 } from '../../shared/i18n/status/order'
 import { SESSION_PROGRESS_STAGE_DICTIONARY } from '../../shared/i18n/status/session'
+import { resolveApiErrorMessage } from '../../shared/api/error-mapper'
 import { presentStatus, statusLabel } from '../../shared/i18n/status/registry'
 
 /**
@@ -439,9 +440,10 @@ export function OrderManagementPage() {
         error={
           isError
             ? {
-                message:
-                  error?.message ??
-                  'Đã xảy ra lỗi không xác định khi tải danh sách đơn đặt.',
+                message: resolveApiErrorMessage(
+                  error,
+                  'tải danh sách đơn đặt',
+                ),
               }
             : null
         }

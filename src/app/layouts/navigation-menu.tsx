@@ -1,58 +1,38 @@
-import {
-  AlertOutlined,
-  ApiOutlined,
-  AppstoreOutlined,
-  BarChartOutlined,
-  DashboardOutlined,
-  ExperimentOutlined,
-  FundOutlined,
-  OrderedListOutlined,
-  TagsOutlined,
-  TeamOutlined,
-  VideoCameraOutlined,
-} from '@ant-design/icons'
+﻿import {
+  Bell, Bug, CalendarDays, ChartColumn, ClipboardList, Cpu, FlaskConical,
+  Gauge, HandPlatter, LayoutGrid, Package, Sprout, Truck, Users, Video,
+} from 'lucide-react'
 import type { MenuProps } from 'antd'
 import type { ReactNode } from 'react'
-import {
-  filterMenuGroups,
-  MENU_GROUPS,
-  type MenuIconName,
-} from './navigation-items'
+import { filterMenuGroups, MENU_GROUPS, type MenuIconName } from './navigation-items'
 
-/** Icon antd tương ứng với từng mục menu. */
+/** Mỗi mục có hình dạng riêng; giữ kích thước 18px và nét 2px. */
 const ICONS: Record<MenuIconName, ReactNode> = {
-  dashboard: <DashboardOutlined />,
-  trays: <AppstoreOutlined />,
-  devices: <ApiOutlined />,
-  camera: <VideoCameraOutlined />,
-  cultivation: <FundOutlined />,
-  alerts: <AlertOutlined />,
-  sessions: <FundOutlined />,
-  issues: <AlertOutlined />,
-  harvests: <ExperimentOutlined />,
-  reports: <BarChartOutlined />,
-  orders: <OrderedListOutlined />,
-  packages: <TagsOutlined />,
-  users: <TeamOutlined />,
-  settings: <ExperimentOutlined />,
+  dashboard: <Gauge size={18} strokeWidth={2} aria-hidden="true" />,
+  trays: <LayoutGrid size={18} strokeWidth={2} aria-hidden="true" />,
+  devices: <Cpu size={18} strokeWidth={2} aria-hidden="true" />,
+  camera: <Video size={18} strokeWidth={2} aria-hidden="true" />,
+  cultivation: <Sprout size={18} strokeWidth={2} aria-hidden="true" />,
+  alerts: <Bell size={18} strokeWidth={2} aria-hidden="true" />,
+  sessions: <CalendarDays size={18} strokeWidth={2} aria-hidden="true" />,
+  issues: <Bug size={18} strokeWidth={2} aria-hidden="true" />,
+  harvests: <Truck size={18} strokeWidth={2} aria-hidden="true" />,
+  harvestRequests: <HandPlatter size={18} strokeWidth={2} aria-hidden="true" />,
+  reports: <ChartColumn size={18} strokeWidth={2} aria-hidden="true" />,
+  orders: <ClipboardList size={18} strokeWidth={2} aria-hidden="true" />,
+  packages: <Package size={18} strokeWidth={2} aria-hidden="true" />,
+  users: <Users size={18} strokeWidth={2} aria-hidden="true" />,
+  settings: <FlaskConical size={18} strokeWidth={2} aria-hidden="true" />,
 }
 
-/**
- * Dựng danh sách menu cho antd theo vai trò hiện tại.
- *
- * - ADMIN → thấy toàn bộ mục.
- * - OPERATOR → ẩn các mục `adminOnly` (không hiện menu chết).
- * - Nhóm không còn mục nào sau khi lọc → ẩn luôn nhóm (tránh nhóm rỗng).
- *
- * ⚠ Logic lọc nằm ở `navigation-items.ts` (thuần dữ liệu) để test được.
- */
+/** Dựng menu theo vai trò; bỏ nhóm rỗng sau khi lọc. */
 export function buildMenuItems(isAdmin: boolean): MenuProps['items'] {
   return filterMenuGroups(MENU_GROUPS, isAdmin).map((group) => ({
     type: 'group' as const,
     label: group.label,
     children: group.items.map((item) => ({
       key: item.key,
-      icon: ICONS[item.icon],
+      icon: <span className="anticon" aria-hidden="true">{ICONS[item.icon]}</span>,
       label: item.label,
     })),
   }))

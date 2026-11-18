@@ -13,6 +13,7 @@ import { useThresholdProfiles } from '../../../features/settings/hooks/useThresh
 import type { MushroomThresholdProfile } from '../../../types/setting.types'
 import type { SemanticTone } from '../../../app/theme/tokens'
 import { DataTable, MetadataBadge, StatusBadge } from '../../../shared/ui'
+import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 
 interface ThresholdProfileTabProps {
   /**
@@ -220,7 +221,7 @@ export function ThresholdProfileTab({
                 Không tải được hồ sơ vi khí hậu.
               </Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {error?.message ?? 'Lỗi không xác định.'}
+                {resolveApiErrorMessage(error, 'tải hồ sơ vi khí hậu')}
               </Typography.Text>
             </Flex>
           }

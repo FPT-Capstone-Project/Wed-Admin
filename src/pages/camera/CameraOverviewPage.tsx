@@ -23,6 +23,7 @@ import {
   StatusBadge,
 } from '../../shared/ui'
 import { CAMERA_STATUS_DICTIONARY } from '../../shared/i18n/status/camera'
+import { resolveApiErrorMessage } from '../../shared/api/error-mapper'
 import { presentStatus, statusLabel } from '../../shared/i18n/status/registry'
 
 
@@ -221,9 +222,10 @@ export function CameraOverviewPage() {
         error={
           isError
             ? {
-                message:
-                  error?.message ??
-                  'Đã xảy ra lỗi không xác định khi tải danh sách camera.',
+                message: resolveApiErrorMessage(
+                  error,
+                  'tải danh sách camera',
+                ),
               }
             : null
         }

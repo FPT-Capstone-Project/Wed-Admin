@@ -20,6 +20,7 @@ import {
   useUpdateMushroomType,
 } from '../../../features/packages/hooks/useMushroomTypes'
 import { MetadataBadge, ActionButton } from '../../../shared/ui'
+import { showApiError } from '../../../shared/api/error-mapper'
 
 interface MushroomVarietyFormModalProps {
   open: boolean
@@ -317,8 +318,10 @@ export function MushroomVarietyFormModal({
       }
       onCancel()
     } catch (err) {
-      messageApi.error(
-        err instanceof Error ? err.message : 'Lỗi không xác định.',
+      showApiError(
+        err,
+        initialValues ? 'cập nhật giống nấm' : 'thêm giống nấm',
+        (text) => messageApi.error(text),
       )
     }
   }

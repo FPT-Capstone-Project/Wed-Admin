@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Alert, Button, Modal, Radio, Space, Spin, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useImouPlayerToken } from '../hooks/useCameras'
-import { getApiErrorMessage } from '../../../shared/api/error'
+import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 import { ActionButton, EmptyState } from '../../../shared/ui'
 import type { Camera } from '../../../types/camera.types'
 import {
@@ -214,9 +214,7 @@ export function CameraStreamModal({
       } catch (error: unknown) {
         if (disposed) return
         setPlayerError(
-          error instanceof Error
-            ? error.message
-            : 'Không khởi tạo được trình phát ImouPlayer.',
+          resolveApiErrorMessage(error, 'khởi tạo trình phát ImouPlayer'),
         )
         setPlayerBooting(false)
       }
@@ -253,7 +251,9 @@ export function CameraStreamModal({
     camera?.cameraCode,
   ])
 
-  const apiErrorMessage = isTokenError ? getApiErrorMessage(tokenError) : null
+  const apiErrorMessage = isTokenError
+    ? resolveApiErrorMessage(tokenError, 'lấy token phát trực tiếp')
+    : null
   const missingToken =
     open && !isLoadingToken && !isTokenError && cameraId !== null && !kitToken
   const missingDevice =

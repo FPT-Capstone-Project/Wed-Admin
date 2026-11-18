@@ -1,4 +1,4 @@
-import { formatVND } from '../../../shared/utils/currency'
+import { formatCompactVND, formatVND } from '../../../shared/utils/currency'
 import { ChartFrame, ChartLegend, ChartTooltipSurface } from '../../../shared/ui/charts/ChartPrimitives'
 import { useChartMotion } from '../../../shared/ui/charts/useChartMotion'
 import { chartTickStyle } from '../../../shared/ui/charts/chart-styles'
@@ -133,11 +133,28 @@ function TooltipRow({
       style={{
         display: 'flex',
         justifyContent: 'space-between',
+        alignItems: 'center',
+        /*
+         * ⚠ `gap` + `minWidth` — nhãn ("Doanh thu kỳ trước") và giá trị
+         *   ("Chưa có dữ liệu kỳ trước") trước đây **dính liền** thành
+         *   "Doanh thu kỳ trướcChưa có dữ liệu kỳ trước" vì `space-between`
+         *   co cả hai về sát nhau khi giá trị dài.
+         */
+        gap: 12,
         fontSize: 12,
         marginBottom: 4,
       }}
     >
-      <span style={{ color: 'var(--mcms-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+      <span
+        style={{
+          color: 'var(--mcms-text-muted)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 6,
+          flex: '0 0 auto',
+          whiteSpace: 'nowrap',
+        }}
+      >
         <span
           style={{
             display: 'inline-block',
@@ -149,7 +166,17 @@ function TooltipRow({
         />
         {label}
       </span>
-      <span style={{ fontWeight: 600, color: 'var(--mcms-text)' }}>{value}</span>
+      <span
+        style={{
+          fontWeight: 600,
+          color: 'var(--mcms-text)',
+          flex: '1 1 auto',
+          minWidth: 0,
+          textAlign: 'right',
+        }}
+      >
+        {value}
+      </span>
     </div>
   )
 }
@@ -240,7 +267,12 @@ function ComparativeRevenueChartInner({
               tickLine={false}
             />
             <YAxis
-              tickFormatter={(v: number) => formatVND(v, { compact: true })}
+              /*
+               * ⚠ `formatCompactVND` — từ 1 triệu trở lên giữ **1 chữ số
+               *   thập phân** ⇒ 2 mốc `1.000.000` / `1.400.000` in ra
+               *   `1 Tr ₫` / `1,4 Tr ₫` (không còn trùng nhãn "1 Tr ₫").
+               */
+              tickFormatter={(v: number) => formatCompactVND(v)}
               tick={chartTickStyle}
               axisLine={{ stroke: 'var(--mcms-border)' }}
               tickLine={false}

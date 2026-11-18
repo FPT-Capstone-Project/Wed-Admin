@@ -1,12 +1,12 @@
 import { message } from 'antd'
-import { extractApiError } from './error'
+import { resolveApiErrorMessage } from './error-mapper'
 
 /**
  * Toast lỗi tập trung cho toàn bộ request thất bại.
  *
  * ⚠ Dùng **static** `message` của AntD, không dùng `App.useApp()`:
  *   interceptor nằm ngoài React nên không có context. AntD khuyến nghị static
- *   API chỉ cho tình huống này; vấn đề `getContainer`/theme chỉ ảnh hưởng
+ *   API chỉ cho tình huống này; vấn đề `getContainer`/theme chỉ ảnh hưởng đến
  *   style của toast, không ảnh hưởng hành vi.
  *
  * 401 được **bỏ qua**: `notifyAuthExpired` đã xử lý (clear session + điều
@@ -23,6 +23,10 @@ import { extractApiError } from './error'
  *
  *   → Toast đang chờ được đánh dấu theo **request** (`method + url`) nên khi
  *   lần retry thành công, interceptor success huỷ đúng toast đó.
+ *
+ * ⚠ **Message luôn đi qua {@link resolveApiErrorMessage}** ⇒ không bao giờ
+ *   lộ ra message thô của axios ("Request failed with status code 500") hay
+ *   message tiếng Anh chưa dịch của Backend.
  */
 
 const SILENT_STATUSES = new Set([401, 403, 404])
@@ -34,8 +38,17 @@ const TOAST_DELAY_MS = 1_200
 const DEDUPE_WINDOW_MS = 4_000
 const lastToastAt = new Map<string, number>()
 
+interface PendingToast {
+  timer: ReturnType<typeof setTimeout>
+  config: {
+    method?: string
+    url?: string
+    skipGlobalErrorToast?: boolean
+  } | null
+}
+
 /** Timer đang chờ, đánh dấu theo request (`method + url`). */
-const pendingToasts = new Map<string, ReturnType<typeof setTimeout>>()
+const pendingToasts = new Map<string, PendingToast>()
 
 /**
  * Khóa nhận diện request — dùng để ghép lỗi với lần retry thành công.
@@ -72,25 +85,35 @@ function shouldShow(status: number | null, text: string): boolean {
  */
 export function installErrorToast(): (error: unknown) => void {
   return function globalErrorToast(error: unknown): void {
-    const { status, message: text } = extractApiError(error)
+    const status =
+      (error as { response?: { status?: number } })?.response?.status ?? null
 
     if (status !== null && SILENT_STATUSES.has(status)) return
 
-    const key = requestKey(
-      (error as { config?: { method?: string; url?: string } })?.config,
-    )
+    const config =
+      (error as { config?: PendingToast['config'] })?.config ?? null
 
     // Đã có toast pending cho request này → không lặp lại.
+    const key = requestKey(config)
     if (pendingToasts.has(key)) return
+
+    // ⚠ UI đã tự hiển thị lỗi này (vd `message.error(...)` trong `onError`)
+    //   ⇒ bỏ qua toast toàn cục để không bắn trùng 2 toast.
+    if (config?.skipGlobalErrorToast) return
 
     const timer = setTimeout(() => {
       pendingToasts.delete(key)
+
+      // Có thể component đã hiển thị lỗi trong lúc chờ ⇒ huỷ toast.
+      if (config?.skipGlobalErrorToast) return
+
+      const text = resolveApiErrorMessage(error)
       if (shouldShow(status, text)) {
         void message.error(text)
       }
     }, TOAST_DELAY_MS)
 
-    pendingToasts.set(key, timer)
+    pendingToasts.set(key, { timer, config })
   }
 }
 
@@ -106,16 +129,16 @@ export function cancelPendingErrorToast(config: {
 } | null | undefined): void {
   const key = requestKey(config)
 
-  const timer = pendingToasts.get(key)
-  if (timer === undefined) return
+  const pending = pendingToasts.get(key)
+  if (pending === undefined) return
 
-  clearTimeout(timer)
+  clearTimeout(pending.timer)
   pendingToasts.delete(key)
 }
 
 /** Xoá cache dedupe + huỷ mọi toast đang chờ — gọi khi logout hoặc trong test. */
 export function resetErrorToastCache(): void {
   lastToastAt.clear()
-  for (const timer of pendingToasts.values()) clearTimeout(timer)
+  for (const pending of pendingToasts.values()) clearTimeout(pending.timer)
   pendingToasts.clear()
 }

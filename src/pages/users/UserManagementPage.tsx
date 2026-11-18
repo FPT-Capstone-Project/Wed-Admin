@@ -36,6 +36,7 @@ import type {
 } from '../../types/user.types'
 import { ActionButton, MetadataBadge, StatCard, StatGrid, StatusBadge, DataTable } from '../../shared/ui'
 import { UserDetailDrawer } from '../../app/router/lazy-modals'
+import { resolveApiErrorMessage } from '../../shared/api/error-mapper'
 
 const PAGE_SIZE = 20
 
@@ -314,7 +315,7 @@ export function UserManagementPage() {
                 Không tải được danh sách tài khoản.
               </Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {error?.message ?? 'Lỗi không xác định.'}
+                {resolveApiErrorMessage(error, 'tải danh sách tài khoản')}
               </Typography.Text>
             </Flex>
           }

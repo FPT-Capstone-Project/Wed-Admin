@@ -33,6 +33,7 @@ import {
   ACTIVE_NODE_IDS,
   SENSORS_PER_NODE,
 } from '../../../features/devices/utils/iot-node-scope'
+import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 
 type HistoryScope = 'realtime' | 'last24h' | 'last7d'
 
@@ -369,7 +370,7 @@ export function TrayIoTHistoryApiView() {
                 Không tải được lịch sử telemetry.
               </Typography.Text>
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-                {error?.message ?? 'Lỗi không xác định.'}
+                {resolveApiErrorMessage(error, 'tải lịch sử telemetry')}
               </Typography.Text>
               <Typography.Text
                 type="secondary"

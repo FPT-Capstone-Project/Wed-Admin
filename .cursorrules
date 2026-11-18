@@ -1,20 +1,32 @@
 # Project Overview
-- Project: mcms-web-admin (IoT / Telemetry monitoring admin dashboard for smart agriculture).
-- Tech stack: React, TypeScript, Tailwind CSS, Recharts, Vite.
-- Architecture: Feature-based (`src/features/...`, `components/`, `routes/`, `stores/`).
+- Project: mcms-web-admin (IoT / Telemetry monitoring admin dashboard for smart agriculture — Smart Mushroom Cultivation Management System).
+- Tech stack: React 19, TypeScript, Tailwind CSS, Ant Design (`antd`), Recharts, Zustand, TanStack Query, Vite.
+- Architecture: Feature-based (`src/features/...`, `components/`, `routes/`, `stores/`, `types/`).
+- UI Language: All user-facing UI text (labels, status indicators, table headers, toast notifications, empty states) MUST be in natural, clear **Vietnamese**.
 
 # Code & Development Guidelines
 - Strictly adhere to existing code structure, patterns, and type definitions.
+- Reuse existing tokenized project components (`StatCard`, `StatusBadge`, `ActionButton`, `UserAvatar`, `DataTable`, `PageHeader`) rather than raw unstyled Ant Design defaults.
 - Do not refactor unrelated files or functions.
 - Do not install new packages unless explicitly requested.
-- Use strict TypeScript; reuse interfaces/types in `types/`.
+- Use strict TypeScript; reuse interfaces/types in `types/` and generated API schemas (`npm run update-api` when OpenAPI specs change).
 - Keep explanations minimal: output clean, direct diffs without unnecessary chit-chat.
+
+# Domain & Business Logic Rules
+- **Mushroom Cultivation Lifecycle:** 4 active stages (`Ủ tơ`, `Kéo tơ`, `Nấm đang phát triển`, `Sẵn sàng thu hoạch`) plus `Hoàn thành` for finished sessions.
+- **Role Boundaries (Admin vs. Farm OP):**
+  - Web Admin is strictly for monitoring, analytics, resource/catalog management (packages, devices, users, rentals, harvest requests), and camera feeds (Imou/Tapo).
+  - NEVER add session stage progression buttons or farm automation controls on Admin views; those actions belong exclusively to Farm OP.
+- **Data Resolution & Safety:**
+  - Always resolve raw numeric staff/user IDs to actual display names.
+  - Safely guard against default/epoch dates or empty arrays from API responses to prevent broken UI states.
+  - Fit primary management tables (sessions, harvest requests) cleanly within a standard desktop viewport (24-inch external monitor) without horizontal scrolling.
 
 # Visual & UI/UX Standards (B2B Industrial IoT)
 - Border Radius: Strictly use subtle corners: `rounded` (4px) or `rounded-md` (6px). NEVER use full rounded pill shapes (`rounded-full`) for menu items, cards, badges, or buttons.
 - Color Palette:
   - Background: Crisp neutral/slate (`bg-slate-50` or `#F8FAFC`), card surfaces use pure white (`#FFFFFF`) with thin borders (`border-slate-200`).
-  - Primary Green: Restrict to key interactive elements (CTA buttons) and healthy/online states only.
+  - Primary Green: Restrict to key interactive elements (CTA buttons, `#16A34A` / `#15803D` with WCAG AA contrast) and healthy/online states only.
   - Border Accents: Do NOT use thick colored borders (red, orange, green) on card edges or badges.
 - Status Indicators:
   - Replace thick bordered badge tags with subtle "Status Dots": a 6px solid dot (green for active, red for offline, amber for warning) followed by medium neutral text.

@@ -5,7 +5,8 @@ import { App, Button, Collapse, Flex, Form, Input, InputNumber, Modal, Popconfir
 import { cultivationRoomApi, type RoomRequest } from '../api/cultivation-room.api'
 import { cultivationKeys, useCultivationRooms } from '../hooks/useCultivation'
 import { iotKeys, useFloorList } from '../../devices/hooks/useIoT'
-import { extractApiError, getApiErrorMessage } from '../../../shared/api/error'
+import { extractApiError } from '../../../shared/api/error'
+import { showApiError, markApiErrorHandled } from '../../../shared/api/error-mapper'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
 import type { CultivationRoom } from '../../../types/cultivation'
 function useResourceAction<T>(mutationFn: (value: T) => Promise<void>) {
@@ -16,7 +17,16 @@ function useResourceAction<T>(mutationFn: (value: T) => Promise<void>) {
     void message.success('Đã cập nhật tài nguyên')
   }, onError: (error: Error) => {
     const detail = extractApiError(error)
-    void message.error(detail.status === 409 ? `Không thể thực hiện do xung đột dữ liệu. ${detail.message}` : getApiErrorMessage(error))
+    // ⚠ 409 — `resolveApiErrorMessage` đã trả sẵn thông báo "Xung đột dữ liệu"
+    //   ⇒ không tiền tố thêm lần nữa (tránh lặp).
+    if (detail.status === 409) {
+      markApiErrorHandled(error)
+      void message.error(detail.message)
+      return
+    }
+    showApiError(error, 'thao tác với phòng', (text) =>
+      void message.error(text),
+    )
   } })
 }
 function RoomForm({ room, onClose }: { room: CultivationRoom | null; onClose: () => void }) {

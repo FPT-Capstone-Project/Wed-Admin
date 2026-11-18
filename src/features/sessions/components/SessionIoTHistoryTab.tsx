@@ -48,6 +48,7 @@ import {
 import { SessionDeviceCycleTable } from './SessionDeviceCycleTable'
 import { SessionMappedFloorList } from './SessionMappedFloorList'
 import { SessionSensorChart } from './SessionSensorChart'
+import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 
 /** Sub-tab bên trong tab "Lịch sử IoT". */
 type IoTHistoryView = 'sensors' | 'commands'
@@ -534,7 +535,10 @@ export function SessionIoTHistoryTab({
           type="warning"
           showIcon
           title="Không tải được lịch sử cảm biến."
-          description={chartError?.message}
+          description={resolveApiErrorMessage(
+            chartError,
+            'tải lịch sử cảm biến',
+          )}
         />
       ) : (chartLoading && !chartPoints) || (!chartReady && !chartPoints) ? (
         /*
@@ -624,7 +628,10 @@ export function SessionIoTHistoryTab({
               type="warning"
               showIcon
               title="Không tải được bảng dữ liệu cảm biến."
-              description={newestError?.message}
+              description={resolveApiErrorMessage(
+                newestError,
+                'tải bảng dữ liệu cảm biến',
+              )}
             />
           )}
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
@@ -692,7 +699,10 @@ export function SessionIoTHistoryTab({
           type="warning"
           showIcon
           title="Không tải được nhật ký thiết bị."
-          description={deviceError?.message}
+          description={resolveApiErrorMessage(
+            deviceError,
+            'tải nhật ký thiết bị',
+          )}
         />
       ) : deviceLoading && !deviceCycles ? (
         <Skeleton active paragraph={{ rows: 6 }} />

@@ -40,6 +40,7 @@ import type {
 } from '../../alerts/types/alert.types'
 import { useNotificationActions } from '../../notifications/hooks/useNotifications'
 import { markAlertsAsRead } from '../utils/mark-alerts-as-read'
+import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 
 const SEVERITY_OPTIONS = (
   Object.keys(ALERT_SEVERITY_CONFIG) as OperationalAlertSeverity[]
@@ -382,9 +383,10 @@ export function AlertsPanel({
           error={
             isError
               ? {
-                  message:
-                    error?.message ??
-                    'Không tải được danh sách cảnh báo. Lỗi không xác định.',
+                  message: resolveApiErrorMessage(
+                    error,
+                    'tải danh sách cảnh báo',
+                  ),
                 }
               : undefined
           }

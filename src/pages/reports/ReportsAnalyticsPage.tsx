@@ -41,7 +41,7 @@ import {
   StatGrid,
   StatusBadge,
 } from '../../shared/ui'
-import { tones } from '../../app/theme/tokens'
+import { chartSeries, tones } from '../../app/theme/tokens'
 
 type ComparisonMode = 'MONTHLY' | 'QUARTERLY'
 
@@ -457,7 +457,13 @@ export function ReportsAnalyticsPage() {
             </Typography.Text>
           </div>
           <Space size={8} wrap>
-            <LegendChip color={tones.ok.solid} label={currentLabel} />
+            {/*
+             * ⚠ Màu chấm phải **khớp** cột biểu đồ + chú thích "Kỳ này"
+             *   ở góc dưới bên trái ⇒ dùng `chartSeries.revenue` (xanh dương
+             *   `#2563eb`), **không** phải `tones.ok.solid` (xanh lá) — nếu
+             *   không, người dùng tưởng badge này mô tả series khác.
+             */}
+            <LegendChip color={chartSeries.revenue} label={currentLabel} />
           </Space>
         </Flex>
 
