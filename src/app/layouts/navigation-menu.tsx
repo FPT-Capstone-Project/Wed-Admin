@@ -1,6 +1,6 @@
 ﻿import {
-  Bell, Bug, CalendarDays, ChartColumn, ClipboardList, Cpu, FlaskConical,
-  Gauge, HandPlatter, LayoutGrid, Package, Sprout, Truck, Users, Video,
+  Bell, Bug, CalendarDays, ChartColumn, ClipboardList, Cpu,
+  Gauge, HandPlatter, LayoutGrid, Package, Sprout, Thermometer, Truck, Users, Video, Warehouse,
 } from 'lucide-react'
 import type { MenuProps } from 'antd'
 import type { ReactNode } from 'react'
@@ -18,11 +18,12 @@ const ICONS: Record<MenuIconName, ReactNode> = {
   issues: <Bug size={18} strokeWidth={2} aria-hidden="true" />,
   harvests: <Truck size={18} strokeWidth={2} aria-hidden="true" />,
   harvestRequests: <HandPlatter size={18} strokeWidth={2} aria-hidden="true" />,
+  inventory: <Warehouse size={18} strokeWidth={2} aria-hidden="true" />,
   reports: <ChartColumn size={18} strokeWidth={2} aria-hidden="true" />,
   orders: <ClipboardList size={18} strokeWidth={2} aria-hidden="true" />,
   packages: <Package size={18} strokeWidth={2} aria-hidden="true" />,
   users: <Users size={18} strokeWidth={2} aria-hidden="true" />,
-  settings: <FlaskConical size={18} strokeWidth={2} aria-hidden="true" />,
+  settings: <Thermometer size={18} strokeWidth={2} aria-hidden="true" />,
 }
 
 /** Dựng menu theo vai trò; bỏ nhóm rỗng sau khi lọc. */

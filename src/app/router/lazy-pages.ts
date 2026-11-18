@@ -1,5 +1,7 @@
 import { lazy } from 'react'
 
+export const SpawnInventoryPage = lazy(() => import('../../pages/inventory/SpawnInventoryPage').then(m => ({ default: m.SpawnInventoryPage })))
+
 // ──────────────────────────────────────────────────────────────────────────
 // Route-level code splitting: mỗi page là một chunk riêng, chỉ tải khi user
 // truy cận. Giúp giảm Initial JS payload từ ~2MB xuống ~400-500KB.

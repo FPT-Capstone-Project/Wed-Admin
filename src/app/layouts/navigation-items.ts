@@ -25,6 +25,7 @@ export type MenuIconName =
   | 'issues'
   | 'harvests'
   | 'harvestRequests'
+  | 'inventory'
   | 'reports'
   | 'orders'
   | 'packages'
@@ -112,6 +113,11 @@ export const MENU_GROUPS: MenuGroupDef[] = [
         key: '/harvest-requests',
         icon: 'harvestRequests',
         label: 'Yêu cầu nhận nấm',
+      },
+      {
+        key: '/inventory',
+        icon: 'inventory',
+        label: 'Kho phôi nấm',
       },
       {
         key: '/reports',

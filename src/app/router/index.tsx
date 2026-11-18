@@ -12,6 +12,7 @@ import { PageFallback } from './PageFallback'
 import { AppErrorBoundary } from '../../shared/ui/AppErrorBoundary'
 import {
   IssueManagementPage,
+  SpawnInventoryPage,
   HarvestManagementPage,
   HarvestRequestManagementPage,
   AlertCenterPage,
@@ -72,6 +73,10 @@ export const router = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
+      {
+        path: 'inventory',
+        element: <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>{withSuspense(<SpawnInventoryPage />)}</RoleGuard>,
+      },
       // ── ADMIN ONLY ────────────────────────────────────────────────────
       // Quản lý sự cố & bệnh hại (gán chuyên gia, đóng hồ sơ) — chỉ Admin.
       {

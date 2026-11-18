@@ -45,6 +45,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/harvests': 'Quản lý Thu hoạch',
   '/harvest-requests': 'Yêu cầu nhận nấm',
   '/reports': 'Báo cáo & phân tích',
+  '/inventory': 'Kho phôi nấm',
   '/orders': 'Quản lý đơn đặt',
   '/sessions': 'Quản lý phiên canh tác',
   '/packages': 'Gói cước thuê',
