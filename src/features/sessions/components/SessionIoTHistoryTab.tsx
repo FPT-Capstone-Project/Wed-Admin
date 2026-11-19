@@ -23,6 +23,7 @@ import { statusLabel } from '../../../shared/i18n/status/registry'
 import {
   useNewestSessionEnvironmentRecords,
   useSessionEnvironmentChart,
+  useSessionDailyAverages,
 } from '../hooks/useSessionEnvironmentHistory'
 import {
   useSessionClimateThresholds,
@@ -171,7 +172,7 @@ export function SessionIoTHistoryTab({
    *   thời gian quyết định **dữ liệu nào được kéo từ API** ⇒ đổi mốc phải
    *   kích hoạt fetch lại, không chỉ re-render.
    */
-  const [timeRange, setTimeRange] = useState<SessionSensorTimeRange>('1h')
+  const [rangeSelection, setRangeSelection] = useState<{ sessionId: number | null; range: SessionSensorTimeRange | 'session' } | null>(null)
 
   /**
    * ⚠ Phiên đã **kết thúc** hay chưa?
@@ -181,6 +182,9 @@ export function SessionIoTHistoryTab({
    */
   const sessionEnded =
     sessionStatus === 'COMPLETED' || sessionStatus === 'CANCELLED'
+  const timeRange = rangeSelection?.sessionId === sessionId ? rangeSelection.range : sessionEnded ? 'session' : '24h'
+  const setTimeRange = (range: SessionSensorTimeRange | 'session') => setRangeSelection({ sessionId, range })
+  const dailyQuery = useSessionDailyAverages(sessionId, view === 'sensors' && timeRange === 'session')
 
   /**
    * ⚠ **Tầng dùng cho biểu đồ** — lấy từ `trays[].floor_id` của endpoint quản
@@ -331,7 +335,7 @@ export function SessionIoTHistoryTab({
     refetch: refetchChart,
   } = useSessionEnvironmentChart(
     sessionId,
-    timeRange,
+    timeRange === 'session' ? '24h' : timeRange,
     floorLabels,
     chartAnchorEnd,
     {
@@ -339,7 +343,7 @@ export function SessionIoTHistoryTab({
       floorNumbers: floorScope.floorNumbers,
       floorNumberByFloorId,
     },
-    { enabled: view === 'sensors' && chartReady },
+    { enabled: view === 'sensors' && chartReady && timeRange !== 'session' },
   )
 
   // ─── Cảm biến (bảng — phân trang client-side trên lô bản ghi đã lọc) ──
@@ -530,31 +534,27 @@ export function SessionIoTHistoryTab({
 
   const sensorsContent = (
     <Flex vertical gap={16}>
-      {chartFailed ? (
+      {(timeRange === 'session' ? dailyQuery.isError : chartFailed) && (
         <Alert
           type="warning"
           showIcon
           title="Không tải được lịch sử cảm biến."
           description={resolveApiErrorMessage(
-            chartError,
+            timeRange === 'session' ? dailyQuery.error : chartError,
             'tải lịch sử cảm biến',
           )}
         />
-      ) : (chartLoading && !chartPoints) || (!chartReady && !chartPoints) ? (
-        /*
-         * ⚠ Chờ `latest` resolve (phiên đã kết thúc) ⇒ hiển thị skeleton thay
-         *   vì biểu đồ chưa thể vẽ đúng mốc neo.
-         */
-        <Skeleton active paragraph={{ rows: 6 }} />
-      ) : (
+      )}
         <>
           <SessionSensorChart
+            key={sessionId}
+            dailyData={dailyQuery.data}
             points={chartPoints ?? []}
             thresholdsByFloor={thresholdsByFloor}
             timeRange={timeRange}
             anchorEnd={chartAnchorEnd}
             onTimeRangeChange={setTimeRange}
-            loading={chartFetching}
+            loading={timeRange === 'session' ? dailyQuery.isFetching : chartFetching || !chartReady}
           />
 
           {/* ── Chỉ số mới nhất ─────────────────────────────────────── */}
@@ -688,7 +688,6 @@ export function SessionIoTHistoryTab({
             emptyDescription="Phiên này chưa ghi nhận bản ghi môi trường nào. Dữ liệu được tổng hợp mỗi 10 phút khi thiết bị hoạt động trong suốt phiên."
           />
         </>
-      )}
     </Flex>
   )
 
@@ -745,10 +744,11 @@ export function SessionIoTHistoryTab({
           type="text"
           size="small"
           icon={<ReloadOutlined />}
-          loading={chartLoading || newestLoading || deviceLoading}
+          loading={(timeRange === 'session' ? dailyQuery.isFetching : chartLoading) || newestLoading || deviceLoading}
           onClick={() => {
             if (view === 'sensors') {
-              void refetchChart()
+              if (timeRange === 'session') void dailyQuery.refetch()
+              else void refetchChart()
               void refetchNewest()
             } else {
               void refetchDevices()

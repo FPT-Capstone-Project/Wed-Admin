@@ -42,7 +42,7 @@ export function isEmptyStock(quantity: string): boolean {
 export function formatQuantity(value: string): string {
   decimal(value)
   const [integer, fraction] = value.split('.')
-  return `${integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')}${fraction ? `,${fraction}` : ''}`
+  return fraction ? `${integer}.${fraction}` : integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
 }
 
 function record(value: unknown): Record<string, unknown> {

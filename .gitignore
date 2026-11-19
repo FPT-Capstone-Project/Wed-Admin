@@ -29,6 +29,11 @@ pnpm-debug.log*
 # AI & preview folders
 .agents/
 .preview/
+.edge-debug-profile/
+scripts/tmp-report-check.mjs
+reports-check/
+.edge-debug-profile/
+scripts/tmp-report-check.mjs
 
 # Temporary files sinh bởi AI / Cursor (chỉ chặn ảnh tạm, không chặn ảnh dự án)
 _tmp_*

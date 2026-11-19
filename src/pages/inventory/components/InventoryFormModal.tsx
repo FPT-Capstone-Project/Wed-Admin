@@ -3,6 +3,7 @@ import { App, Form, Input, InputNumber, Modal, Select } from 'antd'
 import { useMushroomTypes } from '../../../features/packages/hooks/useMushroomTypes'
 import { useInventoryMutation } from '../../../features/inventory/hooks/useInventory'
 import type { Inventory } from '../../../features/inventory/types/inventory.types'
+import { formatQuantity } from '../../../features/inventory/utils/inventory.utils'
 import { showApiError } from '../../../shared/api/error-mapper'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 
@@ -15,7 +16,10 @@ export function InventoryFormModal({ open, item, onClose }: { open: boolean; ite
   useEffect(() => {
     if (open) {
       form.resetFields()
-      if (item) form.setFieldsValue({ quantity: Number(item.quantity) })
+      // Ô "Số lượng mới" cố ý để TRỐNG khi điều chỉnh: điều chỉnh là ghi đè
+      // số tồn, không phải cộng thêm. Điền sẵn số tồn hiện tại khiến admin
+      // dễ "lưu nhầm" mà không thay đổi gì — nên chỉ hiển thị tồn hiện tại
+      // dưới dạng text phụ tham khảo bên dưới ô nhập.
     }
   }, [open, item, form])
   async function submit(values: Values) {
@@ -31,7 +35,7 @@ export function InventoryFormModal({ open, item, onClose }: { open: boolean; ite
     {!item && types.isError && <LoadErrorAlert error={types.error} resource="giống nấm" onRetry={types.refetch} />}
     <Form form={form} layout="vertical" onFinish={submit} disabled={mutation.isPending}>
       {!item && <Form.Item name="mushroomTypeId" label="Giống nấm" rules={[{ required: true, message: 'Vui lòng chọn giống nấm.' }]}><Select loading={types.isLoading} showSearch optionFilterProp="label" options={types.data?.map(type => ({ value: type.mushroom_type_id, label: type.name }))} /></Form.Item>}
-      <Form.Item name="quantity" label={item ? 'Số lượng mới' : 'Số lượng'} rules={[{ required: true, message: 'Vui lòng nhập số lượng.' }, { validator: (_, value: unknown) => typeof value === 'number' && Number.isFinite(value) && value <= Number.MAX_SAFE_INTEGER && (item ? value >= 0 : value > 0) ? Promise.resolve() : Promise.reject(new Error(item ? 'Số lượng mới phải từ 0 trở lên.' : 'Số lượng nhập phải lớn hơn 0.')) }]}><InputNumber min={0} style={{ width: '100%' }} /></Form.Item>
+      <Form.Item name="quantity" label={item ? 'Số lượng mới' : 'Số lượng'} extra={item ? `Tồn hiện tại: ${formatQuantity(item.quantity)} đơn vị` : undefined} rules={[{ required: true, message: 'Vui lòng nhập số lượng.' }, { validator: (_, value: unknown) => typeof value === 'number' && Number.isFinite(value) && value <= Number.MAX_SAFE_INTEGER && (item ? value >= 0 : value > 0) ? Promise.resolve() : Promise.reject(new Error(item ? 'Số lượng mới phải từ 0 trở lên.' : 'Số lượng nhập phải lớn hơn 0.')) }]}><InputNumber min={0} style={{ width: '100%' }} placeholder={item ? 'Nhập số lượng mới' : 'Nhập số lượng'} /></Form.Item>
       <Form.Item name="notes" label="Ghi chú" rules={item ? [{ required: true, whitespace: true, message: 'Vui lòng nhập lý do điều chỉnh.' }] : []}><Input.TextArea rows={3} /></Form.Item>
     </Form>
   </Modal>

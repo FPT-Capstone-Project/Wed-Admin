@@ -1,5 +1,5 @@
-import { ApartmentOutlined, NodeIndexOutlined } from '@ant-design/icons'
-import { Flex, Tag, Typography } from 'antd'
+import { ApartmentOutlined } from '@ant-design/icons'
+import { Flex,Tag,Typography } from 'antd'
 import type { SessionFloorMapping } from '../types/session-floor-mapping.types'
 
 /**
@@ -50,7 +50,7 @@ export function SessionMappedFloorList({
           {floors.map((floor, index) => (
             <Tag
               key={floor.floorId ?? `floor-${index}`}
-              icon={<NodeIndexOutlined />}
+
               color="blue"
               style={{ padding: '4px 10px' }}
             >

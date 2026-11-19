@@ -1,21 +1,18 @@
-import { formatSessionProgress } from '../../sessions/utils/session-progress.utils'
-import { Progress } from 'antd'
-import { resolveSessionPhase } from '../../sessions/utils/session-state.utils'
-import { MUSHROOM_GROWTH_PHASE_DICTIONARY } from '../../../shared/i18n/status/session'
 import {
-  CalendarOutlined,
-  ClockCircleOutlined,
-  EnvironmentOutlined,
-  PhoneOutlined,
-  ShopOutlined,
-  UserOutlined,
-  WarningOutlined,
+CalendarOutlined,
+ClockCircleOutlined,
+PhoneOutlined,
+ShopOutlined,
+WarningOutlined
 } from '@ant-design/icons'
-import { Tag, Typography } from 'antd'
+import { Progress,Tag,Typography } from 'antd'
 import type { ReactNode } from 'react'
+import { MUSHROOM_GROWTH_PHASE_DICTIONARY } from '../../../shared/i18n/status/session'
 import type { TrayRental } from '../../../types/room.types'
+import { formatSessionProgress } from '../../sessions/utils/session-progress.utils'
+import { resolveSessionPhase } from '../../sessions/utils/session-state.utils'
 import type { RentalLifecycleMetrics } from '../utils/tray-rental.utils'
-import { formatRentalDate } from '../utils/tray-rental.utils'
+import { formatRentalDate,OVERDUE_HARVEST_GUIDANCE,rentalDayLabel } from '../utils/tray-rental.utils'
 
 interface RentalLifecycleSectionProps {
   batchId: string | null
@@ -23,6 +20,9 @@ interface RentalLifecycleSectionProps {
   lifecycle: RentalLifecycleMetrics
   growthStage?: string | null
   growthProgress?: number | null
+  sessionStatus?: string
+  harvestReady?: boolean
+  hideHeading?: boolean
 }
 
 interface LifecycleStatusPresentation {
@@ -57,7 +57,7 @@ function getStatusPresentation(
         icon: <WarningOutlined />,
         label: `Quá hạn ${lifecycle.overdueDays} ngày`,
         supportingText:
-          'Gói thuê đã hết hạn, phí chăm sóc bổ sung đang được tính.',
+          OVERDUE_HARVEST_GUIDANCE,
       }
     case 'AUTO_HARVESTED':
       return {
@@ -95,21 +95,29 @@ export function RentalLifecycleSection({
   lifecycle,
   growthStage,
   growthProgress,
+  sessionStatus,
+  harvestReady = false,
+  hideHeading = false,
 }: RentalLifecycleSectionProps) {
   const status = getStatusPresentation(lifecycle)
-  const phase = resolveSessionPhase(growthStage)
+  const phase = resolveSessionPhase(growthStage, sessionStatus, harvestReady)
   const label = phase ? MUSHROOM_GROWTH_PHASE_DICTIONARY[phase].label : 'Chưa cập nhật'
   const percent = growthProgress ?? null
+  const contactText = (value: string | null | undefined) => {
+    const text = value?.trim()
+    return text && text !== '—' && text !== '-' ? text : null
+  }
+  const phone = contactText(rental.tenantPhone)
+  const address = contactText(rental.tenantAddress)
+  const variety = contactText(rental.mushroomVariety)
 
   return (
     <section
       className={`tray-detail-section lifecycle-section lifecycle-section--${status.className}`}
-      aria-labelledby="rental-lifecycle-heading"
+      aria-labelledby={hideHeading ? undefined : 'rental-lifecycle-heading'}
     >
-      <div className="tray-section-heading">
-        <span className="tray-section-icon" aria-hidden="true">
-          <ClockCircleOutlined />
-        </span>
+      {!hideHeading && <div className="tray-section-heading">
+
         <div>
           <Typography.Title id="rental-lifecycle-heading" level={4}>
             Thông tin mẻ & khách hàng
@@ -118,7 +126,7 @@ export function RentalLifecycleSection({
             Chu kỳ mẻ trồng {batchId ?? 'chưa định danh'}
           </Typography.Text>
         </div>
-      </div>
+      </div>}
 
       <div className="lifecycle-status-banner" role="status" aria-atomic="true">
         <Tag color={status.color} icon={status.icon}>
@@ -128,27 +136,20 @@ export function RentalLifecycleSection({
       </div>
 
       <div className="tenant-detail-block">
-        <span className="tenant-avatar" aria-hidden="true">
-          <UserOutlined />
-        </span>
+
         <div className="tenant-detail-copy">
           <span className="tray-detail-label">Khách thuê</span>
           <strong>{rental.tenantName}</strong>
-          <span className="tenant-contact-line">
-            <PhoneOutlined aria-hidden="true" />
-            {rental.tenantPhone}
-          </span>
-          <span className="tenant-contact-line">
-            <EnvironmentOutlined aria-hidden="true" />
-            {rental.tenantAddress}
-          </span>
+          {phone && <span className="tenant-contact-line">{phone}</span>}
+          {address && <span className="tenant-contact-line">{address}</span>}
+          {!phone && !address && <Typography.Text type="secondary">Chưa cập nhật thông tin liên hệ</Typography.Text>}
         </div>
       </div>
 
       <div className="lifecycle-progress-block">
         <div className="lifecycle-progress-copy">
           <span>Giai đoạn sinh trưởng từ Farm OP</span>
-          <strong>{label} · {formatSessionProgress(percent)}</strong>
+          <strong>{label}{percent != null ? ` · ${formatSessionProgress(percent)}` : ''}</strong>
         </div>
         <Progress percent={percent ?? 0} showInfo={false} aria-label={`${label}: ${formatSessionProgress(percent)}`} />
       </div>
@@ -158,7 +159,7 @@ export function RentalLifecycleSection({
           <dt>Loại nấm trồng</dt>
           <dd>
             <strong>{rental.mushroomType}</strong>
-            <span>{rental.mushroomVariety}</span>
+            {variety && <span>{variety}</span>}
           </dd>
         </div>
         <div>
@@ -167,13 +168,13 @@ export function RentalLifecycleSection({
             <strong>
               {lifecycle.packageDurationDays} ngày (
               {formatRentalDate(rental.startDate)} -{' '}
-              {formatRentalDate(rental.expectedHarvestDate)})
+              {formatRentalDate(rental.packageEndDate)})
             </strong>
             <span>
-              Ngày {lifecycle.growthDay}/{lifecycle.expectedHarvestDay}{' · '}
+              {rentalDayLabel(lifecycle)}
               {rental.packageName && rental.packageName !== '—'
-                ? `Gói: ${rental.packageName}`
-                : '—'}
+                ? ` · Gói: ${rental.packageName}`
+                : ''}
             </span>
           </dd>
         </div>

@@ -110,6 +110,7 @@ export {
   ROLE_OPTION_BY_ID,
   getRoleOption,
   getRoleLabel,
+  getRoleKeyByName,
   USER_STATUS_DICTIONARY,
   USER_STATUS_ANTD_COLORS,
   USER_STATUS_LEGACY_CONFIG,

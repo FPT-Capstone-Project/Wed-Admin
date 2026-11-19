@@ -7,8 +7,14 @@
  *   - Chu kỳ tính tiền (`billing_cycle`).
  *
  * ⚠ Vì sao gộp gói + nấm? Cả hai dùng **cùng một bộ trạng thái**
- *   (`ACTIVE` / `INACTIVE`) và cùng cách hiển thị ("Đang nhận đơn" /
- *   "Tạm ngưng") ⇒ 1 từ điển, không tạo 2 bảng trùng nhau.
+ *   (`ACTIVE` / `INACTIVE`) và cùng cách hiển thị ("Đang áp dụng" /
+ *   "Ngừng áp dụng") ⇒ 1 từ điển, không tạo 2 bảng trùng nhau.
+ *
+ * ⚠ Vì sao KHÔNG dùng "Đang nhận đơn" / "Tạm ngưng"?
+ *   Đây là **danh mục** (giống nấm, gói thuê), không phải trạng thái nhận
+ *   đơn. `ACTIVE` = danh mục đang được phép dùng; `INACTIVE` = đã ngừng
+ *   áp dụng (không hiện cho khách, không tạo vụ mới) — đúng với ý nghĩa
+ *   cột `status` trong DB (`CHECK (status IN ('ACTIVE','INACTIVE'))`).
  */
 
 import type { StatusPresentation } from './types'
@@ -30,14 +36,14 @@ export type BillingCycleKey =
 /**
  * Trạng thái gói thuê / giống nấm.
  *
- * ⚠ `ACTIVE` = đang nhận đơn; `INACTIVE` = tạm ngưng.
+ * ⚠ `ACTIVE` = đang áp dụng; `INACTIVE` = ngừng áp dụng.
  */
 export const CATALOG_STATUS_DICTIONARY: Record<
   CatalogStatusKey,
   StatusPresentation
 > = {
-  ACTIVE: { tone: 'ok', label: 'Đang nhận đơn' },
-  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
+  ACTIVE: { tone: 'ok', label: 'Đang áp dụng' },
+  INACTIVE: { tone: 'muted', label: 'Ngừng áp dụng' },
 }
 
 /**
@@ -49,8 +55,8 @@ export const PACKAGE_STATUS_DICTIONARY: Record<
   PackageStatusKey,
   StatusPresentation
 > = {
-  ACTIVE: { tone: 'ok', label: 'Đang nhận đơn' },
-  INACTIVE: { tone: 'muted', label: 'Tạm ngưng' },
+  ACTIVE: { tone: 'ok', label: 'Đang áp dụng' },
+  INACTIVE: { tone: 'muted', label: 'Ngừng áp dụng' },
   PROMOTION: { tone: 'info', label: 'Gói ưu đãi' },
 }
 

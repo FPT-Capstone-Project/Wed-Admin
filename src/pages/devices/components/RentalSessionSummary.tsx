@@ -1,10 +1,3 @@
-import {
-  CalendarOutlined,
-  CloudOutlined,
-  ExperimentOutlined,
-  FireOutlined,
-  UserOutlined,
-} from '@ant-design/icons'
 import type { RentalSession } from '../../../types/iot-history'
 import { getClimateTone } from '../../../features/rooms/utils/climate-tone.utils'
 import { tones } from '../../../app/theme/tokens'
@@ -28,7 +21,6 @@ export function RentalSessionSummary({
       label: 'Khách thuê',
       value: session.tenantName,
       detail: session.tenantId,
-      icon: <UserOutlined />,
       tone: 'forest',
     },
     {
@@ -36,7 +28,6 @@ export function RentalSessionSummary({
       label: 'Loại nấm',
       value: session.mushroomType,
       detail: `${session.orderId} · ${session.batchId}`,
-      icon: <ExperimentOutlined />,
       tone: 'forest',
     },
     {
@@ -44,7 +35,6 @@ export function RentalSessionSummary({
       label: 'Thời gian thuê',
       value: formatRentalDurationLabel(session.startDate, session.endDate),
       detail: `${formatHistoryDate(session.startDate)} – ${formatHistoryDate(session.endDate)}`,
-      icon: <CalendarOutlined />,
       tone: 'amber',
     },
     {
@@ -52,7 +42,6 @@ export function RentalSessionSummary({
       label: 'Nhiệt độ TB',
       value: '—',
       detail: 'Chưa có ngưỡng lịch sử',
-      icon: <FireOutlined />,
       tone: 'muted',
     },
     {
@@ -60,7 +49,6 @@ export function RentalSessionSummary({
       label: 'Độ ẩm TB',
       value: '—',
       detail: 'Chưa có ngưỡng lịch sử',
-      icon: <CloudOutlined />,
       tone: 'muted',
     },
     {
@@ -68,7 +56,6 @@ export function RentalSessionSummary({
       label: 'Số lần tưới',
       value: `${irrigationCount} lần`,
       detail: 'Ghi nhận từ relay',
-      icon: <CloudOutlined />,
       tone: 'blue',
     },
   ] as const
@@ -80,9 +67,6 @@ export function RentalSessionSummary({
           key={metric.key}
           className={`session-summary-card session-summary-card--${metric.tone}`}
         >
-          <span className="session-summary-icon" aria-hidden="true">
-            {metric.icon}
-          </span>
           <span className="session-summary-label">{metric.label}</span>
           <strong style={metric.key === 'temperature' || metric.key === 'humidity' ? { color: tones[getClimateTone(metric.key, 'unknown')].text } : undefined}>{metric.value}</strong>
           <small>{metric.detail}</small>

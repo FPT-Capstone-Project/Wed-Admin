@@ -27,7 +27,9 @@ const compactDecimalFormatter = new Intl.NumberFormat('vi-VN', {
 export function formatCompactVND(value: number | string | null | undefined): string {
   if (value == null || (typeof value === 'string' && !value.trim())) return '—'
   const amount = Number(value)
-  return Number.isFinite(amount) ? compactDecimalFormatter.format(amount) : '—'
+  return Number.isFinite(amount)
+    ? compactDecimalFormatter.formatToParts(amount).map(part => part.type === 'decimal' ? '.' : part.value).join('')
+    : '—'
 }
 
 /** Format finite amounts, preserving a legitimate zero and missing-data fallback. */

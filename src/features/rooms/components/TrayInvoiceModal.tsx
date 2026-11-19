@@ -3,7 +3,6 @@ import {
   CheckCircleOutlined,
   DashboardOutlined,
   EnvironmentOutlined,
-  FileDoneOutlined,
   PrinterOutlined,
   ShopOutlined,
 } from '@ant-design/icons'
@@ -25,6 +24,7 @@ import type {
   TrayRental,
 } from '../../../types/room.types'
 import { formatRentalDate, formatVnd } from '../utils/tray-rental.utils'
+import { formatDecimal } from '../../../shared/utils/number-format'
 
 export type InvoiceMode = Extract<
   TrayClosureOutcome,
@@ -93,7 +93,7 @@ export function TrayInvoiceModal({
       className="tray-invoice-modal"
       title={
         <span className="tray-dialog-title">
-          <FileDoneOutlined aria-hidden="true" />
+
           Thu hoạch &amp; Bàn giao · {batchId} · {trayId}
         </span>
       }
@@ -271,7 +271,7 @@ export function TrayInvoiceModal({
             <strong>Sản lượng thực tế bàn giao</strong>
             <strong className="invoice-harvest-weight">
               {typeof watchedWeight === 'number'
-                ? `${watchedWeight.toLocaleString('vi-VN')} kg`
+                ? `${formatDecimal(watchedWeight, 3, 0)} kg`
                 : '— kg'}
             </strong>
           </div>

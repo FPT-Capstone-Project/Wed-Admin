@@ -287,6 +287,14 @@ textarea {
   background: var(--mcms-background);
 }
 
+.mcms-sider,
+.mcms-sider .ant-layout-sider-trigger,
+.mcms-sider .ant-layout-sider-zero-width-trigger,
+.mcms-sider .ant-layout-sider-zero-width-trigger::after {
+  transition-property: transform, opacity !important;
+  transition-timing-function: cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
 .mcms-sider {
   position: sticky !important;
   top: 0;
@@ -544,7 +552,8 @@ textarea {
 .sidebar-health small {
   overflow: hidden;
   color: var(--mcms-text-muted);
-  font-size: 10px;
+  font-size: 12px;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -5397,34 +5406,6 @@ textarea {
   font-variant-numeric: tabular-nums;
 }
 
-.rental-cost-breakdown .overdue-fee-row {
-  margin: 4px -12px;
-  padding: 12px;
-  border: 1px solid #f1c8c5;
-  border-radius: var(--mcms-radius-md);
-  background: var(--mcms-coral-soft);
-}
-
-.overdue-fee-row dt,
-.overdue-fee-row dd {
-  color: var(--mcms-coral);
-}
-
-.overdue-fee-row dt {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
-  align-items: start;
-  gap: 0 6px;
-  font-weight: var(--mcms-weight-semibold);
-}
-
-.overdue-fee-row dt small {
-  grid-column: 2;
-  color: #8d4a46;
-  font-size: 12px;
-  font-weight: 500;
-}
-
 .rental-cost-breakdown .rental-total-row {
   align-items: center;
   margin-top: 6px;
@@ -5979,13 +5960,11 @@ textarea {
     gap: 8px;
   }
 
-  .rental-cost-breakdown .overdue-fee-row,
   .rental-cost-breakdown .rental-total-row {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .rental-cost-breakdown .overdue-fee-row dd,
   .rental-cost-breakdown .rental-total-row dd {
     padding-left: 24px;
     text-align: left;

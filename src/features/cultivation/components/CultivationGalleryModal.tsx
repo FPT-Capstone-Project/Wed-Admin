@@ -1,7 +1,7 @@
-import { LeftOutlined, PictureOutlined, RightOutlined } from '@ant-design/icons'
-import { Button, Empty, Modal, Typography } from 'antd'
+import { LeftOutlined,RightOutlined } from '@ant-design/icons'
+import { Button,Empty,Modal,Typography } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect,useMemo,useState } from 'react'
 import { MetadataBadge } from '../../../shared/ui'
 import type { CultivationBatch } from '../types/cultivation.types'
 import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
@@ -85,7 +85,7 @@ export function CultivationGalleryModal({
       destroyOnHidden
       title={
         <span className="batch-daily-modal-title">
-          <PictureOutlined aria-hidden="true" />
+
           Ảnh kiểm tra phôi
         </span>
       }

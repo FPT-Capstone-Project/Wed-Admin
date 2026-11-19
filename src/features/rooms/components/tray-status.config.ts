@@ -19,7 +19,7 @@ import { TRAY_UI_STATUS_DICTIONARY } from '../../../shared/i18n/status/room'
  *
  * `label` = nhãn đầy đủ (drawer chi tiết, bảng quản trị, legend).
  * `shortLabel` = nhãn rút gọn cho ô khay nhỏ trong lưới kệ — badge ở đó
- * chỉ rộng ~158px nên "Nhiễm bệnh / Cách ly" bị tràn/wrapping.
+ * chỉ rộng ~158px nên "Đang vệ sinh" là nhãn vừa đủ.
  */
 export const TRAY_STATUS_CONFIG = TRAY_UI_STATUS_DICTIONARY satisfies Record<
   TrayStatus,

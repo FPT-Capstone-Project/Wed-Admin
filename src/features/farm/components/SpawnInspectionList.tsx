@@ -4,6 +4,7 @@ import { MetadataBadge, StatusBadge } from '../../../shared/ui'
 import type { SpawnInspection } from '../types/farm.types'
 import { SPAWN_CONDITION_DICTIONARY } from '../../../shared/i18n/status/session'
 import { presentStatus } from '../../../shared/i18n/status/registry'
+import { translateProgressNote } from '../../../shared/i18n/progress-notes'
 
 const DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
@@ -73,7 +74,7 @@ export function SpawnInspectionCard({ inspection }: SpawnInspectionCardProps) {
       </Flex>
 
       {inspection.notes && (
-        <Typography.Text style={{ fontSize: 12 }}>{inspection.notes}</Typography.Text>
+        <Typography.Text style={{ fontSize: 12 }}>{translateProgressNote(inspection.notes)}</Typography.Text>
       )}
 
       <Typography.Text type="secondary" style={{ fontSize: 12 }}>

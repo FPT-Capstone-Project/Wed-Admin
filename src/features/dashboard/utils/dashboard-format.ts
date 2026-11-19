@@ -13,6 +13,8 @@
  *   có thể trả mã lạ) ⇒ bọc `try/catch` và fallback sang định dạng số
  *   kèm "đ".
  */
+import { formatDecimal } from '../../../shared/utils/number-format.ts'
+
 export function formatDashboardCurrency(
   value: number,
   currency = 'VND',
@@ -35,8 +37,5 @@ export function formatDashboardCurrency(
  */
 export function formatDashboardPercent(value: number): string {
   const safe = typeof value === 'number' && Number.isFinite(value) ? value : 0
-  return `${safe.toLocaleString('vi-VN', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 1,
-  })}%`
+  return `${formatDecimal(safe, 1, 0)}%`
 }

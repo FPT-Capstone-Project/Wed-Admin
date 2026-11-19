@@ -28,7 +28,7 @@ import { summarizeFarmClimate } from '../../rooms/utils/farm-climate.utils'
  *
  * → KHÔNG dùng `useRoomStore` / `useAlertStore` / `useOrderStore` (mock).
  */
-import { CalendarOutlined, CloudOutlined, FireOutlined } from '@ant-design/icons'
+import { CalendarOutlined } from '@ant-design/icons'
 import { Alert, Button, Col, Row, Skeleton, Typography } from 'antd'
 import { useMemo } from 'react'
 import { PageHeader, StatusBadge } from '../../../shared/ui'
@@ -248,7 +248,6 @@ export function DashboardPage() {
               value={temperatureSummary.value}
               unit="°C"
               precision={1}
-              icon={<FireOutlined />}
               tone="coral"
               statusTone={temperatureSummary.tone}
               status={temperatureSummary.label}
@@ -263,7 +262,6 @@ export function DashboardPage() {
               value={humiditySummary.value}
               unit="%"
               precision={1}
-              icon={<CloudOutlined />}
               tone="teal"
               statusTone={humiditySummary.tone}
               status={humiditySummary.label}
@@ -278,7 +276,6 @@ export function DashboardPage() {
               value={summary.occupancyRate}
               unit="%"
               precision={1}
-              icon={<FireOutlined />}
               tone="coral"
               statusTone="ok"
               status={

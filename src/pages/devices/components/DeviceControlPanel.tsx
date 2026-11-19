@@ -1,73 +1,70 @@
-import { getClimateTone, getClimateDirection } from '../../../features/rooms/utils/climate-tone.utils'
-import { climateThresholdsFromConfig } from '../../../features/rooms/utils/farm-climate.utils'
-import { evaluateTemperature, evaluateHumidity, type ClimateReading } from '../../../features/rooms/utils/tray-climate.utils'
-import { tones } from '../../../app/theme/tokens'
-import { formatMeasurement } from '../../../shared/utils/measurement-format'
-import '../device-industrial.css'
-import { Suspense, useMemo, useState } from 'react'
 import {
-  ApiOutlined,
-  BulbOutlined,
-  ControlOutlined,
-  ExperimentOutlined,
-  EyeOutlined,
-  SyncOutlined,
-  ThunderboltOutlined,
-  VideoCameraOutlined,
-  WifiOutlined,
+BulbOutlined,
+ControlOutlined,
+ExperimentOutlined,
+EyeOutlined,
+ThunderboltOutlined,
+VideoCameraOutlined,
+WifiOutlined
 } from '@ant-design/icons'
 import {
-  Alert,
-  App,
-  Button,
-  Card,
-  Descriptions,
-  Drawer,
-  Empty,
-  Flex,
-  Segmented,
-  Select,
-  Space,
-  Tooltip,
-  Typography,
+Alert,
+App,
+Button,
+Card,
+Descriptions,
+Drawer,
+Empty,
+Flex,
+Segmented,
+Select,
+Space,
+Tooltip,
+Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
+import { Suspense,useMemo,useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ActionButton, StatCard, MetadataBadge, StatusBadge, DataTable } from '../../../shared/ui'
-import { formatSensorLabel } from '../../../shared/i18n/terms'
-import { CameraStreamModal } from '../../../app/router/lazy-modals'
+import { AutoControlDetailModal,CameraStreamModal } from '../../../app/router/lazy-modals'
+import { tones } from '../../../app/theme/tokens'
 import { useFloorCameraMap } from '../../../features/cameras/hooks/useFloorCameras'
 import {
-  useAutoControlConfigList,
-  useFloorList,
-  useMasterList,
-  useMasterSensors,
-  useResolvedFloorEnvironment,
-  TELEMETRY_POLL_INTERVAL_MS,
+TELEMETRY_POLL_INTERVAL_MS,
+useAutoControlConfigList,
+useFloorList,
+useMasterList,
+useMasterSensors,
+useResolvedFloorEnvironment,
 } from '../../../features/devices/hooks/useIoT'
-import type {
-  CultivationFloorMapping,
-  FloorStatus,
-  IotSensor,
-} from '../../../types/iot'
-import type { Camera } from '../../../types/camera.types'
-import { AutoControlDetailModal } from '../../../app/router/lazy-modals'
-import { SensorHistoryPanel } from './SensorHistoryPanel'
+import { getClimateDirection,getClimateTone } from '../../../features/rooms/utils/climate-tone.utils'
+import { climateThresholdsFromConfig } from '../../../features/rooms/utils/farm-climate.utils'
+import { evaluateHumidity,evaluateTemperature,type ClimateReading } from '../../../features/rooms/utils/tray-climate.utils'
 import {
-  formatDurationMs,
-  formatProfileName,
-  formatTriggerCondition,
+FLOOR_STATUS_DICTIONARY,
+MASTER_STATUS_DICTIONARY,
+SENSOR_VALIDITY_DICTIONARY,
+} from '../../../shared/i18n/status/iot'
+import { presentStatus,statusLabel } from '../../../shared/i18n/status/registry'
+import { formatSensorLabel } from '../../../shared/i18n/terms'
+import { ActionButton,DataTable,MetadataBadge,StatCard,StatusBadge } from '../../../shared/ui'
+import { formatMeasurement } from '../../../shared/utils/measurement-format'
+import type { Camera } from '../../../types/camera.types'
+import type {
+CultivationFloorMapping,
+FloorStatus,
+IotSensor,
+} from '../../../types/iot'
+import '../device-industrial.css'
+import {
+formatDurationMs,
+formatProfileName,
+formatTriggerCondition,
 } from '../utils/auto-control.utils'
 import {
-  FLOOR_CAMERA_UNAVAILABLE_MESSAGES,
-  type FloorCameraUnavailableReason,
+FLOOR_CAMERA_UNAVAILABLE_MESSAGES,
+type FloorCameraUnavailableReason,
 } from '../utils/floor-camera.utils'
-import {
-  FLOOR_STATUS_DICTIONARY,
-  MASTER_STATUS_DICTIONARY,
-  SENSOR_VALIDITY_DICTIONARY,
-} from '../../../shared/i18n/status/iot'
-import { presentStatus, statusLabel } from '../../../shared/i18n/status/registry'
+import { SensorHistoryPanel } from './SensorHistoryPanel'
 
 /** Tab của card "Cảm biến môi trường". */
 type SensorTab = 'realtime' | 'history'
@@ -631,12 +628,12 @@ export function DeviceControlPanel() {
       <Card
         title={
           <Flex align="center" gap={8}>
-            <ThunderboltOutlined aria-hidden="true" />
+
             <span>Cấu hình tưới phun sương tự động</span>
           </Flex>
         }
         extra={
-          <MetadataBadge icon={<ApiOutlined />} label={<>
+          <MetadataBadge  label={<>
             Chỉ xem
           </>} />
         }
@@ -660,13 +657,13 @@ export function DeviceControlPanel() {
       <Card
         title={
           <Flex align="center" gap={8}>
-            <WifiOutlined aria-hidden="true" />
+
             <span>
               Cảm biến môi trường — Bộ điều khiển {selectedMaster?.masterId ?? '—'}
             </span>
             {isRealtimeTab && sensorsFetching && !sensorsLoading && (
               <StatusBadge tone="info" style={{ fontSize: 11 }} label={<>
-                <SyncOutlined spin /> Đang cập nhật
+                 Đang cập nhật
               </>} />
             )}
           </Flex>
@@ -731,7 +728,7 @@ export function DeviceControlPanel() {
         title={
           selectedFloor ? (
             <Space>
-              <ExperimentOutlined />
+
               <span>Môi trường {selectedFloor.floor_name}</span>
             </Space>
           ) : (

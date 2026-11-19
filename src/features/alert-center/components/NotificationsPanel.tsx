@@ -1,52 +1,48 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+CheckCircleOutlined,
+EyeOutlined,
+SearchOutlined
+} from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  BellOutlined,
-  BugOutlined,
-  CheckCircleOutlined,
-  EyeOutlined,
-  SearchOutlined,
-  WarningOutlined,
-} from '@ant-design/icons'
-import {
-  Button,
-  Descriptions,
-  Drawer,
-  Flex,
-  Input,
-  Select,
-  Skeleton,
-  Tag,
-  Tooltip,
-  Typography,
+Button,
+Descriptions,
+Drawer,
+Flex,
+Input,
+Select,
+Skeleton,
+Tag,
+Tooltip,
+Typography,
 } from 'antd'
-import {
-  ActionButton,
-  DataTable,
-  MetadataBadge,
-  StatCard,
-  StatGrid,
-  StatusBadge,
-} from '../../../shared/ui'
-import { formatDate, formatRelativeTime } from '../../../shared/utils/date'
-import {
-  useAllNotifications,
-  useNotificationActions,
-} from '../../notifications/hooks/useNotifications'
-import { markAlertsAsRead } from '../utils/mark-alerts-as-read'
+import { useEffect,useMemo,useRef,useState } from 'react'
 import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
-import type { AppNotification } from '../../notifications/types/notification.types'
-import {
-  NOTIFICATION_BUSINESS_GROUPS,
-  notificationBusinessGroup,
-  notificationCategory,
-  notificationCategoryMeta,
-  notificationTypeLabel,
-  type NotificationBusinessGroup,
-} from '../../notifications/components/notification-status.config'
-import { isBusinessNotificationType } from '../../notifications/utils/notification-classification'
 import { REFERENCE_TYPE_DICTIONARY } from '../../../shared/i18n/status/reference'
 import { statusLabel } from '../../../shared/i18n/status/registry'
+import {
+ActionButton,
+DataTable,
+MetadataBadge,
+StatCard,
+StatGrid,
+StatusBadge,
+} from '../../../shared/ui'
+import { formatDate,formatRelativeTime } from '../../../shared/utils/date'
+import {
+NOTIFICATION_BUSINESS_GROUPS,
+notificationBusinessGroup,
+notificationCategoryMeta,
+notificationTypeLabel,
+type NotificationBusinessGroup
+} from '../../notifications/components/notification-status.config'
+import {
+useAllNotifications,
+useNotificationActions,
+} from '../../notifications/hooks/useNotifications'
+import type { AppNotification } from '../../notifications/types/notification.types'
+import { isBusinessNotificationType } from '../../notifications/utils/notification-classification'
+import { markAlertsAsRead } from '../utils/mark-alerts-as-read'
 
 type ReadFilter = 'ALL' | 'UNREAD' | 'READ'
 
@@ -72,12 +68,6 @@ const TYPE_FILTER_OPTIONS: Array<{ value: TypeFilter; label: string }> = [
   })),
 ]
 
-/** Icon tương ứng với nhóm hiển thị. */
-function CategoryIcon({ category }: { category: string }) {
-  if (category === 'iot') return <WarningOutlined />
-  if (category === 'cultivation') return <BugOutlined />
-  return <BellOutlined />
-}
 
 /**
  * Tab 2 của Trung tâm "Cảnh báo & Thông báo" — **Thông báo hệ thống**.
@@ -225,13 +215,6 @@ export function NotificationsPanel({
       detail ? notificationCategoryMeta(detail.notification_type) : null,
     [detail],
   )
-  const detailCategory = useMemo(
-    () =>
-      detail
-        ? notificationCategory(detail.notification_type)
-        : ('system' as const),
-    [detail],
-  )
 
   /**
    * Đánh dấu đọc **tất cả** thông báo đang hiển thị ở tab 2.
@@ -283,7 +266,7 @@ export function NotificationsPanel({
       <Flex gap={8} align="center" wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
         <MetadataBadge
           label={`${unreadCount} chưa đọc`}
-          icon={<BellOutlined />}
+
         />
         <Button
           loading={readMany.isPending}
@@ -381,14 +364,13 @@ export function NotificationsPanel({
               key: 'notification_type',
               width: 230,
               render: (type: string) => {
-                const category = notificationCategory(type)
                 const meta = notificationCategoryMeta(type)
 
                 // ⚠ CHỈ 1 Tag duy nhất — không chèn dòng phụ.
                 return (
                   <Tag
                     color={meta.color ?? undefined}
-                    icon={<CategoryIcon category={category} />}
+
                     title={meta.description}
                   >
                     {meta.label}
@@ -519,7 +501,7 @@ export function NotificationsPanel({
               {detailMeta && (
                 <Tag
                   color={detailMeta.color ?? undefined}
-                  icon={<CategoryIcon category={detailCategory} />}
+
                   title={detailMeta.description}
                 >
                   {detailMeta.label}
@@ -527,7 +509,7 @@ export function NotificationsPanel({
               )}
               <MetadataBadge
                 label={notificationTypeLabel(detail.notification_type)}
-                icon={<BellOutlined />}
+
               />
             </Flex>
 

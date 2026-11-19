@@ -260,6 +260,45 @@ test('notification templates and expert roles are localized without altering hum
   assert.equal(localizeNotificationText('MASTER_OFFLINE. Farm Operator'), 'mất kết nối bộ điều khiển. nhân viên vận hành')
 })
 
+test('every role maps to a Vietnamese label and never leaks the English enum', () => {
+  const { getRoleLabel, getRoleKeyByName, ROLE_OPTIONS } = loadApi('../src/shared/i18n/status/user.ts', {})
+  const expected = {
+    1: 'Quản trị viên',
+    2: 'Nhân viên vận hành',
+    3: 'Khách thuê khay',
+    4: 'Chuyên gia',
+  }
+  for (const [roleId, label] of Object.entries(expected)) {
+    assert.equal(getRoleLabel(Number(roleId)), label)
+  }
+  // Tên hiển thị của BE (roles.role_name) cũng phải ra nhãn tiếng Việt.
+  assert.equal(getRoleLabel(1, 'Admin'), 'Quản trị viên')
+  assert.equal(getRoleLabel(2, 'Farm Operator'), 'Nhân viên vận hành')
+  assert.equal(getRoleLabel(3, 'Customer'), 'Khách thuê khay')
+  assert.equal(getRoleLabel(4, 'Mushroom Expert'), 'Chuyên gia')
+  // Mã enum viết tắt / viết thường / có ký tự lạ vẫn map đúng.
+  assert.equal(getRoleLabel(2, 'farm_operator'), 'Nhân viên vận hành')
+  assert.equal(getRoleLabel(4, 'MUSHROOM EXPERT'), 'Chuyên gia')
+  assert.equal(getRoleKeyByName('Farm Operator'), 'OPERATOR')
+  assert.equal(getRoleKeyByName('Mushroom Expert'), 'EXPERT')
+  assert.equal(getRoleKeyByName('Nope'), undefined)
+  // Vai trò lạ không bao giờ hiện mã enum tiếng Anh.
+  assert.equal(getRoleLabel(99, 'UNRECOGNIZED'), 'Vai trò chưa xác định')
+  for (const option of ROLE_OPTIONS) {
+    assert.match(option.label, /[^\x00-\x7F]/)
+    assert.notEqual(option.label, option.role)
+  }
+})
+
+test('the account drawer renders only the Vietnamese role badge', () => {
+  const source = readFileSync(new URL('../src/pages/users/components/UserDetailDrawer.tsx', import.meta.url), 'utf8')
+  // Bỏ comment để chỉ kiểm tra phần code thực sự render.
+  const code = source.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+  // Không được render mô tả vai trò tiếng Anh trả về từ BE.
+  assert.equal(code.includes('role_description'), false)
+  assert.match(code, /getRoleLabel\(profile\.role_id, profile\.role_name\)/)
+})
+
 test('staff lookup resolves missing directory IDs through detail queries without exposing IDs', async () => {
   const calls = []
   let queries

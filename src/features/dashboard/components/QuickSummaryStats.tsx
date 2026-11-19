@@ -15,20 +15,19 @@
  * ⚠ KHÔNG dùng màu raw hay antd Tag color="red" (fail WCAG 4.5:1).
  */
 import {
-  AlertOutlined,
-  CheckCircleOutlined,
-  DollarOutlined,
-  ExperimentOutlined,
-  InboxOutlined,
+AlertOutlined,
+CheckCircleOutlined,
+DollarOutlined,
+InboxOutlined
 } from '@ant-design/icons'
-import { Col, Row, Typography } from 'antd'
+import { Col,Row,Typography } from 'antd'
 import { tokens } from '../../../app/theme/tokens'
-import { StatCard, StatusBadge } from '../../../shared/ui'
-import {
-  formatDashboardCurrency,
-  formatDashboardPercent,
-} from '../utils/dashboard-format'
+import { StatCard,StatusBadge } from '../../../shared/ui'
 import type { DashboardAnalyticsData } from '../../../types/dashboard'
+import {
+formatDashboardCurrency,
+formatDashboardPercent,
+} from '../utils/dashboard-format'
 
 interface QuickSummaryStatsProps {
   /** Số liệu tổng quan từ BE (chưa format). */
@@ -37,7 +36,7 @@ interface QuickSummaryStatsProps {
   totalTrays: number
   /** Số khay đang vận hành — để hiển thị tỷ lệ lấp đầy. */
   activeInUseTrays: number
-  /** Khay đang cách ly / nhiễm bệnh / maintenance — hiển thị badge phụ. */
+  /** Số khay đang vệ sinh / bảo trì — hiển thị badge phụ. */
   maintenanceTrays: number
   /** Số cảnh báo vận hành chờ xử lý. */
   activeAlerts: number
@@ -95,9 +94,9 @@ export function QuickSummaryStats({
           extra={
             maintenanceTrays > 0 ? (
               <StatusBadge
-                tone="danger"
-                label={`${maintenanceTrays} khay đang xử lý bệnh`}
-                icon={<ExperimentOutlined aria-hidden="true" />}
+                tone="warning"
+                label={`${maintenanceTrays} khay đang vệ sinh`}
+
               />
             ) : undefined
           }

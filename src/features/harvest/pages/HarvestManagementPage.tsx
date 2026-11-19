@@ -1,4 +1,5 @@
 import { DataTable } from '../../../shared/ui/DataTable'
+import { formatDecimal } from '../../../shared/utils/number-format'
 import { AuditOutlined } from '@ant-design/icons'
 import {
   HARVEST_METHOD_DICTIONARY,
@@ -63,8 +64,8 @@ export function HarvestManagementPage() {
     {mushrooms.isError && <QueryFeedback query={mushrooms} />}
     <QueryFeedback query={query} />
     {!query.isError && <><StatGrid columns={3} style={{ marginBottom: 16 }}>
-      <StatCard loading={query.isLoading} title="Tổng sản lượng thu hoạch (kg)" value={metrics?.totalWeightKg == null ? '—' : metrics.totalWeightKg.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
-      <StatCard loading={query.isLoading} title="Tỷ lệ thương phẩm A/B (%)" value={metrics?.gradeABPercent == null ? '—' : metrics.gradeABPercent.toLocaleString('vi-VN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} />
+      <StatCard loading={query.isLoading} title="Tổng sản lượng thu hoạch (kg)" value={formatDecimal(metrics?.totalWeightKg, 2)} />
+      <StatCard loading={query.isLoading} title="Tỷ lệ thương phẩm A/B (%)" value={formatDecimal(metrics?.gradeABPercent, 2)} />
       <StatCard loading={query.isLoading} title="Đợt thu hoạch đang chờ giao" value={metrics?.pendingHandover ?? '—'} />
     </StatGrid>
     <DataTable<Harvest> size="small" rowKey="harvest_id" dataSource={rows} loading={query.isLoading} isFetching={query.isFetching} scrollX={1000} tableLayout="fixed" pagination={{ hideOnSinglePage: false, pageSize: 20, showSizeChanger: true }} emptyTitle="Chưa có đợt thu hoạch phù hợp" emptyDescription="Thử thay đổi bộ lọc để xem các đợt thu hoạch khác." expandable={{ expandedRowRender: h => <Descriptions size="small" column={{ xs: 1, md: 2 }} items={[

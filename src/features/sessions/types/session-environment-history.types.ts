@@ -119,3 +119,17 @@ export interface SessionEnvironmentPagination {
  *   — **không** phải lỗi.
  */
 export type SessionEnvironmentLatestResult = SessionEnvironmentRecord | null
+
+/** Daily buckets are Vietnam midnight serialized as UTC ISO timestamps. */
+export interface SessionDailyAveragePoint {
+  date: string
+  temperature_avg: number | null
+  humidity_avg: number | null
+  bucket_count: number
+}
+
+export interface SessionDailyAveragesData {
+  sessionId: number
+  timezone: string
+  points: SessionDailyAveragePoint[]
+}

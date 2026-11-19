@@ -1,3 +1,5 @@
+import { formatDecimal } from '../utils/number-format.ts'
+
 export function auditDate(value: string | null | undefined): string {
   if (!value) return '—'
   const date = new Date(value)
@@ -5,5 +7,5 @@ export function auditDate(value: string | null | undefined): string {
 }
 export function auditWeight(value: number | string | null | undefined): string {
   if (value == null || value === '' || !Number.isFinite(Number(value))) return '—'
-  return Number(value).toLocaleString('vi-VN', { maximumFractionDigits: 3 })
+  return formatDecimal(Number(value), 3, 0)
 }

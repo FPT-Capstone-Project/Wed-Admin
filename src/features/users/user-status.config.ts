@@ -12,6 +12,7 @@ import {
   ROLE_OPTIONS,
   USER_STATUS_LEGACY_CONFIG,
   USER_STATUS_OPTIONS,
+  getRoleKeyByName,
   getRoleOption,
   getRoleLabel,
   nextToggleStatus,
@@ -29,7 +30,7 @@ import {
  */
 export type { RoleOption }
 
-export { ROLE_OPTIONS, ROLE_OPTION_BY_ID, getRoleOption, getRoleLabel }
+export { ROLE_OPTIONS, ROLE_OPTION_BY_ID, getRoleOption, getRoleLabel, getRoleKeyByName }
 
 /** Shape legacy `{ color, label }` — dùng cho `Tag color` của antd. */
 export interface StatusOption {

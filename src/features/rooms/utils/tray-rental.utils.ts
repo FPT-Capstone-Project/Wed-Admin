@@ -4,7 +4,7 @@ import { resolveSessionProgress } from '../../sessions/utils/session-progress.ut
 
 const MILLISECONDS_PER_DAY = 24 * 60 * 60 * 1000
 
-export const DEFAULT_DAILY_OVERDUE_FEE = 25_000
+export const OVERDUE_HARVEST_GUIDANCE = 'Đã quá hạn thu hoạch dự kiến. Nếu không liên hệ được khách hàng, Farm OP chủ động thu hoạch theo quy định và giải phóng khay.'
 
 export interface RentalLifecycleMetrics {
   daysElapsed: number
@@ -13,8 +13,7 @@ export interface RentalLifecycleMetrics {
   daysRemainingToHarvest: number
   isHarvestReady: boolean
   overdueDays: number
-  overdueFee: number
-  totalAmount: number
+  packageOverdueDays: number
   packageDurationDays: number
   progressPercent: number | null
   harvestMarkerPercent: number
@@ -28,8 +27,7 @@ function parseCalendarDate(input: string | Date) {
 
   const dateOnlyMatch = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input)
   if (dateOnlyMatch) {
-    const [, year, month, day] = dateOnlyMatch
-    return new Date(Number(year), Number(month) - 1, Number(day), 12)
+    return new Date(`${input}T00:00:00+07:00`)
   }
 
   return new Date(input)
@@ -42,7 +40,11 @@ function getCalendarTimestamp(input: string | Date) {
     throw new Error(`Ngày không hợp lệ: ${String(input)}`)
   }
 
-  return Date.UTC(date.getFullYear(), date.getMonth(), date.getDate())
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: 'numeric', day: 'numeric',
+  }).formatToParts(date)
+  const part = (name: string) => Number(parts.find(item => item.type === name)?.value)
+  return Date.UTC(part('year'), part('month') - 1, part('day'))
 }
 
 export function differenceInCalendarDays(
@@ -80,21 +82,21 @@ export function calculateRentalLifecycle(
     differenceInCalendarDays(
       rental.expectedHarvestDate,
       rental.startDate,
-    ) + 1,
+    ),
   )
   const daysRemainingToHarvest = Math.max(
     0,
     differenceInCalendarDays(rental.expectedHarvestDate, currentDate),
   )
-  const overdueDays = Math.max(
+  const packageOverdueDays = Math.max(
     0,
     differenceInCalendarDays(currentDate, rental.packageEndDate),
   )
+  const overdueDays = Math.max(0, differenceInCalendarDays(currentDate, rental.expectedHarvestDate))
   const isAlreadyHarvested = rental.harvestStatus === 'AUTO_HARVESTED'
   const isHarvestReady =
     !isAlreadyHarvested &&
     differenceInCalendarDays(currentDate, rental.expectedHarvestDate) >= 0
-  const overdueFee = overdueDays * rental.dailyOverdueFee
 
   let effectiveHarvestStatus: HarvestStatus = 'GROWING'
   if (isAlreadyHarvested) {
@@ -112,8 +114,7 @@ export function calculateRentalLifecycle(
     daysRemainingToHarvest,
     isHarvestReady,
     overdueDays,
-    overdueFee,
-    totalAmount: rental.basePrice + overdueFee,
+    packageOverdueDays,
     packageDurationDays,
     /**
      * ⚠ Tiến độ lấy **trực tiếp** từ Phiên canh tác (`progress_percent`) —
@@ -136,7 +137,14 @@ export function formatRentalDate(value: string | Date) {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
+    timeZone: 'Asia/Ho_Chi_Minh',
   }).format(parseCalendarDate(value))
+}
+
+export function rentalDayLabel(lifecycle: RentalLifecycleMetrics): string {
+  return lifecycle.packageOverdueDays > 0
+    ? `Đã quá hạn ${lifecycle.packageOverdueDays} ngày`
+    : `Ngày ${Math.min(lifecycle.growthDay, lifecycle.packageDurationDays)}/${lifecycle.packageDurationDays}`
 }
 
 export { formatVND as formatVnd } from '../../../shared/utils/currency'
@@ -201,7 +209,6 @@ export function sessionToTrayRental(session: CultivationSession): TrayRental {
     expectedHarvestDate: harvestDate,
     packageEndDate,
     basePrice: 0, // BE list endpoint chưa expose giá → 0
-    dailyOverdueFee: 0, // Tương tự
     harvestStatus,
     customerContactStatus: 'NOT_CONTACTED',
     careLogs: [],

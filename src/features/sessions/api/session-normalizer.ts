@@ -7,6 +7,7 @@ export function normalizeSession(raw: unknown): CultivationSession {
   return {
     session_id: pickNumber(obj, 'session_id', 'sessionId', 'id') ?? 0,
     harvest_status: pickString(obj, 'harvest_status'),
+    harvest_ready: obj.harvest_ready === true,
     order_item_id: pickNumber(obj, 'order_item_id'),
     spawn_quantity: pickNumber(obj, 'spawn_quantity'),
     last_inspected_at: pickString(obj, 'last_inspected_at'),

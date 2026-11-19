@@ -1,28 +1,27 @@
 import {
-  ApartmentOutlined,
-  CalendarOutlined,
-  CloudOutlined,
-  ExperimentOutlined,
-  FireOutlined,
-  HistoryOutlined,
-  LineChartOutlined,
-  RightOutlined,
+CalendarOutlined,
+CloudOutlined,
+ExperimentOutlined,
+FireOutlined,
+HistoryOutlined,
+LineChartOutlined,
+RightOutlined
 } from '@ant-design/icons'
-import { Empty, Segmented, Select, Spin, Tabs, Tag } from 'antd'
-import { useMemo, useRef, useState } from 'react'
-import type {
-  HistoryGranularity,
-  HistoryRangePreset,
-  HistoryViewMode,
-  RentalSession,
-} from '../../../types/iot-history'
+import { Empty,Segmented,Select,Spin,Tabs,Tag } from 'antd'
+import { useMemo,useRef,useState } from 'react'
 import { useFloorList } from '../../../features/devices/hooks/useIoT'
 import { useTrayHistory } from '../../../features/devices/hooks/useTrayHistory'
 import { useCultivationTrays } from '../../../features/rooms/hooks/useCultivation'
+import type {
+HistoryGranularity,
+HistoryRangePreset,
+HistoryViewMode,
+RentalSession,
+} from '../../../types/iot-history'
 import {
-  aggregateLongTermTelemetry,
-  buildYearComparison,
-  formatHistoryDate,
+aggregateLongTermTelemetry,
+buildYearComparison,
+formatHistoryDate,
 } from '../utils/iot-history.utils'
 import { IoTTelemetryChart } from './IoTTelemetryChart'
 import { LongTermTrendChart } from './LongTermTrendChart'
@@ -320,9 +319,6 @@ export function TrayIoTHistoryView() {
     <section className="tray-iot-history" aria-label="Lịch sử telemetry IoT theo khay">
       <div className="iot-history-filter-bar">
         <div className="iot-filter-heading">
-          <span className="iot-filter-heading-icon" aria-hidden="true">
-            <ApartmentOutlined />
-          </span>
           <div>
             <strong>Phạm vi giám sát</strong>
             <span>

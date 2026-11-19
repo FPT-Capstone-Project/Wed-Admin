@@ -8,10 +8,8 @@ export type RentalSessionStatus = 'COMPLETED' | 'ACTIVE' | 'OVERDUE'
  *   "Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch".
  */
 export type GrowthStageName =
-  | 'Ủ tơ'
-  | 'Kéo tơ'
-  | 'Nấm đang phát triển'
-  | 'Sẵn sàng thu hoạch'
+  | (typeof import('../shared/i18n/status/session').GROWTH_STAGE_LABELS)[keyof typeof import('../shared/i18n/status/session').GROWTH_STAGE_LABELS]
+  | (typeof import('../shared/i18n/status/session').SESSION_WORKFLOW_LABELS)[keyof typeof import('../shared/i18n/status/session').SESSION_WORKFLOW_LABELS]
 
 export interface StageTimelineItem {
   id: string

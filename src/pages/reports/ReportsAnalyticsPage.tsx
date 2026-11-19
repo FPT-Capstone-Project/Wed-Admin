@@ -1,60 +1,51 @@
-import { LoadErrorAlert } from '../../shared/ui/LoadErrorAlert'
-import '../../styles/reports-users-industrial.css'
-import { Suspense, useMemo, useState } from 'react'
 import {
-  AppstoreOutlined,
-  BarChartOutlined,
-  DatabaseOutlined,
-  DollarOutlined,
-  DownloadOutlined,
-  ExperimentOutlined,
-  PercentageOutlined,
-  TeamOutlined,
+AppstoreOutlined,
+DatabaseOutlined,
+DollarOutlined,
+DownloadOutlined,
+ExperimentOutlined,
+InfoCircleOutlined,
+PercentageOutlined,
+TeamOutlined
 } from '@ant-design/icons'
 import {
-  Card,
-  Flex,
-  Segmented,
-  Skeleton,
-  Space,
-  Typography,
-  message,
+Card,
+Flex,
+Segmented,
+Skeleton,
+Space,
+Tooltip,
+Typography,
+message,
 } from 'antd'
-import dayjs from 'dayjs'
+import { useEffect,useMemo,useState } from 'react'
+import { flushSync } from 'react-dom'
+import { tones } from '../../app/theme/tokens'
 import { useReportsAnalytics } from '../../features/analytics/hooks/useFarmAnalytics'
 import {
-  buildMonthlyComparison,
-  buildQuarterlyRevenue,
-  buildStageDistribution,
-  buildVarietyPerformance,
-  computeExecutiveKpis,
+buildSessionRevenue,
+buildStageDistribution,
+buildVarietyPerformance,
+computeExecutiveKpis,
 } from '../../features/analytics/utils/executive-report.utils'
-import { KpiVarianceCard } from './components/KpiVarianceCard'
-import { ComparativeRevenueChart } from './components/ComparativeRevenueChart'
-import { VarietyPerformanceTable } from './components/VarietyPerformanceTable'
-import { ExportReportModal } from '../../app/router/lazy-modals'
+import { useAuthStore } from '../../features/auth/store/auth.store'
 import {
-  ActionButton,
-  MetadataBadge,
-  PageHeader,
-  StatCard,
-  StatGrid,
-  StatusBadge,
+ActionButton,
+PageHeader,
+StatCard,
+StatGrid,
+StatusBadge,
 } from '../../shared/ui'
-import { chartSeries, tones } from '../../app/theme/tokens'
+import { LoadErrorAlert } from '../../shared/ui/LoadErrorAlert'
+import '../../styles/reports-users-industrial.css'
+import { ComparativeRevenueChart } from './components/ComparativeRevenueChart'
+import { KpiVarianceCard } from './components/KpiVarianceCard'
+import { SpeciesRevenueDonut } from './components/SpeciesRevenueDonut'
+import { VarietyPerformanceTable } from './components/VarietyPerformanceTable'
+import { continuousRevenuePeriods,formatReportMoney,formatReportNumber,formatReportPercent,formatReportWeight,reportDateTime,reportFileDate } from './report-format'
+import './reports-print.css'
 
-type ComparisonMode = 'MONTHLY' | 'QUARTERLY'
-
-const COMPARISON_LABELS: Record<ComparisonMode, { label: string; subtitle: string }> = {
-  MONTHLY: {
-    label: 'Theo tháng',
-    subtitle: 'Doanh thu ước tính từng tháng trong năm',
-  },
-  QUARTERLY: {
-    label: 'Theo quý',
-    subtitle: 'Doanh thu ước tính theo từng quý',
-  },
-}
+type Granularity = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'
 
 /**
  * Trang Báo cáo & Phân tích — **100% READ-ONLY**.
@@ -71,10 +62,16 @@ const COMPARISON_LABELS: Record<ComparisonMode, { label: string; subtitle: strin
  * ⚠ Không còn vòng lặp gọi endpoint theo từng tầng / từng phiên (N+1).
  */
 export function ReportsAnalyticsPage() {
-  const [comparisonMode, setComparisonMode] = useState<ComparisonMode>('MONTHLY')
-  const [exportOpen, setExportOpen] = useState(false)
+  const [granularity, setGranularity] = useState<Granularity>('MONTHLY')
+  const [exportedAt, setExportedAt] = useState<Date | null>(null)
+  const user = useAuthStore(state => state.user)
+  useEffect(() => {
+    const stamp = () => flushSync(() => setExportedAt(new Date()))
+    window.addEventListener('beforeprint', stamp)
+    return () => window.removeEventListener('beforeprint', stamp)
+  }, [])
 
-  const { data, isLoading, isError, error, refetch } = useReportsAnalytics()
+  const { data, isLoading, isFetching, isError, error, refetch } = useReportsAnalytics()
 
   const analytics = data
 
@@ -88,7 +85,6 @@ export function ReportsAnalyticsPage() {
       analytics
         ? buildVarietyPerformance(
             analytics.speciesBreakdown,
-            analytics.usableRate,
           )
         : [],
     [analytics],
@@ -107,14 +103,16 @@ export function ReportsAnalyticsPage() {
    * → setState kích hoạt re-render parent → loop vô tận.
    */
   const chartData = useMemo(() => {
-    if (!analytics) return []
-    return comparisonMode === 'QUARTERLY'
-      ? buildQuarterlyRevenue(analytics.monthlyRevenue)
-      : buildMonthlyComparison(analytics.monthlyRevenue)
-  }, [analytics, comparisonMode])
+    if (!analytics || analytics.revenueIncomplete) return []
+    return continuousRevenuePeriods(buildSessionRevenue(analytics.revenueEvents, granularity), granularity)
+  }, [analytics, granularity])
 
   const currentLabel =
-    comparisonMode === 'MONTHLY' ? 'Kỳ này' : 'Kỳ này (theo quý)'
+    granularity === 'WEEKLY'
+      ? 'Kỳ này (tuần)'
+      : granularity === 'MONTHLY'
+        ? 'Kỳ này (tháng)'
+        : 'Kỳ này (quý)'
 
   const revenueDelta =
     kpis && kpis.previousTotalRevenue > 0
@@ -143,8 +141,8 @@ export function ReportsAnalyticsPage() {
 
     const lines: string[][] = [
       ['BÁO CÁO EXECUTIVE - MCMS'],
-      [`Chế độ: ${COMPARISON_LABELS[comparisonMode].label}`],
-      [`Xuất lúc: ${dayjs().format('DD/MM/YYYY HH:mm')}`],
+      [`Chế độ: ${granularity === 'WEEKLY' ? 'Theo tuần' : granularity === 'MONTHLY' ? 'Theo tháng' : 'Theo quý'}`],
+      [`Xuất lúc: ${reportDateTime(new Date())}`],
       [],
       ['KPI'],
       ['Chỉ số', 'Giá trị'],
@@ -165,12 +163,12 @@ export function ReportsAnalyticsPage() {
       ...stageDistribution.map((row) => [row.stage, String(row.count)]),
       [],
       ['HIỆU SUẤT THEO GIỐNG NẤM'],
-      ['Giống nấm', 'Số phiên', 'Tỷ lệ đạt chuẩn %', 'Doanh thu ước tính'],
+      ['Giống nấm', 'Số phiên', 'Tỷ lệ thành công %', 'Doanh thu dự kiến'],
       ...varietyPerformance.map((v) => [
         v.varietyName,
         String(v.traysRented),
-        v.successRate.toFixed(1),
-        String(v.currentRevenue),
+        v.successRate == null ? '—' : v.successRate.toFixed(1),
+        analytics.revenueIncomplete ? '—' : String(v.currentRevenue),
       ]),
     ]
 
@@ -185,10 +183,25 @@ export function ReportsAnalyticsPage() {
     const link = document.createElement('a')
 
     link.href = url
-    link.download = `mcms-executive-${dayjs().format('YYYYMMDD-HHmm')}.csv`
+    link.download = `bao-cao-mcms-${reportFileDate(new Date())}.csv`
     link.click()
     URL.revokeObjectURL(url)
     message.success('Đã xuất báo cáo Executive CSV.')
+  }
+
+  const handleExportPdf = async () => {
+    if (isLoading || isFetching || !analytics || !kpis) {
+      message.info('Đang tải dữ liệu')
+      return
+    }
+    try {
+      await document.fonts.ready
+      flushSync(() => setExportedAt(new Date()))
+      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
+      window.print()
+    } catch {
+      message.error('Không mở được hộp thoại in. Vui lòng thử lại hoặc nhấn Ctrl+P.')
+    }
   }
 
   if (isLoading) {
@@ -199,6 +212,7 @@ export function ReportsAnalyticsPage() {
           description="Đang tải số liệu thực tế từ hệ thống…"
         />
         <Skeleton active paragraph={{ rows: 14 }} />
+        <ActionButton icon={<DownloadOutlined />} label="Xuất báo cáo PDF" description="Đang tải dữ liệu" disabled />
       </div>
     )
   }
@@ -216,160 +230,73 @@ export function ReportsAnalyticsPage() {
   }
 
   return (
-    <div>
+    <div className="reports-page">
+      <section className="reports-print-heading">
+        <h1>Báo cáo điều hành MCMS</h1>
+        <p>Ngày giờ xuất: {exportedAt ? reportDateTime(exportedAt) : '—'} (giờ Việt Nam)</p>
+        <p>Người xuất: {user?.fullName || user?.email || 'Chưa xác định'}</p>
+        <p>Phạm vi: {granularity === 'WEEKLY' ? 'Theo tuần' : granularity === 'MONTHLY' ? 'Theo tháng' : 'Theo quý'} · Tất cả kỳ có dữ liệu · Doanh thu dự kiến theo phiên canh tác.</p>
+      </section>
       <PageHeader
         title={
           <Flex align="center" gap={8}>
-            <BarChartOutlined />
+
             Báo cáo & Phân tích Điều hành
           </Flex>
         }
-        description="Số liệu vận hành và doanh thu ước tính, tổng hợp trực tiếp từ hệ thống (chế độ chỉ đọc)."
+        description="Số liệu vận hành và doanh thu đã thu, tổng hợp trực tiếp từ hệ thống (chế độ chỉ đọc)."
         actions={
           <Space wrap>
             <StatusBadge tone="info" label="Chế độ chỉ đọc" />
             <StatusBadge
               tone="info"
-              label={`${analytics.totalSessions} phiên canh tác`}
+              label={`${formatReportNumber(analytics.totalSessions)} phiên canh tác`}
             />
             <ActionButton
               icon={<DownloadOutlined />}
-              label="Xuất báo cáo Executive"
-              description="Tải báo cáo Executive dưới dạng CSV hoặc PDF."
+              label={isFetching ? 'Đang tải dữ liệu' : 'Xuất báo cáo PDF'}
+              description="Mở hộp thoại in, chọn 'Lưu thành PDF'"
+              disabled={isFetching}
               variant="primary"
               size="middle"
-              onClick={() => setExportOpen(true)}
+              onClick={handleExportPdf}
             />
           </Space>
         }
       />
 
-      <StatGrid columns={4}>
-        <StatCard
-          title="Doanh thu đã thu"
-          value={formatCompactVND(kpis.totalRevenue)}
-          tone="ok"
-          highlightValue
-          icon={<DollarOutlined />}
-          description="Tổng đơn đã thanh toán (mọi thời điểm)"
-          extra={
-            <StatusBadge
-              tone={revenueDelta >= 0 ? 'ok' : 'danger'}
-              label={`${revenueDelta >= 0 ? '+' : ''}${revenueDelta.toFixed(1)}% so với kỳ trước`}
-            />
-          }
-        />
-        <StatCard
-          title="Tỷ lệ lấp đầy khay"
-          value={`${kpis.occupancyRate.toFixed(1)}%`}
-          tone="info"
-          highlightValue
-          icon={<AppstoreOutlined />}
-          description={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
-          extra={
-            <StatusBadge
-              tone={occupancyDelta >= 0 ? 'ok' : 'danger'}
-              label={`${occupancyDelta >= 0 ? '+' : ''}${occupancyDelta.toFixed(1)} điểm % so với kỳ trước`}
-            />
-          }
-        />
-        <StatCard
-          title="Thương phẩm thu hoạch"
-          value={`${kpis.harvestedGradeAKg.toLocaleString('vi-VN')} kg`}
-          tone="warning"
-          highlightValue
-          icon={<ExperimentOutlined />}
-          description="Khối lượng thu hoạch đạt chuẩn"
-          extra={
-            <StatusBadge
-              tone={yieldDelta >= 0 ? 'ok' : 'danger'}
-              label={`${yieldDelta >= 0 ? '+' : ''}${yieldDelta.toFixed(1)}% so với kỳ trước`}
-            />
-          }
-        />
-        <StatCard
-          title="Tỷ lệ hao hụt"
-          value={`${kpis.spoilageRate.toFixed(1)}%`}
-          tone="danger"
-          highlightValue
-          icon={<PercentageOutlined />}
-          description="Giảm = cải thiện tốt"
-          extra={
-            <StatusBadge
-              tone={spoilageDelta <= 0 ? 'ok' : 'danger'}
-              label={`${spoilageDelta >= 0 ? '+' : ''}${spoilageDelta.toFixed(1)} điểm % so với kỳ trước`}
-            />
-          }
-        />
-      </StatGrid>
 
       {/* Cơ cấu trang trại — số liệu thật */}
-      <StatGrid columns={4}>
+      <StatGrid columns={4} className="reports-operations">
         <StatCard
           title="Tổng số phòng"
-          value={analytics.totalRooms}
+          value={formatReportNumber(analytics.totalRooms)}
           tone="neutral"
           icon={<DatabaseOutlined />}
-          description={`${analytics.activeRooms} phòng đang hoạt động`}
+          description={`${formatReportNumber(analytics.activeRooms)} phòng đang hoạt động`}
         />
         <StatCard
           title="Tổng số tầng"
-          value={analytics.totalFloors}
+          value={formatReportNumber(analytics.totalFloors)}
           tone="neutral"
           icon={<AppstoreOutlined />}
-          description="Từ /api/iot/floors"
+          description="Số tầng đang vận hành"
         />
         <StatCard
           title="Master đang online"
-          value={`${analytics.devices.online}/${analytics.devices.total}`}
+          value={`${formatReportNumber(analytics.devices.online)}/${formatReportNumber(analytics.devices.total)}`}
           tone={analytics.devices.offline > 0 ? 'warning' : 'ok'}
           icon={<TeamOutlined />}
-          description={`${analytics.devices.offline} master đang offline`}
+          description={`${formatReportNumber(analytics.devices.offline)} master đang offline`}
         />
         <StatCard
-          title="Khay theo trạng thái"
-          value={`${analytics.trays.available}/${analytics.trays.total}`}
+          title="Khay trống"
+          value={`${formatReportNumber(analytics.trays.available)}/${formatReportNumber(analytics.trays.total)}`}
           tone="info"
           icon={<AppstoreOutlined />}
-          description={`${analytics.trays.occupied} đang thuê · ${analytics.trays.maintenance} bảo trì`}
+          description={`${formatReportNumber(analytics.trays.occupied)} đang thuê · ${formatReportNumber(analytics.trays.maintenance)} đang vệ sinh`}
         />
       </StatGrid>
-
-      {/* COMPARATIVE FILTER BAR */}
-      <Card
-        style={{
-          borderRadius: 'var(--mcms-radius-xl)',
-          marginBottom: 'var(--mcms-space-5)',
-          borderColor: 'var(--mcms-border)',
-          background: 'var(--mcms-surface-muted)',
-        }}
-        styles={{ body: { padding: 18 } }}
-      >
-        <Flex align="center" justify="space-between" gap={16} wrap>
-          <Flex align="center" gap={12} wrap>
-            <Typography.Text strong style={{ fontSize: 13 }}>
-              Cách trình bày:
-            </Typography.Text>
-            <Segmented<ComparisonMode>
-              value={comparisonMode}
-              onChange={setComparisonMode}
-              options={[
-                { label: 'Theo tháng', value: 'MONTHLY' },
-                { label: 'Theo quý', value: 'QUARTERLY' },
-              ]}
-            />
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {COMPARISON_LABELS[comparisonMode].subtitle}
-            </Typography.Text>
-          </Flex>
-
-          <Space wrap>
-            <MetadataBadge
-              label={`${analytics.traysUsed} lượt khay đã sử dụng`}
-            />
-          </Space>
-        </Flex>
-      </Card>
 
       {/* KPI VARIANCE CARDS */}
       <StatGrid columns={4}>
@@ -377,14 +304,15 @@ export function ReportsAnalyticsPage() {
           icon={<DollarOutlined />}
           iconBg={tones.ok.bg}
           iconColor={tones.ok.solid}
-          title="Doanh thu đã thu"
+          title={<Space>Doanh thu đã thu<Tooltip title="Tổng giá trị các đơn hàng đã thanh toán, tính trên mọi thời điểm."><InfoCircleOutlined tabIndex={0} aria-label="Giải thích doanh thu đã thu" /></Tooltip></Space>}
           currentLabel="Kỳ này"
-          currentValue={formatCompactVND(kpis.totalRevenue)}
+          currentValue={formatReportMoney(kpis.totalRevenue)}
           previousLabel="Kỳ trước"
-          previousValue={formatCompactVND(kpis.previousTotalRevenue)}
+          previousValue={formatReportMoney(kpis.previousTotalRevenue)}
           deltaPercent={revenueDelta}
           higherIsBetter
           subtitle="Tổng đơn đã thanh toán"
+          hasPreviousData={false}
         />
 
         <KpiVarianceCard
@@ -393,12 +321,13 @@ export function ReportsAnalyticsPage() {
           iconColor={tones.info.solid}
           title="Tỷ lệ lấp đầy khay"
           currentLabel="Kỳ này"
-          currentValue={`${kpis.occupancyRate.toFixed(1)}%`}
+          currentValue={formatReportPercent(kpis.occupancyRate)}
           previousLabel="Kỳ trước"
-          previousValue={`${kpis.previousOccupancyRate.toFixed(1)}%`}
+          previousValue={formatReportPercent(kpis.previousOccupancyRate)}
           deltaPercent={occupancyDelta}
           higherIsBetter
-          subtitle={`${kpis.rentedTrays}/${kpis.totalTrays} khay đang thuê`}
+          subtitle={`${formatReportNumber(kpis.rentedTrays)}/${formatReportNumber(kpis.totalTrays)} khay đang thuê`}
+          hasPreviousData={false}
         />
 
         <KpiVarianceCard
@@ -407,31 +336,34 @@ export function ReportsAnalyticsPage() {
           iconColor={tones.warning.solid}
           title="Thương phẩm thu hoạch"
           currentLabel="Kỳ này"
-          currentValue={`${kpis.harvestedGradeAKg.toLocaleString('vi-VN')} kg`}
+          currentValue={formatReportWeight(kpis.harvestedGradeAKg)}
           previousLabel="Kỳ trước"
-          previousValue={`${kpis.previousHarvestedGradeAKg.toLocaleString('vi-VN')} kg`}
+          previousValue={formatReportWeight(kpis.previousHarvestedGradeAKg)}
           deltaPercent={yieldDelta}
           higherIsBetter
           subtitle="Khối lượng thu hoạch đạt chuẩn"
+          hasPreviousData={false}
         />
 
         <KpiVarianceCard
           icon={<PercentageOutlined />}
           iconBg={tones.danger.bg}
           iconColor={tones.danger.solid}
-          title="Tỷ lệ phôi bất thường"
+          title="Tỷ lệ hao hụt"
           currentLabel="Kỳ này"
-          currentValue={`${kpis.spoilageRate.toFixed(2)}%`}
+          currentValue={formatReportPercent(kpis.spoilageRate)}
           previousLabel="Kỳ trước"
-          previousValue={`${kpis.previousSpoilageRate.toFixed(2)}%`}
+          previousValue={formatReportPercent(kpis.previousSpoilageRate)}
           deltaPercent={spoilageDelta}
           higherIsBetter={false}
           subtitle="Giảm = cải thiện tốt"
+          hasPreviousData={false}
         />
       </StatGrid>
 
       {/* REVENUE COMPARATIVE CHART */}
       <Card
+        className="reports-revenue-card"
         style={{
           borderRadius: 'var(--mcms-radius-xl)',
           marginBottom: 'var(--mcms-space-5)',
@@ -439,50 +371,49 @@ export function ReportsAnalyticsPage() {
         }}
         styles={{ body: { padding: 20 } }}
       >
-        <Flex
-          align="center"
-          justify="space-between"
-          wrap
-          gap={12}
-          style={{ marginBottom: 8 }}
-        >
+        <Flex align="center" justify="space-between" wrap gap={12} style={{ marginBottom: 8 }}>
           <div>
             <Typography.Title level={5} style={{ margin: 0 }}>
-              Biểu đồ doanh thu ước tính
+              Doanh thu dự kiến theo phiên canh tác <Tooltip title="Ước tính số phiên × giá gói hiện tại; khác doanh thu đã thu từ đơn PAID."><InfoCircleOutlined tabIndex={0} /></Tooltip>
             </Typography.Title>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              {comparisonMode === 'MONTHLY'
-                ? 'Doanh thu ước tính từng tháng (giá gói thuê × số phiên bắt đầu trong tháng)'
-                : 'Doanh thu ước tính theo quý'}
+              Theo ngày bắt đầu phiên · Giờ Việt Nam
             </Typography.Text>
           </div>
-          <Space size={8} wrap>
-            {/*
-             * ⚠ Màu chấm phải **khớp** cột biểu đồ + chú thích "Kỳ này"
-             *   ở góc dưới bên trái ⇒ dùng `chartSeries.revenue` (xanh dương
-             *   `#2563eb`), **không** phải `tones.ok.solid` (xanh lá) — nếu
-             *   không, người dùng tưởng badge này mô tả series khác.
-             */}
-            <LegendChip color={chartSeries.revenue} label={currentLabel} />
-          </Space>
+          <Segmented<Granularity>
+            value={granularity}
+            onChange={setGranularity}
+            options={[
+              { label: 'Tuần', value: 'WEEKLY' },
+              { label: 'Tháng', value: 'MONTHLY' },
+              { label: 'Quý', value: 'QUARTERLY' },
+            ]}
+            size="small"
+          />
         </Flex>
 
+        <div className="reports-revenue-grid">
+        <div>
         {chartData.length > 0 ? (
           <ComparativeRevenueChart
             data={chartData}
             currentLabel={currentLabel}
             previousLabel="Kỳ trước"
-            height={340}
+            height={320}
           />
         ) : (
           <Typography.Text type="secondary">
-            Chưa có phiên canh tác nào để tính doanh thu ước tính.
+            <Tooltip title="Cần ngày bắt đầu hợp lệ và giá gói xác định cho từng phiên; đơn có nhiều gói chưa thể nối chính xác."><span>— Chưa đủ dữ liệu phiên và giá gói để tổng hợp.</span></Tooltip>
           </Typography.Text>
         )}
+        </div>
+        <SpeciesRevenueDonut data={varietyPerformance} incomplete={analytics.revenueIncomplete} />
+        </div>
       </Card>
 
       {/* VARIETY PERFORMANCE TABLE */}
       <Card
+        className="reports-species-card"
         style={{
           borderRadius: 'var(--mcms-radius-xl)',
           marginBottom: 'var(--mcms-space-5)',
@@ -502,24 +433,17 @@ export function ReportsAnalyticsPage() {
               Cơ cấu giống nấm được thuê nhiều nhất
             </Typography.Title>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Số phiên canh tác và doanh thu ước tính theo từng giống nấm.
+              Số phiên theo giống; doanh thu dự kiến theo giá gói hiện tại.
             </Typography.Text>
           </div>
         </Flex>
 
-        <VarietyPerformanceTable data={varietyPerformance} />
+        <VarietyPerformanceTable data={varietyPerformance} revenueIncomplete={analytics.revenueIncomplete} />
       </Card>
 
-            <Suspense fallback={null}>
-              <ExportReportModal
-              open={exportOpen}
-              onCancel={() => setExportOpen(false)}
-              reportTitle={`Báo cáo Executive (${COMPARISON_LABELS[comparisonMode].label})`}
-              />
-            </Suspense>
 
       {/* Nút xuất CSV nhanh — dùng dữ liệu thật */}
-      <Flex justify="flex-end">
+      <Flex justify="flex-end" className="reports-export-actions">
         <ActionButton
           icon={<DownloadOutlined />}
           label="Tải CSV từ dữ liệu hiện tại"
@@ -531,47 +455,4 @@ export function ReportsAnalyticsPage() {
       </Flex>
     </div>
   )
-}
-
-function LegendChip({ color, label }: { color: string; label: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 6,
-        fontSize: 12,
-        color: 'var(--mcms-text-muted)',
-      }}
-    >
-      <span
-        style={{
-          display: 'inline-block',
-          width: 12,
-          height: 12,
-          borderRadius: 3,
-          background: color,
-        }}
-      />
-      {label}
-    </span>
-  )
-}
-
-/**
- * Format VND dạng rút gọn (1.5Tr, 42.5M, ...) với fallback an toàn — không bao giờ in NaN.
- */
-function formatCompactVND(value: unknown): string {
-  const safe = typeof value === 'number' && Number.isFinite(value) ? value : 0
-  if (safe === 0) return '0 đ'
-  try {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      notation: 'compact',
-      maximumFractionDigits: 1,
-    }).format(safe)
-  } catch {
-    return `${safe} đ`
-  }
 }

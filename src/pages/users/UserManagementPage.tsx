@@ -176,7 +176,7 @@ export function UserManagementPage() {
            *   Lý do: cột này bị đẩy rộng ⇒ cột "Ngày tạo" bị đẩy ra khỏi
            *   khung hình trên laptop 1280–1536px. Mô tả vai trò là thông tin
            *   **tham chiếu**, không phải thông tin cần đọc ở bảng danh sách
-           *   ⇒ chỉ hiện trong Drawer chi tiết (xem `UserDetailDrawer`).
+           *   ⇒ chỉ hiện **badge tên vai trò tiếng Việt** (không kèm mô tả).
            */
           return <MetadataBadge label={roleLabel} />
         },
@@ -223,7 +223,7 @@ export function UserManagementPage() {
   return (
     <div>
       <PageHeader title="Quản lý tài khoản"  actions={<Flex align="center" gap={8} wrap>
-          <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
+          <MetadataBadge  label="Chỉ xem" />
           <Typography.Text type="secondary" style={{ fontSize: 12 }}>
             Việc tạo / khoá tài khoản do nhân viên thực hiện trên ứng dụng nhân viên.
           </Typography.Text>

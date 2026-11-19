@@ -1,56 +1,46 @@
-import '../../../styles/catalog-industrial.css'
-import { useMemo, useState } from 'react'
 import {
-  CheckCircleOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PauseCircleOutlined,
-  PlusOutlined,
-  SearchOutlined,
+EditOutlined,
+PlusOutlined,
+SearchOutlined
 } from '@ant-design/icons'
 import {
-  App,
-  Button,
-  Card,
-  Empty,
-  Flex,
-  Input,
-  Segmented,
-  Skeleton,
-  Space,
-  Tooltip,
-  Typography,
+App,
+Button,
+Card,
+Empty,
+Flex,
+Input,
+Segmented,
+Skeleton,
+Tooltip,
+Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import type {
-  RentalPackage,
-  RentalPackageStatus,
-} from '../../../types/rental-package'
-import {
-  useDeleteRentalPackage,
-  useRentalPackages,
-  useUpdateRentalPackage,
-} from '../../../features/packages/hooks/useRentalPackages'
+import { useMemo,useState } from 'react'
 import { useRentalPackageOrderCounts } from '../../../features/packages/hooks/useRentalPackageOrderCounts'
 import {
-  ActionButton,
-  StatusBadge,
-  MetadataBadge,
-  DataTable,
-  ConfirmActionButton,
-} from '../../../shared/ui'
-import { RentalPackageFormModal } from './RentalPackageFormModal'
-import {
-  isRentalPackageInUseError,
-  RENTAL_PACKAGE_IN_USE_MESSAGE,
+useRentalPackages,
+useUpdateRentalPackage,
 } from '../../../features/packages/hooks/useRentalPackages'
-import { CATALOG_STATUS_DICTIONARY } from '../../../shared/i18n/status/package'
-import { presentStatus } from '../../../shared/i18n/status/registry'
 import {
-  markApiErrorHandled,
-  resolveApiErrorMessage,
-  showApiError,
+resolveApiErrorMessage,
+showApiError,
 } from '../../../shared/api/error-mapper'
+import { CATALOG_STATUS_DICTIONARY,type CatalogStatusKey } from '../../../shared/i18n/status/package'
+import { presentStatus,statusLabel } from '../../../shared/i18n/status/registry'
+import { isVietnameseDescription } from '../../../shared/i18n/vietnamese-text'
+import {
+ActionButton,
+DataTable,
+MetadataBadge,
+StatusBadge,
+} from '../../../shared/ui'
+import '../../../styles/catalog-industrial.css'
+import type {
+RentalPackage,
+RentalPackageStatus,
+} from '../../../types/rental-package'
+import { RentalPackageFormModal } from './RentalPackageFormModal'
 
 const VND = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -67,7 +57,20 @@ interface RentalPackageCatalogProps {
 /**
  * ⚠ Nhãn + tone lấy từ **module trung tâm**
  *   (`src/shared/i18n/status/package.ts`) ⇒ 1 nguồn sự thật.
+ *
+ * ⚠ Bộ lọc trạng thái cũng lấy nhãn từ đó ⇒ nhãn ở bộ lọc, cột "Trạng
+ *   thái" và modal **luôn khớp nhau** (ACTIVE → "Đang áp dụng",
+ *   INACTIVE → "Ngừng áp dụng").
  */
+const STATUS_FILTER_OPTIONS: Array<{ label: string; value: FilterStatus }> = [
+  { label: 'Tất cả', value: 'ALL' },
+  ...(Object.keys(CATALOG_STATUS_DICTIONARY) as CatalogStatusKey[]).map(
+    (value) => ({
+      label: statusLabel(CATALOG_STATUS_DICTIONARY, value),
+      value: value as FilterStatus,
+    }),
+  ),
+]
 
 export function RentalPackageCatalog({
   canManage,
@@ -101,27 +104,14 @@ export function RentalPackageCatalog({
     onSuccess: (updated) => {
       messageApi.success(
         updated.status === 'ACTIVE'
-          ? `Đã mở nhận đơn cho gói "${updated.package_name}".`
-          : `Đã tạm ngưng nhận đơn cho gói "${updated.package_name}".`,
+          ? `Đã kích hoạt gói thuê "${updated.package_name}".`
+          : `Đã ngừng áp dụng gói thuê "${updated.package_name}".`,
       )
     },
     onError: (err) =>
       showApiError(err, 'cập nhật gói thuê', (text) => messageApi.error(text)),
   })
 
-  const deleteMutation = useDeleteRentalPackage({
-    onSuccess: () => messageApi.success('Đã xóa gói thuê.'),
-    onError: (err) => {
-      // ⚠ 409 — gói đã có đơn hàng: hiện message tiếng Việt có hướng dẫn
-      //   hành động thay thế (chuyển sang Tạm ngưng) thay vì message kỹ thuật.
-      if (isRentalPackageInUseError(err)) {
-        markApiErrorHandled(err)
-        messageApi.warning(RENTAL_PACKAGE_IN_USE_MESSAGE)
-        return
-      }
-      showApiError(err, 'xóa gói thuê', (text) => messageApi.error(text))
-    },
-  })
 
   const [searchText, setSearchText] = useState('')
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL')
@@ -152,9 +142,6 @@ export function RentalPackageCatalog({
     setModalOpen(true)
   }
 
-  const handleDelete = (pkg: RentalPackage) => {
-    deleteMutation.mutate(pkg.package_id)
-  }
 
   const handleToggleStatus = (pkg: RentalPackage) => {
     const nextStatus: RentalPackageStatus =
@@ -177,18 +164,29 @@ export function RentalPackageCatalog({
       render: (_, record) => {
         // Hiển thị nguyên bản tên gói thuê từ DB (`rental_packages.package_name`).
         const name = record.package_name
+        /*
+         * ⚠ CHỈ hiện mô tả khi là **tiếng Việt**.
+         *
+         *   Lý do: `rental_packages.description` còn nhiều mô tả **tiếng Anh**
+         *   từ seed data cũ (vd "Premium package", "Basic oyster mushroom
+         *   cultivation package") ⇒ hiện ra UI làm giao diện lệch ngôn ngữ.
+         *
+         *   ⇒ Mô tả không phải tiếng Việt ⇒ **ẩn** (không render dòng phụ).
+         */
+        const description = record.description?.trim() ?? ''
+        const showDescription = isVietnameseDescription(description)
         return (
           <Flex vertical gap={2} style={{ minWidth: 0 }}>
             <Typography.Text strong ellipsis={{ tooltip: name }}>
               {name}
             </Typography.Text>
-            {record.description && (
+            {showDescription && (
               <Typography.Text
                 type="secondary"
                 style={{ fontSize: 12, maxWidth: 260 }}
-                ellipsis={{ tooltip: record.description }}
+                ellipsis={{ tooltip: description }}
               >
-                {record.description}
+                {description}
               </Typography.Text>
             )}
           </Flex>
@@ -219,7 +217,7 @@ export function RentalPackageCatalog({
               countsFailed
                 ? 'Không tải được số liệu đơn hàng — có thể gói đã có đơn mà chưa hiển thị.'
                 : count > 0
-                  ? `Gói này đã có ${count} đơn hàng sử dụng ⇒ không thể xoá, chỉ chuyển trạng thái sang Tạm ngưng.`
+                  ? `Gói này đã có ${count} đơn hàng sử dụng ⇒ không thể xoá, chỉ chuyển trạng thái sang Ngừng áp dụng.`
                   : 'Gói chưa phát sinh đơn hàng nào.'
             }
           >
@@ -252,13 +250,7 @@ export function RentalPackageCatalog({
         const badge = (
           <StatusBadge
             {...presentStatus(CATALOG_STATUS_DICTIONARY, record.status)}
-            icon={
-              isActive ? (
-                <CheckCircleOutlined aria-hidden="true" />
-              ) : (
-                <PauseCircleOutlined aria-hidden="true" />
-              )
-            }
+
           />
         )
 
@@ -270,7 +262,7 @@ export function RentalPackageCatalog({
             type="button"
             onClick={() => handleToggleStatus(record)}
             disabled={isToggling(record.package_id)}
-            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} gói ${record.package_name}`}
+            aria-label={`${isActive ? 'Ngừng áp dụng' : 'Kích hoạt'} gói thuê ${record.package_name}`}
             style={{
               padding: 0,
               border: 0,
@@ -289,70 +281,16 @@ export function RentalPackageCatalog({
           {
             title: 'Hành động',
             key: 'actions',
-            width: 120,
+            width: 100,
             fixed: 'right' as const,
-            render: (_: unknown, record: RentalPackage) => {
-              /**
-               * ⚠ Gom 2 trường hợp gói **không thể xoá**:
-               *   1. Đã phát sinh đơn hàng → BE trả 409 ⇒ hướng dẫn chuyển
-               *      trạng thái sang "Tạm ngưng" thay vì xoá.
-               *   2. Đang ở trạng thái "Tạm ngưng" → không cần xoá, chỉ cần
-               *      bật/tắt trạng thái.
-               *
-               * → Làm mờ nút + kèm Tooltip giải thích rõ lý do.
-               *
-               * ⚠ **Số đơn lấy từ bộ đếm thực tế** (đếm từ
-               *   `GET /api/orders/admin`) vì BE **không** trả `order_count`
-               *   trong danh sách gói thuê ⇒ nếu dựa vào field đó thì nút Xóa
-               *   luôn bật ⇒ user gặp lỗi khoá ngoại 500 từ BE.
-               */
-              const orderCount = orderCounts.get(record.package_id) ?? 0
-              const isInactive = record.status === 'INACTIVE'
-              const deleteDisabledReason = orderCount
-                ? RENTAL_PACKAGE_IN_USE_MESSAGE
-                : isInactive
-                  ? 'Gói đang tạm ngưng — không cần xóa. Dùng nút trạng thái để mở lại nhận đơn.'
-                  : null
-
-              const deleteButton = (
-                <ConfirmActionButton
-                  icon={<DeleteOutlined />}
-                  label="Xóa"
-                  description={`Xóa gói ${record.package_name}`}
-                  variant="danger"
-                  title="Xóa gói thuê?"
-                  content={`Thao tác này không thể hoàn tác. Bạn có chắc muốn xóa gói "${record.package_name}"?`}
-                  okText="Xóa"
-                  cancelText="Hủy"
-                  onConfirm={() => handleDelete(record)}
-                  disabled={deleteDisabledReason !== null}
-                />
-              )
-
-              return (
-                <Space size={4}>
-                  <ActionButton
-                    icon={<EditOutlined />}
-                    label="Sửa"
-                    description={`Sửa gói ${record.package_name}`}
-                    variant="text"
-                    hideLabel
-                    onClick={() => handleOpenEdit(record)}
-                  />
-
-                  {deleteDisabledReason ? (
-                    <Tooltip title={deleteDisabledReason}>
-                      {/* span bọc để tooltip bám được cả khi button bị disabled */}
-                      <span className="mcms-action-button-tooltip">
-                        {deleteButton}
-                      </span>
-                    </Tooltip>
-                  ) : (
-                    deleteButton
-                  )}
-                </Space>
-              )
-            },
+            render: (_: unknown, record: RentalPackage) => (
+              <ActionButton
+                icon={<EditOutlined />}
+                label="Sửa"
+                description={`Sửa gói ${record.package_name}`}
+                onClick={() => handleOpenEdit(record)}
+              />
+            ),
           } as ColumnsType<RentalPackage>[number],
         ]
       : []),
@@ -394,11 +332,7 @@ export function RentalPackageCatalog({
         <Segmented<FilterStatus>
           value={statusFilter}
           onChange={setStatusFilter}
-          options={[
-            { label: 'Tất cả', value: 'ALL' },
-            { label: 'Đang nhận đơn', value: 'ACTIVE' },
-            { label: 'Tạm ngưng', value: 'INACTIVE' },
-          ]}
+          options={STATUS_FILTER_OPTIONS}
         />
         <Button
           size="small"

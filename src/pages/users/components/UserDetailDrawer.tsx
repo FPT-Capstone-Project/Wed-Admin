@@ -1,32 +1,26 @@
-import { formatDate } from '../../../shared/utils/date'
-import '../../../styles/reports-users-industrial.css'
-import { StatusBadge, MetadataBadge } from '../../../shared/ui'
 import {
-  CloseCircleOutlined,
-  ExperimentOutlined,
-  EyeOutlined,
-  MailOutlined,
-  PhoneOutlined,
-  ShoppingCartOutlined,
+CloseCircleOutlined
 } from '@ant-design/icons'
 import {
-  Alert,
-  Button,
-  Descriptions,
-  Drawer,
-  Flex,
-  Skeleton,
-  Space,
-  Statistic,
-  Typography,
+Alert,
+Button,
+Descriptions,
+Drawer,
+Flex,
+Skeleton,
+Statistic,
+Typography,
 } from 'antd'
 import { useState } from 'react'
 import { useAuthStore } from '../../../features/auth/store/auth.store'
 import { useUser } from '../../../features/users/hooks/useUsers'
 import {
-  getRoleLabel,
-  USER_STATUS_CONFIG,
+getRoleLabel,
+USER_STATUS_CONFIG,
 } from '../../../features/users/user-status.config'
+import { MetadataBadge,StatusBadge } from '../../../shared/ui'
+import { formatDate } from '../../../shared/utils/date'
+import '../../../styles/reports-users-industrial.css'
 import type { UserWithRole } from '../../../types/user.types'
 import { SendResetOtpModal } from './SendResetOtpModal'
 
@@ -83,7 +77,7 @@ export function UserDetailDrawer({
         destroyOnHidden
         extra={
           <MetadataBadge
-            icon={<EyeOutlined />}
+
             label="Chỉ xem"
           />
         }
@@ -113,13 +107,11 @@ export function UserDetailDrawer({
               <Statistic
                 title="Số đơn hàng"
                 value={detail?.order_count ?? 0}
-                prefix={<ShoppingCartOutlined />}
                 valueStyle={{ fontSize: 24 }}
               />
               <Statistic
                 title="Số phiên canh tác"
                 value={detail?.cultivation_session_count ?? 0}
-                prefix={<ExperimentOutlined />}
                 valueStyle={{ fontSize: 24 }}
               />
             </Flex>
@@ -141,7 +133,7 @@ export function UserDetailDrawer({
                   label: 'Email',
                   children: (
                     <Typography.Text>
-                      <MailOutlined /> {profile.email}
+                      {profile.email}
                     </Typography.Text>
                   ),
                 },
@@ -150,7 +142,7 @@ export function UserDetailDrawer({
                   label: 'Số điện thoại',
                   children: profile.phone ? (
                     <Typography.Text>
-                      <PhoneOutlined /> {profile.phone}
+                      {profile.phone}
                     </Typography.Text>
                   ) : (
                     <Typography.Text type="secondary">—</Typography.Text>
@@ -169,19 +161,20 @@ export function UserDetailDrawer({
                   key: 'role',
                   label: 'Vai trò',
                   children: (
-                    <Space direction="vertical" size={2}>
-                      <MetadataBadge label={<>
-                        {getRoleLabel(profile.role_id, profile.role_name)}
-                      </>} />
-                      {profile.role_description && (
-                        <Typography.Text
-                          type="secondary"
-                          style={{ fontSize: 12 }}
-                        >
-                          {profile.role_description}
-                        </Typography.Text>
-                      )}
-                    </Space>
+                    /*
+                     * ⚠ CHỈ hiện **một** badge tên vai trò tiếng Việt.
+                     *
+                     *   Không render `role_description` (BE trả mô tả **tiếng
+                     *   Anh** dài, vd "Mushroom cultivation expert responsible for
+                     *   evaluating cultivation conditions") ⇒ vừa lệch ngôn
+                     *   ngữ, vừa làm drawer rối.
+                     *
+                     *   `getRoleLabel()` luôn trả nhãn tiếng Việt đã map (fallback
+                     *   "Vai trò chưa xác định") ⇒ không lọt mã enum tiếng Anh.
+                     */
+                    <MetadataBadge label={<>
+                      {getRoleLabel(profile.role_id, profile.role_name)}
+                    </>} />
                   ),
                 },
                 {

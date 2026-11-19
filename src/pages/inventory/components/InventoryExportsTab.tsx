@@ -6,13 +6,14 @@ import type { ExportQuery, ExportTransaction } from '../../../features/inventory
 import { formatQuantity } from '../../../features/inventory/utils/inventory.utils'
 import { DataTable } from '../../../shared/ui'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
+import { InventoryMushroomCell } from './InventoryMushroomCell'
 
-export function InventoryExportsTab({ filters }: { filters: Pick<ExportQuery, 'mushroomTypeId' | 'fromDate' | 'toDate'> }) {
+export function InventoryExportsTab({ filters, mushroomImages }: { filters: Pick<ExportQuery, 'mushroomTypeId' | 'fromDate' | 'toDate'>; mushroomImages: ReadonlyMap<number, string | null> }) {
   const [page, setPage] = useState(1)
   const query = useInventoryExports({ ...filters, page, limit: 20 })
   const columns: ColumnsType<ExportTransaction> = [
     { title: 'Mã giao dịch', dataIndex: 'transaction_id', render: value => `#${value}` },
-    { title: 'Giống nấm', key: 'name', render: (_, row) => <><strong>{row.mushroom_name}</strong><div>{row.session_id ? `Phiên #${row.session_id}` : '—'}</div></> },
+    { title: 'Giống nấm', key: 'name', render: (_, row) => <InventoryMushroomCell id={row.mushroom_type_id} name={row.mushroom_name} imageUrl={mushroomImages.get(row.mushroom_type_id)} sessionId={row.session_id} /> },
     { title: 'Số lượng xuất', dataIndex: 'quantity', align: 'right', render: formatQuantity },
     { title: 'Tồn trước → sau', key: 'balance', render: (_, row) => `${formatQuantity(row.quantity_before)} → ${formatQuantity(row.quantity_after)}` },
     { title: 'Ghi chú', dataIndex: 'notes', render: value => value?.trim() || '—' },

@@ -7,25 +7,15 @@
  * Giải pháp: chấm màu + chữ muted, không nền, không viền, không bo góc —
  * trông như chú thích biểu đồ (chart legend) theo chuẩn MD.
  *
- * Màu KHÔNG bao giờ là tín hiệu duy nhất: luôn kèm nhãn chữ + icon phân
- * biệt hình dạng (WCAG 1.4.1).
+ * Màu KHÔNG bao giờ là tín hiệu duy nhất: luôn kèm nhãn chữ.
  */
-import { Flex, Tooltip, Typography } from 'antd'
-import {
-  BugOutlined,
-  ClockCircleOutlined,
-  InboxOutlined,
-  UserOutlined,
-} from '@ant-design/icons'
-import type { ReactNode } from 'react'
+import { Flex,Tooltip,Typography } from 'antd'
 import { tones } from '../../../app/theme/tokens'
 import type { TrayStatus } from '../../../types/room.types'
 import { TRAY_STATUS_CONFIG } from './tray-status.config'
 
 interface LegendEntry {
   status: TrayStatus
-  /** Icon phân biệt hình dạng (WCAG 1.4.1 — không chỉ dựa vào màu). */
-  icon: ReactNode
   /** Mô tả ngắn khi hover — giải thích trạng thái bằng lời. */
   hint: string
 }
@@ -33,22 +23,18 @@ interface LegendEntry {
 const TRAY_LEGEND_ENTRIES: readonly LegendEntry[] = [
   {
     status: 'maintenance',
-    icon: <BugOutlined aria-hidden="true" />,
-    hint: 'Khay bị nhiễm hoặc đang cách ly — cần xử lý trước khi gán khách.',
+    hint: 'Khay đang vệ sinh sau khi thu hoạch — cần khử trùng trước khi gán khách.',
   },
   {
     status: 'harvesting',
-    icon: <ClockCircleOutlined aria-hidden="true" />,
     hint: 'Đã tới mốc thu hoạch — cần báo khách và nhận sản phẩm.',
   },
   {
     status: 'rented',
-    icon: <UserOutlined aria-hidden="true" />,
     hint: 'Khay đang có vụ thuê chạy bình thường.',
   },
   {
     status: 'empty',
-    icon: <InboxOutlined aria-hidden="true" />,
     hint: 'Khay trống, sẵn sàng gán cho vụ thuê mới.',
   },
 ]
@@ -66,7 +52,9 @@ export function TrayStatusLegend() {
       {TRAY_LEGEND_ENTRIES.map((entry) => {
         // Nhãn + tone lấy từ config chung → legend và ô khay luôn khớp.
         const config = TRAY_STATUS_CONFIG[entry.status]
-        const palette = tones[config.tone]
+        const palette = entry.status === 'maintenance'
+          ? { text: '#0c4a6e', solid: '#0284c7' }
+          : tones[config.tone]
 
         return (
           <Tooltip key={entry.status} title={entry.hint}>
@@ -86,7 +74,7 @@ export function TrayStatusLegend() {
                   fontSize: 'var(--mcms-font-small)',
                 }}
               >
-                {entry.icon}
+
                 <span
                   style={{
                     display: 'inline-block',

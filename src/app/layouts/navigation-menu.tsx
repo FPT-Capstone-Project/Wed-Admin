@@ -1,5 +1,5 @@
 ﻿import {
-  Bell, Bug, CalendarDays, ChartColumn, ClipboardList, Cpu,
+  Bell, Bug, CalendarDays, ChartColumn, ClipboardList, Cpu, MessageSquareWarning,
   Gauge, HandPlatter, LayoutGrid, Package, Sprout, Thermometer, Truck, Users, Video, Warehouse,
 } from 'lucide-react'
 import type { MenuProps } from 'antd'
@@ -8,6 +8,7 @@ import { filterMenuGroups, MENU_GROUPS, type MenuIconName } from './navigation-i
 
 /** Mỗi mục có hình dạng riêng; giữ kích thước 18px và nét 2px. */
 const ICONS: Record<MenuIconName, ReactNode> = {
+  complaints: <MessageSquareWarning size={18} strokeWidth={2} aria-hidden="true" />,
   dashboard: <Gauge size={18} strokeWidth={2} aria-hidden="true" />,
   trays: <LayoutGrid size={18} strokeWidth={2} aria-hidden="true" />,
   devices: <Cpu size={18} strokeWidth={2} aria-hidden="true" />,

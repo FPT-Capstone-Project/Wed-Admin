@@ -10,37 +10,31 @@
  */
 
 import {
-  ApiOutlined,
-  CheckCircleOutlined,
-  CheckOutlined,
-  CloseCircleOutlined,
-  CloudOutlined,
-  DeleteOutlined,
-  DownloadOutlined,
-  EditOutlined,
-  EyeOutlined,
-  FundOutlined,
-  InfoCircleOutlined,
-  PlusOutlined,
-  QuestionCircleOutlined,
-  ReloadOutlined,
-  SearchOutlined,
-  StopOutlined,
-  WarningOutlined,
+ApiOutlined,
+CheckOutlined,
+CloudOutlined,
+DeleteOutlined,
+DownloadOutlined,
+EditOutlined,
+EyeOutlined,
+FundOutlined,
+PlusOutlined,
+ReloadOutlined,
+SearchOutlined
 } from '@ant-design/icons'
-import { Card, Col, Flex, Input, Row, Space, Typography } from 'antd'
+import { Card,Col,Flex,Input,Row,Space,Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { useMemo, useState, type ReactNode } from 'react'
-import { toneLabels, type SemanticTone } from '../../app/theme/tokens'
+import { useMemo,useState,type ReactNode } from 'react'
+import { toneLabels,type SemanticTone } from '../../app/theme/tokens'
 import { IOT_TERMS } from '../../shared/i18n/terms'
 import {
-  ActionButton,
-  DataTable,
-  EmptyState,
-  EmptyStateAction,
-  PageHeader,
-  StatCard,
-  StatusBadge,
+ActionButton,
+DataTable,
+EmptyState,
+EmptyStateAction,
+PageHeader,
+StatCard,
+StatusBadge,
 } from '../../shared/ui'
 
 /* ──────────────────────────────────────────────────────────────────────────
@@ -111,16 +105,6 @@ const SAMPLE_TRAYS: SampleTray[] = [
   },
 ]
 
-/** Icon đi kèm mỗi tone — badge KHÔNG được chỉ dựa vào màu (WCAG 1.4.1). */
-const TONE_ICONS: Record<SemanticTone, ReactNode> = {
-  ok: <CheckCircleOutlined />,
-  success: <CheckCircleOutlined />,
-  info: <InfoCircleOutlined />,
-  warning: <WarningOutlined />,
-  danger: <CloseCircleOutlined />,
-  muted: <StopOutlined />,
-  neutral: <QuestionCircleOutlined />,
-}
 
 const TONE_ORDER: SemanticTone[] = ['ok', 'success', 'info', 'warning', 'danger', 'muted', 'neutral']
 
@@ -223,7 +207,7 @@ function StyleGuideContent() {
         <StatusBadge
           tone={tray.tone}
           label={tray.status}
-          icon={TONE_ICONS[tray.tone]}
+
         />
       ),
     },
@@ -284,7 +268,7 @@ function StyleGuideContent() {
                 key={tone}
                 tone={tone}
                 label={toneLabels[tone]}
-                icon={TONE_ICONS[tone]}
+
               />
             ))}
           </Flex>

@@ -105,15 +105,13 @@ export function TrayStaffActionWorkflow({
       >
         {/* ── Section Header ───────────────────────────────────────── */}
         <div className="tray-section-heading">
-          <span className="tray-section-icon" aria-hidden="true">
-            <CalendarOutlined />
-          </span>
+
           <div>
             <Typography.Title id="tray-staff-workflow-heading" level={4}>
               Thao tác vận hành
             </Typography.Title>
             <Typography.Text type="secondary">
-              Giai đoạn {growthDay}/{expectedHarvestDay} ·{' '}
+              {lifecycle.overdueDays > 0 ? `Đã quá hạn thu hoạch ${lifecycle.overdueDays} ngày` : `Giai đoạn ${Math.min(growthDay, expectedHarvestDay)}/${expectedHarvestDay}`} ·{' '}
               {stage === 'CARING'
                 ? 'Đang nuôi'
                 : stage === 'WARN_48H'
@@ -130,7 +128,7 @@ export function TrayStaffActionWorkflow({
               className="staff-stage-badge staff-stage-badge--care"
               role="status"
             >
-              <StatusBadge tone="ok" icon={<CheckCircleOutlined />} label={<>
+              <StatusBadge tone="ok"  label={<>
                 Đang chăm sóc bình thường
               </>} />
               <span>
@@ -258,7 +256,7 @@ onClick={onDestroy} label="Tiêu hủy mẻ (Khách từ chối nhận)" />
         className="tray-log-note-modal"
         title={
           <span className="tray-dialog-title">
-            <PhoneOutlined aria-hidden="true" />
+
             Ghi chú nhật ký chăm sóc
           </span>
         }

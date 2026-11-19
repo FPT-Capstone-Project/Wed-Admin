@@ -1,5 +1,6 @@
 import type { CultivationSessionStatus } from '../types/session.types'
 import type { SessionGrowthStage } from '../types/admin-session.types'
+import { resolveGrowthPhase } from '../../../shared/i18n/status/session'
 
 const STAGES: Record<string, SessionGrowthStage> = {
   SPAWNING: 'SPAWNING', SPAWN_RESTING: 'SPAWNING', PREPARATION: 'SPAWNING',
@@ -13,6 +14,10 @@ const keyOf = (value: unknown) => typeof value === 'string' ? value.trim().toUpp
 
 export function normalizeSessionStatus(value: unknown): CultivationSessionStatus {
   const key = keyOf(value)
+  if (key === 'RECEIVED' || key === 'INCUBATING') return key
+  if (['PENDING', 'SPAWN_RESTING', 'MYCELIAL_DEVELOPMENT', 'READY_FOR_CULTIVATION', 'CULTIVATING', 'HARVEST_READY', 'HARVESTING', 'COMPLETED', 'CANCELLED'].includes(key)) return key as CultivationSessionStatus
+  if (key === 'RESTING') return 'SPAWN_RESTING'
+  if (key === 'DEVELOPING') return 'MYCELIAL_DEVELOPMENT'
   if (key === 'COMPLETED' || key === 'CANCELLED' || key === 'PENDING') return key
   if (key === 'ACTIVE' || key === 'IN_PROGRESS' || STAGES[key]) return 'CULTIVATING'
   return 'PENDING'
@@ -49,13 +54,6 @@ export function summarizeSessions(items: readonly { status: CultivationSessionSt
   }, { total: 0, active: 0, waiting: 0, cancelled: 0, completed: 0 })
 }
 
-export function resolveSessionPhase(stage: string | null | undefined, status?: string) {
-  // A finished lifecycle takes precedence over the last recorded biological stage.
-  if (keyOf(status) === 'COMPLETED') return 'COMPLETED'
-  const value = STAGES[keyOf(stage)]
-  if (value === 'SPAWNING') return 'SPAWNING'
-  if (value === 'RUNNING') return 'RUNNING'
-  if (value === 'MATURATION') return 'HARVESTING'
-  if (value) return 'FRUITING'
-  return null
+export function resolveSessionPhase(stage: string | null | undefined, status?: string, harvestReady = false) {
+  return resolveGrowthPhase(stage, status, harvestReady)
 }

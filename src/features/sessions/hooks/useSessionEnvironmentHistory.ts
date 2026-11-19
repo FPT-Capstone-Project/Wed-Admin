@@ -3,6 +3,7 @@ import {
   fetchAllSessionEnvironmentRecords,
   fetchNewestSessionEnvironmentRecords,
   fetchSessionEnvironmentHistory,
+  fetchSessionDailyAverages,
 } from '../api/session-environment-history.api'
 import {
   environmentRecordsToClimatePoints,
@@ -82,6 +83,7 @@ export function buildFloorScopeSignature(
  *   "chỉ số mới nhất" chỉ cần **1 bản ghi**.
  */
 export const sessionEnvironmentHistoryKeys = {
+  daily: (sessionId: number) => ['session-environment-history', 'daily-averages', sessionId] as const,
   all: ['session-environment-history'] as const,
   /** Lịch sử phân trang — `/api/environment-history/sessions/{id}`. */
   history: () => [...sessionEnvironmentHistoryKeys.all, 'history'] as const,
@@ -99,6 +101,15 @@ export const sessionEnvironmentHistoryKeys = {
   /** Biểu đồ — gom nhiều trang theo cửa sổ thời gian. */
   chart: (sessionId: number, timeRange: SessionSensorTimeRange) =>
     [...sessionEnvironmentHistoryKeys.history(), 'chart', sessionId, timeRange] as const,
+}
+
+export function useSessionDailyAverages(sessionId: number | null, enabled = true) {
+  return useQuery({
+    queryKey: sessionEnvironmentHistoryKeys.daily(sessionId ?? -1),
+    queryFn: ({ signal }) => fetchSessionDailyAverages(sessionId as number, signal),
+    enabled: enabled && sessionId != null && Number.isSafeInteger(sessionId) && sessionId > 0,
+    staleTime: 60_000,
+  })
 }
 
 /**

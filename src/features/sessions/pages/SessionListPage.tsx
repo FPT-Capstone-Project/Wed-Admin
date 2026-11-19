@@ -37,6 +37,7 @@ import {
 import { SessionStatusTag } from '../components/SessionStatusTag'
 import {
   MUSHROOM_GROWTH_PHASE_DICTIONARY,
+  SESSION_STATUS_DICTIONARY,
   resolveSessionHarvestStatus,
 } from '../../../shared/i18n/status/session'
 import { formatSessionProgress, resolveSessionProgress } from '../utils/session-progress.utils'
@@ -55,10 +56,10 @@ import { SessionDetailDrawer } from '../../../app/router/lazy-modals'
  */
 
 const STATUS_OPTIONS = [
-  { value: 'PENDING', label: 'Chờ xử lý' },
-  { value: 'CULTIVATING', label: 'Đang canh tác' },
-  { value: 'COMPLETED', label: 'Hoàn thành' },
-  { value: 'CANCELLED', label: 'Đã hủy' },
+  { value: 'PENDING', label: SESSION_STATUS_DICTIONARY.PENDING.label },
+  { value: 'CULTIVATING', label: SESSION_STATUS_DICTIONARY.CULTIVATING.label },
+  { value: 'COMPLETED', label: SESSION_STATUS_DICTIONARY.COMPLETED.label },
+  { value: 'CANCELLED', label: SESSION_STATUS_DICTIONARY.CANCELLED.label },
 ]
 
 /**
@@ -73,8 +74,8 @@ type SessionGroupFilter = 'ALL' | 'CULTIVATING' | 'PENDING' | 'FINISHED'
 const GROUP_FILTER_OPTIONS: Array<{ value: SessionGroupFilter; label: string }> =
   [
     { value: 'ALL', label: 'Tất cả' },
-    { value: 'CULTIVATING', label: 'Đang canh tác' },
-    { value: 'PENDING', label: 'Chờ xử lý' },
+    { value: 'CULTIVATING', label: SESSION_STATUS_DICTIONARY.CULTIVATING.label },
+    { value: 'PENDING', label: SESSION_STATUS_DICTIONARY.PENDING.label },
     { value: 'FINISHED', label: 'Đã hoàn tất' },
   ]
 
@@ -307,7 +308,7 @@ export function SessionListPage() {
           const stage: SessionGrowthStage | null =
             session.current_stage ?? session.growth_status
           const percent = resolveProgress(session)
-          const phase = resolveSessionPhase(stage, session.status)
+          const phase = resolveSessionPhase(stage, session.status, session.harvest_ready)
           return (
             <Flex vertical gap={2} style={{ width: '100%', maxWidth: 160 }}>
               <Flex justify="space-between" align="center" gap={8}>

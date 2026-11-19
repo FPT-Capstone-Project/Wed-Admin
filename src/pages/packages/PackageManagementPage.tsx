@@ -1,5 +1,4 @@
 import { Tabs } from 'antd'
-import { TagsOutlined } from '@ant-design/icons'
 import { PageHeader } from '../../shared/ui'
 import { MushroomVarietyCatalog } from './components/MushroomVarietyCatalog'
 import { RentalPackageCatalog } from './components/RentalPackageCatalog'
@@ -25,7 +24,7 @@ export function PackageManagementPage() {
       <PageHeader
         title={
           <>
-            <TagsOutlined aria-hidden="true" /> Quản lý Giống nấm &amp; Gói thuê
+             Quản lý Giống nấm &amp; Gói thuê
           </>
         }
         description="Kho giống nấm, thông số canh tác, thời gian sinh trưởng và các gói thuê theo vụ mùa."

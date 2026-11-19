@@ -1,25 +1,25 @@
-import { PageHeader } from '../../../shared/ui/PageHeader'
-import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
-import { Suspense, useMemo, useState } from 'react'
-import { FilterOutlined, SearchOutlined } from '@ant-design/icons'
+import { SearchOutlined } from '@ant-design/icons'
 import {
-  Button,
-  Empty,
-  Flex,
-  Input,
-  Pagination,
-  Select,
-  Skeleton,
+Button,
+Empty,
+Flex,
+Input,
+Pagination,
+Select,
+Skeleton,
 } from 'antd'
-import { MetadataBadge, StatCard } from '../../../shared/ui'
-import { CultivationBatchCard } from '../components/CultivationBatchCard'
+import { Suspense,useMemo,useState } from 'react'
 import { CultivationGalleryModal } from '../../../app/router/lazy-modals'
+import { MetadataBadge,StatCard } from '../../../shared/ui'
+import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
+import { PageHeader } from '../../../shared/ui/PageHeader'
+import { CultivationBatchCard } from '../components/CultivationBatchCard'
 import { useCultivationBatches } from '../hooks/useCultivationBatches'
 import {
-  GROWTH_STAGE_META,
-  type CultivationBatch,
-  type GrowthStage,
-  type SpawnHealthFilter,
+GROWTH_STAGE_META,
+type CultivationBatch,
+type GrowthStage,
+type SpawnHealthFilter,
 } from '../types/cultivation.types'
 
 const STAGE_OPTIONS = (
@@ -123,7 +123,7 @@ export function CultivationManagementPage() {
   return (
     <div>
       <PageHeader title="Sinh trưởng & thu hoạch" description="Tiến độ mẻ nấm, giai đoạn sinh trưởng và lịch sử kiểm tra phôi (chỉ đọc)" actions={<MetadataBadge
-          icon={<FilterOutlined />}
+
           label="Chế độ chỉ đọc — dữ liệu từ API thật"
         />} />
 

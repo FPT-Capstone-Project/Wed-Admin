@@ -1,46 +1,44 @@
-import '../../../styles/catalog-industrial.css'
-import { useMemo, useState } from 'react'
 import {
-  CheckCircleOutlined,
-  DeleteOutlined,
-  EditOutlined,
-  PauseCircleOutlined,
-  PlusOutlined,
-  SearchOutlined,
+DeleteOutlined,
+EditOutlined,
+PlusOutlined,
+SearchOutlined
 } from '@ant-design/icons'
 import {
-  App,
-  Button,
-  Empty,
-  Flex,
-  Input,
-  Segmented,
-  Space,
-  Tooltip,
-  Typography,
+App,
+Button,
+Empty,
+Flex,
+Input,
+Segmented,
+Space,
+Tooltip,
+Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import type { MushroomType, MushroomTypeStatus } from '../../../types/mushroom-type'
+import { useMemo,useState } from 'react'
 import {
-  useDeleteMushroomType,
-  useMushroomTypes,
-  useUpdateMushroomType,
+useDeleteMushroomType,
+useMushroomTypes,
+useUpdateMushroomType,
 } from '../../../features/packages/hooks/useMushroomTypes'
 import {
-  ActionButton,
-  StatusBadge,
-  MetadataBadge,
-  DataTable,
-  ConfirmActionButton,
+resolveApiErrorMessage,
+showApiError,
+} from '../../../shared/api/error-mapper'
+import { CATALOG_STATUS_DICTIONARY,type CatalogStatusKey } from '../../../shared/i18n/status/package'
+import { presentStatus,statusLabel } from '../../../shared/i18n/status/registry'
+import {
+ActionButton,
+ConfirmActionButton,
+DataTable,
+MetadataBadge,
+StatusBadge,
 } from '../../../shared/ui'
+import '../../../styles/catalog-industrial.css'
+import type { MushroomType,MushroomTypeStatus } from '../../../types/mushroom-type'
 import { FallbackThumbnail } from './FallbackThumbnail'
 import { MushroomVarietyFormModal } from './MushroomVarietyFormModal'
-import { CATALOG_STATUS_DICTIONARY } from '../../../shared/i18n/status/package'
-import { presentStatus } from '../../../shared/i18n/status/registry'
-import {
-  resolveApiErrorMessage,
-  showApiError,
-} from '../../../shared/api/error-mapper'
 
 const VND = new Intl.NumberFormat('vi-VN', {
   style: 'currency',
@@ -57,7 +55,20 @@ interface MushroomVarietyCatalogProps {
 /**
  * ⚠ Nhãn + tone lấy từ **module trung tâm**
  *   (`src/shared/i18n/status/package.ts`) ⇒ 1 nguồn sự thật.
+ *
+ * ⚠ Bộ lọc trạng thái cũng lấy nhãn từ đó ⇒ nhãn ở bộ lọc, cột "Trạng
+ *   thái" và modal **luôn khớp nhau** (ACTIVE → "Đang áp dụng",
+ *   INACTIVE → "Ngừng áp dụng").
  */
+const STATUS_FILTER_OPTIONS: Array<{ label: string; value: FilterStatus }> = [
+  { label: 'Tất cả', value: 'ALL' },
+  ...(Object.keys(CATALOG_STATUS_DICTIONARY) as CatalogStatusKey[]).map(
+    (value) => ({
+      label: statusLabel(CATALOG_STATUS_DICTIONARY, value),
+      value: value as FilterStatus,
+    }),
+  ),
+]
 
 export function MushroomVarietyCatalog({
   canManage,
@@ -76,8 +87,8 @@ export function MushroomVarietyCatalog({
     onSuccess: (updated) => {
       messageApi.success(
         updated.status === 'ACTIVE'
-          ? `Đã mở nhận đơn cho "${updated.name}".`
-          : `Đã tạm ngưng nhận đơn cho "${updated.name}".`,
+          ? `Đã kích hoạt giống nấm "${updated.name}".`
+          : `Đã ngừng áp dụng giống nấm "${updated.name}".`,
       )
     },
     onError: (err) =>
@@ -196,13 +207,7 @@ export function MushroomVarietyCatalog({
         const badge = (
           <StatusBadge
             {...presentStatus(CATALOG_STATUS_DICTIONARY, record.status)}
-            icon={
-              isActive ? (
-                <CheckCircleOutlined aria-hidden="true" />
-              ) : (
-                <PauseCircleOutlined aria-hidden="true" />
-              )
-            }
+
           />
         )
 
@@ -214,7 +219,7 @@ export function MushroomVarietyCatalog({
             type="button"
             onClick={() => handleToggleStatus(record)}
             disabled={isToggling(record.mushroom_type_id)}
-            aria-label={`${isActive ? 'Tạm ngưng' : 'Mở nhận đơn'} cho ${record.name}`}
+            aria-label={`${isActive ? 'Ngừng áp dụng' : 'Kích hoạt'} giống nấm ${record.name}`}
             style={{
               padding: 0,
               border: 0,
@@ -300,11 +305,7 @@ export function MushroomVarietyCatalog({
         <Segmented<FilterStatus>
           value={statusFilter}
           onChange={setStatusFilter}
-          options={[
-            { label: 'Tất cả', value: 'ALL' },
-            { label: 'Đang nhận đơn', value: 'ACTIVE' },
-            { label: 'Tạm ngưng', value: 'INACTIVE' },
-          ]}
+          options={STATUS_FILTER_OPTIONS}
         />
         <Button
           size="small"

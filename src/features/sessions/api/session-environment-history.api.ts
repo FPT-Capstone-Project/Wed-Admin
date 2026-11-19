@@ -9,6 +9,7 @@ import type {
   SessionEnvironmentLatestResult,
   SessionEnvironmentPagination,
   SessionEnvironmentRecord,
+  SessionDailyAveragesData,
 } from '../types/session-environment-history.types'
 
 /**
@@ -39,6 +40,16 @@ import type {
 
 /** Base endpoint nhóm Environment History. */
 export const ENVIRONMENT_HISTORY_URL = '/api/environment-history'
+
+/** The Azure schema declares this path, but leaves its 200 body unspecified. */
+export async function fetchSessionDailyAverages(sessionId: number, signal?: AbortSignal): Promise<SessionDailyAveragesData> {
+  const response = await apiClient.get<unknown>(`${ENVIRONMENT_HISTORY_URL}/sessions/${sessionId}/daily-averages`, { signal })
+  const data = ensureObject<SessionDailyAveragesData>(response.data)
+  if (!data || !Array.isArray(data.points) || data.sessionId !== sessionId) {
+    throw new Error('Dữ liệu trung bình môi trường theo ngày không đúng định dạng.')
+  }
+  return { ...data, timezone: data.timezone || 'Asia/Ho_Chi_Minh' }
+}
 
 /**
  * `pageSize` tối đa mà BE **chắc chắn** chấp nhận.

@@ -2,16 +2,22 @@ import '../../../styles/catalog-industrial.css'
 import { ActionButton } from '../../../shared/ui'
 import { showApiError } from '../../../shared/api/error-mapper'
 import { useEffect } from 'react'
-import { App, Form, Input, InputNumber, Modal } from 'antd'
+import { App, Form, Input, InputNumber, Modal, Select } from 'antd'
 import type {
   CreateRentalPackageRequest,
   RentalPackage,
+  RentalPackageStatus,
   UpdateRentalPackageRequest,
 } from '../../../types/rental-package'
 import {
   useCreateRentalPackage,
   useUpdateRentalPackage,
 } from '../../../features/packages/hooks/useRentalPackages'
+import {
+  CATALOG_STATUS_DICTIONARY,
+  type CatalogStatusKey,
+} from '../../../shared/i18n/status/package'
+import { statusLabel } from '../../../shared/i18n/status/registry'
 
 interface RentalPackageFormModalProps {
   open: boolean
@@ -24,9 +30,22 @@ type FormShape = {
   description?: string
   durationDays: number
   price: number
+  status: RentalPackageStatus
 }
 
 const DEFAULT_STATUS = 'ACTIVE' as const
+
+/**
+ * Options trạng thái — lấy từ **từ điển trung tâm**
+ * (`shared/i18n/status/package.ts`) ⇒ nhãn giống hệt cột "Trạng thái" ở
+ * bảng và bộ lọc: `ACTIVE` → "Đang áp dụng", `INACTIVE` → "Ngừng áp dụng".
+ */
+const STATUS_OPTIONS = (
+  Object.keys(CATALOG_STATUS_DICTIONARY) as CatalogStatusKey[]
+).map((value) => ({
+  value,
+  label: statusLabel(CATALOG_STATUS_DICTIONARY, value),
+})) satisfies Array<{ value: CatalogStatusKey; label: string }>
 
 function toFormShape(item: RentalPackage): FormShape {
   return {
@@ -34,6 +53,7 @@ function toFormShape(item: RentalPackage): FormShape {
     description: item.description ?? '',
     durationDays: item.duration_days,
     price: item.price,
+    status: item.status,
   }
 }
 
@@ -43,7 +63,7 @@ function formShapeToCreatePayload(values: FormShape): CreateRentalPackageRequest
     description: values.description?.trim() || undefined,
     durationDays: values.durationDays,
     price: values.price,
-    status: DEFAULT_STATUS,
+    status: values.status ?? DEFAULT_STATUS,
   }
 }
 
@@ -53,6 +73,7 @@ function formShapeToUpdatePayload(values: FormShape): UpdateRentalPackageRequest
     description: values.description?.trim() || undefined,
     durationDays: values.durationDays,
     price: values.price,
+    status: values.status,
   }
 }
 
@@ -77,6 +98,7 @@ export function RentalPackageFormModal({
         description: '',
         durationDays: 30,
         price: 500_000,
+        status: DEFAULT_STATUS,
       })
     }
   }, [form, initialValues, open])
@@ -160,6 +182,15 @@ export function RentalPackageFormModal({
             maxLength={500}
             showCount
           />
+        </Form.Item>
+
+        <Form.Item
+          label="Trạng thái"
+          name="status"
+          rules={[{ required: true, message: 'Vui lòng chọn trạng thái.' }]}
+          tooltip="Gói 'Đang áp dụng' mới được khách chọn khi đặt gói thuê mới."
+        >
+          <Select options={STATUS_OPTIONS} />
         </Form.Item>
 
         <div style={{ display: 'flex', gap: 16 }}>

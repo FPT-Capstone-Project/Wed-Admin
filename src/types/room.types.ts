@@ -45,7 +45,6 @@ export interface TrayClosureRecord {
   reason: string
   actualHarvestWeightKg: number | null
   basePrice: number
-  overdueFee: number
   totalAmount: number
   closedAt: string
 }
@@ -55,7 +54,6 @@ export interface CloseTraySessionInput {
   outcome: TrayClosureOutcome
   reason: string
   actualHarvestWeightKg?: number
-  overdueFee?: number
   totalAmount?: number
 }
 
@@ -79,7 +77,6 @@ export interface TrayRental {
   expectedHarvestDate: string | Date
   packageEndDate: string | Date
   basePrice: number
-  dailyOverdueFee: number
   harvestStatus: HarvestStatus
   customerContactStatus: CustomerContactStatus
   careLogs: TrayCareLog[]

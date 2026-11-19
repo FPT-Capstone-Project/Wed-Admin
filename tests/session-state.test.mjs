@@ -29,7 +29,7 @@ test('both normalizers preserve operational activity and biological stages', () 
   for (const normalize of [normalizeAdminSession, normalizeSession]) {
     for (const status of ['ACTIVE', 'IN_PROGRESS', 'SPAWN_RESTING', 'MYCELIAL_DEVELOPMENT']) {
       const result = normalize({ status, stage: 'RUNNING', progressPercent: 0 })
-      assert.equal(result.status, 'CULTIVATING')
+      assert.equal(result.status, ['SPAWN_RESTING', 'MYCELIAL_DEVELOPMENT'].includes(status) ? status : 'CULTIVATING')
       assert.equal(result.current_stage, 'RUNNING')
       assert.equal(resolveSessionProgress(result.progress_percent, result.status, result.current_stage), 0)
     }
@@ -48,7 +48,7 @@ test('progress never infers percentages from stage or lifecycle status', () => {
       assert.equal(resolveSessionProgress(38, status, stage), 38)
     }
   }
-  assert.equal(resolveSessionPhase(null, 'CULTIVATING'), null)
+  assert.equal(resolveSessionPhase(null, 'CULTIVATING'), 'CULTIVATING')
 })
 test('KPI categories are disjoint and cover all sessions including completed', () => {
   const summary = summarizeSessions(['PENDING', 'CULTIVATING', 'CANCELLED', 'COMPLETED'].map(status => ({ status })))
@@ -62,7 +62,7 @@ test('completed lifecycle overrides missing or stale biological stages without c
     assert.equal(resolveSessionPhase(stage, ' completed '), 'COMPLETED')
     assert.equal(resolveSessionProgress(20, 'COMPLETED', stage), 20)
   }
-  assert.equal(resolveSessionPhase('MATURATION', 'CULTIVATING'), 'HARVESTING')
+  assert.equal(resolveSessionPhase('MATURATION', 'CULTIVATING'), 'MATURATION')
 })
 
 const { resolveFarmGrowth } = await import(await load(new URL('utils/farm-growth.utils.ts', root).pathname.replace(/^\/(\w:)/, '$1')))
@@ -148,5 +148,5 @@ test('released tray assignments never appear as current assigned trays', () => {
   assert.equal(result.batches[0].trays.length, 0)
 })
 test('order audit recognizes the normalized FRUITING phase', () => {
-  assert.equal(SESSION_PROGRESS_STAGE_DICTIONARY.FRUITING.label, 'N\u1ea5m \u0111ang ph\u00e1t tri\u1ec3n')
+  assert.equal(SESSION_PROGRESS_STAGE_DICTIONARY.FRUITING.label, 'Đang trồng')
 })

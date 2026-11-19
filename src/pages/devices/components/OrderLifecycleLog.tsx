@@ -1,17 +1,16 @@
 import {
-  CheckCircleOutlined,
-  CloudOutlined,
-  HistoryOutlined,
-  NodeIndexOutlined,
-  PlayCircleOutlined,
-  ThunderboltOutlined,
-  WarningOutlined,
+CheckCircleOutlined,
+CloudOutlined,
+NodeIndexOutlined,
+PlayCircleOutlined,
+ThunderboltOutlined,
+WarningOutlined
 } from '@ant-design/icons'
-import { Tag, Timeline } from 'antd'
+import { Tag,Timeline } from 'antd'
 import type {
-  OrderStatusLog,
-  OrderStatusLogType,
-  RentalSession,
+OrderStatusLog,
+OrderStatusLogType,
+RentalSession,
 } from '../../../types/iot-history'
 
 interface OrderLifecycleLogProps {
@@ -98,9 +97,6 @@ export function OrderLifecycleLog({ session }: OrderLifecycleLogProps) {
     >
       <div className="order-lifecycle-header">
         <div>
-          <span className="order-lifecycle-header-icon" aria-hidden="true">
-            <HistoryOutlined />
-          </span>
           <span>
             <h3 id="order-lifecycle-heading">Nhật ký lifecycle Order / Mẻ</h3>
             <p>

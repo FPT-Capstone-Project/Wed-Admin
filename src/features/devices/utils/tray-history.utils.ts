@@ -34,10 +34,14 @@ import {
 } from '../../../shared/i18n/status/session'
 
 /** Bảng màu giai đoạn sinh trưởng (dùng cho band trên biểu đồ). */
-export const STAGE_COLORS: Record<GrowthStageName, string> = {
+export const STAGE_COLORS: Partial<Record<GrowthStageName, string>> = {
   'Ủ tơ': 'rgba(22, 119, 255, 0.12)',
-  'Kéo tơ': 'rgba(0, 201, 160, 0.14)',
-  'Nấm đang phát triển': 'rgba(250, 140, 22, 0.14)',
+  'Phát triển tơ': 'rgba(0, 201, 160, 0.14)',
+  'Đang trồng': 'rgba(250, 140, 22, 0.14)',
+  'Kích thích ra quả thể': 'rgba(22, 119, 255, 0.12)',
+  'Hình thành mầm nấm': 'rgba(0, 201, 160, 0.14)',
+  'Quả thể non': 'rgba(250, 140, 22, 0.14)',
+  'Trưởng thành': 'rgba(19, 194, 194, 0.16)',
   'Sẵn sàng thu hoạch': 'rgba(19, 194, 194, 0.16)',
 }
 
@@ -110,7 +114,7 @@ export function buildStagesTimeline(
       stageName,
       startTime: timestamp,
       endTime: timestamp,
-      backgroundColor: STAGE_COLORS[stageName],
+      backgroundColor: STAGE_COLORS[stageName] ?? 'rgba(22, 119, 255, 0.12)',
     })
   })
 

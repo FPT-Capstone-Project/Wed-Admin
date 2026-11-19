@@ -19,6 +19,11 @@ import {
   type ClimateThresholds,
 } from '../utils/tray-climate.utils'
 import type { TraySessionSummary } from '../hooks/useTraySessionSummaries'
+import { useMushroomTypes } from '../../packages/hooks/useMushroomTypes'
+import { useAllAdminCultivationSessions } from '../../sessions/hooks/useAdminCultivationSessions'
+import { useHasPermission } from '../../auth/hooks/usePermission'
+import { SESSION_MANAGE } from '../../auth/permissions'
+import { TrayStatusLegend } from './TrayStatusLegend'
 
 interface RackViewProps {
   tiers: Tier[]
@@ -61,11 +66,12 @@ interface TrayVisualConfig {
 }
 
 const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
+  // Cleaning uses blue, distinct from amber trays awaiting harvest.
   maintenance: {
-    borderColor: tokens.tone.danger.border,
-    bgColor: tokens.tone.danger.bg,
-    textColor: tokens.tone.danger.text,
-    progressColor: tokens.tone.danger.solid,
+    borderColor: '#0284c7',
+    bgColor: '#f0f9ff',
+    textColor: '#0c4a6e',
+    progressColor: '#0284c7',
     borderStyle: 'solid',
   },
   harvesting: {
@@ -87,27 +93,51 @@ const TRAY_VISUAL: Record<TrayStatus, TrayVisualConfig> = {
     bgColor: tokens.tone.muted.bg,
     textColor: tokens.tone.muted.text,
     progressColor: tokens.tone.muted.solid,
-    borderStyle: 'dashed',
+    borderStyle: 'solid',
   },
 }
 
-/** Use the same recorded percentage as the tray drawer; rental dates are unrelated. */
-function growthProgress(summary: TraySessionSummary | null): { percent: number } | null {
-  if (summary?.progressPercent == null) return null
-  return { percent: summary.progressPercent }
+/** Calendar time to harvest, independent of the recorded Farm OP growth percentage. */
+function harvestTiming(start: string | Date | null | undefined, end: string | Date | null | undefined) {
+  const finish = end ? new Date(end).getTime() : NaN
+  if (!Number.isFinite(finish) || new Date(finish).getUTCFullYear() <= 1970) return null
+  const begin = start ? new Date(start).getTime() : NaN
+  const vietnamDay = (time: number) => Math.floor((time + 7 * 3600000) / 86400000)
+  const today = vietnamDay(Date.now())
+  const days = vietnamDay(finish) - today
+  const totalDays = Number.isFinite(begin) && new Date(begin).getUTCFullYear() > 1970
+    ? vietnamDay(finish) - vietnamDay(begin) : null
+  const elapsedDays = totalDays != null && totalDays > 0 ? Math.max(0, today - vietnamDay(begin)) : null
+  const percent = elapsedDays != null && totalDays != null
+    ? Math.min(100, elapsedDays / totalDays * 100) : null
+  return { days, percent, totalDays, elapsedDays }
+}
+
+function MushroomThumbnail({ src, name, empty = false }: { src?: string | null; name: string; empty?: boolean }) {
+  const [failed, setFailed] = useState<string | null>(null)
+  const url = src?.trim()
+  return !empty && url && failed !== url
+    ? <img className="mcms-tray-thumbnail" src={url} alt={name} loading="lazy" onError={() => setFailed(url)} />
+    : <span className="mcms-tray-thumbnail mcms-tray-thumbnail-placeholder" role="img" aria-label={name}>{empty
+      ? <svg aria-hidden="true" width={22} height={22} viewBox="0 0 24 24"><path d="M3 13a9 9 0 0 1 18 0H3Zm6 0v7h6v-7" fill="none" stroke="currentColor" strokeWidth={1.5} /></svg>
+      : Array.from(name.trim())[0] || '?'}</span>
 }
 
 /** Định dạng ngày thu hoạch dự kiến — "25/10". */
 const SHORT_DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
   day: '2-digit',
   month: '2-digit',
+  timeZone: 'Asia/Ho_Chi_Minh',
+})
+const FULL_DATE_FMT = new Intl.DateTimeFormat('vi-VN', {
+  day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'Asia/Ho_Chi_Minh',
 })
 
-function formatShortDate(value: string | Date | null | undefined): string | null {
+function formatShortDate(value: string | Date | null | undefined, full = false): string | null {
   if (!value) return null
   const date = value instanceof Date ? value : new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return SHORT_DATE_FMT.format(date)
+  if (Number.isNaN(date.getTime()) || date.getUTCFullYear() <= 1970) return null
+  return (full ? FULL_DATE_FMT : SHORT_DATE_FMT).format(date)
 }
 
 // ── Climate chip (nhiệt độ / độ ẩm) ───────────────────────────────────────
@@ -122,8 +152,14 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
   const direction = getClimateDirection(reading)
   const tone = getClimateTone(unit === '°C' ? 'temperature' : 'humidity', direction)
   const palette = tokens.tone[tone]
+  const thresholdExplanation = direction === 'low' && reading.min != null
+    ? `Dưới ngưỡng tối thiểu ${formatMeasurement(reading.min)} ${unit}`
+    : direction === 'high' && reading.max != null
+      ? `Trên ngưỡng tối đa ${formatMeasurement(reading.max)} ${unit}`
+      : tone === 'danger' ? 'Ngoài khoảng khuyến nghị' : null
 
   const tooltip = [
+    thresholdExplanation,
     reading.statusLabel,
     reading.targetLabel ? `Mục tiêu ${reading.targetLabel}` : null,
   ]
@@ -132,7 +168,7 @@ function ClimateChip({ icon, reading, unit, ariaLabel }: ClimateChipProps) {
     .join(' · ')
 
   const valueText =
-    tone !== 'muted' ? `${formatMeasurement(reading.value)}${unit}` : '—'
+    tone !== 'muted' ? `${formatMeasurement(reading.value)} ${unit}` : '—'
 
   return (
     <Tooltip title={`${ariaLabel}: ${valueText}, ${tooltip}`} trigger={['hover', 'focus']}>
@@ -191,7 +227,8 @@ function shelfDisplayLabel(
 
 // ── Tray Card ────────────────────────────────────────────────────────────────
 interface TrayCardProps {
-  unplaced?: boolean
+  imageUrl?: string | null
+  floorLabel?: string
   tray: Tray
   isSelected: boolean
   onClick: () => void
@@ -199,7 +236,7 @@ interface TrayCardProps {
   summary: TraySessionSummary | null
 }
 
-function TrayCard({ tray, isSelected, onClick, summary, unplaced = false }: TrayCardProps) {
+function TrayCard({ tray, isSelected, onClick, summary, floorLabel, imageUrl }: TrayCardProps) {
   /**
    * Khay "đã tới hạn thu hoạch" nhận nhãn + màu "Chờ thu hoạch" dù BE vẫn
    * trả status `OCCUPIED` — người dùng phải thấy được việc cần xử lý.
@@ -208,38 +245,51 @@ function TrayCard({ tray, isSelected, onClick, summary, unplaced = false }: Tray
     tray.status === 'rented' && summary?.harvestDue ? 'harvesting' : tray.status
 
   const vis = TRAY_VISUAL[effectiveStatus]
-  const progress = growthProgress(summary)
+  const timing = harvestTiming(summary?.startDate ?? tray.rental?.startDate, summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
   const trayCode = formatTrayCode(tray.code)
   const customerName = summary?.customerName ?? tray.rental?.tenantName ?? 'Chưa có khách'
   const harvestDate = formatShortDate(summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
+  const startDate = formatShortDate(summary?.startDate ?? tray.rental?.startDate)
   const mushroomName = summary?.mushroomName ?? tray.rental?.mushroomType ?? 'Chưa rõ loại nấm'
   const detail = [
-    tray.code, ...(unplaced ? [trayFloorLabel(tray)] : []), TRAY_STATUS_CONFIG[effectiveStatus].label, mushroomName, customerName,
-    harvestDate ? `Dự kiến thu hoạch ${harvestDate}` : null,
+    floorLabel ?? trayFloorLabel(tray), tray.code, TRAY_STATUS_CONFIG[effectiveStatus].label,
+    ...(tray.status === 'empty' ? [] : [mushroomName, customerName]),
+    summary ? `Phiên #${summary.sessionId}` : null,
+    startDate ? `Bắt đầu ${formatShortDate(summary?.startDate ?? tray.rental?.startDate, true)}` : null,
+    harvestDate ? `Dự kiến thu hoạch ${formatShortDate(summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate, true)}` : null,
+    timing?.percent != null ? `Đã nuôi ${timing.elapsedDays}/${timing.totalDays} ngày` : null,
     summary ? `Tiến độ Farm OP: ${formatSessionProgress(summary.progressPercent)}` : null,
   ].filter(Boolean).join(' · ')
 
   return <Tooltip title={detail} trigger={['hover', 'focus']}>
     <button type="button" onClick={onClick} aria-label={`Mở chi tiết ${trayCode}: ${detail}`}
-      aria-current={isSelected ? 'true' : undefined} className="tray-card-btn"
+      aria-current={isSelected ? 'true' : undefined} className={`tray-card-btn ${tray.status === 'empty' ? 'mcms-tray-empty' : 'mcms-tray-active'}`}
       style={{
-        appearance: 'none', font: 'inherit', width: '100%', height: unplaced ? 'auto' : '100%', minWidth: 0,
-        minHeight: tokens.components.tray.minHeight, padding: tokens.space['3'],
-        display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: tokens.space['2'],
-        textAlign: 'left', borderRadius: tokens.radius.md, cursor: 'pointer',
-        border: `${isSelected ? tokens.components.tray.selectedBorderWidth : tokens.components.tray.borderWidth}px ${vis.borderStyle} ${isSelected ? tokens.color.text : vis.borderColor}`,
-        color: vis.textColor, background: vis.bgColor, boxShadow: tokens.shadow.xs,
+        appearance: 'none', font: 'inherit', width: '100%', minWidth: 0,
+        textAlign: 'left', borderRadius: 10, cursor: 'pointer',
+        border: `1px ${vis.borderStyle} ${isSelected ? tokens.color.text : vis.borderColor}`,
+        borderLeft: tray.status === 'empty'
+          ? `1px solid ${isSelected ? tokens.color.text : vis.borderColor}`
+          : `3px solid ${vis.progressColor}`,
+        color: vis.textColor, background: tray.status === 'empty' ? tokens.color.surfaceMuted : vis.bgColor,
       }}>
-      <span style={{ display: 'flex', gap: tokens.space['2'], alignItems: 'center', minWidth: 0 }}>
-        <TrayCodeText code={tray.code} wrap={unplaced} focusable={false} />
-        {tray.status !== 'empty' && <svg aria-hidden="true" width={tokens.components.tray.iconSize} height={tokens.components.tray.iconSize} viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
-          <path d="M3 13a9 9 0 0 1 18 0H3Zm6 0v7h6v-7" fill="none" stroke="currentColor" strokeWidth={tokens.components.tray.borderWidth} />
-        </svg>}
+      <span className="mcms-tray-code-row">
+        <TrayCodeText code={tray.code} wrap={false} focusable={false} />
       </span>
-      <span aria-hidden="true" style={{ display: 'block', height: tokens.components.tray.progressHeight,
-        width: '100%', borderRadius: tokens.radius.sm, background: tokens.color.surface }}>
-        {progress && <span style={{ display: 'block', height: '100%', width: `${progress.percent}%`,
-          borderRadius: tokens.radius.sm, background: vis.progressColor }} />}
+      <span className="mcms-tray-content">
+      <span className="mcms-tray-crop"><MushroomThumbnail src={imageUrl} name={tray.status === 'empty' ? 'Khay trống' : mushroomName} empty={tray.status === 'empty'} /><strong className="mcms-tray-variety">{tray.status === 'empty' ? 'Trống' : mushroomName}</strong></span>
+      <span className="mcms-tray-status" data-status={effectiveStatus} aria-hidden={tray.status === 'empty'} style={{ color: vis.textColor, background: `color-mix(in srgb, ${vis.progressColor} 10%, ${tokens.color.surface})`, visibility: tray.status === 'empty' ? 'hidden' : 'visible' }}>{TRAY_STATUS_CONFIG[effectiveStatus].shortLabel}</span>
+      <span className="mcms-tray-harvest-row" aria-hidden={tray.status === 'empty'} style={{ visibility: tray.status === 'empty' ? 'hidden' : 'visible' }}>
+        <span className="mcms-tray-date" style={{ visibility: harvestDate || startDate ? undefined : 'hidden' }}>{harvestDate
+          ? timing && timing.days <= 0
+            ? `Đến hạn ${harvestDate}`
+            : `Hạn ${harvestDate}${timing ? ` · còn ${timing.days.toLocaleString('vi-VN')} ngày` : ''}`
+          : startDate ? `Từ ${startDate}` : '\u00a0'}</span>
+      {timing?.percent != null ? <Tooltip title={`Đã nuôi ${timing.elapsedDays?.toLocaleString('vi-VN')}/${timing.totalDays?.toLocaleString('vi-VN')} ngày`} trigger={['hover', 'focus']}>
+      <span className="mcms-tray-progress-track" role="progressbar" aria-label={`Đã nuôi ${timing.elapsedDays}/${timing.totalDays} ngày`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(timing.percent)}>
+        <span className="mcms-tray-progress-fill" style={{ transform: `scaleX(${timing.percent / 100})`, background: vis.progressColor }} />
+      </span></Tooltip> : <span className="mcms-tray-progress-placeholder" aria-hidden="true" />}
+      </span>
       </span>
     </button>
   </Tooltip>
@@ -284,7 +334,7 @@ function EmptyTrayGroup({
           fontSize: 'var(--mcms-font-small)',
           fontFamily: 'var(--mcms-font-mono)',
           cursor: 'pointer',
-          transition: `background-color ${tokens.motion.fast}`,
+          transition: `transform ${tokens.motion.fast}, opacity ${tokens.motion.fast}`,
           WebkitTapHighlightColor: 'transparent',
         }}
       >
@@ -332,7 +382,6 @@ function EmptyTrayGroup({
           isSelected={selectedTrayId === tray.id}
           onClick={() => onSelectTray(tray)}
           summary={null}
-          unplaced
         />
       ))}
     </Flex>
@@ -349,6 +398,13 @@ export function RackView({
   sessionSummaries,
   liveReadings,
 }: RackViewProps) {
+  const canViewSessions = useHasPermission(SESSION_MANAGE)
+  const sessions = useAllAdminCultivationSessions(undefined, { enabled: canViewSessions, staleTime: 60_000 })
+  const mushrooms = useMushroomTypes()
+  const imageBySession = useMemo(() => {
+    const images = new Map(mushrooms.data?.map(type => [type.mushroom_type_id, type.image_url]))
+    return new Map(sessions.data?.map(session => [session.session_id, session.mushroom_type_id == null ? null : images.get(session.mushroom_type_id)]))
+  }, [sessions.data, mushrooms.data])
   const floorCount = new Set([
     ...floorLayouts.map(floor => floor.floor_id),
     ...tiers.flatMap(tier => tier.trays.map(tray => tray.floorId)),
@@ -381,6 +437,7 @@ export function RackView({
       <Typography.Title level={2} style={{ margin: 0, fontSize: 16 }}>
         Kệ nuôi · {floorCount} tầng
       </Typography.Title>
+      <TrayStatusLegend />
       {orderedTiers.map((tier) => {
         const thresholds = thresholdsByTier?.get(tier.tierId) ?? null
 
@@ -483,18 +540,19 @@ export function RackView({
 
             {/* ── Giàn kệ công nghiệp: các tầng xếp chồng ── */}
             {orderedGrids.length > 0 && (
-              <div className="mcms-rack-shell">
+              <div className={`mcms-rack-shell${orderedGrids.length === 1 ? ' mcms-rack-shell-single' : ''}`}>
                 {orderedGrids.map((grid, gridIndex) => {
                   const cells = new Map(grid.cells.map(cell => [`${cell.row}:${cell.column}`, cell.tray]))
                   const conflicts = new Set(grid.conflicts.map(cell => `${cell.row}:${cell.column}`))
                   const isTopShelf = gridIndex === 0
-                  const isBottomShelf = gridIndex === orderedGrids.length - 1
                   const shelfLabel = shelfDisplayLabel(grid, {
                     isTopShelf,
                     isSingleShelf: orderedGrids.length === 1,
                   })
+                  const occupied = grid.cells.filter(cell => cell.tray.status !== 'empty').length
+                  const total = grid.cells.length
                   return (
-                    <div key={grid.floorId}>
+                    <div key={grid.floorId} style={{ minWidth: 0 }}>
                       {/* ── Tầng trên (kệ) ── */}
                       <section className="mcms-rack-shelf" aria-label={shelfLabel}>
                         <div className="mcms-rack-shelf-header">
@@ -508,18 +566,20 @@ export function RackView({
                           >
                             {shelfLabel}
                           </Typography.Title>
-                          <Typography.Text type="secondary" style={{ fontSize: 'var(--mcms-font-small)' }}>
-                            {grid.rows} × {grid.columns} ô khay
-                          </Typography.Text>
+                          <Tooltip title={`${grid.rows} × ${grid.columns} vị trí · ${occupied}/${total} khay đang dùng`}>
+                            <span className="mcms-shelf-occupancy"><span>{occupied}/{total} đang dùng</span><span className="mcms-shelf-occupancy-track"><span style={{ width: '100%', transform: `scaleX(${total ? occupied / total : 0})`, transformOrigin: 'left' }} /></span></span>
+                          </Tooltip>
                         </div>
                         {grid.rows > 0 && grid.columns > 0 ? (
                           <div className="mcms-rack-tray-scroll">
                             <div
                               style={{
                                 display: 'grid',
-                                gridTemplateRows: `repeat(${grid.rows}, ${tokens.components.tray.minHeight}px)`,
-                                gridTemplateColumns: `repeat(${grid.columns}, ${tokens.components.tray.minWidth}px)`,
-                                gap: tokens.space['2'],
+                                gridAutoRows: 'var(--tray-h)',
+                                gridTemplateColumns: `repeat(${grid.columns}, minmax(0, 1fr))`,
+                                gap: 12,
+                                minWidth: grid.columns > 6 ? grid.columns * 120 + (grid.columns - 1) * 12 : 0,
+                                width: '100%', marginInline: 'auto',
                               }}
                             >
                               {Array.from({ length: grid.rows * grid.columns }, (_, index) => {
@@ -533,20 +593,22 @@ export function RackView({
                                   <div key={`${row}:${column}`} style={{ gridRow: row, gridColumn: column, minWidth: 0 }}>
                                     {tray ? (
                                       <TrayCard
+                                        floorLabel={shelfLabel}
                                         tray={tray}
                                         isSelected={selectedTrayId === tray.id}
                                         onClick={() => onSelectTray(tray)}
                                         summary={sessionSummaries?.get(Number(tray.id)) ?? null}
+                                        imageUrl={imageBySession.get(sessionSummaries?.get(Number(tray.id))?.sessionId ?? -1)}
                                       />
                                     ) : (
                                       <span
                                         role="img"
                                         aria-label={`${grid.label}, R${row}-C${column}: ${vacancyLabel}`}
-                                        title={`R${row}-C${column}: ${vacancyLabel}`}
+                                        title={`${shelfLabel} · R${row}-C${column}: ${vacancyLabel}`}
                                         style={{
-                                          display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%',
-                                          border: `${tokens.components.tray.borderWidth}px dashed ${tokens.tone.muted.border}`,
-                                          borderRadius: tokens.radius.md, background: tokens.tone.muted.bg, color: tokens.tone.muted.text,
+                                          display: 'flex', alignItems: 'center', justifyContent: 'center', height: 'var(--tray-h)',
+                                          border: `1px solid ${tokens.tone.muted.border}`,
+                                          borderRadius: 10, background: tokens.color.surfaceMuted, color: tokens.tone.muted.text,
                                           fontSize: tokens.typography.sizeSmall,
                                         }}
                                       >
@@ -563,20 +625,10 @@ export function RackView({
                         )}
                       </section>
 
-                      {/* ── Thanh đỡ sàn mâm kẽm giữa 2 tầng ── */}
-                      {!isBottomShelf && (
-                        <div className="mcms-rack-beam" role="presentation" aria-hidden="true" />
-                      )}
                     </div>
                   )
                 })}
 
-                {/* ── Chân đế giàn kệ ── */}
-                <div className="mcms-rack-feet" role="presentation" aria-hidden="true">
-                  <span className="mcms-rack-foot" />
-                  <span className="mcms-rack-foot" />
-                  <span className="mcms-rack-foot" />
-                </div>
               </div>
             )}
             {layout.unplacedGroups.length > 0 && <section style={{ padding: tokens.space['4'] }} aria-label="Khay chưa xác định vị trí">
@@ -584,8 +636,9 @@ export function RackView({
               {layout.unplacedGroups.map(group => <section key={group.floorId ?? 'unassigned'} aria-label={group.label}>
                 <Typography.Title level={5} style={{ overflowWrap: 'anywhere' }}>{group.label}</Typography.Title>
                 <div style={{ display: 'grid', gridTemplateColumns: `repeat(auto-fill, minmax(${tokens.components.tray.fallbackWidth}px, 1fr))`, gap: tokens.space['3'], marginBottom: tokens.space['4'] }}>
-                  {group.trays.filter(tray => tray.status !== 'empty').map(tray => <TrayCard key={tray.id} unplaced tray={tray}
-                    isSelected={selectedTrayId === tray.id} onClick={() => onSelectTray(tray)} summary={sessionSummaries?.get(Number(tray.id)) ?? null} />)}
+                  {group.trays.filter(tray => tray.status !== 'empty').map(tray => <TrayCard key={tray.id} tray={tray}
+                    isSelected={selectedTrayId === tray.id} onClick={() => onSelectTray(tray)} summary={sessionSummaries?.get(Number(tray.id)) ?? null}
+                    imageUrl={imageBySession.get(sessionSummaries?.get(Number(tray.id))?.sessionId ?? -1)} />)}
                   {group.trays.some(tray => tray.status === 'empty') && <div style={{ gridColumn: '1 / -1' }}>
                     <EmptyTrayGroup trays={group.trays.filter(tray => tray.status === 'empty')} selectedTrayId={selectedTrayId}
                       onSelectTray={onSelectTray} onToggle={() => toggleEmptyTier(tier.tierId)} expanded={isEmptyExpanded} />

@@ -9,6 +9,11 @@ import {
   notificationApi,
   sendSessionNotification,
 } from '../api/notification.api'
+import { useFloorList } from '../../devices/hooks/useIoT'
+import {
+  applyFloorLabelsToResult,
+  buildFloorLabelLookup,
+} from '../utils/floor-label.utils'
 import { useNotificationStore } from '../store/notification.store'
 import type {
     NotificationListQuery,
@@ -45,13 +50,38 @@ export const notificationKeys = {
  */
 export const ALL_NOTIFICATIONS_STALE_TIME = 30_000
 
+/**
+ * Chuẩn hoá tên tầng cho **mọi** thông báo.
+ *
+ * ⚠ Vì sao cần?
+ *   BE dựng nhãn thiết bị bằng **khoá kỹ thuật** `floor_id`:
+ *   `"Cảm biến X của tầng ID 3..."` — nhưng `floor_id = 3` có thể là
+ *   **tầng 2** (`floor_number = 2`). In thẳng ra UI là sai.
+ *
+ *   ⇒ Dùng `select` để thay `tầng ID <id>` bằng tên tầng thật lấy từ
+ *     `GET /api/iot/floors` (`useFloorList`).
+ *
+ * ⚠ Vì sao dùng `select` mà **không** ghi vào cache?
+ *   `select` chỉ biến đổi **view data** ⇒ cache gốc vẫn giữ nguyên nội dung
+ *   BE ⇒ khi danh sách floors tải xong sau, chỉ cần re-render là tên tầng
+ *   tự đúng (không phải refetch lại thông báo).
+ *
+ * ⚠ Map rỗng (floors chưa tải / lỗi) ⇒ nội dung giữ nguyên, **không** lỗi.
+ */
+function useFloorLabelLookup() {
+  const floorsQuery = useFloorList({ staleTime: 60_000 })
+  return buildFloorLabelLookup(floorsQuery.data)
+}
+
 export function useAllNotifications(
     options?: Partial<UseQueryOptions<NotificationListResult, Error>>,
 ) {
+    const floorLookup = useFloorLabelLookup()
     return useQuery<NotificationListResult, Error>({
         queryKey: notificationKeys.every(),
         queryFn: () => notificationApi.listAll(),
         staleTime: ALL_NOTIFICATIONS_STALE_TIME,
+        select: (result) => applyFloorLabelsToResult(result, floorLookup),
         ...options,
     })
 }
@@ -60,11 +90,13 @@ export function useNotifications(
   query: NotificationListQuery = {},
   options?: Partial<UseQueryOptions<NotificationListResult, Error>>,
 ) {
+  const floorLookup = useFloorLabelLookup()
   return useQuery<NotificationListResult, Error>({
     queryKey: notificationKeys.list(query),
     queryFn: () => notificationApi.list(query),
     placeholderData: (prev) => prev,
     staleTime: 30_000,
+    select: (result) => applyFloorLabelsToResult(result, floorLookup),
     ...options,
   })
 }

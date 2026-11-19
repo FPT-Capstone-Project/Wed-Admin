@@ -1,43 +1,38 @@
-import { formatDate } from '../../../shared/utils/date'
-import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
-import '../rooms-industrial.css'
-import { EmptyState, MetadataBadge } from '../../../shared/ui'
 import {
-  ApiOutlined,
-  CalendarOutlined,
-  ExperimentOutlined,
-  InfoCircleOutlined,
-  LoadingOutlined,
-  UserOutlined,
+LoadingOutlined
 } from '@ant-design/icons'
 import {
-  Alert,
-  Descriptions,
-  Drawer,
-  Empty,
-  Flex,
-  Spin,
-  Typography,
+Alert,
+Descriptions,
+Drawer,
+Empty,
+Flex,
+Spin,
+Typography,
 } from 'antd'
 import { useMemo } from 'react'
 import { tokens } from '../../../app/theme/tokens'
+import { PAYMENT_STATUS_DICTIONARY } from '../../../shared/i18n/status/order'
+import { presentStatus } from '../../../shared/i18n/status/registry'
+import { EmptyState,MetadataBadge } from '../../../shared/ui'
+import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import { StatusBadge } from '../../../shared/ui/StatusBadge'
-import { useAllUiTrays } from '../hooks/useCultivation'
-import { useSessions } from '../../sessions/hooks/useSessions'
-import {
-  calculateRentalLifecycle,
-  sessionToTrayRental,
-} from '../utils/tray-rental.utils'
-import { RentalLifecycleSection } from './RentalLifecycleSection'
-import { SessionStatusTag } from '../../sessions/components/SessionStatusTag'
+import { formatDate } from '../../../shared/utils/date'
 import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
 import { useSpawnInspections } from '../../farm/hooks/useFarm'
 import { DailyInspectionList } from '../../sessions/components/DailyInspectionList'
+import { SessionStatusTag } from '../../sessions/components/SessionStatusTag'
 import { useTrayDailyInspections } from '../../sessions/hooks/useSessionInspections'
+import { useSessions } from '../../sessions/hooks/useSessions'
 import { ACTIVE_SESSION_STATUSES } from '../../sessions/types/session.types'
+import { useAllUiTrays } from '../hooks/useCultivation'
+import '../rooms-industrial.css'
+import {
+calculateRentalLifecycle,
+sessionToTrayRental,
+} from '../utils/tray-rental.utils'
+import { RentalLifecycleSection } from './RentalLifecycleSection'
 import { TrayStatusTag } from './TrayStatusTag'
-import { PAYMENT_STATUS_DICTIONARY } from '../../../shared/i18n/status/order'
-import { presentStatus } from '../../../shared/i18n/status/registry'
 
 interface TrayDetailDrawerProps {
   trayId: string | null
@@ -48,12 +43,11 @@ interface TrayDetailDrawerProps {
 
 // ── Info Card helper ─────────────────────────────────────────────────────────
 interface InfoCardProps {
-  icon: React.ReactNode
   title: string
   subtitle?: string
   children: React.ReactNode
 }
-function InfoCard({ icon, title, subtitle, children }: InfoCardProps) {
+function InfoCard({ title, subtitle, children }: InfoCardProps) {
   return (
     <div
       style={{
@@ -74,23 +68,7 @@ function InfoCard({ icon, title, subtitle, children }: InfoCardProps) {
           backgroundColor: tokens.color.surfaceMuted,
         }}
       >
-        <span
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-            borderRadius: tokens.radius.md,
-            backgroundColor: tokens.color.primarySoft,
-            color: tokens.color.primary,
-            fontSize: 14,
-            flexShrink: 0,
-          }}
-          aria-hidden="true"
-        >
-          {icon}
-        </span>
+
         <div>
           <Typography.Title level={5} style={{ margin: 0, fontSize: 13, color: tokens.color.text }}>
             {title}
@@ -245,7 +223,7 @@ export function TrayDetailDrawer({
           }}
         >
           <InfoCard
-            icon={<ApiOutlined />}
+
             title="Thông tin khay"
             subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}
           >
@@ -283,7 +261,7 @@ export function TrayDetailDrawer({
         >
           {/* Khay + trạng thái */}
           <InfoCard
-            icon={<ApiOutlined />}
+
             title="Thông tin khay"
             subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}
           >
@@ -303,22 +281,25 @@ export function TrayDetailDrawer({
 
           {/* Vòng đời canh tác */}
           <InfoCard
-            icon={<CalendarOutlined />}
+
             title="Thông tin mẻ & khách hàng"
-            subtitle={`Phiên canh tác #${session.session_id}`}
+            subtitle={`Chu kỳ mẻ trồng Phiên #${session.session_id}`}
           >
             <RentalLifecycleSection
+              hideHeading
               batchId={`Phiên #${session.session_id}`}
               rental={trayRental}
               lifecycle={lifecycle}
               growthStage={session.current_stage ?? session.growth_status}
               growthProgress={session.progress_percent}
+              sessionStatus={session.status}
+              harvestReady={session.harvest_ready === true || session.harvest_status === 'HARVEST_READY'}
             />
           </InfoCard>
 
           {/* Chi tiết phiên từ BE */}
           <InfoCard
-            icon={<InfoCircleOutlined />}
+
             title={`Chi tiết phiên canh tác #${session.session_id}`}
             subtitle="Dữ liệu đồng bộ từ hệ thống quản lý"
           >
@@ -330,7 +311,7 @@ export function TrayDetailDrawer({
               <Descriptions.Item
                 label={
                   <>
-                    <UserOutlined /> Khách thuê
+                     Khách thuê
                   </>
                 }
                 span={2}
@@ -355,13 +336,13 @@ export function TrayDetailDrawer({
                 {session.package_name ?? '—'}
               </Descriptions.Item>
 
-              <Descriptions.Item label={<><ExperimentOutlined /> Phôi đã cấp</>}>
+              <Descriptions.Item label={<> Phôi đã cấp</>}>
                 {session.trays.some((t) => (t.spawn_quantity ?? 0) > 0)
                   ? `${session.trays.reduce((sum, t) => sum + (t.spawn_quantity ?? 0), 0)} đơn vị`
                   : '—'}
               </Descriptions.Item>
 
-              <Descriptions.Item label={<><CalendarOutlined /> Bắt đầu</>}>
+              <Descriptions.Item label={<> Bắt đầu</>}>
                 {formatDate(session.start_date)}
               </Descriptions.Item>
 
@@ -390,7 +371,7 @@ export function TrayDetailDrawer({
 
           {/* Lịch sử kiểm tra phôi */}
           <InfoCard
-            icon={<ExperimentOutlined />}
+
             title="Lịch sử kiểm tra phôi"
             subtitle="Chỉ xem — ghi nhận do nhân viên thực hiện trên app"
           >
@@ -414,7 +395,7 @@ export function TrayDetailDrawer({
             */}
           {sessionTrayId !== null && (
             <InfoCard
-              icon={<ExperimentOutlined />}
+
               title="Lịch sử kiểm tra trên khay"
               subtitle={`Chỉ ảnh kiểm tra phát sinh từ khi phôi được gán lên khay này · ${
                 dailyInspections?.pagination.total ?? 0
@@ -451,7 +432,7 @@ export function TrayDetailDrawer({
         }}
       >
         <InfoCard
-          icon={<ApiOutlined />}
+
           title="Thông tin khay"
           subtitle={`Tầng ${apiTray.tierId} · ${apiTray.code}`}
         >

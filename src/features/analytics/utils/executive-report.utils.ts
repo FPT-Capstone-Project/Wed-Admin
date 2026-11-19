@@ -61,7 +61,7 @@ export interface VarietyPerformance {
   /** Số phiên canh tác của giống nấm. */
   traysRented: number
   /** Tỷ lệ thu hoạch đạt chuẩn (0–100) — suy ra từ tổng quan BE. */
-  successRate: number
+  successRate: number | null
   currentRevenue: number
   previousRevenue: number
   growthPercent: number
@@ -108,6 +108,22 @@ export function buildMonthlyComparison(
 }
 
 /**
+ * Gom doanh thu ước tính theo tuần ISO (theo start_date của phiên).
+ * Key tuần: `YYYY-WNN` (vd "2026-W44").
+ *
+ * ⚠ BE không trả dữ liệu theo tuần — hàm này là alias cho `buildMonthlyComparison`
+ *   để tránh NaN / undefined khi granularity === 'WEEKLY'.
+ */
+export function buildWeeklyRevenue(
+  monthlyRevenue: MonthlyRevenue[],
+): MonthlyRevenuePoint[] {
+  // monthlyRevenue không có weekly, nên hàm này fallback về monthly
+  // nhưng đổi label hiển thị thành "W{tuần}" — thực tế dữ liệu thô
+  // chỉ có granularity tháng từ BE nên trả về monthly với label "T{n}"
+  return buildMonthlyComparison(monthlyRevenue)
+}
+
+/**
  * Gom doanh thu theo tháng thật thành từng quý, giữ nhãn `Q1..Q4`.
  */
 export function buildQuarterlyRevenue(
@@ -139,11 +155,12 @@ export function buildQuarterlyRevenue(
  * Dựng bảng hiệu suất theo giống nấm từ cơ cấu giống nấm thật.
  *
  * ⚠ BE chưa trả "tỷ lệ thành công" theo từng giống ⇒ dùng tỷ lệ đạt chung
- *   toàn trang trại (từ `/api/analytics/dashboard`).
+ *   toàn trang trại (từ `/api/analytics/dashboard`). Khi BE bổ sung field
+ *   per-species, thay `overallSuccessRate` bằng `entry.successRate`.
  */
 export function buildVarietyPerformance(
   speciesBreakdown: SpeciesBreakdown[],
-  overallSuccessRate: number,
+
 ): VarietyPerformance[] {
   return speciesBreakdown.map((entry) => {
     const currentRevenue = Math.round(toSafeNumber(entry.estimatedRevenue))
@@ -152,7 +169,7 @@ export function buildVarietyPerformance(
       varietyId: entry.species,
       varietyName: entry.species,
       traysRented: toSafeNumber(entry.sessionCount),
-      successRate: toSafeNumber(overallSuccessRate),
+      successRate: null,
       currentRevenue,
       previousRevenue: 0,
       growthPercent: 0,
@@ -203,4 +220,24 @@ export function buildStageDistribution(analytics: ReportsAnalytics) {
       stage: statusLabel(SESSION_STATUS_DICTIONARY, stage),
       count,
     }))
+}
+
+/** Bucket session estimates using Vietnam calendar dates; Monday starts a week. */
+export function buildSessionRevenue(events: ReportsAnalytics['revenueEvents'], granularity: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'): MonthlyRevenuePoint[] {
+  const buckets = new Map<string, number>()
+  for (const event of events) {
+    const instant = new Date(event.date)
+    if (!Number.isFinite(instant.getTime()) || instant.getUTCFullYear() <= 1970) continue
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant)
+    const part = (name: string) => Number(parts.find(p => p.type === name)?.value)
+    const year = part('year'), month = part('month'), day = part('day')
+    let key: string
+    if (granularity === 'WEEKLY') {
+      const monday = new Date(Date.UTC(year, month - 1, day))
+      monday.setUTCDate(monday.getUTCDate() - (monday.getUTCDay() + 6) % 7)
+      key = monday.toISOString().slice(0, 10)
+    } else key = granularity === 'MONTHLY' ? `${year}-${String(month).padStart(2, '0')}` : `${year}-Q${Math.ceil(month / 3)}`
+    buckets.set(key, (buckets.get(key) ?? 0) + event.amount)
+  }
+  return [...buckets].sort(([a], [b]) => a.localeCompare(b)).map(([month, current]) => ({ month, current, previous: null }))
 }

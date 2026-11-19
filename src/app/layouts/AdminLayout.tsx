@@ -47,6 +47,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/reports': 'Báo cáo & phân tích',
   '/inventory': 'Kho phôi nấm',
   '/orders': 'Quản lý đơn đặt',
+  '/complaints': 'Quản lý Khiếu nại',
   '/sessions': 'Quản lý phiên canh tác',
   '/packages': 'Gói cước thuê',
   '/users': 'Quản lý tài khoản',

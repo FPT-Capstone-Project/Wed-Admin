@@ -1,4 +1,5 @@
 import { formatDate } from '../../../shared/utils/date'
+import { translateProgressNote } from '../../../shared/i18n/progress-notes'
 import { Flex, Image, Tooltip, Typography } from 'antd'
 import { useMemo } from 'react'
 import { MetadataBadge, StatusBadge } from '../../../shared/ui'
@@ -91,7 +92,7 @@ export function DailyInspectionCard({ inspection }: DailyInspectionCardProps) {
       </Flex>
 
       {inspection.notes && (
-        <Typography.Text style={{ fontSize: 12 }}>{inspection.notes}</Typography.Text>
+        <Typography.Text style={{ fontSize: 12 }}>{translateProgressNote(inspection.notes)}</Typography.Text>
       )}
 
       {inspection.inspected_by_name && (

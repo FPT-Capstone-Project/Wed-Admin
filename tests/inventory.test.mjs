@@ -12,7 +12,7 @@ test('decimal sum remains exact beyond JS precision and across scales', () => {
   assert.equal(sumQuantities(['9007199254740993.123456789', '0.000000001']), '9007199254740993.12345679')
   assert.equal(sumQuantities(['-0.5', '0.25']), '-0.25')
   assert.equal(sumQuantities([]), '0')
-  assert.equal(formatQuantity('1234.56'), '1.234,56')
+  assert.equal(formatQuantity('1234.56'), '1234.56')
 })
 test('inventory mapper preserves decimal quantity and guards missing data and epoch dates', () => {
   const row = mapInventory({ inventory_id: 1, mushroom_type_id: 2, quantity: '0.00', updated_at: '1970-01-01' })

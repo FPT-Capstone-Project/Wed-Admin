@@ -55,7 +55,7 @@ export function ExportReportModal({
       onCancel={onCancel}
       title={
         <Space>
-          <DownloadOutlined />
+
           Xuất báo cáo Executive
         </Space>
       }

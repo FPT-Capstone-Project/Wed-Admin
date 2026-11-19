@@ -241,7 +241,7 @@ export function OrderStatusLogTable({ session }: OrderStatusLogTableProps) {
           <span className="status-log-actor">
             <Tag
               color={presentation.tagColor}
-              icon={presentation.icon}
+
               className="status-log-actor-tag"
             >
               {presentation.label}

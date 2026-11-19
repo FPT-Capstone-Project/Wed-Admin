@@ -22,6 +22,7 @@
  *   - `/api/iot/*` (đọc)         → `authenticate`               → ADMIN + OPERATOR
  */
 import type { UserRole } from '../types/user.types'
+import { ROLE_OPTIONS } from '../shared/i18n/status/user'
 
 /** Chỉ Quản trị viên. */
 export const ADMIN_ONLY: readonly UserRole[] = ['ADMIN']
@@ -31,11 +32,16 @@ export const ADMIN_AND_OPERATOR: readonly UserRole[] = ['ADMIN', 'OPERATOR']
 
 /**
  * Nhãn hiển thị cho từng vai trò — dùng ở header & trang 403.
+ *
+ * ⚠ Lấy từ registry vai trò trung tâm (`shared/i18n/status/user.ts`) để
+ *   header / trang 403 / bảng tài khoản **luôn hiện cùng một chữ** — trước
+ *   đây mỗi nơi khai báo riêng ⇒ dễ lệch ("Vận hành trang trại" vs
+ *   "Nhân viên vận hành").
  */
 export const ROLE_LABELS: Record<UserRole, string> = {
-  ADMIN: 'Quản trị viên',
-  OPERATOR: 'Vận hành trang trại',
-  CUSTOMER: 'Khách hàng',
+  ADMIN: ROLE_OPTIONS.find((option) => option.role === 'ADMIN')?.label ?? 'Quản trị viên',
+  OPERATOR: ROLE_OPTIONS.find((option) => option.role === 'OPERATOR')?.label ?? 'Nhân viên vận hành',
+  CUSTOMER: ROLE_OPTIONS.find((option) => option.role === 'CUSTOMER')?.label ?? 'Khách thuê khay',
 }
 
 /**

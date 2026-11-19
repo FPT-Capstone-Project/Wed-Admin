@@ -1,46 +1,43 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+CheckCircleOutlined,
+EyeOutlined,
+SearchOutlined
+} from '@ant-design/icons'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  BellOutlined,
-  CheckCircleOutlined,
-  ExclamationCircleOutlined,
-  EyeOutlined,
-  FilterOutlined,
-  SearchOutlined,
-} from '@ant-design/icons'
-import {
-  Button,
-  Descriptions,
-  Drawer,
-  Flex,
-  Input,
-  Select,
-  Skeleton,
-  Typography,
+Button,
+Descriptions,
+Drawer,
+Flex,
+Input,
+Select,
+Skeleton,
+Typography,
 } from 'antd'
+import { useEffect,useMemo,useRef,useState } from 'react'
+import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 import {
-  ActionButton,
-  DataTable,
-  MetadataBadge,
-  StatCard,
-  StatGrid,
+ActionButton,
+DataTable,
+MetadataBadge,
+StatCard,
+StatGrid,
 } from '../../../shared/ui'
 import { formatDate } from '../../../shared/utils/date'
 import { AlertItemRow } from '../../alerts/components/AlertItemRow'
 import {
-  ALERT_CATEGORY_LABELS,
-  ALERT_SEVERITY_CONFIG,
+ALERT_CATEGORY_LABELS,
+ALERT_SEVERITY_CONFIG,
 } from '../../alerts/components/alert-status.config'
 import { useTechnicalAlerts } from '../../alerts/hooks/useOperationalAlerts'
 import type {
-  AlertReadFilter,
-  OperationalAlert,
-  OperationalAlertCategory,
-  OperationalAlertSeverity,
+AlertReadFilter,
+OperationalAlert,
+OperationalAlertCategory,
+OperationalAlertSeverity,
 } from '../../alerts/types/alert.types'
 import { useNotificationActions } from '../../notifications/hooks/useNotifications'
 import { markAlertsAsRead } from '../utils/mark-alerts-as-read'
-import { resolveApiErrorMessage } from '../../../shared/api/error-mapper'
 
 const SEVERITY_OPTIONS = (
   Object.keys(ALERT_SEVERITY_CONFIG) as OperationalAlertSeverity[]
@@ -253,7 +250,7 @@ export function AlertsPanel({
       <Flex gap={8} align="center" wrap style={{ marginBottom: 'var(--mcms-space-4)' }}>
         <MetadataBadge
           label={`${counts?.unread ?? 0} chưa đọc`}
-          icon={<BellOutlined />}
+
         />
         <Button
           loading={readMany.isPending}
@@ -437,13 +434,13 @@ export function AlertsPanel({
             <Flex gap={8} wrap align="center">
               <MetadataBadge
                 label={ALERT_SEVERITY_CONFIG[detail.severity].label}
-                icon={<ExclamationCircleOutlined />}
+
               />
               <MetadataBadge
                 label={
                   detail.isRead ? 'Đã đọc' : 'Chưa đọc'
                 }
-                icon={<FilterOutlined />}
+
               />
               <MetadataBadge label={ALERT_CATEGORY_LABELS[detail.category]} />
             </Flex>

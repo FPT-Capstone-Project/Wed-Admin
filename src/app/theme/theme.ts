@@ -10,6 +10,7 @@ import {
   tones,
   typography,
   gridBreakpoint,
+  motion,
 } from './tokens'
 import { SIDEBAR_COLLAPSED_WIDTH } from '../layouts/store/sidebar.store'
 
@@ -40,6 +41,9 @@ export type McmsThemeConfig = Omit<ThemeConfig, 'token'> & {
  */
 export const mcmsTheme: McmsThemeConfig = {
   token: {
+    motionEaseOutBack: motion.smoothEasing,
+    motionEaseInBack: motion.smoothEasing,
+    motionEaseInOutCirc: 'cubic-bezier(0.4, 0, 0.2, 1)',
     screenXS: gridBreakpoint.xs,
     screenXSMin: gridBreakpoint.xs,
     screenXSMax: gridBreakpoint.sm - 1,

@@ -29,6 +29,7 @@ export function toCultivationSession(
     mushroom_name: dto.mushroom_name,
     status: dto.status,
     harvest_status: dto.harvest_status,
+    harvest_ready: dto.harvest_ready,
     progress_percent: dto.progress_percent,
     current_stage: dto.current_stage,
     growth_status: dto.growth_status,

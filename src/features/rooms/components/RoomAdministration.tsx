@@ -1,7 +1,7 @@
 import { DataTable } from '../../../shared/ui/DataTable'
 import { useState } from 'react'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { App, Button, Collapse, Flex, Form, Input, InputNumber, Modal, Popconfirm } from 'antd'
+import { App, Button, Collapse, ConfigProvider, Flex, Form, Input, InputNumber, Modal, Popconfirm } from 'antd'
 import { cultivationRoomApi, type RoomRequest } from '../api/cultivation-room.api'
 import { cultivationKeys, useCultivationRooms } from '../hooks/useCultivation'
 import { iotKeys, useFloorList } from '../../devices/hooks/useIoT'
@@ -57,6 +57,7 @@ export function RoomAdministration() {
   const remove = useResourceAction(cultivationRoomApi.remove)
   return <>
     <Flex justify="end"><Button type="primary" onClick={() => setEditing(null)}>+ Thêm phòng</Button></Flex>
+    <ConfigProvider theme={{ token: { motion: false } }}>
     <Collapse items={[{ key: 'resources', label: 'Cấu hình phòng & lưới khay', children: <>
       <QueryFeedback query={rooms} />
       {!rooms.isError && <DataTable<CultivationRoom> size="small" rowKey="room_id" dataSource={rooms.data} loading={rooms.isLoading} pagination={false} scroll={{ x: 650 }} columns={[
@@ -66,6 +67,7 @@ export function RoomAdministration() {
       <QueryFeedback query={floors} />
       {!floors.isError && <Collapse style={{ marginTop: 12 }} items={floors.data?.map(floor => ({ key: floor.floor_id, label: `${floor.floor_name} · Phòng #${floor.room_id} · Tầng #${floor.floor_id}`, children: <FloorTrayActions floorId={floor.floor_id} /> }))} />}
     </> }]} />
+    </ConfigProvider>
     {editing !== undefined && <RoomForm room={editing} onClose={() => setEditing(undefined)} />}
   </>
 }

@@ -1,14 +1,10 @@
-import { PageHeader } from '../../shared/ui/PageHeader'
+import { Card,Space } from 'antd'
 import { useMemo } from 'react'
-import {
-  EyeOutlined,
-  SafetyCertificateOutlined,
-} from '@ant-design/icons'
-import { Card, Space } from 'antd'
-import { MetadataBadge } from '../../shared/ui'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useCustomerMushroomTypeIds } from '../../features/settings/hooks/useCustomerMushroomTypeIds'
 import { useThresholdProfiles } from '../../features/settings/hooks/useThresholdProfiles'
+import { MetadataBadge } from '../../shared/ui'
+import { PageHeader } from '../../shared/ui/PageHeader'
 import { ThresholdProfileTab } from './components/ThresholdProfileTab'
 
 function normalizeRole(role: string | undefined) {
@@ -55,14 +51,14 @@ export function SettingsPage() {
     <div>
       <PageHeader title="Hồ sơ Vi khí hậu & Ngưỡng AUTO" description="Theo dõi dải thông số nhiệt độ và độ ẩm chuẩn đang áp dụng cho từng giống nấm." actions={<Space wrap>
           <MetadataBadge
-            icon={<SafetyCertificateOutlined />}
+
             label={isAdmin
               ? 'ADMIN · Chỉ xem'
               : role === 'OPERATOR'
                 ? 'OPERATOR · Chỉ xem'
                 : 'CUSTOMER · Chỉ xem'}
           />
-          <MetadataBadge icon={<EyeOutlined />} label="Chỉ xem" />
+          <MetadataBadge  label="Chỉ xem" />
         </Space>} />
 
       <Card

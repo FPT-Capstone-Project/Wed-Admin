@@ -9,8 +9,9 @@ import { formatQuantity, isEmptyStock, stockLevel } from '../../../features/inve
 import { DataTable, StatusBadge } from '../../../shared/ui'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import { showApiError } from '../../../shared/api/error-mapper'
+import { InventoryMushroomCell } from './InventoryMushroomCell'
 
-export function InventoryStockTab({ mushroomTypeId, onEdit }: { mushroomTypeId?: number; onEdit: (item: Inventory) => void }) {
+export function InventoryStockTab({ mushroomTypeId, onEdit, mushroomImages }: { mushroomTypeId?: number; onEdit: (item: Inventory) => void; mushroomImages: ReadonlyMap<number, string | null> }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const query = useInventory({ page, limit: 20, mushroomTypeId, search: search || undefined })
@@ -27,7 +28,7 @@ export function InventoryStockTab({ mushroomTypeId, onEdit }: { mushroomTypeId?:
     }
   }
   const columns: ColumnsType<Inventory> = [
-    { title: 'Giống nấm', key: 'name', render: (_, row) => <><strong>{row.mushroom_name}</strong><div>Mã giống #{row.mushroom_type_id}</div></> },
+    { title: 'Giống nấm', key: 'name', render: (_, row) => <InventoryMushroomCell id={row.mushroom_type_id} name={row.mushroom_name} imageUrl={mushroomImages.get(row.mushroom_type_id)} /> },
     { title: 'Tồn kho phôi', dataIndex: 'quantity', align: 'right', render: value => <strong>{formatQuantity(value)}</strong> },
     { title: 'Mức tồn', key: 'level', render: (_, row) => <StatusBadge {...stockLevel(row.quantity)} /> },
     { title: 'Cập nhật lần cuối', dataIndex: 'updated_at', render: value => formatDate(value, 'ddd HH:mm DD/MM/YYYY') },

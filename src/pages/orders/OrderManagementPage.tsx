@@ -1,4 +1,5 @@
 import { formatVND } from '../../shared/utils/currency'
+import { translateProgressNote } from '../../shared/i18n/progress-notes'
 import { LoadErrorAlert } from '../../shared/ui/LoadErrorAlert'
 import { formatSessionProgress } from '../../features/sessions/utils/session-progress.utils'
 import { formatDate, isValidDateValue } from '../../shared/utils/date'
@@ -8,7 +9,6 @@ import '../../features/sessions/sessions-industrial.css'
 import { useMemo, useState } from 'react'
 import {
   CreditCardOutlined,
-  EnvironmentOutlined,
   EyeOutlined,
   SearchOutlined,
   ShoppingCartOutlined,
@@ -556,7 +556,6 @@ export function OrderManagementPage() {
               bordered
               title={
                 <Space>
-                  <CreditCardOutlined />
                   Thanh toán PayOS
                 </Space>
               }
@@ -659,7 +658,7 @@ export function OrderManagementPage() {
             {/* ── Timeline tiến độ ──────────────────────────────────── */}
             <div>
               <Typography.Title level={5} style={{ marginTop: 0 }}>
-                Timeline tiến độ
+                Tiến trình sinh trưởng
               </Typography.Title>
               {cultivationProgress?.entries?.length ? (
                 <Flex vertical gap={8}>
@@ -675,16 +674,12 @@ export function OrderManagementPage() {
                       <Flex vertical gap={0}>
                         <Typography.Text style={{ fontSize: 12 }}>
                           {formatSessionProgress(entry.progress_percent)}
-                          {entry.description ? ` · ${entry.description}` : ''}
+                          {translateProgressNote(entry.description ?? entry.notes) ? ` · ${translateProgressNote(entry.description ?? entry.notes)}` : ''}
                         </Typography.Text>
-                        <Typography.Text
+                        {isValidDateValue(entry.created_at) && <Typography.Text
                           type="secondary"
                           style={{ fontSize: 11 }}
-                        >
-                          {entry.created_at
-                            ? formatDate(entry.created_at)
-                            : '—'}
-                        </Typography.Text>
+                        >{formatDate(entry.created_at)}</Typography.Text>}
                       </Flex>
                     </Flex>
                   ))}
@@ -708,7 +703,6 @@ export function OrderManagementPage() {
             </div>
 
             <Flex align="center" gap={6} wrap>
-              <EnvironmentOutlined aria-hidden="true" />
               <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                 Đơn đặt được tạo và thanh toán trên ứng dụng khách hàng. Trang
                 quản trị chỉ theo dõi trạng thái, không thực hiện thao tác ghi.

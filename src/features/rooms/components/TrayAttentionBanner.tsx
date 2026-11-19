@@ -13,8 +13,8 @@ import '../rooms-industrial.css'
  */
 import { Button, Flex, Tooltip, Typography } from 'antd'
 import {
-  BugOutlined,
   CheckCircleOutlined,
+  ClearOutlined,
   ClockCircleOutlined,
 } from '@ant-design/icons'
 import { tokens } from '../../../app/theme/tokens'
@@ -25,7 +25,7 @@ export interface AttentionTray {
   id: string
   /** Mã khay đã chuẩn hoá (vd: "KH-007"). */
   code: string
-  /** `maintenance` = nhiễm bệnh, `harvesting` = chờ thu hoạch. */
+  /** `maintenance` = đang vệ sinh, `harvesting` = chờ thu hoạch. */
   kind: 'maintenance' | 'harvesting'
   /** Tên khách thuê (chỉ có với khay đang thuê) — giúp biết cần báo ai. */
   customerName?: string | null
@@ -83,8 +83,8 @@ export function TrayAttentionBanner({
     )
   }
 
-  const sickCount = trays.filter((t) => t.kind === 'maintenance').length
-  const harvestCount = trays.length - sickCount
+  const maintenanceCount = trays.filter((t) => t.kind === 'maintenance').length
+  const harvestCount = trays.length - maintenanceCount
 
   return (
     <div
@@ -100,7 +100,7 @@ export function TrayAttentionBanner({
     >
       <Flex align="center" justify="space-between" gap={12} wrap>
         <Flex align="center" gap={8} wrap>
-          <BugOutlined
+          <ClearOutlined
             aria-hidden="true"
             style={{ color: tokens.color.text, fontSize: 15 }}
           />
@@ -111,7 +111,7 @@ export function TrayAttentionBanner({
             {trays.length} khay cần xử lý
           </Typography.Text>
 
-          {sickCount > 0 && (
+          {maintenanceCount > 0 && (
             <span
               style={{
                 display: 'inline-flex',
@@ -121,8 +121,8 @@ export function TrayAttentionBanner({
                 color: tokens.color.text,
               }}
             >
-              <BugOutlined aria-hidden="true" />
-              {sickCount} nhiễm bệnh
+              <ClearOutlined aria-hidden="true" />
+              {maintenanceCount} đang vệ sinh
             </span>
           )}
 
@@ -148,7 +148,7 @@ export function TrayAttentionBanner({
             const dueDate = formatShortDate(tray.expectedHarvestDate)
             const context = [
               tray.kind === 'maintenance'
-                ? 'Khay nhiễm bệnh / đang cách ly'
+                ? 'Khay đang vệ sinh'
                 : 'Khay chờ thu hoạch',
               tray.customerName ? `Khách: ${tray.customerName}` : null,
               dueDate ? `Thu hoạch dự kiến: ${dueDate}` : null,

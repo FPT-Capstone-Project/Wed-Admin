@@ -7,24 +7,24 @@
  *
  * → KHÔNG dùng `useAlertStore` (mock) nữa.
  */
-import { ArrowRightOutlined, ClockCircleOutlined } from '@ant-design/icons'
-import { Card, Flex, Typography } from 'antd'
+import { ArrowRightOutlined } from '@ant-design/icons'
+import { Card,Flex,Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import dayjs from 'dayjs'
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useOperationalAlerts } from '../../alerts/hooks/useOperationalAlerts'
+import { ActionButton,DataTable,StatusBadge } from '../../../shared/ui'
 import {
-  ALERT_CATEGORY_LABELS,
-  ALERT_SEVERITY_CONFIG,
-} from '../../alerts/components/alert-status.config'
-import type { OperationalAlert } from '../../alerts/types/alert.types'
-import {
-  ALERT_CENTER_TAB_ALERTS,
-  buildAlertCenterHref,
-  tabForAlert,
+ALERT_CENTER_TAB_ALERTS,
+buildAlertCenterHref,
+tabForAlert,
 } from '../../alert-center/utils/alert-center-navigation'
-import { ActionButton, DataTable, StatusBadge } from '../../../shared/ui'
+import {
+ALERT_CATEGORY_LABELS,
+ALERT_SEVERITY_CONFIG,
+} from '../../alerts/components/alert-status.config'
+import { useOperationalAlerts } from '../../alerts/hooks/useOperationalAlerts'
+import type { OperationalAlert } from '../../alerts/types/alert.types'
 
 /** Số cảnh báo hiển thị tối đa trong widget trên Dashboard. */
 const MAX_VISIBLE_ALERTS = 5
@@ -89,7 +89,6 @@ export function RecentAlertsTable() {
       width: 150,
       render: (_, alert) => (
         <span style={{ color: 'var(--mcms-text-muted)', fontSize: 12 }}>
-          <ClockCircleOutlined aria-hidden="true" />{' '}
           {formatRelativeTime(alert.timestamp)}
         </span>
       ),

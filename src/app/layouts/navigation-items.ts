@@ -15,6 +15,7 @@
 
 /** Tên icon — ánh xạ sang component trong `navigation-menu.tsx`. */
 export type MenuIconName =
+  | 'complaints'
   | 'dashboard'
   | 'trays'
   | 'devices'
@@ -114,6 +115,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
         icon: 'harvestRequests',
         label: 'Yêu cầu nhận nấm',
       },
+      { key: '/complaints', icon: 'complaints', label: 'Khiếu nại' },
       {
         key: '/inventory',
         icon: 'inventory',

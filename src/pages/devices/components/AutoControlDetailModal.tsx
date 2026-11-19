@@ -249,7 +249,7 @@ export function AutoControlDetailModal({
               <StatusBadge
                 tone="ok"
                 label="Đã phun sương"
-                icon={<ThunderboltOutlined />}
+
               />
             )
           case 'skipped':
@@ -677,7 +677,7 @@ export function AutoControlDetailModal({
       className="mcms-iot-modal"
       title={
         <Flex align="center" gap={8}>
-          <ThunderboltOutlined aria-hidden="true" />
+
           <span>
             Chi tiết cấu hình tưới phun sương tự động
             {floor ? ` — Tầng ${floor.floor_number}` : ''}

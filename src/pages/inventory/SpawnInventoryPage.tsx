@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button, Col, DatePicker, Flex, Row, Select, Tabs } from 'antd'
 import { CircleAlert, Clock, Plus, TriangleAlert, Warehouse } from 'lucide-react'
 import dayjs from 'dayjs'
@@ -11,6 +11,7 @@ import { formatQuantity, INCOMPLETE_SUMMARY } from '../../features/inventory/uti
 import { InventoryFormModal } from './components/InventoryFormModal'
 import { InventoryStockTab } from './components/InventoryStockTab'
 import { InventoryExportsTab } from './components/InventoryExportsTab'
+import { InventoryMushroomThumbnail } from './components/InventoryMushroomCell'
 
 export function SpawnInventoryPage() {
   const [tab, setTab] = useState('stock')
@@ -20,6 +21,7 @@ export function SpawnInventoryPage() {
   const [modal, setModal] = useState(false)
   const [editing, setEditing] = useState<Inventory | null>(null)
   const types = useMushroomTypes()
+  const mushroomImages = useMemo(() => new Map(types.data?.map(type => [type.mushroom_type_id, type.image_url ?? null])), [types.data])
   // Ngày lịch Việt Nam được chuyển thành ISO UTC bao gồm hết ngày kết thúc.
   const filters = { mushroomTypeId, fromDate: from ? `${from}T00:00:00.000+07:00` : undefined, toDate: to ? `${to}T23:59:59.999+07:00` : undefined }
   const summary = useInventorySummary(filters)
@@ -35,10 +37,10 @@ export function SpawnInventoryPage() {
     </Row>
     {types.isError && <LoadErrorAlert error={types.error} resource="danh mục giống nấm" onRetry={types.refetch} />}
     <Flex gap={12} wrap style={{ marginBottom: 16 }}>
-      <Select aria-label="Giống nấm" placeholder="Giống nấm" allowClear showSearch optionFilterProp="label" value={mushroomTypeId} onChange={setMushroomTypeId} loading={types.isLoading} style={{ minWidth: 240 }} options={types.data?.map(type => ({ value: type.mushroom_type_id, label: type.name }))} />
+      <Select aria-label="Giống nấm" placeholder="Giống nấm" allowClear showSearch optionFilterProp="label" value={mushroomTypeId} onChange={setMushroomTypeId} loading={types.isLoading} style={{ minWidth: 240 }} options={types.data?.map(type => ({ value: type.mushroom_type_id, label: type.name }))} optionRender={option => <Flex align="center" gap={8}><InventoryMushroomThumbnail name={option.data.label} imageUrl={mushroomImages.get(option.data.value)} size={24} /><span>{option.data.label}</span></Flex>} />
       {tab === 'exports' && <><DatePicker aria-label="Từ ngày" placeholder="Từ ngày" format="DD/MM/YYYY" value={from ? dayjs(from) : null} disabledDate={date => !!to && date.format('YYYY-MM-DD') > to} onChange={date => setFrom(date?.format('YYYY-MM-DD'))} /><DatePicker aria-label="Đến ngày" placeholder="Đến ngày" format="DD/MM/YYYY" value={to ? dayjs(to) : null} disabledDate={date => !!from && date.format('YYYY-MM-DD') < from} onChange={date => setTo(date?.format('YYYY-MM-DD'))} /></>}
     </Flex>
-    <Tabs activeKey={tab} onChange={setTab} items={[{ key: 'stock', label: 'Tồn kho phôi', children: tab === 'stock' ? <InventoryStockTab key={mushroomTypeId ?? 'all'} mushroomTypeId={mushroomTypeId} onEdit={item => { setEditing(item); setModal(true) }} /> : null }, { key: 'exports', label: 'Lịch sử xuất kho', children: tab === 'exports' ? <InventoryExportsTab key={JSON.stringify(filters)} filters={filters} /> : null }]} />
+    <Tabs activeKey={tab} onChange={setTab} items={[{ key: 'stock', label: 'Tồn kho phôi', children: tab === 'stock' ? <InventoryStockTab key={mushroomTypeId ?? 'all'} mushroomTypeId={mushroomTypeId} mushroomImages={mushroomImages} onEdit={item => { setEditing(item); setModal(true) }} /> : null }, { key: 'exports', label: 'Lịch sử xuất kho', children: tab === 'exports' ? <InventoryExportsTab key={JSON.stringify(filters)} filters={filters} mushroomImages={mushroomImages} /> : null }]} />
     {modal && <InventoryFormModal open={modal} item={editing} onClose={() => setModal(false)} />}
   </div>
 }

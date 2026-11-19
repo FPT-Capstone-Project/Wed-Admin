@@ -51,9 +51,14 @@ export const ROOM_STATUS_DICTIONARY: Record<RoomStatusKey, StatusPresentation> =
 }
 
 /**
- * Trạng thái khay của BE.
+ * Trạng thái khay của BE (`cultivation_trays.status`).
  *
  * ⚠ `INACTIVE` dùng `muted` (không dùng) còn `MAINTENANCE` dùng `warning`.
+ *
+ * ⚠ `MAINTENANCE` = **đang vệ sinh** (WF-05 sanitation sau thu hoạch) —
+ *   KHÔNG phải "nhiễm bệnh / cách ly". BE chỉ đưa khay vào `MAINTENANCE`
+ *   sau khi bàn giao vụ thu hoạch và chờ khử trùng ⇒ tone `warning`
+ *   (cảnh báo nhẹ) chứ không phải `danger` (đỏ nghiêm trọng).
  */
 export const CULTIVATION_TRAY_STATUS_DICTIONARY: Record<
   CultivationTrayStatusKey,
@@ -61,7 +66,7 @@ export const CULTIVATION_TRAY_STATUS_DICTIONARY: Record<
 > = {
   AVAILABLE: { tone: 'muted', label: 'Còn trống' },
   OCCUPIED: { tone: 'ok', label: 'Đang thuê' },
-  MAINTENANCE: { tone: 'warning', label: 'Bảo trì' },
+  MAINTENANCE: { tone: 'warning', label: 'Đang vệ sinh' },
   INACTIVE: { tone: 'muted', label: 'Ngưng sử dụng' },
 }
 
@@ -70,7 +75,11 @@ export const CULTIVATION_TRAY_STATUS_DICTIONARY: Record<
  *
  * ⚠ `label` = nhãn đầy đủ (drawer chi tiết, bảng quản trị, legend).
  * `shortLabel` = nhãn rút gọn cho ô khay nhỏ — badge ở đó chỉ rộng ~158px
- * nên "Nhiễm bệnh / Cách ly" bị tràn/wrapping.
+ * nên "Đang vệ sinh" là nhãn vừa đủ.
+ *
+ * ⚠ `maintenance` = **đang vệ sinh** (khay chờ khử trùng sau thu hoạch) —
+ *   dùng tone `warning` (cảnh báo nhẹ), KHÔNG dùng `danger` (đỏ nghiêm
+ *   trọng) vì đây là bước vệ sinh định kỳ, không phải sự cố bệnh hại.
  */
 export const TRAY_UI_STATUS_DICTIONARY: Record<
   TrayUiStatusKey,
@@ -84,9 +93,9 @@ export const TRAY_UI_STATUS_DICTIONARY: Record<
     shortLabel: 'Chờ thu hoạch',
   },
   maintenance: {
-    tone: 'danger',
-    label: 'Nhiễm bệnh / Cách ly',
-    shortLabel: 'Nhiễm bệnh',
+    tone: 'warning',
+    label: 'Đang vệ sinh',
+    shortLabel: 'Đang vệ sinh',
   },
 }
 

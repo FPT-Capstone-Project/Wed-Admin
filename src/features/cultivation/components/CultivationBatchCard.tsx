@@ -1,22 +1,20 @@
-import { resolveSessionPhase } from '../../sessions/utils/session-state.utils'
-import dayjs from 'dayjs'
 import {
-  CalendarOutlined,
-  ExperimentOutlined,
-  PictureOutlined,
-  SearchOutlined,
+PictureOutlined,
+SearchOutlined
 } from '@ant-design/icons'
-import { Button, Card, Flex, Popover, Progress, Tooltip, Typography } from 'antd'
-import { MetadataBadge, StatusBadge } from '../../../shared/ui'
-import { formatSessionProgress, resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
-import {
-  type CultivationBatch,
-} from '../types/cultivation.types'
-import {
-  MUSHROOM_GROWTH_PHASE_DICTIONARY,
-} from '../../../shared/i18n/status/session'
-import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
+import { Button,Card,Flex,Popover,Progress,Tooltip,Typography } from 'antd'
+import dayjs from 'dayjs'
 import { tokens } from '../../../app/theme/tokens'
+import {
+MUSHROOM_GROWTH_PHASE_DICTIONARY,
+} from '../../../shared/i18n/status/session'
+import { MetadataBadge,StatusBadge } from '../../../shared/ui'
+import { formatSessionProgress,resolveSessionProgress } from '../../sessions/utils/session-progress.utils'
+import { resolveSessionPhase } from '../../sessions/utils/session-state.utils'
+import {
+type CultivationBatch,
+} from '../types/cultivation.types'
+import { GrowthSnapshotThumbnail } from './GrowthSnapshotThumbnail'
 
 interface CultivationBatchCardProps {
   batch: CultivationBatch
@@ -63,6 +61,7 @@ export function CultivationBatchCard({
   const growthPhase = resolveSessionPhase(
     batch.growthStage,
     batch.currentStage,
+    batch.harvestReady,
   )
   const growthPhaseLabel = growthPhase
     ? MUSHROOM_GROWTH_PHASE_DICTIONARY[growthPhase].label
@@ -179,7 +178,7 @@ export function CultivationBatchCard({
             </Flex>
 
             <MetadataBadge
-              icon={<ExperimentOutlined />}
+
               label={batch.mushroomType}
             />
 
@@ -189,7 +188,7 @@ export function CultivationBatchCard({
             </Typography.Text>
 
             <Typography.Text type="secondary">
-              <CalendarOutlined aria-hidden="true" /> Bắt đầu:{' '}
+              Bắt đầu:{' '}
               <strong>
                 {batch.startDate
                   ? dayjs(batch.startDate).format('DD/MM/YYYY')

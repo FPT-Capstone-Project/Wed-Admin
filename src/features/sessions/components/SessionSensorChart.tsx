@@ -23,8 +23,10 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import { Flex, Segmented, Skeleton, Spin, Typography } from 'antd'
-import { useMemo } from 'react'
+import { Button, Flex, Segmented, Skeleton, Spin, Typography } from 'antd'
+import { useMemo, useState } from 'react'
+import { DataTable } from '../../../shared/ui/DataTable'
+import type { SessionDailyAveragesData } from '../types/session-environment-history.types'
 import {
   buildAxisTicks,
   resolveAxisDomain,
@@ -66,6 +68,7 @@ import type { SessionClimatePoint } from '../utils/session-environment-aggregati
 
 /** Một điểm đã chuẩn hoá cho biểu đồ. */
 interface SensorChartPoint {
+  bucketCount?: number
   /** Timestamp (epoch ms) — trục hoành là thang số thực. */
   timestamp: number
   /** Nhãn mốc `HH:mm DD/MM`. */
@@ -100,7 +103,8 @@ export interface SessionSensorChartProps {
    *   gian quyết định **dữ liệu nào được kéo từ API** ⇒ đổi mốc phải kích
    *   hoạt fetch lại, không chỉ re-render.
    */
-  timeRange: SessionSensorTimeRange
+  timeRange: SessionSensorTimeRange | 'session'
+  dailyData?: SessionDailyAveragesData
   /**
    * Mốc **neo** của cửa sổ (epoch ms) — dùng cho **phiên đã kết thúc**.
    *
@@ -111,7 +115,7 @@ export interface SessionSensorChartProps {
    */
   anchorEnd?: number | null
   /** Callback khi đổi khoảng thời gian. */
-  onTimeRangeChange: (range: SessionSensorTimeRange) => void
+  onTimeRangeChange: (range: SessionSensorTimeRange | 'session') => void
   /**
    * Đang tải dữ liệu của mốc thời gian mới.
    *
@@ -128,8 +132,15 @@ export function SessionSensorChart({
   anchorEnd = null,
   onTimeRangeChange,
   loading = false,
+  dailyData,
 }: SessionSensorChartProps) {
   const animate = useChartMotion()
+  const daily = timeRange === 'session'
+  const [tableOpen, setTableOpen] = useState(false)
+  const timezone = dailyData?.timezone || 'Asia/Ho_Chi_Minh'
+  const dailyDate = (value: number | string, full = false) => new Intl.DateTimeFormat('vi-VN', {
+    timeZone: timezone, day: '2-digit', month: '2-digit', ...(full ? { year: 'numeric' } : {}),
+  }).format(new Date(value))
 
   /**
    * Ngưỡng chung của mọi tầng — dùng làm fallback cho điểm không xác định
@@ -169,6 +180,11 @@ export function SessionSensorChart({
    *   ⇒ dùng ngưỡng chung (để không mất cảnh báo vượt/thấp ngưỡng).
    */
   const points = useMemo<SensorChartPoint[]>(() => {
+    if (daily) return [...(dailyData?.points ?? [])].sort((a, b) => Date.parse(a.date) - Date.parse(b.date)).map(point => ({
+      timestamp: Date.parse(point.date), label: point.date, temperature: point.temperature_avg,
+      humidity: point.humidity_avg, bucketCount: point.bucket_count, sampleCount: point.bucket_count,
+      serverAggregated: true, floorLabel: '—', thresholds: null,
+    }))
     return climatePoints.map((point) => {
       const floorId = point.floorIds[0]
       const thresholds =
@@ -187,7 +203,7 @@ export function SessionSensorChart({
         serverAggregated: point.serverAggregated,
       }
     })
-  }, [climatePoints, thresholdsByFloor, sharedThresholds])
+  }, [climatePoints, thresholdsByFloor, sharedThresholds, daily, dailyData])
 
   /**
    * **Domain trục hoành CỐ ĐỊNH** theo cửa sổ đã chọn.
@@ -206,8 +222,8 @@ export function SessionSensorChart({
    *     `resolveTimeRangeWindow`).
    */
   const xDomain = useMemo<[number, number]>(
-    () => resolveAxisDomain(timeRange, new Date(), anchorEnd),
-    [timeRange, anchorEnd],
+    () => daily && points.length ? [points[0].timestamp - 12 * 3600000, points[points.length - 1].timestamp + 12 * 3600000] : resolveAxisDomain(timeRange === 'session' ? '24h' : timeRange, new Date(), anchorEnd),
+    [timeRange, anchorEnd, daily, points],
   )
 
   /**
@@ -217,18 +233,18 @@ export function SessionSensorChart({
    *   16:00 · 17:30 · 19:00 · 20:30 · 22:00.
    */
   const xTicks = useMemo(
-    () => buildAxisTicks(timeRange, new Date(), anchorEnd),
-    [timeRange, anchorEnd],
+    () => daily ? points.map(point => point.timestamp) : buildAxisTicks(timeRange, new Date(), anchorEnd),
+    [timeRange, anchorEnd, daily, points],
   )
 
   // Domain trục Y suy ra từ dữ liệu thật (bước 1/2/5×10ⁿ) — không hardcode.
   const temperatureAxis = useMemo(
-    () => climateAxis(points.map((point) => point.temperature)),
-    [points],
+    () => daily ? dailyAxis(points.map(point => point.temperature), 2) : climateAxis(points.map((point) => point.temperature)),
+    [points, daily],
   )
   const humidityAxis = useMemo(
-    () => climateAxis(points.map((point) => point.humidity)),
-    [points],
+    () => daily ? dailyAxis(points.map(point => point.humidity), 5, true) : climateAxis(points.map((point) => point.humidity)),
+    [points, daily],
   )
 
   const hasData = points.some(
@@ -237,18 +253,18 @@ export function SessionSensorChart({
 
   return (
     <Flex vertical gap={8}>
-      <Flex justify="space-between" align="center" gap={12} wrap>
+      <Flex vertical gap={8}>
         <Typography.Text strong style={{ fontSize: 13 }}>
           Diễn biến nhiệt độ &amp; độ ẩm
         </Typography.Text>
-        <Segmented<SessionSensorTimeRange>
+        <Segmented<SessionSensorTimeRange | 'session'>
           size="small"
           value={timeRange}
           onChange={onTimeRangeChange}
-          options={SENSOR_TIME_RANGE_OPTIONS.map((option) => ({
+          options={[...SENSOR_TIME_RANGE_OPTIONS.map((option) => ({
             value: option.value,
             label: option.label,
-          }))}
+          })), { value: 'session' as const, label: 'Cả phiên' }]}
         />
       </Flex>
 
@@ -296,7 +312,7 @@ export function SessionSensorChart({
                */
               interval="preserveStartEnd"
               tickFormatter={(value: number) =>
-                formatAxisTimestamp(value, value === xTicks[0])
+                daily ? dailyDate(value) : formatAxisTimestamp(value, value === xTicks[0])
               }
               minTickGap={20}
               tick={chartTickStyle}
@@ -318,7 +334,16 @@ export function SessionSensorChart({
               unit="%RH"
               tick={chartTickStyle}
             />
-            <Tooltip content={SensorTooltip} />
+            <Tooltip filterNull={false} content={daily ? ({ active, payload }) => {
+              const point = payload?.[0]?.payload as SensorChartPoint | undefined
+              if (!active || !point) return null
+              return <ChartTooltipSurface>
+                <strong>{dailyDate(point.timestamp, true)}</strong>
+                <div style={{ color: chartSeries.temperature }}>Nhiệt độ TB: {formatMeasurement(point.temperature)}{point.temperature == null ? '' : '°C'}</div>
+                <div style={{ color: chartSeries.humidity }}>Độ ẩm TB: {formatMeasurement(point.humidity)}{point.humidity == null ? '' : '%RH'}</div>
+                <div>Số mẫu: {point.bucketCount}/144 nhóm 10 phút{(point.bucketCount ?? 0) < 144 ? ' (chưa đủ 24 giờ)' : ''}</div>
+              </ChartTooltipSurface>
+            } : SensorTooltip} />
             <ChartLegend
               items={[
                 {
@@ -340,7 +365,8 @@ export function SessionSensorChart({
               name="Nhiệt độ (°C)"
               stroke={chartSeries.temperature}
               type="monotone"
-              dot={false}
+              dot={daily ? { r: 3 } : false}
+              activeDot={daily ? { r: 5 } : undefined}
               strokeWidth={2}
               connectNulls={false}
               isAnimationActive={animate}
@@ -352,7 +378,8 @@ export function SessionSensorChart({
               stroke={chartSeries.humidity}
               strokeDasharray="7 4"
               type="monotone"
-              dot={false}
+              dot={daily ? { r: 3 } : false}
+              activeDot={daily ? { r: 5 } : undefined}
               strokeWidth={2}
               connectNulls={false}
               isAnimationActive={animate}
@@ -379,11 +406,28 @@ export function SessionSensorChart({
           ⚠ Nguồn **BE gộp sẵn** (10 phút/tầng) ⇒ nói đúng nhóm thời gian
           *   thực tế, không nói "trung bình theo phút" (sai).
           */}
-        {`Giá trị hiển thị là trung bình theo nhóm ${ENVIRONMENT_HISTORY_BUCKET_MINUTES} phút của ${points.length} nhóm lần đo trong khoảng đã chọn.`}{' '}
-        Bảng bên dưới giữ chi tiết từng nhóm theo tầng.
+        {daily ? `Giá trị hiển thị là trung bình theo từng ngày dương lịch (giờ Việt Nam) trong suốt chu kỳ phiên (${points.length} ngày). Các khoảng thời gian có nhiều tầng đã được tính trung bình trước khi gộp theo ngày.` : `Giá trị hiển thị là trung bình theo nhóm ${ENVIRONMENT_HISTORY_BUCKET_MINUTES} phút của ${points.length} nhóm lần đo trong khoảng đã chọn. Bảng bên dưới giữ chi tiết từng nhóm theo tầng.`}
       </Typography.Text>
+      {daily && points.length > 0 && <>
+        <Button type="link" size="small" onClick={() => setTableOpen(open => !open)} aria-expanded={tableOpen} style={{ alignSelf: 'flex-start' }}>{tableOpen ? 'Ẩn bảng theo ngày' : `Xem bảng theo ngày (${points.length} ngày)`}</Button>
+        {tableOpen && <div style={{ maxHeight: 260, overflowY: 'auto' }}><DataTable rowKey="timestamp" dataSource={points} size="small" pagination={false} scroll={{ y: 220 }} columns={[
+          { title: 'Ngày', dataIndex: 'timestamp', render: (value: number) => dailyDate(value, true) },
+          { title: 'Nhiệt độ TB (°C)', dataIndex: 'temperature', render: formatMeasurement },
+          { title: 'Độ ẩm TB (%RH)', dataIndex: 'humidity', render: formatMeasurement },
+          { title: 'Số mẫu', dataIndex: 'bucketCount', render: (value: number) => `${value}/144${value < 144 ? ' (chưa đủ ngày)' : ''}` },
+        ]} /></div>}
+      </>}
     </Flex>
   )
+}
+
+function dailyAxis(values: (number | null)[], padding: number, humidity = false) {
+  const finite = values.filter((value): value is number => value != null && Number.isFinite(value))
+  if (!finite.length) return climateAxis(values)
+  const axis = climateAxis([Math.min(...finite) - padding, Math.max(...finite) + padding])
+  if (!humidity) return axis
+  const domain: [number, number] = [Math.max(0, axis.domain[0]), Math.min(100, axis.domain[1])]
+  return { domain, ticks: axis.ticks.filter(tick => tick >= domain[0] && tick <= domain[1]) }
 }
 
 const axisTime = new Intl.DateTimeFormat('vi-VN', {

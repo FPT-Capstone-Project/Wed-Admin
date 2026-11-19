@@ -52,7 +52,7 @@ export function RoomListPage() {
   }, [tiers])
 
   /**
-   * Khay cần người dùng xử lý — nhiễm bệnh/cách ly + chờ thu hoạch.
+   * Khay cần người dùng xử lý — đang vệ sinh + chờ thu hoạch.
    * Đây là câu trả lời trực tiếp cho "khay nào cần xử lý".
    *
    * "Chờ thu hoạch" được suy ra từ phiên canh tác đang chạy đã tới mốc
@@ -99,7 +99,7 @@ export function RoomListPage() {
       }
     }
 
-    // Nhiễm bệnh trước, chờ thu hoạch sau.
+    // Đang vệ sinh trước, chờ thu hoạch sau.
     return result.sort((a, b) =>
       a.kind === b.kind ? 0 : a.kind === 'maintenance' ? -1 : 1,
     )

@@ -85,6 +85,8 @@ export interface MonthlyRevenue {
  *   trang Tổng quan (`features/dashboard`).
  */
 export interface ReportsAnalytics {
+  revenueIncomplete: boolean
+  revenueEvents: { date: string; amount: number }[]
   totalRooms: number
   activeRooms: number
   totalFloors: number
@@ -121,6 +123,8 @@ export interface ReportsAnalytics {
 
 /** Danh sách 8 trạng thái phiên — thứ tự vòng đời thật. */
 const ALL_SESSION_STATUSES: CultivationSessionStatus[] = [
+  'RECEIVED',
+  'INCUBATING',
   'PENDING',
   'SPAWN_RESTING',
   'MYCELIAL_DEVELOPMENT',
@@ -172,6 +176,12 @@ export async function fetchReportsAnalytics(): Promise<ReportsAnalytics> {
     fetchAllAdminOrders({ pageSize: 100, maxPages: 20 }),
   ])
 
+  // Session failures disable estimates, without discarding dashboard KPIs.
+  const failed = [packagesResult, roomsResult, traysResult,
+    floorsResult, mastersResult, harvestsResult, metricsResult, ordersResult]
+    .find(result => result.status === 'rejected')
+  if (failed?.status === 'rejected') throw failed.reason
+
   const sessions =
     sessionsResult.status === 'fulfilled' ? sessionsResult.value.items : []
   const packages =
@@ -191,7 +201,7 @@ export async function fetchReportsAnalytics(): Promise<ReportsAnalytics> {
   const metrics =
     metricsResult.status === 'fulfilled' ? metricsResult.value : null
 
-  return buildReportsAnalytics({
+  const result = buildReportsAnalytics({
     rooms,
     trays,
     floors,
@@ -210,6 +220,8 @@ export async function fetchReportsAnalytics(): Promise<ReportsAnalytics> {
     traysUsed: metrics?.trays_used ?? 0,
     orders,
   })
+  if (sessionsResult.status === 'rejected') result.revenueIncomplete = true
+  return result
 }
 
 // ─── Builder (tách riêng để test được) ─────────────────────────────────
@@ -333,14 +345,14 @@ export function buildReportsAnalytics(
     const prices = names
       .map((name) => priceByPackageName.get(name))
       .filter((price): price is number => price != null)
-    if (prices.length === 0) continue
-    priceByOrderId.set(order.order_id, Math.min(...prices))
+    if (prices.length !== 1) continue
+    priceByOrderId.set(order.order_id, prices[0])
   }
 
   /**
    * Giá của 1 phiên — ưu tiên `package_id` (nếu có), fallback qua `order_id`.
    */
-  const resolveSessionPrice = (session: CultivationSession): number => {
+  const resolveSessionPrice = (session: CultivationSession): number | null => {
     if (session.package_id) {
       const byId = priceByPackageId.get(session.package_id)
       if (byId != null) return byId
@@ -356,14 +368,18 @@ export function buildReportsAnalytics(
       const byName = nameKey ? priceByPackageName.get(nameKey) : undefined
       if (byName != null) return byName
     }
-    return 0
+    return null
   }
 
   const speciesMap = new Map<string, { count: number; revenue: number }>()
+  const revenueEvents: { date: string; amount: number }[] = []
+  let revenueIncomplete = false
   const monthlyMap = new Map<string, { count: number; revenue: number }>()
 
   for (const session of input.sessions) {
-    const price = resolveSessionPrice(session)
+    const resolvedPrice = resolveSessionPrice(session)
+    if (resolvedPrice == null) revenueIncomplete = true
+    const price = resolvedPrice ?? 0
 
     const species = session.mushroom_name ?? 'Chưa xác định'
     const speciesEntry = speciesMap.get(species) ?? { count: 0, revenue: 0 }
@@ -372,7 +388,9 @@ export function buildReportsAnalytics(
     speciesMap.set(species, speciesEntry)
 
     const monthKey = resolveMonthKey(session.start_date ?? session.created_at)
+    if (!monthKey) revenueIncomplete = true
     if (monthKey) {
+      revenueEvents.push({ date: (session.start_date ?? session.created_at)!, amount: price })
       const monthEntry = monthlyMap.get(monthKey) ?? { count: 0, revenue: 0 }
       monthEntry.count += 1
       monthEntry.revenue += price
@@ -410,6 +428,7 @@ export function buildReportsAnalytics(
   }
 
   return {
+    revenueIncomplete,
     totalRooms: input.rooms.length,
     activeRooms: input.rooms.filter((room) => room.status === 'ACTIVE').length,
     totalFloors: input.floors.length,
@@ -419,6 +438,7 @@ export function buildReportsAnalytics(
     sessionsByStage,
     speciesBreakdown,
     monthlyRevenue,
+    revenueEvents,
     totalRevenue: input.totalRevenue,
     totalHarvestWeightKg,
     usableHarvestWeightKg,
@@ -458,8 +478,11 @@ function normalizePackageName(value: string | null | undefined): string | null {
 function resolveMonthKey(value: string | null | undefined): string | null {
   if (!value) return null
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return null
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+  if (Number.isNaN(date.getTime()) || date.getUTCFullYear() <= 1970) return null
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit',
+  }).formatToParts(date)
+  return `${parts.find(part => part.type === 'year')?.value}-${parts.find(part => part.type === 'month')?.value}`
 }
 
 /** Nhãn `T01/2026`. */

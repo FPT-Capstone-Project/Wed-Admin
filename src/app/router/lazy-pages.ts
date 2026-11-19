@@ -1,4 +1,5 @@
 import { lazy } from 'react'
+export const ComplaintsPage = lazy(() => import('../../features/complaints/ComplaintsPage').then(m => ({ default: m.ComplaintsPage })))
 
 export const SpawnInventoryPage = lazy(() => import('../../pages/inventory/SpawnInventoryPage').then(m => ({ default: m.SpawnInventoryPage })))
 

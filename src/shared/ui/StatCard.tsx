@@ -10,7 +10,7 @@ export interface StatCardProps {
   value: ReactNode
   /** Đơn vị đo, hiển thị cạnh giá trị. */
   suffix?: ReactNode
-  /** Icon góc trên bên phải — trang trí, không mang thông tin. */
+  /** Compatibility prop; decorative KPI icons are no longer rendered. */
   icon?: ReactNode
   /** Trạng thái ngữ nghĩa — chấm tròn cạnh nhãn, không tô viền card. */
   tone?: SemanticTone
@@ -48,7 +48,6 @@ export function StatCard({
   title,
   value,
   suffix,
-  icon,
   tone,
   description,
   extra,
@@ -128,27 +127,6 @@ export function StatCard({
           )}
         </Flex>
 
-        {icon && (
-          <span
-            aria-hidden="true"
-            style={{
-              fontSize: 18,
-              lineHeight: 1,
-              color: palette?.text ?? tokens.color.textMuted,
-              background: palette?.bg ?? tokens.color.surfaceMuted,
-              border: `${tokens.components.kpi.borderWidth}px solid ${palette?.border ?? tokens.color.border}`,
-              borderRadius: tokens.radius.md,
-              width: tokens.components.kpi.iconSize,
-              height: tokens.components.kpi.iconSize,
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}
-          >
-            {icon}
-          </span>
-        )}
       </Flex>
 
       {hint && (

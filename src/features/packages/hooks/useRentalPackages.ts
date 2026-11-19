@@ -113,10 +113,10 @@ export function useUpdateRentalPackage(
  * ⚠ BE trả `409 Conflict` + message
  *   "Rental package is referenced by an order and cannot be deleted".
  *   Người dùng không thể "xử lý" bằng cách thử lại ⇒ cần chỉ dẫn hành động
- *   thay thế (chuyển gói sang Tạm ngưng).
+ *   thay thế (chuyển gói sang Ngừng áp dụng).
  */
 export const RENTAL_PACKAGE_IN_USE_MESSAGE =
-  'Không thể xóa gói thuê đã có đơn hàng sử dụng. Vui lòng chuyển trạng thái sang Tạm ngưng.'
+  'Không thể xóa gói thuê đã có đơn hàng sử dụng. Vui lòng chuyển trạng thái sang Ngừng áp dụng.'
 
 /** Lỗi này có phải "gói thuê đã có đơn hàng" không? (409 hoặc message của BE) */
 export function isRentalPackageInUseError(error: unknown): boolean {

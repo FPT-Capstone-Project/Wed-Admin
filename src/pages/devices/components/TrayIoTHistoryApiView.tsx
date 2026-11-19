@@ -221,7 +221,7 @@ export function TrayIoTHistoryApiView() {
       <Card
         title={
           <Flex align="center" gap={8}>
-            <ExperimentOutlined aria-hidden="true" />
+
             <span>Lịch sử Telemetry — IoT API</span>
           </Flex>
         }

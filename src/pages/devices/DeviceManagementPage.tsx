@@ -1,11 +1,11 @@
-import { PageHeader } from '../../shared/ui/PageHeader'
-import './device-industrial.css'
-import { MetadataBadge } from '../../shared/ui'
-import { HistoryOutlined, EyeOutlined } from '@ant-design/icons'
-import { App, Button, Flex } from 'antd'
+import { HistoryOutlined } from '@ant-design/icons'
+import { App,Button,Flex } from 'antd'
 import { useNavigate } from 'react-router-dom'
 import { useMasterList } from '../../features/devices/hooks/useIoT'
+import { MetadataBadge } from '../../shared/ui'
+import { PageHeader } from '../../shared/ui/PageHeader'
 import { DeviceControlPanel } from './components/DeviceControlPanel'
+import './device-industrial.css'
 
 /**
  * Trang "Thiết bị IoT" — **CHỈ GIÁM SÁT** trên web admin.
@@ -26,7 +26,7 @@ export function DeviceManagementPage() {
   return (
     <div className="mcms-iot-view">
       <PageHeader title="Giám sát thiết bị IoT" description={masters.length > 0 ? `${masters.length} bộ điều khiển trung tâm đã đăng ký` : 'Đang tải dữ liệu thiết bị IoT...'} actions={<Flex align="center" gap={16} wrap>
-          <MetadataBadge icon={<EyeOutlined />} label={<>
+          <MetadataBadge  label={<>
             Chỉ giám sát
           </>} />
           <Button

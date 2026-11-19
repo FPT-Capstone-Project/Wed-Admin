@@ -1,40 +1,41 @@
-import { resolveSessionPhase } from '../utils/session-state.utils'
-import { formatDate } from '../../../shared/utils/date'
-import '../sessions-industrial.css'
-import { ExperimentOutlined, PictureOutlined, ShopOutlined } from '@ant-design/icons'
+import { PictureOutlined } from '@ant-design/icons'
 import {
-  Button,
-  Descriptions,
-  Drawer,
-  Flex,
-  Progress,
-  Skeleton,
-  Space,
-  Tabs,
-  Typography,
+Button,
+Descriptions,
+Drawer,
+Flex,
+Progress,
+Skeleton,
+Space,
+Tabs,
+Typography,
 } from 'antd'
-import { useMemo, useState } from 'react'
-import { MetadataBadge, StatusBadge } from '../../../shared/ui'
-import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
-import { useAdminCultivationSession } from '../hooks/useAdminCultivationSessions'
-import { toCultivationSession } from '../api/admin-session-mapper'
-import {
-  MUSHROOM_GROWTH_PHASE_DICTIONARY,
-  resolveSessionHarvestStatus,
-} from '../../../shared/i18n/status/session'
+import { useMemo,useState } from 'react'
 import { PAYMENT_STATUS_DICTIONARY } from '../../../shared/i18n/status/order'
 import { presentStatus } from '../../../shared/i18n/status/registry'
-import { formatSessionProgress, resolveSessionProgress } from '../utils/session-progress.utils'
-import { SessionStatusTag } from './SessionStatusTag'
-import { useFarmSession, useSpawnInspections } from '../../farm/hooks/useFarm'
+import {
+MUSHROOM_GROWTH_PHASE_DICTIONARY,
+resolveSessionHarvestStatus,
+} from '../../../shared/i18n/status/session'
+import { MetadataBadge,StatusBadge } from '../../../shared/ui'
+import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
+import { formatDate } from '../../../shared/utils/date'
 import { SpawnInspectionList } from '../../farm/components/SpawnInspectionList'
+import { useFarmSession,useSpawnInspections } from '../../farm/hooks/useFarm'
+import { toCultivationSession } from '../api/admin-session-mapper'
+import { useAdminCultivationSession } from '../hooks/useAdminCultivationSessions'
 import { useSessionGallery } from '../hooks/useSessionGallery'
+import '../sessions-industrial.css'
+import type { CultivationSession } from '../types/session.types'
+import { toSessionFloorKey } from '../utils/session-floor-matching.utils'
+import { formatSessionProgress,resolveSessionProgress } from '../utils/session-progress.utils'
+import { resolveSessionPhase } from '../utils/session-state.utils'
+import { SessionProgressHistory } from './SessionProgressHistory'
 import { DailyInspectionList } from './DailyInspectionList'
 import { GalleryPhotoGrid } from './GalleryPhotoGrid'
 import { SessionGalleryModal } from './SessionGalleryModal'
 import { SessionIoTHistoryTab } from './SessionIoTHistoryTab'
-import { toSessionFloorKey } from '../utils/session-floor-matching.utils'
-import type { CultivationSession } from '../types/session.types'
+import { SessionStatusTag } from './SessionStatusTag'
 
 interface SessionDetailDrawerProps {
   sessionId: number | null
@@ -170,13 +171,8 @@ function SessionDetailContent({
   // ⚠ `presentStatus` ⇒ không bao giờ lộ enum lạ của BE.
 
   /**
-   * ⚠ Giai đoạn hiển thị thuộc **1 trong 4 giai đoạn trồng nấm**
-   *   ("Ủ tơ" → "Kéo tơ" → "Nấm đang phát triển" → "Sẵn sàng thu hoạch").
-   *
-   * ⚠ Phiên `CULTIVATING` mặc định là **"Kéo tơ"** (phôi đã lên khay, chưa
-   *   có ghi nhận ra quả của Farm OP) — chỉ khi `current_stage` ∈
-   *   `FRUITING_INITIATION` / `PINNING` / `YOUNG_FRUITING` / `FRUITING` thì
-   *   mới hiển thị "Nấm đang phát triển".
+   * Giai đoạn sinh trưởng và trạng thái vòng đời dùng chung từ điển.
+   * MATURATION chỉ là trưởng thành; cờ sẵn sàng thu hoạch được xét riêng.
    *
    * ⚠ Phiên đã `COMPLETED` ⇒ "Hoàn thành", giữ nguyên tiến độ đã ghi nhận.
    * Không hiển thị "Sẵn sàng thu hoạch" cho phiên đã kết thúc.
@@ -184,6 +180,7 @@ function SessionDetailContent({
   const growthPhase = resolveSessionPhase(
     session.current_stage ?? session.growth_status,
     session.status,
+    session.harvest_ready === true || session.harvest_status === 'HARVEST_READY',
   )
   const growthPhaseLabel = growthPhase
     ? MUSHROOM_GROWTH_PHASE_DICTIONARY[growthPhase].label
@@ -289,6 +286,7 @@ function SessionDetailContent({
         activeKey={activeTab}
         onChange={setActiveTab}
         items={[
+          { key: 'progress', label: 'Tiến trình sinh trưởng', children: activeTab === 'progress' ? <SessionProgressHistory key={session.session_id} sessionId={session.session_id} /> : null },
           {
             key: 'overview',
             label: 'Tổng quan',
@@ -388,7 +386,7 @@ function SessionDetailContent({
                       children:
                         spawnIssued != null ? (
                           <MetadataBadge
-                            icon={<ExperimentOutlined />}
+
                             label={`${spawnIssued} đơn vị`}
                           />
                         ) : (
@@ -594,7 +592,6 @@ function TrayAssignmentTable({ session }: { session: CultivationSession }) {
           key: `tray-${tray.session_tray_id ?? tray.tray_id ?? index}`,
           label: (
             <Space size={4}>
-              <ShopOutlined aria-hidden="true" />
               <span className="mcms-session-mono">
                 {tray.tray_code ?? `Khay #${tray.tray_id ?? index + 1}`}
               </span>

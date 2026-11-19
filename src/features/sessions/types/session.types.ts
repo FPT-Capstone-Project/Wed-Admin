@@ -24,6 +24,8 @@ import type { SessionGrowthStage } from './admin-session.types'
  *   → CULTIVATING → HARVESTING → COMPLETED | CANCELLED
  */
 export type CultivationSessionStatus =
+  | 'RECEIVED'
+  | 'INCUBATING'
   | 'PENDING'
   | 'SPAWN_RESTING'
   | 'MYCELIAL_DEVELOPMENT'
@@ -88,6 +90,7 @@ export interface SessionTray {
 /** Phiên canh tác — BE trả flat, đã join customer / package / mushroom. */
 export interface CultivationSession {
   harvest_status?: string | null
+  harvest_ready?: boolean
   order_item_id?: number | null
   spawn_quantity?: number | null
   last_inspected_at?: string | null

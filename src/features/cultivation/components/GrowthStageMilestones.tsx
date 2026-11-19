@@ -1,5 +1,6 @@
 import { Tooltip } from 'antd'
 import { tokens } from '../../../app/theme/tokens'
+import { GROWTH_STAGE_LABELS } from '../../../shared/i18n/status/session'
 
 /**
  * ⚠ Reference markers only; the actual progress comes from the session.
@@ -8,19 +9,14 @@ import { tokens } from '../../../app/theme/tokens'
  * "Sẵn sàng thu hoạch".
  */
 const stages = [
-  'SPAWNING',
-  'RUNNING',
-  'FRUITING',
-  'HARVESTING',
+  'FRUITING_INITIATION',
+  'PINNING',
+  'YOUNG_FRUITING',
+  'MATURATION',
 ] as const
 
 /** Nhãn của 4 giai đoạn trồng nấm. */
-const STAGE_LABELS: Record<(typeof stages)[number], string> = {
-  SPAWNING: 'Ủ tơ',
-  RUNNING: 'Kéo tơ',
-  FRUITING: 'Nấm đang phát triển',
-  HARVESTING: 'Sẵn sàng thu hoạch',
-}
+const STAGE_LABELS = GROWTH_STAGE_LABELS
 
 /**
  * Vị trí tham chiếu (%) của từng mốc giai đoạn.
@@ -30,10 +26,10 @@ const STAGE_LABELS: Record<(typeof stages)[number], string> = {
  *   (Farm OP cập nhật) — xem `features/sessions/utils/session-progress.utils.ts`.
  */
 const STAGE_REFERENCE_PERCENT: Record<(typeof stages)[number], number> = {
-  SPAWNING: 15,
-  RUNNING: 35,
-  FRUITING: 65,
-  HARVESTING: 100,
+  FRUITING_INITIATION: 15,
+  PINNING: 35,
+  YOUNG_FRUITING: 65,
+  MATURATION: 100,
 }
 
 export function GrowthStageMilestones() {

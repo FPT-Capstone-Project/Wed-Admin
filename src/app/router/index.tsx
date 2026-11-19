@@ -12,6 +12,7 @@ import { PageFallback } from './PageFallback'
 import { AppErrorBoundary } from '../../shared/ui/AppErrorBoundary'
 import {
   IssueManagementPage,
+  ComplaintsPage,
   SpawnInventoryPage,
   HarvestManagementPage,
   HarvestRequestManagementPage,
@@ -73,6 +74,7 @@ export const router = createBrowserRouter([
       </AuthGuard>
     ),
     children: [
+      { path: 'complaints', element: <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>{withSuspense(<ComplaintsPage />)}</RoleGuard> },
       {
         path: 'inventory',
         element: <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>{withSuspense(<SpawnInventoryPage />)}</RoleGuard>,

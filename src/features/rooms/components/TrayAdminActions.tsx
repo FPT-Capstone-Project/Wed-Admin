@@ -4,12 +4,12 @@ import {
   CheckCircleOutlined,
   DeleteOutlined,
   FileDoneOutlined,
-  SafetyCertificateOutlined,
   ScissorOutlined,
   WarningOutlined,
 } from '@ant-design/icons'
 import { Alert, Typography } from 'antd'
 import type { HarvestStatus } from '../../../types/room.types'
+import { OVERDUE_HARVEST_GUIDANCE } from '../utils/tray-rental.utils'
 
 interface TrayAdminActionsProps {
   status: HarvestStatus
@@ -39,15 +39,13 @@ export function TrayAdminActions({
       aria-labelledby="tray-admin-actions-heading"
     >
       <div className="tray-section-heading">
-        <span className="tray-section-icon" aria-hidden="true">
-          <SafetyCertificateOutlined />
-        </span>
+
         <div>
           <Typography.Title id="tray-admin-actions-heading" level={4}>
             Thao tác quản trị viên
           </Typography.Title>
           <Typography.Text type="secondary">
-            Kết thúc mẻ, đối soát chi phí và giải phóng khay
+            Kết thúc mẻ và giải phóng khay theo quy định
           </Typography.Text>
         </div>
       </div>
@@ -58,13 +56,13 @@ export function TrayAdminActions({
             type="error"
             showIcon
             title={`Mẻ đã quá hạn ${overdueDays} ngày`}
-            description="Phí chăm sóc bổ sung đang được tính. Hãy lập hóa đơn phạt hoặc xử lý tiêu hủy nếu khách bỏ mẻ."
+            description={OVERDUE_HARVEST_GUIDANCE}
             className="tray-admin-alert"
           />
           <div className="tray-admin-actions tray-admin-actions--crisis">
             <ActionButton variant="primary" size="middle" className="tray-action-button"
 icon={<FileDoneOutlined />}
-onClick={onLateHarvest} label="Thu hoạch trễ & Xuất hóa đơn phạt" />
+onClick={onLateHarvest} label="Thu hoạch theo quy định" />
             <ActionButton variant="dangerText" size="middle" className="tray-action-button"
 icon={<DeleteOutlined />}
 onClick={onDestroyOverdue} label="Cưỡng chế hủy & Tiêu hủy nấm" />

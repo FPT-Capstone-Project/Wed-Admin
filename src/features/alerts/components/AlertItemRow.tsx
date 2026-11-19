@@ -29,16 +29,16 @@ export function AlertItemRow({ alert }: AlertItemRowProps) {
 
   return (
     <Flex align="flex-start" justify="space-between" gap={16} wrap>
-      <Flex align="flex-start" gap={12} style={{ flex: '1 1 560px' }}>
-        <div style={{ marginTop: 2, whiteSpace: 'nowrap' }}>
+      <Flex align="flex-start" gap={12} style={{ flex: '1 1 560px', minWidth: 0 }}>
+        <div style={{ marginTop: 2, whiteSpace: 'nowrap', flexShrink: 0, width: 116, minWidth: 116 }}>
           <StatusBadge
             tone={severityConfig.tone}
             label={severityConfig.label}
-            icon={severityConfig.icon}
+            style={{ whiteSpace: 'nowrap', flexShrink: 0 }}
           />
         </div>
 
-        <div>
+        <div style={{ minWidth: 0, flex: 1, overflowWrap: 'anywhere' }}>
             <Flex align="center" gap={8} wrap>
               {/*
                 * ⚠ Tiêu đề **chỉ in đậm khi CHƯA ĐỌC** — đã đọc thì chữ về

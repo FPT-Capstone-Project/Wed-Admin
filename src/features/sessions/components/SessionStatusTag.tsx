@@ -11,9 +11,7 @@ interface SessionStatusTagProps {
 export function SessionStatusTag({ status }: SessionStatusTagProps) {
   // ⚠ BE có thể trả trạng thái chưa khai báo trong từ điển ⇒ dùng
   //   `presentStatus()` để **không bao giờ** lộ chuỗi tiếng Anh thô.
-  const config = normalizeSessionStatus(status) === 'CULTIVATING'
-    ? { tone: 'ok' as const, label: 'Đang canh tác' }
-    : SESSION_STATUS_DICTIONARY[normalizeSessionStatus(status)]
+  const config = SESSION_STATUS_DICTIONARY[status] ?? SESSION_STATUS_DICTIONARY[normalizeSessionStatus(status)]
 
   return <StatusBadge tone={config.tone} label={config.label} />
 }

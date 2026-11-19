@@ -73,6 +73,7 @@ export function buildCultivationBatches(
       currentStage: stage,
       // Biological stage and percentage are resolved by the shared Farm OP reader.
       growthStage: session.current_stage ?? session.growth_status ?? null,
+      harvestReady: session.harvest_ready === true || session.harvest_status === 'HARVEST_READY',
       progressPercent,
       startDate: session.start_date ?? farmSession?.start_date ?? null,
       estimatedHarvestDate: session.expected_harvest_date ?? null,

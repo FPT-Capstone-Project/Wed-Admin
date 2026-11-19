@@ -1,6 +1,5 @@
 import '../../../styles/catalog-industrial.css'
 import {
-  CheckOutlined,
   EditOutlined,
   StarFilled,
   StarOutlined,
@@ -100,17 +99,11 @@ export function PackageCard({
             {rentalPackage.features.length > 0 ? (
               rentalPackage.features.map((feature) => (
                 <Flex key={feature} align="flex-start" gap={8}>
-                  <CheckOutlined
-                  style={{ color: 'var(--mcms-text-muted)', marginTop: 4 }}
-                />
                   <Typography.Text>{feature}</Typography.Text>
                 </Flex>
               ))
             ) : (
               <Flex align="flex-start" gap={8}>
-                <StopOutlined
-                  style={{ color: 'var(--mcms-text-muted)', marginTop: 4 }}
-                />
                 <Typography.Text type="secondary">Không có tiện ích bổ sung</Typography.Text>
               </Flex>
             )}
@@ -139,18 +132,18 @@ export function PackageCard({
                 />
                 <ConfirmActionButton
                   icon={<StopOutlined />}
-                  label={
-                    rentalPackage.status === 'INACTIVE'
-                      ? 'Kích hoạt'
-                      : 'Tạm ngưng'
-                  }
-                  description="Thay đổi trạng thái gói cước"
-                  size="middle"
-                  title={
-                    rentalPackage.status === 'INACTIVE'
-                      ? 'Kích hoạt gói cước?'
-                      : 'Tạm ngưng gói cước?'
-                  }
+              label={
+                rentalPackage.status === 'INACTIVE'
+                  ? 'Kích hoạt'
+                  : 'Ngừng áp dụng'
+              }
+              description="Thay đổi trạng thái gói cước"
+              size="middle"
+              title={
+                rentalPackage.status === 'INACTIVE'
+                  ? 'Kích hoạt gói cước?'
+                  : 'Ngừng áp dụng gói cước?'
+              }
                   content="Thay đổi trạng thái sẽ ảnh hưởng khả năng đăng ký mới."
                   okText="Xác nhận"
                   cancelText="Hủy"
@@ -187,7 +180,7 @@ export function PackageCard({
                 disabled={!isAvailable}
                 onClick={() => onSelect(rentalPackage)}
               >
-                {isAvailable ? 'Chọn gói này' : 'Tạm ngưng đăng ký'}
+                {isAvailable ? 'Chọn gói này' : 'Đã ngừng áp dụng'}
               </Button>
             )}
           </Flex>

@@ -1,15 +1,15 @@
-import { LeftOutlined, PictureOutlined, RightOutlined } from '@ant-design/icons'
-import { Button, Empty, Modal, Segmented, Spin, Typography } from 'antd'
+import { LeftOutlined,RightOutlined } from '@ant-design/icons'
+import { Button,Empty,Modal,Segmented,Spin,Typography } from 'antd'
 import dayjs from 'dayjs'
-import { useEffect, useMemo, useState } from 'react'
-import { MetadataBadge, StatusBadge } from '../../../shared/ui'
+import { useEffect,useMemo,useState } from 'react'
+import { MetadataBadge,StatusBadge } from '../../../shared/ui'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import { GrowthSnapshotThumbnail } from '../../cultivation/components/GrowthSnapshotThumbnail'
-import { filterGalleryByPhase } from '../utils/session-gallery.utils'
 import type {
-  SessionGalleryPhoto,
-  SessionGalleryPhase,
+SessionGalleryPhase,
+SessionGalleryPhoto,
 } from '../types/session-gallery.types'
+import { filterGalleryByPhase } from '../utils/session-gallery.utils'
 
 interface SessionGalleryModalProps {
   open: boolean
@@ -129,7 +129,7 @@ export function SessionGalleryModal({
       destroyOnHidden
       title={
         <span className="batch-daily-modal-title">
-          <PictureOutlined aria-hidden="true" />
+
           Thư viện ảnh phiên canh tác
         </span>
       }

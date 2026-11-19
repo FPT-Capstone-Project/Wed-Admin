@@ -2858,8 +2858,8 @@ export interface paths {
         options?: never;
         head?: never;
         /**
-         * Adjust inventory balance
-         * @description Admin (role_id 1) and Farm Operator (role_id 2) only.
+         * Add quantity to inventory
+         * @description Adds quantity to the existing balance for inventoryId and records an IN transaction. Only quantity is required in the body. Admin (role_id 1) and Farm Operator (role_id 2) only.
          */
         patch: {
             parameters: {
@@ -2873,10 +2873,13 @@ export interface paths {
             requestBody: {
                 content: {
                     "application/json": {
-                        /** @example 50 */
+                        /**
+                         * @description Quantity to add to the current inventory balance
+                         * @example 50
+                         */
                         quantity: number;
                         /** @example Physical stock count adjustment */
-                        notes: string;
+                        notes?: string;
                     };
                 };
             };
@@ -4085,7 +4088,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    status?: "OPEN" | "WAITING_EXPERT" | "IN_PROGRESS" | "MONITORING" | "RESOLVED";
+                    status?: "OPEN" | "WAITING_EXPERT" | "IN_PROGRESS" | "MONITORING" | "WAITING_REVIEW" | "RESOLVED";
                     severity?: "LOW" | "MEDIUM" | "HIGH";
                     sessionId?: number;
                     page?: number;
@@ -4190,7 +4193,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get issue details and evidence media */
+        /** Get issue details, evidence, and review history */
         get: {
             parameters: {
                 query?: never;
@@ -4226,56 +4229,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/issues/{issueId}/status": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Change issue status using an allowed workflow transition */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    issueId: number;
-                };
-                cookie?: never;
-            };
-            requestBody: {
-                content: {
-                    "application/json": {
-                        /** @enum {string} */
-                        status: "IN_PROGRESS" | "MONITORING";
-                    };
-                };
-            };
-            responses: {
-                /** @description Issue status updated using statuses supported by the current database */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Invalid workflow transition or missing treatment result */
-                409: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        trace?: never;
-    };
     "/api/issues/{issueId}/resolve": {
         parameters: {
             query?: never;
@@ -4289,7 +4242,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Resolve an issue after expert review */
+        /** Confirm an issue is resolved after monitoring */
         patch: {
             parameters: {
                 query?: never;
@@ -4299,7 +4252,13 @@ export interface paths {
                 };
                 cookie?: never;
             };
-            requestBody?: never;
+            requestBody?: {
+                content: {
+                    "application/json": {
+                        reviewComment?: string;
+                    };
+                };
+            };
             responses: {
                 /** @description Issue resolved */
                 200: {
@@ -4308,14 +4267,14 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Assigned expert or Admin role required */
+                /** @description Expert or Admin role required */
                 403: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content?: never;
                 };
-                /** @description Issue is not in MONITORING status */
+                /** @description Issue is not monitoring or consultation is not answered */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -4521,56 +4480,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/consultations/{consultationId}/assign": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Accept a consultation or assign an expert as Admin */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    consultationId: number;
-                };
-                cookie?: never;
-            };
-            requestBody?: {
-                content: {
-                    "application/json": {
-                        /** @description Required for Admin assignment */
-                        expertId?: number;
-                    };
-                };
-            };
-            responses: {
-                /** @description Consultation assigned */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Selected account is not an expert */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        trace?: never;
-    };
     "/api/consultations/{consultationId}/respond": {
         parameters: {
             query?: never;
@@ -4584,7 +4493,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Submit diagnosis and solution or request more information */
+        /** Submit the expert diagnosis and solution */
         patch: {
             parameters: {
                 query?: never;
@@ -4598,57 +4507,20 @@ export interface paths {
                 content: {
                     "application/json": {
                         diagnosis: string;
-                        solution?: string;
-                        needsMoreInfo?: boolean;
+                        solution: string;
                     };
                 };
             };
             responses: {
-                /** @description Expert response submitted; request-more-info maps to PENDING consultation and WAITING_EXPERT issue */
+                /** @description Expert response submitted; consultation becomes ANSWERED and issue becomes IN_PROGRESS */
                 200: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content?: never;
                 };
-                /** @description Assigned expert or Admin role required */
+                /** @description Expert or Admin role required */
                 403: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-            };
-        };
-        trace?: never;
-    };
-    "/api/consultations/{consultationId}/close": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Close a responded consultation */
-        patch: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    consultationId: number;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Consultation closed */
-                200: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4685,7 +4557,7 @@ export interface paths {
                 };
             };
             responses: {
-                /** @description Follow-up appended to the consultation question and returned to the assigned expert; no separate message table is used */
+                /** @description Follow-up appended while the expert is diagnosing; status is unchanged */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -4744,13 +4616,11 @@ export interface paths {
                     "application/json": {
                         actionDescription: string;
                         resultDescription?: string;
-                        /** Format: date-time */
-                        performedAt?: string;
                     };
                 };
             };
             responses: {
-                /** @description Treatment recorded */
+                /** @description Treatment recorded and issue moved to WAITING_REVIEW */
                 201: {
                     headers: {
                         [name: string]: unknown;
@@ -4758,6 +4628,64 @@ export interface paths {
                     content?: never;
                 };
                 /** @description Expert solution is not available */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/treatments/{treatmentLogId}/review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Review the latest FO treatment update */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    treatmentLogId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        reviewResult: "APPROVED" | "NEEDS_MORE_ACTION";
+                        reviewComment?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description APPROVED moves the issue to MONITORING; NEEDS_MORE_ACTION moves it to IN_PROGRESS */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Expert or Admin role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Treatment is not the latest update awaiting review */
                 409: {
                     headers: {
                         [name: string]: unknown;
@@ -4955,7 +4883,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get customer-visible issue, consultation, treatment, follow-up, and media timeline */
+        /** Get customer-visible issue, review, consultation, treatment, follow-up, and media timeline */
         get: {
             parameters: {
                 query?: never;
@@ -6854,6 +6782,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/environment-history/sessions/{sessionId}/daily-averages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get daily temperature and humidity averages for a cultivation session
+         * @description Groups the stored 10-minute averages by Vietnam calendar day (Asia/Ho_Chi_Minh). Periods shared by multiple floors are averaged before computing the daily average. Customers may access only their own session.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Daily average chart points and contributing 10-minute bucket counts */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unsupported role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session not found or not accessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/environment-history/sessions/{sessionId}": {
         parameters: {
             query?: never;
@@ -7046,6 +7034,371 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/orders/{orderId}/complaints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Customer submits a delivered harvest complaint */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    orderId: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        complaintType: string;
+                        description: string;
+                        imageUrls?: string[];
+                    };
+                };
+            };
+            responses: {
+                /** @description Complaint created with OPEN status */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid content or image URLs */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Order not found or not owned */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Ineligible shipment or duplicate complaint */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/complaints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff lists complaints newest first */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                    status?: "OPEN" | "IN_PROGRESS" | "WAITING_CUSTOMER" | "RESOLVED" | "REJECTED";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated complaints */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/complaints/my": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer lists own complaints using page, pageSize and status filters */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Paginated owned complaints */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/complaints/my/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Customer views own complaint details */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Complaint */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Complaint not found or not owned */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/complaints/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Staff or owning customer views complaint details */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Complaint details */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/complaints/{id}/replies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Staff or owning customer replies to an active complaint */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        message: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Reply created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Complaint is final */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/complaints/{id}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Staff assigns an active Admin or Farm Operator */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        assignedTo: number | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Assignment updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Ineligible assignee */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
+    "/api/complaints/{id}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Admin or Farm Operator changes directly to any supported status */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        /** @enum {string} */
+                        status?: "OPEN" | "IN_PROGRESS" | "WAITING_CUSTOMER" | "RESOLVED" | "REJECTED";
+                        resolution?: string;
+                    };
+                };
+            };
+            responses: {
+                /** @description Complaint updated */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid status or missing resolution */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
         trace?: never;
     };
     "/api/cameras": {

@@ -1,7 +1,5 @@
 import '../../../styles/catalog-industrial.css'
 import {
-  CheckCircleOutlined,
-  CloseCircleOutlined,
   DeleteOutlined,
   EditOutlined,
   PauseCircleOutlined,
@@ -124,7 +122,6 @@ export function PackageComparisonTable({
             ))
           ) : (
             <Flex align="center" gap={4}>
-              <CloseCircleOutlined style={{ color: 'var(--mcms-text-muted)' }} />
               <Typography.Text type="secondary">Không hỗ trợ</Typography.Text>
             </Flex>
           )}
@@ -141,17 +138,11 @@ export function PackageComparisonTable({
           {features.length > 0 ? (
             features.map((feature) => (
               <Flex key={feature} align="flex-start" gap={6}>
-                <CheckCircleOutlined
-                  style={{ color: 'var(--mcms-text-muted)', marginTop: 3 }}
-                />
                 <Typography.Text ellipsis>{feature}</Typography.Text>
               </Flex>
             ))
           ) : (
             <Flex align="center" gap={6}>
-              <CloseCircleOutlined
-                style={{ color: 'var(--mcms-text-muted)' }}
-              />
               <Typography.Text type="secondary">Không có</Typography.Text>
             </Flex>
           )}
@@ -205,7 +196,7 @@ export function PackageComparisonTable({
               label={
                 rentalPackage.status === 'INACTIVE'
                   ? 'Kích hoạt'
-                  : 'Tạm ngưng'
+                  : 'Ngừng áp dụng'
               }
               description="Thay đổi trạng thái gói cước"
               variant="text"
@@ -213,7 +204,7 @@ export function PackageComparisonTable({
               title={
                 rentalPackage.status === 'INACTIVE'
                   ? 'Kích hoạt gói cước?'
-                  : 'Tạm ngưng gói cước?'
+                  : 'Ngừng áp dụng gói cước?'
               }
               content="Thay đổi trạng thái sẽ ảnh hưởng khả năng đăng ký mới."
               okText="Xác nhận"

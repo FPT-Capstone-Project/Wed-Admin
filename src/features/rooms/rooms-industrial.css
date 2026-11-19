@@ -6,6 +6,30 @@
   box-shadow: none;
 }
 
+/* Rooms hierarchy only: preserve the app font and fixed tray content metrics. */
+.mcms-rooms-view > .mcms-page-header h1.ant-typography {
+  font-size: 23px !important;
+  line-height: 1.3 !important;
+  font-weight: 600 !important;
+}
+.mcms-room-rack > h2.ant-typography {
+  font-size: 18px !important;
+  line-height: 1.35;
+  font-weight: 600;
+}
+.mcms-rack h3.ant-typography,
+.mcms-rack-shelf-header h4.ant-typography {
+  font-size: 16px !important;
+  line-height: 1.4;
+  font-weight: 600;
+}
+.mcms-rack-shelf-header .ant-typography-secondary,
+.mcms-rack > .ant-flex .ant-typography-secondary,
+.mcms-rooms-view .mcms-page-header-copy > .ant-typography-secondary {
+  font-size: 12px !important;
+  font-weight: 400;
+}
+
 /* --- Giàn kệ công nghiệp 2 tầng (industrial rack shell) --------------------
  *
  * Mô phỏng giàn kệ thép thực tế:
@@ -16,22 +40,28 @@
  * ---------------------------------------------------------------------- */
 
 .mcms-rack-shell {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: stretch;
   margin: 16px;
   padding: 16px;
-  border: 2px solid #cbd5e1;
+  border: 1px solid var(--mcms-border);
   border-radius: 6px;
-  background: rgba(248, 250, 252, 0.6);
+  background: var(--mcms-surface-muted);
   box-shadow: var(--mcms-shadow-xs);
 }
 
 .mcms-rack-shelf {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 100%;
+  min-width: 0;
   padding: 12px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--mcms-border);
   border-radius: 6px;
-  background: #ffffff;
+  background: var(--mcms-surface);
 }
 
 .mcms-rack-shelf-header {
@@ -72,9 +102,27 @@
 
 /* Lưới khay: co giãn/cho phép cuộn ngang trên màn hình nhỏ mà không vỡ ô. */
 .mcms-rack-tray-scroll {
+  min-width: 0;
+  max-width: 100%;
   overflow-x: auto;
+  flex: 0 0 auto;
   padding: 4px;
 }
+
+@media (min-width: 1100px) {
+  .mcms-rack-shell:not(.mcms-rack-shell-single) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+.mcms-tray-variety {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.mcms-tray-status { font-size: 11px; line-height: 1.2; font-weight: 600; }
+.mcms-tray-date { font-size: 11px; line-height: 1.2; }
+.mcms-room-rack .tray-card-btn { overflow-wrap: anywhere; overflow: hidden; }
 
 @media (max-width: 767px) {
   .mcms-rack-shell {
@@ -121,15 +169,16 @@
 
 .mcms-room-rack .tray-card-btn:hover,
 .mcms-room-rack .rack-tray-btn:hover {
-  box-shadow: none;
-  transform: none;
+  box-shadow: var(--mcms-shadow-xs);
+  transform: translateY(-2px);
 }
 
 .mcms-room-rack .tray-card-btn:focus-visible,
 .mcms-room-rack .rack-tray-btn:focus-visible {
   outline: 2px solid var(--mcms-border-strong);
   outline-offset: 2px;
-  box-shadow: none;
+  box-shadow: var(--mcms-shadow-xs);
+  transform: translateY(-2px);
 }
 
 .tray-admin-section .mcms-action-button.ant-btn,
@@ -189,4 +238,88 @@
 .mcms-rooms-view .ant-table-small .ant-table-thead > tr > th,
 .mcms-rooms-view .ant-table-small .ant-table-tbody > tr > td {
   padding: 8px 12px;
+}
+
+/* Keep the existing detailed legend once, beside the rack heading. */
+.mcms-rooms-view > [aria-label="Chú thích trạng thái khay"] { display: none; }
+.mcms-room-rack .tray-card-btn {
+  position: relative;
+  height: var(--tray-h);
+  min-height: var(--tray-h);
+  max-height: var(--tray-h);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Compensate for the 3px left / 1px right border to center visually. */
+  padding: 24px 11px 25px 9px;
+  transition: transform 150ms ease-out, opacity 150ms ease-out;
+}
+.mcms-room-rack .tray-card-btn.mcms-tray-empty {
+  color: var(--mcms-text-muted);
+  /* Equal 1px borders need equal padding; active trays retain their 3px accent. */
+  padding-inline: 10px;
+}
+.mcms-room-rack { --tray-h: 132px; }
+.mcms-tray-code-row { position: absolute; top: 8px; left: 10px; z-index: 1; max-width: calc(100% - 20px); display: block; min-width: 0; font-size: 11px; font-weight: 600; line-height: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.mcms-tray-code-row > span { font-size: 11px !important; font-weight: 600; line-height: 1; vertical-align: top !important; }
+.mcms-tray-content { width: 100%; min-width: 0; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.mcms-tray-empty .mcms-tray-crop { opacity: 0.55; position: absolute; top: 24px; bottom: 25px; left: 10px; right: 10px; width: auto; display: flex; flex-direction: column; justify-content: center; gap: 3px; }
+.mcms-tray-empty .mcms-tray-variety { font-weight: 400; }
+.mcms-tray-harvest-row { min-width: 0; width: 100%; flex-shrink: 0; }
+.mcms-tray-progress-placeholder,
+.mcms-tray-progress-track { position: absolute; left: 10px; right: 10px; bottom: 10px; height: 5px; border-radius: 999px; }
+.mcms-tray-progress-placeholder { visibility: hidden; }
+.mcms-tray-progress-track { display: block; background: var(--mcms-border); overflow: hidden; }
+.mcms-tray-progress-fill { display: block; width: 100%; height: 100%; border-radius: inherit; transform-origin: left; }
+.mcms-tray-crop { display: flex; justify-content: center; align-items: center; gap: 8px; min-width: 0; width: 100%; max-width: 100%; flex-shrink: 0; }
+.mcms-tray-thumbnail {
+  width: 32px; height: 32px; flex: 0 0 32px; border-radius: 6px;
+  object-fit: cover; background: var(--mcms-surface); border: 1px solid rgba(15, 23, 42, 0.08);
+}
+.mcms-tray-thumbnail-placeholder { display: inline-flex; align-items: center; justify-content: center; }
+.mcms-tray-variety { min-width: 0; max-width: 100%; font-size: 13.5px; font-weight: 700; text-align: center; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; line-height: 1.25; }
+.mcms-tray-date { display: block; min-width: 0; max-width: 100%; font-size: 12px; font-weight: 500; color: var(--mcms-text-muted); line-height: 1.3; white-space: nowrap; text-align: center; overflow: hidden; text-overflow: ellipsis; }
+.mcms-tray-status {
+  min-width: 0; max-width: 100%; width: fit-content;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  align-self: center; flex-shrink: 0; padding: 2px 10px; border: none; font-size: 11px; font-weight: 600; line-height: 1.4; border-radius: 999px;
+  background: var(--mcms-surface);
+}
+.mcms-room-rack .mcms-tray-status[data-status='rented'] {
+  color: #14532d !important;
+  background: #eaf7ee !important;
+}
+.mcms-room-rack .mcms-tray-status[data-status='harvesting'] {
+  color: #92400e !important;
+  background: #fff7e2 !important;
+}
+.mcms-room-rack .mcms-tray-status[data-status='maintenance'] {
+  color: #0c4a6e !important;
+  background: #f0f9ff !important;
+}
+.mcms-shelf-occupancy { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; }
+.mcms-shelf-occupancy > span:first-child { padding: 3px 6px; border-radius: 4px; background: var(--mcms-surface-muted); }
+.mcms-shelf-occupancy-track { width: 48px; height: 4px; background: var(--mcms-border); border-radius: 2px; overflow: hidden; }
+.mcms-shelf-occupancy-track > span { display: block; height: 100%; background: var(--mcms-primary); }
+/* Confine library transitions (including loading icons) to non-layout properties. */
+.mcms-rooms-view :where(*),
+.mcms-rooms-view :where(*)::before,
+.mcms-rooms-view :where(*)::after { transition-property: transform, opacity !important; }
+.mcms-tray-progress-fill,
+.mcms-shelf-occupancy-track > span { transition: none !important; }
+/* Prevent library loading/image/progress transitions from animating layout in rooms. */
+.mcms-rooms-view .ant-btn-loading-icon,
+.mcms-rooms-view .ant-image,
+.mcms-rooms-view .ant-progress-bg,
+.mcms-rooms-view .ant-progress-success-bg {
+  transition-property: transform, opacity !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .mcms-room-rack .tray-card-btn,
+  .mcms-room-rack .rack-tray-btn { transition: none; }
+  .mcms-room-rack .tray-card-btn:hover,
+  .mcms-room-rack .rack-tray-btn:hover,
+  .mcms-room-rack .tray-card-btn:focus-visible,
+  .mcms-room-rack .rack-tray-btn:focus-visible { transform: none; }
 }

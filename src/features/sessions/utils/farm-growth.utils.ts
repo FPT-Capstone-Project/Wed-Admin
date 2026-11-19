@@ -1,4 +1,4 @@
-import { resolveSessionPhase } from './session-state.utils'
+import { normalizeSessionStage } from './session-state.utils'
 import { resolveSessionProgress } from './session-progress.utils'
 import type { SessionGrowthStage } from '../types/admin-session.types'
 
@@ -29,7 +29,7 @@ export interface FarmGrowthSnapshot {
 
 function stageOf(record: FarmGrowthRecord) {
   const rawStage = record.stage ?? record.growth_stage ?? record.current_stage
-  return resolveSessionPhase(rawStage === 'RESTING' ? 'SPAWNING' : rawStage)
+  return normalizeSessionStage({ current_stage: rawStage === 'RESTING' ? 'SPAWNING' : rawStage })
 }
 
 function newestFirst(records: readonly FarmGrowthRecord[]) {
@@ -46,7 +46,7 @@ export function resolveFarmGrowth(input: FarmGrowthInput): FarmGrowthSnapshot {
     ...(input.observations ?? []),
   ].filter(record => record.description !== 'Cultivation started after tray assignment' && stageOf(record)))[0]
   const phase = latestStage ? stageOf(latestStage.record)
-    : resolveSessionPhase(input.sessionStatus)
+    : normalizeSessionStage({ current_stage: input.sessionStatus })
 
   // Select independently: a newer photo/health inspection never resets progress.
   // Include actual zero values, even automatic initialization or pre-assignment stages.
@@ -54,7 +54,7 @@ export function resolveFarmGrowth(input: FarmGrowthInput): FarmGrowthSnapshot {
     resolveSessionProgress(record.progress_percent) !== null,
   )
   return {
-    stage: phase === 'HARVESTING' ? 'MATURATION' : phase === 'COMPLETED' ? null : phase,
+    stage: phase,
     progress: latestProgress ? resolveSessionProgress(latestProgress.record.progress_percent) : null,
     updatedAt: latestStage?.updatedAt ?? null,
   }

@@ -38,7 +38,7 @@ export const ROLE_OPTIONS: readonly RoleOption[] = [
   {
     roleId: 2,
     role: 'OPERATOR',
-    label: 'Vận hành trang trại',
+    label: 'Nhân viên vận hành',
     description: 'Vận hành vụ thuê, khay, IoT. Không huỷ vụ thuê.',
   },
   {
@@ -66,16 +66,85 @@ export function getRoleOption(roleId: number): RoleOption | undefined {
 }
 
 /**
+ * Chuẩn hoá tên vai trò từ BE về dạng khoá so sánh.
+ *
+ * ⚠ BE trả `roles.role_name` theo **tên hiển thị**, KHÔNG phải enum:
+ *   `Admin` / `Farm Operator` / `Customer` / `Mushroom Expert`
+ *   (xem `Backend/database.sql` → bảng `public.roles`).
+ *
+ *   Nhưng Swagger/API có chỗ trả enum (`ADMIN`, `OPERATOR`, `CUSTOMER`,
+ *   `EXPERT`) ⇒ chuẩn hoá cả hai về cùng một dạng: bỏ khoảng trắng, gạch
+ *   dưới, gạch ngang và ký tự đặc biệt, rồi viết hoa.
+ */
+function normalizeRoleKey(value: string | null | undefined): string {
+  return (value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase()
+}
+
+/**
+ * Tên vai trò (tiếng Anh) → enum nội bộ.
+ *
+ * ⚠ Bao gồm **cả** tên hiển thị của BE lẫn mã enum, để không nơi nào lọt
+ *   chuỗi tiếng Anh ra UI khi BE đổi cách đặt tên.
+ */
+const ROLE_NAME_ALIASES: Readonly<Record<string, UserRoleKey>> = {
+  // Admin
+  ADMIN: 'ADMIN',
+  ADMINISTRATOR: 'ADMIN',
+  SUPERADMIN: 'ADMIN',
+  // Farm Operator
+  OPERATOR: 'OPERATOR',
+  FARMOPERATOR: 'OPERATOR',
+  FARMMANAGER: 'OPERATOR',
+  STAFF: 'OPERATOR',
+  // Customer
+  CUSTOMER: 'CUSTOMER',
+  USER: 'CUSTOMER',
+  TENANT: 'CUSTOMER',
+  RENTER: 'CUSTOMER',
+  // Expert
+  EXPERT: 'EXPERT',
+  MUSHROOMEXPERT: 'EXPERT',
+  MUSHROOMDISEASEEXPERT: 'EXPERT',
+}
+
+/**
+ * Tra enum của vai trò từ **tên** BE trả về.
+ *
+ * @returns `undefined` khi tên không khớp vai trò nào đã biết.
+ */
+export function getRoleKeyByName(
+  roleName?: string | null,
+): UserRoleKey | undefined {
+  const key = normalizeRoleKey(roleName)
+  if (!key) return undefined
+  return ROLE_NAME_ALIASES[key]
+}
+
+/**
  * Nhãn tiếng Việt của vai trò.
  *
- * Tên role và ID đều được tra qua registry; không in enum hoặc ID lạ.
+ * ⚠ **Không bao giờ** in mã enum tiếng Anh (`ADMIN`, `EXPERT`…) ra UI:
+ *   tên từ BE được tra qua registry, tên lạ thì rơi về nhãn theo `role_id`,
+ *   cuối cùng là "Vai trò chưa xác định".
+ *
+ * ⚠ Ưu tiên `role_id` (khoá chuẩn của DB) hơn `role_name` — vì `role_name`
+ *   là chuỗi tự do do BE trả và có thể đổi theo thời gian.
  */
 export function getRoleLabel(
   roleId: number,
   roleName?: string | null,
 ): string {
-  const namedRole = ROLE_OPTIONS.find(option => option.role === roleName?.trim().toUpperCase())
-  return namedRole?.label ?? getRoleOption(roleId)?.label ?? 'Vai trò chưa xác định'
+  const byId = getRoleOption(roleId)
+  if (byId) return byId.label
+
+  const key = getRoleKeyByName(roleName)
+  if (key) return ROLE_OPTIONS.find((option) => option.role === key)?.label ?? 'Vai trò chưa xác định'
+
+  return 'Vai trò chưa xác định'
 }
 
 /**

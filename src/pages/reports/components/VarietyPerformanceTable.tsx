@@ -1,17 +1,16 @@
-import '../../../styles/reports-users-industrial.css'
-import { ArrowDownOutlined, ArrowUpOutlined } from '@ant-design/icons'
-import { Tooltip, Typography } from 'antd'
+import { Tooltip,Typography } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { EmptyState, StatusBadge, DataTable } from '../../../shared/ui'
-import { formatCurrency } from '../../../features/analytics/utils/executive-report.utils'
-import type { VarietyPerformance } from '../../../features/analytics/utils/executive-report.utils'
 import type { SemanticTone } from '../../../app/theme/tokens'
+import type { VarietyPerformance } from '../../../features/analytics/utils/executive-report.utils'
+import { DataTable,EmptyState,StatusBadge } from '../../../shared/ui'
+import '../../../styles/reports-users-industrial.css'
+import { formatReportMoney as formatCurrency,formatReportNumber,formatReportPercent } from '../report-format'
 
 interface VarietyPerformanceTableProps {
   data: VarietyPerformance[]
+  revenueIncomplete?: boolean
 }
 
-/** Làm sạch giá trị số trước khi render — đảm bảo không in `NaN`. */
 function safeNumber(value: unknown, fallback = 0): number {
   if (typeof value === 'number' && Number.isFinite(value)) return value
   if (typeof value === 'string') {
@@ -27,7 +26,6 @@ function safePercent(value: unknown): number {
   return num
 }
 
-/** Tỷ lệ thành công → tone ngữ nghĩa. */
 function successTone(rate: number): SemanticTone {
   if (rate >= 90) return 'ok'
   if (rate >= 80) return 'info'
@@ -36,6 +34,7 @@ function successTone(rate: number): SemanticTone {
 
 export function VarietyPerformanceTable({
   data,
+  revenueIncomplete,
 }: VarietyPerformanceTableProps) {
   if (!data || data.length === 0) {
     return (
@@ -53,24 +52,22 @@ export function VarietyPerformanceTable({
       width: 230,
       render: (_, record) => {
         const name = record.varietyName || 'Không rõ'
-        const id = record.varietyId || 'N/A'
         return (
           <div>
             <Typography.Text strong>{name}</Typography.Text>
-            <div style={{ fontSize: 11, color: 'var(--mcms-text-muted)' }}>{id}</div>
           </div>
         )
       },
     },
     {
-      title: 'Số khay đã trồng',
+      title: 'Số phiên canh tác',
       dataIndex: 'traysRented',
       key: 'traysRented',
       align: 'right',
       width: 130,
       sorter: (a, b) => safeNumber(a.traysRented) - safeNumber(b.traysRented),
       render: (value: number) => (
-        <Typography.Text strong>{safeNumber(value)} khay</Typography.Text>
+        <Typography.Text strong>{formatReportNumber(safeNumber(value))} phiên</Typography.Text>
       ),
     },
     {
@@ -80,18 +77,19 @@ export function VarietyPerformanceTable({
       align: 'right',
       width: 150,
       sorter: (a, b) => safeNumber(a.successRate) - safeNumber(b.successRate),
-      render: (rate: number) => {
+      render: (rate: number | null) => {
+        if (rate == null) return <Tooltip title="Chưa có tỷ lệ thành công theo giống"><span>—</span></Tooltip>
         const safe = safeNumber(rate)
         return (
           <StatusBadge
             tone={successTone(safe)}
-            label={`${safe.toFixed(1)}%`}
+            label={formatReportPercent(safe)}
           />
         )
       },
     },
     {
-      title: 'Doanh thu kỳ này',
+      title: 'Doanh thu dự kiến',
       dataIndex: 'currentRevenue',
       key: 'currentRevenue',
       align: 'right',
@@ -100,33 +98,31 @@ export function VarietyPerformanceTable({
         safeNumber(a.currentRevenue) - safeNumber(b.currentRevenue),
       render: (value: number) => (
         <Typography.Text strong style={{ color: 'var(--mcms-tone-ok-text)' }}>
-          {formatCurrency(value)}
+          {revenueIncomplete ? <Tooltip title="Thiếu giá gói hoặc không xác định được gói của phiên"><span>—</span></Tooltip> : formatCurrency(value)}
         </Typography.Text>
       ),
     },
     {
-      title: 'Cùng kỳ',
+      title: 'Kỳ trước',
       dataIndex: 'previousRevenue',
       key: 'previousRevenue',
       align: 'right',
       width: 170,
-      render: (value: number) => (
-        <Typography.Text type="secondary">
-          {formatCurrency(value)}
-        </Typography.Text>
-      ),
+      render: () => <Tooltip title="Chưa có dữ liệu kỳ trước"><span>—</span></Tooltip>,
     },
     {
-      title: 'Tăng trưởng YoY',
+      title: 'Tăng trưởng so kỳ trước',
       key: 'growth',
       align: 'right',
       width: 160,
       sorter: (a, b) =>
         safePercent(a.growthPercent) - safePercent(b.growthPercent),
       render: (_, record) => {
+        if (safeNumber(record.previousRevenue) === 0) {
+          return <Tooltip title="Chưa có dữ liệu kỳ trước"><span>—</span></Tooltip>
+        }
         const growth = safePercent(record.growthPercent)
         const isPositive = growth >= 0
-        const Icon = isPositive ? ArrowUpOutlined : ArrowDownOutlined
         return (
           <Tooltip
             title={`${formatCurrency(record.currentRevenue)} → ${formatCurrency(
@@ -136,8 +132,8 @@ export function VarietyPerformanceTable({
             <span>
               <StatusBadge
                 tone={isPositive ? 'ok' : 'danger'}
-                label={`${isPositive ? '+' : ''}${growth.toFixed(1)}%`}
-                icon={<Icon style={{ fontSize: 10 }} />}
+                label={`${isPositive ? '+' : ''}${formatReportPercent(growth)}`}
+
               />
             </span>
           </Tooltip>

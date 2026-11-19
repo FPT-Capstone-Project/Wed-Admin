@@ -74,6 +74,7 @@ export interface CultivationBatch {
    *   hiển thị **"Kéo tơ"** — xem `resolveGrowthPhase`.
    */
   growthStage: string | null
+  harvestReady?: boolean
   /** Tiến độ 0–100 (BE trả `progress_percent`). */
   progressPercent: number | null
   /** Ngày bắt đầu canh tác. */

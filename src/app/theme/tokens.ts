@@ -385,6 +385,7 @@ export const typography = {
 /* ─── Chuyển động ──────────────────────────────────────────────────────── */
 
 export const motion = {
+  smoothEasing: 'cubic-bezier(0.22, 1, 0.36, 1)',
   /** Chuẩn cho hover/focus. */
   fast: '160ms ease',
   /** Chuẩn cho mở/đóng panel. */

@@ -37,12 +37,11 @@ export interface StatusBadgeProps {
  *
  * Quy tắc bắt buộc (WCAG 1.4.1 — không dùng màu đơn độc để truyền đạt):
  *   - Luôn có `label` dạng chữ.
- *   - Nên kèm `icon` để phân biệt nhanh bằng hình dạng.
+ *   - Chấm màu và nhãn chữ luôn xuất hiện cùng nhau.
  */
 export function StatusBadge({
   tone,
   label,
-  icon,
   title,
   dot = false,
   className,
@@ -116,7 +115,7 @@ export function StatusBadge({
           backgroundColor: dotColor,
         }}
       />
-      {icon && <span aria-hidden="true">{icon}</span>}
+
       <span
         style={{
           minWidth: 0,
@@ -137,7 +136,7 @@ export function StatusBadge({
 /** Metadata describes a role/category; it must not imply operational health. */
 export type MetadataBadgeProps = Omit<StatusBadgeProps, 'tone' | 'dot'>
 
-export function MetadataBadge({ label, icon, title, className, style }: MetadataBadgeProps) {
+export function MetadataBadge({ label, title, className, style }: MetadataBadgeProps) {
   // ⚠ `whiteSpace` truyền xuống span nhãn ⇒ cho phép siết nhãn dài về 1
   //   dòng (xem `StatusBadge`).
   const labelWrap = style?.whiteSpace
@@ -147,7 +146,7 @@ export function MetadataBadge({ label, icon, title, className, style }: Metadata
       tabIndex={title ? 0 : undefined}
       style={style}
     >
-      {icon && <span aria-hidden="true">{icon}</span>}
+
       <span
         style={{
           minWidth: 0,
