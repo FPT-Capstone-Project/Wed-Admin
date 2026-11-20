@@ -149,57 +149,6 @@ export const AUTO_CONTROL_ACTION_DICTIONARY: StatusDictionary = {
 }
 
 /**
- * Trạng thái phiên thuê (legacy `RentalSessionStatus` — dữ liệu lịch sử IoT).
- *
- * ⚠ Dùng **màu preset của antd** vì 2 chỗ dùng vẫn render bằng `Tag` của
- *   antd (`RentalHistoryTable`, `TrayIoTHistoryView`).
- */
-export const RENTAL_SESSION_STATUS_DICTIONARY: StatusDictionary = {
-  ACTIVE: { tone: 'ok', label: 'Đang vận hành' },
-  COMPLETED: { tone: 'muted', label: 'Đã hoàn thành' },
-  OVERDUE: { tone: 'danger', label: 'Quá hạn' },
-}
-
-/** Màu preset của antd tương ứng — dùng cho `Tag color`. */
-export const RENTAL_SESSION_STATUS_ANTD_COLORS: Record<string, string> = {
-  ACTIVE: 'success',
-  COMPLETED: 'default',
-  OVERDUE: 'error',
-}
-
-/**
- * Trạng thái phiên thuê theo **shape legacy** (`{ color, label }`).
- *
- * ⚠ Giữ lại để tương thích ngược với các `Tag color={...}` của antd đang
- *   tồn tại trong codebase (`RentalHistoryTable`, `TrayIoTHistoryView`).
- *   Màu ở đây là **preset của antd**, không phải tone ngữ nghĩa — dùng
- *   `RENTAL_SESSION_STATUS_DICTIONARY` cho badge mới.
- */
-export interface RentalSessionLegacyOption {
-  color: string
-  label: string
-}
-
-/** Trạng thái phiên thuê — shape legacy `{ color, label }`. */
-export const RENTAL_SESSION_STATUS_LEGACY_CONFIG: Record<
-  string,
-  RentalSessionLegacyOption
-> = {
-  ACTIVE: {
-    color: RENTAL_SESSION_STATUS_ANTD_COLORS.ACTIVE,
-    label: RENTAL_SESSION_STATUS_DICTIONARY.ACTIVE.label,
-  },
-  COMPLETED: {
-    color: RENTAL_SESSION_STATUS_ANTD_COLORS.COMPLETED,
-    label: RENTAL_SESSION_STATUS_DICTIONARY.COMPLETED.label,
-  },
-  OVERDUE: {
-    color: RENTAL_SESSION_STATUS_ANTD_COLORS.OVERDUE,
-    label: RENTAL_SESSION_STATUS_DICTIONARY.OVERDUE.label,
-  },
-}
-
-/**
  * Loại sự kiện nhật ký tự động hoá (`iot_auto_control_logs.event_type`).
  *
  * ⚠ `DECISION` = "hệ thống đã đánh giá", **KHÔNG** phải "đã tưới" — sự

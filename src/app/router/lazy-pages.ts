@@ -44,11 +44,6 @@ export const DeviceManagementPage = lazy(() =>
     default: m.DeviceManagementPage,
   })),
 )
-export const IoTHistoryPage = lazy(() =>
-  import('../../pages/devices/IoTHistoryPage').then((m) => ({
-    default: m.IoTHistoryPage,
-  })),
-)
 export const OrderManagementPage = lazy(() =>
   import('../../pages/orders/OrderManagementPage').then((m) => ({
     default: m.OrderManagementPage,

@@ -18,17 +18,15 @@ Tooltip,
 Typography,
 message,
 } from 'antd'
-import { useEffect,useMemo,useState } from 'react'
-import { flushSync } from 'react-dom'
+import { useMemo,useState } from 'react'
 import { tones } from '../../app/theme/tokens'
 import { useReportsAnalytics } from '../../features/analytics/hooks/useFarmAnalytics'
 import {
-buildSessionRevenue,
+buildOrderRevenue,
 buildStageDistribution,
 buildVarietyPerformance,
 computeExecutiveKpis,
 } from '../../features/analytics/utils/executive-report.utils'
-import { useAuthStore } from '../../features/auth/store/auth.store'
 import {
 ActionButton,
 PageHeader,
@@ -43,7 +41,7 @@ import { KpiVarianceCard } from './components/KpiVarianceCard'
 import { SpeciesRevenueDonut } from './components/SpeciesRevenueDonut'
 import { VarietyPerformanceTable } from './components/VarietyPerformanceTable'
 import { continuousRevenuePeriods,formatReportMoney,formatReportNumber,formatReportPercent,formatReportWeight,reportDateTime,reportFileDate } from './report-format'
-import './reports-print.css'
+import './reports-layout.css'
 
 type Granularity = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'
 
@@ -52,9 +50,9 @@ type Granularity = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'
  *
  * ⚠ Đã bỏ hoàn toàn `useRoomStore` / `useAlertStore` / `useOrderStore` (mock).
  *   Toàn bộ số liệu đến từ `useReportsAnalytics`:
- *   - `/api/analytics/dashboard` — doanh thu, khay đã dùng, chất lượng thu hoạch
- *   - `/api/farm/sessions` — phiên theo giai đoạn, giống nấm
- *   - `/api/rental-packages` — giá gói thuê (doanh thu ước tính)
+ *   - `/api/analytics/dashboard` — khay đã dùng, chất lượng thu hoạch
+ *   - `/api/cultivation-sessions/admin` — tất cả phiên theo giai đoạn, giống nấm
+ *   - `/api/orders/admin` — doanh thu thực tế từ đơn đã thanh toán
  *   - `/api/cultivation-rooms`, `/api/cultivation-trays` — cơ cấu trang trại
  *   - `/api/iot/floors`, `/api/iot/masters` — sức khoẻ thiết bị
  *   - `/api/harvests/admin` — khối lượng thu hoạch
@@ -63,15 +61,7 @@ type Granularity = 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'
  */
 export function ReportsAnalyticsPage() {
   const [granularity, setGranularity] = useState<Granularity>('MONTHLY')
-  const [exportedAt, setExportedAt] = useState<Date | null>(null)
-  const user = useAuthStore(state => state.user)
-  useEffect(() => {
-    const stamp = () => flushSync(() => setExportedAt(new Date()))
-    window.addEventListener('beforeprint', stamp)
-    return () => window.removeEventListener('beforeprint', stamp)
-  }, [])
-
-  const { data, isLoading, isFetching, isError, error, refetch } = useReportsAnalytics()
+  const { data, isLoading, isError, error, refetch } = useReportsAnalytics()
 
   const analytics = data
 
@@ -104,7 +94,7 @@ export function ReportsAnalyticsPage() {
    */
   const chartData = useMemo(() => {
     if (!analytics || analytics.revenueIncomplete) return []
-    return continuousRevenuePeriods(buildSessionRevenue(analytics.revenueEvents, granularity), granularity)
+    return continuousRevenuePeriods(buildOrderRevenue(analytics.revenueEvents, granularity), granularity)
   }, [analytics, granularity])
 
   const currentLabel =
@@ -163,10 +153,10 @@ export function ReportsAnalyticsPage() {
       ...stageDistribution.map((row) => [row.stage, String(row.count)]),
       [],
       ['HIỆU SUẤT THEO GIỐNG NẤM'],
-      ['Giống nấm', 'Số phiên', 'Tỷ lệ thành công %', 'Doanh thu dự kiến'],
+      ['Giống nấm', 'Số phiên', 'Tỷ lệ thành công %', 'Doanh thu thực tế'],
       ...varietyPerformance.map((v) => [
         v.varietyName,
-        String(v.traysRented),
+        v.traysRented == null ? '—' : String(v.traysRented),
         v.successRate == null ? '—' : v.successRate.toFixed(1),
         analytics.revenueIncomplete ? '—' : String(v.currentRevenue),
       ]),
@@ -187,21 +177,6 @@ export function ReportsAnalyticsPage() {
     link.click()
     URL.revokeObjectURL(url)
     message.success('Đã xuất báo cáo Executive CSV.')
-  }
-
-  const handleExportPdf = async () => {
-    if (isLoading || isFetching || !analytics || !kpis) {
-      message.info('Đang tải dữ liệu')
-      return
-    }
-    try {
-      await document.fonts.ready
-      flushSync(() => setExportedAt(new Date()))
-      await new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve())))
-      window.print()
-    } catch {
-      message.error('Không mở được hộp thoại in. Vui lòng thử lại hoặc nhấn Ctrl+P.')
-    }
   }
 
   if (isLoading) {
@@ -231,12 +206,6 @@ export function ReportsAnalyticsPage() {
 
   return (
     <div className="reports-page">
-      <section className="reports-print-heading">
-        <h1>Báo cáo điều hành MCMS</h1>
-        <p>Ngày giờ xuất: {exportedAt ? reportDateTime(exportedAt) : '—'} (giờ Việt Nam)</p>
-        <p>Người xuất: {user?.fullName || user?.email || 'Chưa xác định'}</p>
-        <p>Phạm vi: {granularity === 'WEEKLY' ? 'Theo tuần' : granularity === 'MONTHLY' ? 'Theo tháng' : 'Theo quý'} · Tất cả kỳ có dữ liệu · Doanh thu dự kiến theo phiên canh tác.</p>
-      </section>
       <PageHeader
         title={
           <Flex align="center" gap={8}>
@@ -252,15 +221,7 @@ export function ReportsAnalyticsPage() {
               tone="info"
               label={`${formatReportNumber(analytics.totalSessions)} phiên canh tác`}
             />
-            <ActionButton
-              icon={<DownloadOutlined />}
-              label={isFetching ? 'Đang tải dữ liệu' : 'Xuất báo cáo PDF'}
-              description="Mở hộp thoại in, chọn 'Lưu thành PDF'"
-              disabled={isFetching}
-              variant="primary"
-              size="middle"
-              onClick={handleExportPdf}
-            />
+
           </Space>
         }
       />
@@ -374,10 +335,10 @@ export function ReportsAnalyticsPage() {
         <Flex align="center" justify="space-between" wrap gap={12} style={{ marginBottom: 8 }}>
           <div>
             <Typography.Title level={5} style={{ margin: 0 }}>
-              Doanh thu dự kiến theo phiên canh tác <Tooltip title="Ước tính số phiên × giá gói hiện tại; khác doanh thu đã thu từ đơn PAID."><InfoCircleOutlined tabIndex={0} /></Tooltip>
+              Doanh thu thực tế theo thời gian <Tooltip title="Tổng giá trị đơn đã thanh toán, phân kỳ theo ngày tạo đơn."><InfoCircleOutlined tabIndex={0} /></Tooltip>
             </Typography.Title>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Theo ngày bắt đầu phiên · Giờ Việt Nam
+              Theo ngày tạo đơn đã thanh toán · Giờ Việt Nam
             </Typography.Text>
           </div>
           <Segmented<Granularity>
@@ -403,7 +364,7 @@ export function ReportsAnalyticsPage() {
           />
         ) : (
           <Typography.Text type="secondary">
-            <Tooltip title="Cần ngày bắt đầu hợp lệ và giá gói xác định cho từng phiên; đơn có nhiều gói chưa thể nối chính xác."><span>— Chưa đủ dữ liệu phiên và giá gói để tổng hợp.</span></Tooltip>
+            Chưa có đơn hàng đã thanh toán.
           </Typography.Text>
         )}
         </div>
@@ -433,7 +394,7 @@ export function ReportsAnalyticsPage() {
               Cơ cấu giống nấm được thuê nhiều nhất
             </Typography.Title>
             <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Số phiên theo giống; doanh thu dự kiến theo giá gói hiện tại.
+              Tất cả phiên trên mọi thời điểm, gồm đang chạy và đã kết thúc. Thành công = hoàn thành / (hoàn thành + hủy). Doanh thu từ đơn đã thanh toán; đơn thiếu giống hoặc có nhiều giống chưa thể phân bổ được gom vào “Khác”.
             </Typography.Text>
           </div>
         </Flex>

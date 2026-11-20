@@ -111,12 +111,15 @@ export async function fetchAdminOrders(
  *   100 đơn.
  */
 export async function fetchAllAdminOrders(
-  options: { pageSize?: number; maxPages?: number } = {},
+  options: { pageSize?: number; maxPages?: number; requireComplete?: boolean } = {},
 ): Promise<AdminOrderDto[]> {
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 100))
   const maxPages = Math.max(1, options.maxPages ?? 20)
 
   const first = await fetchAdminOrders({ page: 1, pageSize })
+  if (options.requireComplete && first.pagination.totalPages > maxPages) {
+    throw new Error('Số đơn vượt giới hạn tổng hợp; chưa thể tính đầy đủ doanh thu báo cáo.')
+  }
   const totalPages = Math.min(first.pagination.totalPages, maxPages)
   if (totalPages <= 1) return first.items
 

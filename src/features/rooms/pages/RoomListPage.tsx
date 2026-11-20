@@ -1,5 +1,4 @@
 import '../rooms-industrial.css'
-import { RoomAdministration } from '../components/RoomAdministration'
 import {
   CheckCircleOutlined,
   InboxOutlined,
@@ -135,6 +134,11 @@ export function RoomListPage() {
     return map
   }, [tiersWithEnv])
 
+  const floorCount = new Set([
+    ...floorLayouts.map(floor => floor.floor_id),
+    ...tiers.flatMap(tier => tier.trays.map(tray => tray.floorId)),
+  ].filter((id): id is number => id != null && Number.isSafeInteger(id) && id > 0)).size
+
   const handleSelectTray = (tray: Tray) => navigate(`/rooms/${tray.id}`)
 
   return (
@@ -144,10 +148,9 @@ export function RoomListPage() {
 
       <PageHeader
         title="Quản lý khay nấm"
-        description={`${tiers.length} tầng nuôi · ${summary.total} khay`}
+        description={`${floorCount} tầng nuôi · ${summary.total} khay`}
       />
 
-      <RoomAdministration />
       {/* ── Legend nhỏ — chú thích trạng thái, không phải nút bấm ───── */}
       <TrayStatusLegend />
 

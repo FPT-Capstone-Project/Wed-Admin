@@ -93,19 +93,23 @@ test('cultivation aggregator does not swallow failed session requests', async ()
   })
   await assert.rejects(fetchCultivationBatches(), error => error === notFound)
 })
-test('reports analytics aggregator survives a session 404 without publishing zero KPIs', async () => {
+test('reports uses complete admin sessions and paid order revenue, and propagates incomplete or failed session loads', async () => {
   const list = async () => []
   const orderRequests = []
+  let sessionResponse = { items: [], complete: true, total: 0 }
+  let sessionError = null
   const { fetchReportsAnalytics } = loadApi('../src/features/analytics/api/analytics.api.ts', {
     '../../rooms/api/cultivation-room.api': { cultivationRoomApi: { list } },
     '../../rooms/api/cultivation-tray.api': { cultivationTrayApi: { list } },
     '../../devices/api/iot.api': { autoMistingApi: { listFloors: list }, iotApi: { listMasters: list } },
-    '../../sessions/api/session.api': { sessionApi: { list: reject404 } },
-    '../../packages/api/rental-package.api': { rentalPackageApi: { list } },
+    '../../sessions/api/admin-session.api': { fetchAllAdminCultivationSessionsDetailed: async () => {
+      if (sessionError) throw sessionError
+      return sessionResponse
+    } },
     '../../orders/api/order.api': {
       fetchAllAdminOrders: async options => {
         orderRequests.push(options)
-        return []
+        return [{ order_id: 1, payment_status: 'PAID', total_amount: '340000', mushroom_name: 'Golden', created_at: '2026-11-20' }]
       },
     },
     '../../harvest/api/harvest.api': { harvestApi: { list: async () => ({ data: [] }) } },
@@ -118,13 +122,16 @@ test('reports analytics aggregator survives a session 404 without publishing zer
     },
   })
   const analytics = await fetchReportsAnalytics()
-  assert.deepEqual(orderRequests.map(options => ({ ...options })), [{ pageSize: 100, maxPages: 20 }])
-  // Phiên lỗi chỉ làm mất dữ liệu phiên — không cascade làm hỏng cả trang.
+  assert.deepEqual(orderRequests.map(options => ({ ...options })), [{ pageSize: 100, maxPages: 20, requireComplete: true }])
   assert.equal(analytics.totalSessions, 0)
-  assert.equal(analytics.totalRevenue, 128500000)
+  assert.equal(analytics.totalRevenue, 340000)
   assert.equal(analytics.traysUsed, 36)
   assert.equal(analytics.usableRate, 93)
   assert.equal(analytics.wasteRate, 7)
+  sessionResponse = { items: [], complete: false, total: 3000 }
+  await assert.rejects(fetchReportsAnalytics())
+  sessionError = notFound
+  await assert.rejects(fetchReportsAnalytics(), error => error === notFound)
 })
 test('dashboard metrics endpoint is fetched through the shared axios client', async () => {
   const calls = []
@@ -449,7 +456,7 @@ test('router parent guard opens the admin area for OPERATOR and blocks CUSTOMER 
     assert.ok(pattern.test(source), `route "${path}" phải giới hạn ADMIN_ONLY`)
   }
   // Route ADMIN + OPERATOR.
-  for (const path of ['devices', 'devices/history', 'sessions']) {
+  for (const path of ['devices', 'sessions']) {
     const pattern = new RegExp(`path: '${path}'[\\s\\S]{0,200}?allowedRoles=\\{ADMIN_AND_OPERATOR\\}`)
     assert.ok(pattern.test(source), `route "${path}" phải cho phép ADMIN_AND_OPERATOR`)
   }

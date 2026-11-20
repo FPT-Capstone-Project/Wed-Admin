@@ -289,7 +289,7 @@ export function useNotificationActions() {
  * ⚠ Hook **tự** hiện toast (AntD `message`) khi thành công / thất bại ⇒
  *   component gọi hook không cần `try/catch` + `message.*` thủ công.
  *   `mutateAsync` vẫn **reject** khi lỗi ⇒ dùng `.catch(() => undefined)`
- *   khi không cần xử lý thêm (xem `RoomAdministration`).
+ *   khi không cần xử lý thêm.
  */
 export function useSendSessionNotification() {
     const { message } = App.useApp()

@@ -24,7 +24,6 @@ Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
 import { Suspense,useMemo,useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { AutoControlDetailModal,CameraStreamModal } from '../../../app/router/lazy-modals'
 import { tones } from '../../../app/theme/tokens'
 import { useFloorCameraMap } from '../../../features/cameras/hooks/useFloorCameras'
@@ -141,7 +140,6 @@ function formatTimestamp(timestamp: string | number | null) {
  *   (SSR)" đã được gỡ khỏi giao diện.
  */
 export function DeviceControlPanel() {
-  const navigate = useNavigate()
   const { message } = App.useApp()
 
   /**
@@ -718,7 +716,6 @@ export function DeviceControlPanel() {
           <SensorHistoryPanel
             key={selectedMaster?.masterId ?? 'no-master'}
             masterId={selectedMaster?.masterId ?? null}
-            onOpenFullHistory={() => navigate('/devices/history')}
           />
         )}
       </Card>

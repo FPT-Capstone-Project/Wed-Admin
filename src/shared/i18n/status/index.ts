@@ -78,9 +78,6 @@ export {
   AUTO_CONTROL_EVENT_DICTIONARY,
   AUTO_CONTROL_ACTION_DICTIONARY,
   SENSOR_VALIDITY_DICTIONARY,
-  RENTAL_SESSION_STATUS_DICTIONARY,
-  RENTAL_SESSION_STATUS_ANTD_COLORS,
-  RENTAL_SESSION_STATUS_LEGACY_CONFIG,
 } from './iot'
 export type {
   MasterStatusKey,
@@ -90,7 +87,6 @@ export type {
   AutoControlRunStatusKey,
   IotCommandStatusKey,
   SensorValidityKey,
-  RentalSessionLegacyOption,
 } from './iot'
 
 export {

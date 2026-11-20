@@ -5,7 +5,6 @@
   MenuFoldOutlined,
   MenuUnfoldOutlined,
   MenuOutlined,
-  WifiOutlined,
 } from '@ant-design/icons'
 import {
   Avatar,
@@ -14,7 +13,6 @@ import {
   Dropdown,
   Layout,
   Menu,
-  Tooltip,
   Typography,
 } from 'antd'
 import type { MenuProps } from 'antd'
@@ -25,7 +23,6 @@ import { AUTH_EXPIRED_EVENT } from '../../shared/api/client'
 import { NotificationBell } from '../../features/notifications/components/NotificationBell'
 import { resolveUserRole, ROLE_LABELS } from '../../routes/access-policy'
 import { buildMenuItems } from './navigation-menu'
-import { useMasterList } from '../../features/devices/hooks/useIoT'
 import {
   SIDEBAR_COLLAPSED_WIDTH,
   SIDEBAR_EXPANDED_WIDTH,
@@ -128,20 +125,6 @@ function NavigationPanel({
   items,
   collapsed = false,
 }: NavigationPanelProps) {
-  const { data: masters, isPending, isError } = useMasterList({
-    refetchInterval: 30_000,
-  })
-  const total = masters?.length ?? 0
-  const online = masters?.filter((master) => master.reportedStatus === 'online').length ?? 0
-  const connectionState = masters === undefined
-    ? isPending ? 'loading' : 'empty'
-    : total === 0 ? 'empty'
-      : online === total ? 'online' : online > 0 ? 'partial' : 'offline'
-  const connectionLabel = masters === undefined
-    ? isError ? 'Không thể kiểm tra kết nối' : 'Đang kiểm tra kết nối'
-    : total === 0 ? 'Đã kết nối 0/0 thiết bị'
-      : online === 0 ? 'Mất kết nối' : `Đã kết nối ${online}/${total} thiết bị`
-
   return (
     <div className="sidebar-panel">
       <Brand onClose={onClose} collapsed={collapsed} />
@@ -156,18 +139,6 @@ function NavigationPanel({
           onClose?.()
         }}
       />
-      <div className="sidebar-health" role="status">
-        <span className="sidebar-health-icon" aria-hidden="true">
-          <WifiOutlined />
-        </span>
-        <span>
-          <strong>Giám sát trang trại</strong>
-          <small>{connectionLabel}</small>
-        </span>
-        <Tooltip title={connectionLabel}>
-          <span className="status-pulse" data-state={connectionState} role="img" aria-label={connectionLabel} tabIndex={0} />
-        </Tooltip>
-      </div>
     </div>
   )
 }
@@ -224,9 +195,7 @@ export function AdminLayout() {
 
   const selectedMenuKey = getSelectedMenuKey(location.pathname)
   const pageTitle =
-    location.pathname.startsWith('/devices/history')
-      ? 'Lịch sử Telemetry IoT'
-      : import.meta.env.DEV && location.pathname.startsWith('/dev/style-guide')
+    import.meta.env.DEV && location.pathname.startsWith('/dev/style-guide')
         ? 'Cẩm nang giao diện (dev)'
         : PAGE_TITLES[selectedMenuKey]
 

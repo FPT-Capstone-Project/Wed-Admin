@@ -23,7 +23,6 @@ import {
   DashboardPage,
   DeviceManagementPage,
   ForgotPasswordPage,
-  IoTHistoryPage,
   OrderManagementPage,
   PackageManagementPage,
   ReportsAnalyticsPage,
@@ -61,7 +60,7 @@ export const router = createBrowserRouter([
         {/*
           ⚠ Route CHA phải cho phép CẢ ADMIN lẫn OPERATOR.
           Trước đây route cha chỉ mở `['ADMIN']` ⇒ Farm Operator bị chặn
-          ngay ở cổng vào dù các route con (devices, devices/history,
+          ngay ở cổng vào dù các route con (devices,
           sessions) đã cho phép OPERATOR ⇒ không bao giờ tới được.
           → Route con tự quyết định quyền (xem `RoleGuard` bên dưới).
         */}
@@ -166,14 +165,6 @@ export const router = createBrowserRouter([
         element: (
           <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>
             {withSuspense(<DeviceManagementPage />)}
-          </RoleGuard>
-        ),
-      },
-      {
-        path: 'devices/history',
-        element: (
-          <RoleGuard allowedRoles={ADMIN_AND_OPERATOR}>
-            {withSuspense(<IoTHistoryPage />)}
           </RoleGuard>
         ),
       },

@@ -59,8 +59,8 @@ export interface VarietyPerformance {
   varietyId: string
   varietyName: string
   /** Số phiên canh tác của giống nấm. */
-  traysRented: number
-  /** Tỷ lệ thu hoạch đạt chuẩn (0–100) — suy ra từ tổng quan BE. */
+  traysRented: number | null
+  /** Tỷ lệ phiên hoàn thành trong số phiên đã kết thúc (0–100). */
   successRate: number | null
   currentRevenue: number
   previousRevenue: number
@@ -69,7 +69,7 @@ export interface VarietyPerformance {
 
 /** KPI executive tính từ dữ liệu thật. */
 export interface ExecutiveKpis {
-  /** Doanh thu thật (đơn đã thanh toán) — từ `/api/analytics/dashboard`. */
+  /** Doanh thu thật từ danh sách đơn PAID dùng chung cho báo cáo. */
   totalRevenue: number
   /** Kỳ trước — chưa có dữ liệu lịch sử ⇒ 0. */
   previousTotalRevenue: number
@@ -90,7 +90,7 @@ export interface ExecutiveKpis {
 /**
  * Chuẩn hoá danh sách doanh thu theo tháng thật thành điểm biểu đồ.
  *
- * @param monthlyRevenue doanh thu ước tính theo tháng (từ `start_date` phiên)
+ * @param monthlyRevenue doanh thu thực tế theo tháng (created_at của đơn PAID)
  * @param months số tháng hiển thị (mặc định 12)
  */
 export function buildMonthlyComparison(
@@ -101,14 +101,14 @@ export function buildMonthlyComparison(
 
   return safe.map((entry) => ({
     month: entry.label,
-    current: Math.round(toSafeNumber(entry.estimatedRevenue)),
+    current: Math.round(toSafeNumber(entry.revenue)),
     // null phân biệt thiếu lịch sử với doanh thu kỳ trước thực sự bằng 0.
     previous: null,
   }))
 }
 
 /**
- * Gom doanh thu ước tính theo tuần ISO (theo start_date của phiên).
+ * Adapter cũ từ dữ liệu tháng; biểu đồ báo cáo dùng buildOrderRevenue để gom tuần.
  * Key tuần: `YYYY-WNN` (vd "2026-W44").
  *
  * ⚠ BE không trả dữ liệu theo tuần — hàm này là alias cho `buildMonthlyComparison`
@@ -137,7 +137,7 @@ export function buildQuarterlyRevenue(
     if (!Number.isFinite(monthIndex)) continue
     const quarter = Math.floor((monthIndex - 1) / 3) + 1
     const key = `${year}-Q${quarter}`
-    byQuarter.set(key, (byQuarter.get(key) ?? 0) + toSafeNumber(entry.estimatedRevenue))
+    byQuarter.set(key, (byQuarter.get(key) ?? 0) + toSafeNumber(entry.revenue))
   }
 
   return [...byQuarter.entries()]
@@ -154,22 +154,21 @@ export function buildQuarterlyRevenue(
 /**
  * Dựng bảng hiệu suất theo giống nấm từ cơ cấu giống nấm thật.
  *
- * ⚠ BE chưa trả "tỷ lệ thành công" theo từng giống ⇒ dùng tỷ lệ đạt chung
- *   toàn trang trại (từ `/api/analytics/dashboard`). Khi BE bổ sung field
- *   per-species, thay `overallSuccessRate` bằng `entry.successRate`.
+ * Tỷ lệ thành công lấy từ kết quả phiên theo giống; chưa có phiên kết thúc là null.
  */
 export function buildVarietyPerformance(
   speciesBreakdown: SpeciesBreakdown[],
 
 ): VarietyPerformance[] {
   return speciesBreakdown.map((entry) => {
-    const currentRevenue = Math.round(toSafeNumber(entry.estimatedRevenue))
+    const currentRevenue = Math.round(toSafeNumber(entry.revenue))
 
     return {
       varietyId: entry.species,
       varietyName: entry.species,
-      traysRented: toSafeNumber(entry.sessionCount),
-      successRate: null,
+      traysRented: entry.species.trim().toLocaleLowerCase('vi-VN') === 'khác' && entry.sessionCount === 0
+        ? null : toSafeNumber(entry.sessionCount),
+      successRate: entry.successRate ?? null,
       currentRevenue,
       previousRevenue: 0,
       growthPercent: 0,
@@ -222,12 +221,15 @@ export function buildStageDistribution(analytics: ReportsAnalytics) {
     }))
 }
 
-/** Bucket session estimates using Vietnam calendar dates; Monday starts a week. */
-export function buildSessionRevenue(events: ReportsAnalytics['revenueEvents'], granularity: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'): MonthlyRevenuePoint[] {
+/** Bucket paid order amounts using Vietnam calendar dates; Monday starts a week. */
+export function buildOrderRevenue(events: ReportsAnalytics['revenueEvents'], granularity: 'WEEKLY' | 'MONTHLY' | 'QUARTERLY'): MonthlyRevenuePoint[] {
   const buckets = new Map<string, number>()
   for (const event of events) {
     const instant = new Date(event.date)
-    if (!Number.isFinite(instant.getTime()) || instant.getUTCFullYear() <= 1970) continue
+    if (!Number.isFinite(instant.getTime()) || instant.getUTCFullYear() <= 1970) {
+      buckets.set('UNKNOWN', (buckets.get('UNKNOWN') ?? 0) + event.amount)
+      continue
+    }
     const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(instant)
     const part = (name: string) => Number(parts.find(p => p.type === name)?.value)
     const year = part('year'), month = part('month'), day = part('day')

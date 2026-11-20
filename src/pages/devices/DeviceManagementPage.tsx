@@ -1,6 +1,4 @@
-import { HistoryOutlined } from '@ant-design/icons'
-import { App,Button,Flex } from 'antd'
-import { useNavigate } from 'react-router-dom'
+import { Flex } from 'antd'
 import { useMasterList } from '../../features/devices/hooks/useIoT'
 import { MetadataBadge } from '../../shared/ui'
 import { PageHeader } from '../../shared/ui/PageHeader'
@@ -15,8 +13,6 @@ import './device-industrial.css'
  * `features/auth/permissions.ts` (`iot.automation.manage`).
  */
 export function DeviceManagementPage() {
-  App.useApp()
-  const navigate = useNavigate()
 
   // ── IoT Masters (real) ────────────────────────────────────────────
   const {
@@ -29,12 +25,7 @@ export function DeviceManagementPage() {
           <MetadataBadge  label={<>
             Chỉ giám sát
           </>} />
-          <Button
-            icon={<HistoryOutlined />}
-            onClick={() => navigate('/devices/history')}
-          >
-            Lịch sử Telemetry
-          </Button>
+
         </Flex>} />
 
       <DeviceControlPanel />

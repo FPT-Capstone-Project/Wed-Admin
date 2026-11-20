@@ -17,6 +17,7 @@ export function niceRevenueTicks(max: number): number[] {
   return Array.from({ length: Math.ceil(max / step) + 1 }, (_, i) => i * step)
 }
 export function formatReportPeriod(key: string): string {
+  if (key === 'UNKNOWN') return 'Chưa rõ ngày'
   if (/^\d{4}-\d{2}$/.test(key)) return `T${key.slice(5)}/${key.slice(0, 4)}`
   if (/^\d{4}-Q[1-4]$/.test(key)) return `${key.slice(5)}/${key.slice(0, 4)}`
   if (/^\d{4}-\d{2}-\d{2}$/.test(key)) {
@@ -53,10 +54,13 @@ export function continuousRevenuePeriods<T extends { month: string; current: num
   const dateFor = (key: string) => new Date(granularity === 'QUARTERLY'
     ? Date.UTC(Number(key.slice(0, 4)), (Number(key.slice(-1)) - 1) * 3, 1)
     : `${key}${granularity === 'MONTHLY' ? '-01' : ''}T00:00:00Z`)
-  const sorted = [...points].sort((a, b) => a.month.localeCompare(b.month))
+  const undated = points.filter(point => point.month === 'UNKNOWN')
+  const dated = points.filter(point => point.month !== 'UNKNOWN')
+  if (!dated.length) return undated
+  const sorted = [...dated].sort((a, b) => a.month.localeCompare(b.month))
   const cursor = dateFor(sorted[0].month)
   const today = new Date(`${reportFileDate(now)}T00:00:00Z`)
-  const last = keyFor(today)
+  const last = [keyFor(today), sorted[sorted.length - 1].month].sort().at(-1)!
   const values = new Map(points.map(point => [point.month, point]))
   const result = []
   while (keyFor(cursor) <= last) {
@@ -65,5 +69,5 @@ export function continuousRevenuePeriods<T extends { month: string; current: num
     if (granularity === 'WEEKLY') cursor.setUTCDate(cursor.getUTCDate() + 7)
     else cursor.setUTCMonth(cursor.getUTCMonth() + (granularity === 'MONTHLY' ? 1 : 3))
   }
-  return result
+  return [...result, ...undated]
 }

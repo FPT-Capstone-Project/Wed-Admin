@@ -66,19 +66,19 @@ export function VarietyPerformanceTable({
       align: 'right',
       width: 130,
       sorter: (a, b) => safeNumber(a.traysRented) - safeNumber(b.traysRented),
-      render: (value: number) => (
-        <Typography.Text strong>{formatReportNumber(safeNumber(value))} phiên</Typography.Text>
+      render: (value: number | null) => (
+        <Typography.Text strong>{value == null ? '—' : `${formatReportNumber(safeNumber(value))} phiên`}</Typography.Text>
       ),
     },
     {
-      title: 'Tỷ lệ thành công',
+      title: <Tooltip title="Số phiên hoàn thành / tổng phiên đã kết thúc (hoàn thành + hủy). Phiên đang chạy không tính vào mẫu số.">Tỷ lệ thành công</Tooltip>,
       dataIndex: 'successRate',
       key: 'successRate',
       align: 'right',
       width: 150,
       sorter: (a, b) => safeNumber(a.successRate) - safeNumber(b.successRate),
       render: (rate: number | null) => {
-        if (rate == null) return <Tooltip title="Chưa có tỷ lệ thành công theo giống"><span>—</span></Tooltip>
+        if (rate == null) return <Tooltip title="Chưa có phiên kết thúc để tính tỷ lệ thành công"><span>—</span></Tooltip>
         const safe = safeNumber(rate)
         return (
           <StatusBadge
@@ -89,7 +89,7 @@ export function VarietyPerformanceTable({
       },
     },
     {
-      title: 'Doanh thu dự kiến',
+      title: 'Doanh thu thực tế',
       dataIndex: 'currentRevenue',
       key: 'currentRevenue',
       align: 'right',
@@ -98,7 +98,7 @@ export function VarietyPerformanceTable({
         safeNumber(a.currentRevenue) - safeNumber(b.currentRevenue),
       render: (value: number) => (
         <Typography.Text strong style={{ color: 'var(--mcms-tone-ok-text)' }}>
-          {revenueIncomplete ? <Tooltip title="Thiếu giá gói hoặc không xác định được gói của phiên"><span>—</span></Tooltip> : formatCurrency(value)}
+          {revenueIncomplete ? <Tooltip title="Chưa đủ dữ liệu đơn đã thanh toán"><span>—</span></Tooltip> : formatCurrency(value)}
         </Typography.Text>
       ),
     },

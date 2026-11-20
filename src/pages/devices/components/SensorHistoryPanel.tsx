@@ -1,7 +1,7 @@
 import '../device-industrial.css'
 import { StatusBadge, DataTable } from '../../../shared/ui'
 import { useMemo, useState } from 'react'
-import { HistoryOutlined, RightOutlined } from '@ant-design/icons'
+import { RightOutlined } from '@ant-design/icons'
 import {
   Alert,
   Button,
@@ -21,8 +21,6 @@ import {
 interface SensorHistoryPanelProps {
   /** Master đang xem (`null` → chưa có master ⇒ không tải). */
   masterId: string | null
-  /** Mở trang lịch sử đầy đủ (`/devices/history`). */
-  onOpenFullHistory: () => void
 }
 
 function formatTimestamp(timestamp: string | null | undefined) {
@@ -48,7 +46,6 @@ function formatTimestamp(timestamp: string | null | undefined) {
  */
 export function SensorHistoryPanel({
   masterId,
-  onOpenFullHistory,
 }: SensorHistoryPanelProps) {
   const [nodeId, setNodeId] = useState<number>(ACTIVE_NODE_IDS[0] ?? 1)
   const [sensorId, setSensorId] = useState<number>(1)
@@ -169,13 +166,6 @@ export function SensorHistoryPanel({
           Tải lại
         </Button>
 
-        <Button
-          type="link"
-          icon={<HistoryOutlined />}
-          onClick={onOpenFullHistory}
-        >
-          Xem lịch sử đầy đủ
-        </Button>
       </Flex>
 
       {isError ? (

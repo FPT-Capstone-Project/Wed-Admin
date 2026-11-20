@@ -1,0 +1,13 @@
+.reports-page .mcms-stat-card-value { font-family: inherit !important; font-variant-numeric: tabular-nums; }
+.reports-revenue-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); gap: 24px; }
+.reports-revenue-grid > * { min-width: 0; }
+.reports-donut-legend { display: grid; gap: 8px; padding: 0; list-style: none; }
+.reports-donut-legend li { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.reports-donut h3 { margin: 0 0 8px; font-size: 14px; }
+.reports-donut-plot { position: relative; width: 290px; max-width: 100%; margin: 0 auto; }
+.reports-donut-total { position: absolute; inset: 0; text-align: center; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; pointer-events: none; font-size: 12px; }
+.reports-donut-total strong { font-size: 15px; font-variant-numeric: tabular-nums; }
+.reports-legend-square { display: inline-block; width: 10px; height: 10px; flex-shrink: 0; }
+.reports-chart-legend { display: flex; gap: 16px; font-size: 12px; margin-top: 8px; }
+.reports-legend-line { display: inline-block; width: 20px; border-top: 2px dashed #d97706; margin-right: 6px; }
+@media screen and (max-width: 1100px) { .reports-revenue-grid { grid-template-columns: minmax(0, 1fr); } }

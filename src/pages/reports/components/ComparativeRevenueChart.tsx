@@ -21,7 +21,6 @@ import {
 import { tones, chartSeries, tokens } from '../../../app/theme/tokens'
 import { Empty } from 'antd'
 import type { MonthlyRevenuePoint } from '../../../features/analytics/utils/executive-report.utils'
-import { useReportPrint } from '../useReportPrint'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -212,9 +211,8 @@ function ComparativeRevenueChartInner({
   height = 300,
 }: ComparativeRevenueChartProps) {
   const animate = false
-  const printing = useReportPrint()
   const showCumulative = data.length >= 4
-  const chartHeight = printing ? 220 : height
+  const chartHeight = height
 
   // Compute: cumulative, hasPreviousData, padding, totals
   const { chartData, hasPreviousData, totals } = useMemo(() => {
@@ -371,7 +369,7 @@ function ComparativeRevenueChartInner({
           label="So sánh doanh thu theo kỳ"
           empty={false}
         >
-          <ResponsiveContainer width={printing ? 620 : '100%'} height={chartHeight}>
+          <ResponsiveContainer width="100%" minWidth={0} height={chartHeight}>
             <ComposedChart
               data={chartData}
               margin={{ top: 44, right: 24, left: 16, bottom: 8 }}
