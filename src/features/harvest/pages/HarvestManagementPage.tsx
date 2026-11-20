@@ -9,6 +9,7 @@ import {
 } from '../../../shared/i18n/status/harvest'
 import {
   SESSION_HARVEST_STATUS_DICTIONARY,
+  resolveSessionHarvestStatus,
   SESSION_STATUS_DICTIONARY,
 } from '../../../shared/i18n/status/session'
 import { presentStatus, selectOptions, statusLabel } from '../../../shared/i18n/status/registry'
@@ -70,7 +71,7 @@ export function HarvestManagementPage() {
     </StatGrid>
     <DataTable<Harvest> size="small" rowKey="harvest_id" dataSource={rows} loading={query.isLoading} isFetching={query.isFetching} scrollX={1000} tableLayout="fixed" pagination={{ hideOnSinglePage: false, pageSize: 20, showSizeChanger: true }} emptyTitle="Chưa có đợt thu hoạch phù hợp" emptyDescription="Thử thay đổi bộ lọc để xem các đợt thu hoạch khác." expandable={{ expandedRowRender: h => <Descriptions size="small" column={{ xs: 1, md: 2 }} items={[
         { key: 'session', label: 'Trạng thái phiên', children: <StatusBadge {...presentStatus(SESSION_STATUS_DICTIONARY, h.cultivation_status)} title="Trạng thái phiên canh tác" /> },
-        { key: 'readiness', label: 'Độ sẵn sàng thu hoạch', children: <StatusBadge {...presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, h.harvest_status)} title="Trạng thái sẵn sàng thu hoạch của phiên" /> },
+        { key: 'readiness', label: 'Độ sẵn sàng thu hoạch', children: <StatusBadge {...(resolveSessionHarvestStatus(h.status === 'COMPLETED' ? h.status : h.cultivation_status, h.harvest_status) ?? presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, h.harvest_status))} title="Trạng thái sẵn sàng thu hoạch của phiên" /> },
         { key: 'method', label: 'Hình thức nhận', children: <><StatusBadge {...presentStatus(HARVEST_METHOD_DICTIONARY, h.harvest_method, 'Chưa chọn')} /><Typography.Paragraph>{h.harvest_method === 'PICKUP' ? auditDate(h.scheduled_at) : h.customer_note ?? '—'}</Typography.Paragraph></> },
         { key: 'grade', label: 'Phẩm cấp', children: statusLabel(HARVEST_QUALITY_DICTIONARY, h.quality_grade, 'Chưa ghi nhận') },
         { key: 'rejected', label: 'Loại bỏ (kg)', children: auditWeight(h.rejected_weight_kg) },

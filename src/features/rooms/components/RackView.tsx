@@ -244,6 +244,7 @@ function TrayCard({ tray, isSelected, onClick, summary, floorLabel, imageUrl }: 
   const effectiveStatus: TrayStatus =
     tray.status === 'rented' && summary?.harvestDue ? 'harvesting' : tray.status
 
+  const isIdle = tray.status === 'empty' || tray.status === 'maintenance'
   const vis = TRAY_VISUAL[effectiveStatus]
   const timing = harvestTiming(summary?.startDate ?? tray.rental?.startDate, summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
   const trayCode = formatTrayCode(tray.code)
@@ -253,7 +254,7 @@ function TrayCard({ tray, isSelected, onClick, summary, floorLabel, imageUrl }: 
   const mushroomName = summary?.mushroomName ?? tray.rental?.mushroomType ?? 'Chưa rõ loại nấm'
   const detail = [
     floorLabel ?? trayFloorLabel(tray), tray.code, TRAY_STATUS_CONFIG[effectiveStatus].label,
-    ...(tray.status === 'empty' ? [] : [mushroomName, customerName]),
+    ...(isIdle ? [] : [mushroomName, customerName]),
     summary ? `Phiên #${summary.sessionId}` : null,
     startDate ? `Bắt đầu ${formatShortDate(summary?.startDate ?? tray.rental?.startDate, true)}` : null,
     harvestDate ? `Dự kiến thu hoạch ${formatShortDate(summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate, true)}` : null,
@@ -263,7 +264,7 @@ function TrayCard({ tray, isSelected, onClick, summary, floorLabel, imageUrl }: 
 
   return <Tooltip title={detail} trigger={['hover', 'focus']}>
     <button type="button" onClick={onClick} aria-label={`Mở chi tiết ${trayCode}: ${detail}`}
-      aria-current={isSelected ? 'true' : undefined} className={`tray-card-btn ${tray.status === 'empty' ? 'mcms-tray-empty' : 'mcms-tray-active'}`}
+      aria-current={isSelected ? 'true' : undefined} className={`tray-card-btn ${isIdle ? 'mcms-tray-empty' : 'mcms-tray-active'}`}
       style={{
         appearance: 'none', font: 'inherit', width: '100%', minWidth: 0,
         textAlign: 'left', borderRadius: 10, cursor: 'pointer',
@@ -277,9 +278,12 @@ function TrayCard({ tray, isSelected, onClick, summary, floorLabel, imageUrl }: 
         <TrayCodeText code={tray.code} wrap={false} focusable={false} />
       </span>
       <span className="mcms-tray-content">
-      <span className="mcms-tray-crop"><MushroomThumbnail src={imageUrl} name={tray.status === 'empty' ? 'Khay trống' : mushroomName} empty={tray.status === 'empty'} /><strong className="mcms-tray-variety">{tray.status === 'empty' ? 'Trống' : mushroomName}</strong></span>
-      <span className="mcms-tray-status" data-status={effectiveStatus} aria-hidden={tray.status === 'empty'} style={{ color: vis.textColor, background: `color-mix(in srgb, ${vis.progressColor} 10%, ${tokens.color.surface})`, visibility: tray.status === 'empty' ? 'hidden' : 'visible' }}>{TRAY_STATUS_CONFIG[effectiveStatus].shortLabel}</span>
-      <span className="mcms-tray-harvest-row" aria-hidden={tray.status === 'empty'} style={{ visibility: tray.status === 'empty' ? 'hidden' : 'visible' }}>
+      <span className="mcms-tray-crop">
+        {tray.status !== 'maintenance' && <MushroomThumbnail src={imageUrl} name={tray.status === 'empty' ? 'Khay trống' : mushroomName} empty={tray.status === 'empty'} />}
+        <strong className="mcms-tray-variety">{tray.status === 'maintenance' ? 'Đang vệ sinh' : tray.status === 'empty' ? 'Trống' : mushroomName}</strong>
+      </span>
+      <span className="mcms-tray-status" data-status={effectiveStatus} aria-hidden={isIdle} style={{ color: vis.textColor, background: `color-mix(in srgb, ${vis.progressColor} 10%, ${tokens.color.surface})`, visibility: isIdle ? 'hidden' : 'visible' }}>{TRAY_STATUS_CONFIG[effectiveStatus].shortLabel}</span>
+      <span className="mcms-tray-harvest-row" aria-hidden={isIdle} style={{ visibility: isIdle ? 'hidden' : 'visible' }}>
         <span className="mcms-tray-date" style={{ visibility: harvestDate || startDate ? undefined : 'hidden' }}>{harvestDate
           ? timing && timing.days <= 0
             ? `Đến hạn ${harvestDate}`

@@ -35,7 +35,7 @@ export const ORDER_STATUS_DICTIONARY: Record<OrderStatusKey, StatusPresentation>
   {
     PENDING: { tone: 'warning', label: 'Chờ xử lý' },
     CONFIRMED: { tone: 'info', label: 'Đã xác nhận' },
-    PROCESSING: { tone: 'ok', label: 'Đang xử lý' },
+    PROCESSING: { tone: 'ok', label: 'Đang canh tác' },
     COMPLETED: { tone: 'muted', label: 'Hoàn thành' },
     CANCELLED: { tone: 'danger', label: 'Đã hủy' },
   }

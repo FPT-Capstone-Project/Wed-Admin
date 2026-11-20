@@ -409,7 +409,10 @@ export function AutoControlDetailModal({
               label: 'Điều khiển làm mát',
               children: config.cooling_enabled ? (
                 <Flex vertical gap={2}>
-                  <StatusBadge tone="info" label="Đang bật" />
+                  <StatusBadge
+                    tone={configuration?.mode === 'AUTO' ? 'ok' : 'muted'}
+                    label={configuration?.mode === 'AUTO' ? 'Đang bật' : 'Tạm dừng (Chế độ thủ công)'}
+                  />
                   {typeof config.temperature_start_threshold === 'number' && (
                     <Typography.Text type="secondary" style={{ fontSize: 12 }}>
                       Kích hoạt khi nhiệt độ ≥{' '}

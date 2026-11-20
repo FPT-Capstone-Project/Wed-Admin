@@ -277,6 +277,7 @@
   width: 32px; height: 32px; flex: 0 0 32px; border-radius: 6px;
   object-fit: cover; background: var(--mcms-surface); border: 1px solid rgba(15, 23, 42, 0.08);
 }
+.mcms-tray-empty .mcms-tray-thumbnail { background: transparent; border: none; }
 .mcms-tray-thumbnail-placeholder { display: inline-flex; align-items: center; justify-content: center; }
 .mcms-tray-variety { min-width: 0; max-width: 100%; font-size: 13.5px; font-weight: 700; text-align: center; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; line-height: 1.25; }
 .mcms-tray-date { display: block; min-width: 0; max-width: 100%; font-size: 12px; font-weight: 500; color: var(--mcms-text-muted); line-height: 1.3; white-space: nowrap; text-align: center; overflow: hidden; text-overflow: ellipsis; }

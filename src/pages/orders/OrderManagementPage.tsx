@@ -25,7 +25,6 @@ import {
   Typography,
 } from 'antd'
 import type { ColumnsType } from 'antd/es/table'
-import { useOrderPaymentStatus } from '../../features/orders/hooks/usePayments'
 import {
   useOrderCultivationProgress,
   useOrderCultivationStatus,
@@ -74,7 +73,7 @@ const TAB_OPTIONS: Array<{ value: OrderTab; label: string }> = [
   { value: 'ALL', label: 'Tất cả' },
   { value: 'PENDING', label: 'Chờ xử lý' },
   { value: 'CONFIRMED', label: 'Đã xác nhận' },
-  { value: 'PROCESSING', label: 'Đang xử lý' },
+  { value: 'PROCESSING', label: 'Đang canh tác' },
   { value: 'COMPLETED', label: 'Đã hoàn thành' },
   { value: 'CANCELLED', label: 'Đã hủy' },
 ]
@@ -95,11 +94,6 @@ export function OrderManagementPage() {
     refetch,
     sourceErrors,
   } = useAdminOrders()
-
-  // Payment status polling — chỉ khi đang mở drawer chi tiết
-  const { data: payosStatus } = useOrderPaymentStatus(
-    detailOrder ? detailOrder.orderId : null,
-  )
 
   // Dữ liệu theo đơn (chỉ đọc) — trạng thái, timeline, lịch sử kiểm tra phôi
   const { data: cultivationStatus } = useOrderCultivationStatus(
@@ -329,23 +323,6 @@ export function OrderManagementPage() {
     },
   ]
 
-  /**
-   * ⚠ **Dữ liệu thanh toán "live" từ PayOS.**
-   *
-   *   Chỉ dùng được khi PayOS thực sự trả về **mã giao dịch hợp lệ**
-   *   (`paymentCode` khác rỗng). Nếu không có mã ⇒ không có giao dịch PayOS
-   *   nào (đơn chưa tạo link thanh toán, hoặc API lỗi/404) ⇒ **không**
-   *   được dùng `amount` / `paymentStatus` của nó.
-   *
-   *   ⇒ Mặc định UI luôn hiển thị dữ liệu chuẩn của đơn
-   *   (`detailOrder.paymentStatus` / `detailOrder.totalAmount`).
-   */
-  const livePayment = useMemo(() => {
-    const data = payosStatus?.data
-    if (!data?.paymentCode) return null
-    return data
-  }, [payosStatus])
-
   // ⚠ Skeleton chỉ hiện lần **đầu** (chưa có dữ liệu). Các lần đổi trang sau
   //   giữ bảng + spinner của antd để không nhảy layout.
   if (isLoading && orders.length === 0) {
@@ -391,7 +368,7 @@ export function OrderManagementPage() {
           description="Đơn chờ khởi tạo phiên canh tác"
         />
         <StatCard
-          title="Đang xử lý"
+          title="Đang canh tác"
           value={summary.processing}
           tone="ok"
           highlightValue
@@ -484,7 +461,7 @@ export function OrderManagementPage() {
             key={detailOrder.orderId}
             orderId={detailOrder.orderId}
             orderStatus={detailOrder.status}
-            paymentStatus={livePayment?.paymentStatus ?? detailOrder.paymentStatus}
+            paymentStatus={detailOrder.paymentStatus}
           ><Flex vertical gap={20}>
             {/* ── Thông tin đơn ─────────────────────────────────────── */}
             <Descriptions
@@ -564,13 +541,12 @@ export function OrderManagementPage() {
                   key: 'status',
                   label: 'Trạng thái',
                   children: (() => {
-                    const liveStatus =
-                      livePayment?.paymentStatus ?? detailOrder.paymentStatus
+                    const paymentStatus = detailOrder.paymentStatus
                     return (
                       <StatusBadge
                         {...presentStatus(
                           PAYMENT_STATUS_DICTIONARY,
-                          liveStatus,
+                          paymentStatus,
                           'Chưa có thông tin',
                         )}
                       />
@@ -578,23 +554,12 @@ export function OrderManagementPage() {
                   })(),
                 },
                 {
-                  key: 'code',
-                  label: 'Mã thanh toán',
-                  children: livePayment?.paymentCode ? (
-                    <Typography.Text code>
-                      {livePayment.paymentCode}
-                    </Typography.Text>
-                  ) : (
-                    <Typography.Text type="secondary">—</Typography.Text>
-                  ),
-                },
-                {
                   key: 'amount',
                   label: 'Số tiền',
                   children: (
                     <Typography.Text strong type="danger">
                       {formatVND(
-                        livePayment?.amount ?? detailOrder.totalAmount,
+                        detailOrder.totalAmount,
                       )}
                     </Typography.Text>
                   ),

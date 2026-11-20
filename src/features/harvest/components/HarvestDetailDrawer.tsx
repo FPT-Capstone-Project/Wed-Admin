@@ -17,6 +17,7 @@ import {
 } from '../../../shared/i18n/status/harvest'
 import {
   SESSION_HARVEST_STATUS_DICTIONARY,
+  resolveSessionHarvestStatus,
   SESSION_STATUS_DICTIONARY,
 } from '../../../shared/i18n/status/session'
 import { presentStatus } from '../../../shared/i18n/status/registry'
@@ -45,7 +46,8 @@ export function HarvestDetailDrawer({ id, onClose }: { id: number; onClose: () =
    */
   const harvestStatus = presentStatus(HARVEST_STATUS_DICTIONARY, h?.status)
   const sessionStatus = presentStatus(SESSION_STATUS_DICTIONARY, h?.cultivation_status)
-  const harvestReadiness = presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, h?.harvest_status)
+  const harvestReadiness = resolveSessionHarvestStatus(h?.status === 'COMPLETED' ? h.status : h?.cultivation_status, h?.harvest_status)
+    ?? presentStatus(SESSION_HARVEST_STATUS_DICTIONARY, h?.harvest_status)
   const quality = presentStatus(HARVEST_QUALITY_DICTIONARY, h?.quality_grade, 'Chưa ghi nhận')
   const method = presentStatus(HARVEST_METHOD_DICTIONARY, h?.harvest_method, 'Chưa chọn')
   const requestStatus = presentStatus(HARVEST_REQUEST_STATUS_DICTIONARY, h?.harvest_request_status, 'Chưa có yêu cầu')
