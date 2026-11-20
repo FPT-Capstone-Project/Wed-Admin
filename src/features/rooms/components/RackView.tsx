@@ -247,6 +247,10 @@ function TrayCard({ tray, isSelected, onClick, summary, floorLabel, imageUrl }: 
   const isIdle = tray.status === 'empty' || tray.status === 'maintenance'
   const vis = TRAY_VISUAL[effectiveStatus]
   const timing = harvestTiming(summary?.startDate ?? tray.rental?.startDate, summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
+  const progressPercent = summary?.progressPercent ?? timing?.percent ?? null
+  const progressLabel = summary?.progressPercent != null
+    ? `Tiến độ Farm OP: ${formatSessionProgress(summary.progressPercent)}`
+    : `Đã nuôi ${timing?.elapsedDays}/${timing?.totalDays} ngày`
   const trayCode = formatTrayCode(tray.code)
   const customerName = summary?.customerName ?? tray.rental?.tenantName ?? 'Chưa có khách'
   const harvestDate = formatShortDate(summary?.expectedHarvestDate ?? tray.rental?.expectedHarvestDate)
@@ -289,9 +293,9 @@ function TrayCard({ tray, isSelected, onClick, summary, floorLabel, imageUrl }: 
             ? `Đến hạn ${harvestDate}`
             : `Hạn ${harvestDate}${timing ? ` · còn ${timing.days.toLocaleString('vi-VN')} ngày` : ''}`
           : startDate ? `Từ ${startDate}` : '\u00a0'}</span>
-      {timing?.percent != null ? <Tooltip title={`Đã nuôi ${timing.elapsedDays?.toLocaleString('vi-VN')}/${timing.totalDays?.toLocaleString('vi-VN')} ngày`} trigger={['hover', 'focus']}>
-      <span className="mcms-tray-progress-track" role="progressbar" aria-label={`Đã nuôi ${timing.elapsedDays}/${timing.totalDays} ngày`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(timing.percent)}>
-        <span className="mcms-tray-progress-fill" style={{ transform: `scaleX(${timing.percent / 100})`, background: vis.progressColor }} />
+      {progressPercent != null ? <Tooltip title={progressLabel} trigger={['hover', 'focus']}>
+      <span className="mcms-tray-progress-track" role="progressbar" aria-label={progressLabel} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+        <span className="mcms-tray-progress-fill" style={{ transform: `scaleX(${progressPercent / 100})`, background: vis.progressColor }} />
       </span></Tooltip> : <span className="mcms-tray-progress-placeholder" aria-hidden="true" />}
       </span>
       </span>
