@@ -1,5 +1,13 @@
 type ErrorRecord = Record<string, unknown>
 
+export function apiErrorStatus(error: unknown): number | undefined {
+  for (const item of errorChain(error)) {
+    const status = asRecord(item.response)?.status ?? item.status
+    if (typeof status === 'number') return status
+  }
+  return undefined
+}
+
 function asRecord(value: unknown): ErrorRecord | undefined {
   return value !== null && typeof value === 'object'
     ? value as ErrorRecord
@@ -21,7 +29,7 @@ function vietnameseMessage(value: unknown): string | undefined {
   if (typeof value !== 'string') return undefined
   const text = value.trim()
   // Chỉ chuyển thông báo tiếng Việt; không lộ lỗi Axios/stack/HTML thô.
-  if (!/[À-ỹĐđ]/u.test(text) || /<[^>]+>|\b(?:SQL|stack trace|AxiosError)\b/iu.test(text)) return undefined
+  if (!/[À-ỹĐđ]/u.test(text) || /<[^>]+>|\b(?:SQL|stack trace|AxiosError)\b|\/api(?:\/|\b)|\b(?:GET|POST|PATCH|DELETE|PUT)\s+\//iu.test(text)) return undefined
   return text || undefined
 }
 

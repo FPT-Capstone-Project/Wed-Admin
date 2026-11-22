@@ -1,5 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { type ReactNode } from 'react'
+import { useEffect, type ReactNode } from 'react'
+import { useAuthStore } from '../../features/auth/store/auth.store'
+import { ENVIRONMENT_HISTORY_KEY } from '../../features/dashboard/utils/environment-history-snapshot'
 import { retryApiErrors } from '../../shared/api/retry-policy'
 
 /**
@@ -64,6 +66,12 @@ interface QueryProviderProps {
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
+  useEffect(() => useAuthStore.subscribe((state, previous) => {
+    if (previous.isAuthenticated && !state.isAuthenticated) {
+      void queryClient.cancelQueries({ queryKey: ENVIRONMENT_HISTORY_KEY, exact: true })
+      queryClient.removeQueries({ queryKey: ENVIRONMENT_HISTORY_KEY, exact: true })
+    }
+  }), [])
   return (
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   )

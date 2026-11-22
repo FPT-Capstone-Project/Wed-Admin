@@ -165,7 +165,7 @@ function FloorChart({ floor, from, to, bucketMs }: { floor: EnvironmentChartFloo
               activeDot={{ r: 4 }}
               strokeWidth={2}
               connectNulls={false}
-              isAnimationActive={true}
+              isAnimationActive={false}
             />
             <Line
               yAxisId="humidity"
@@ -178,7 +178,7 @@ function FloorChart({ floor, from, to, bucketMs }: { floor: EnvironmentChartFloo
               activeDot={{ r: 4 }}
               strokeWidth={2}
               connectNulls={false}
-              isAnimationActive={true}
+              isAnimationActive={false}
             />
           </LineChart>
         </ResponsiveContainer>

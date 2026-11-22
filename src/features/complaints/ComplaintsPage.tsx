@@ -1,7 +1,7 @@
 import { Alert, Button, Flex, Input, Select, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useMemo, useState } from 'react'
-import { StatCard, StatGrid } from '../../shared/ui'
+import { PageHeader, StatCard, StatGrid } from '../../shared/ui'
 import { DataTable } from '../../shared/ui/DataTable'
 import { LoadErrorAlert } from '../../shared/ui/LoadErrorAlert'
 import { useAuthStore } from '../auth/store/auth.store'
@@ -42,6 +42,10 @@ export function ComplaintsPage() {
     if (isAdmin) void usersQuery.refetch()
   }
   return <div>
+    <PageHeader
+      title="Quản lý Khiếu nại"
+      description="Theo dõi, phân công và xử lý các khiếu nại đơn hàng từ khách hàng."
+    />
     <StatGrid columns={4}>
       <StatCard title="Tổng khiếu nại" value={counts?.total.toLocaleString('vi-VN') ?? '—'} description="Tất cả khiếu nại ghi nhận" loading={summary.isPending} />
       <StatCard title="Mới tạo" value={counts?.open.toLocaleString('vi-VN') ?? '—'} tone="danger" description="Chờ tiếp nhận và phân công" loading={summary.isPending} />
@@ -58,14 +62,14 @@ export function ComplaintsPage() {
     {search && <Typography.Paragraph type="secondary">Tìm kiếm trong tối đa 2.000 khiếu nại mới nhất theo trạng thái đang chọn.{!isAdmin && ' Tìm theo tên/email khách hàng chưa khả dụng với quyền hiện tại; có thể tìm bằng mã khách hàng.'}</Typography.Paragraph>}
     {search && searchQuery.data?.incomplete && <Alert type="warning" title="Kết quả tìm kiếm chưa bao phủ toàn bộ dữ liệu. Chọn trạng thái cụ thể để thu hẹp phạm vi." />}
     {activeQuery.isError ? <LoadErrorAlert error={activeQuery.error} resource="danh sách khiếu nại" onRetry={activeQuery.refetch} /> : <DataTable<Complaint>
-      rowKey="complaint_id" dataSource={data} loading={activeQuery.isLoading} isFetching={activeQuery.isFetching} scrollX={null}
+      rowKey="complaint_id" dataSource={data} loading={activeQuery.isLoading} isFetching={activeQuery.isFetching} scrollX={null} tableLayout="fixed"
       onRow={row => ({ onClick: () => setSelected(row.complaint_id), style: { cursor: 'pointer' } })}
       emptyTitle="Chưa có khiếu nại phù hợp" pagination={{ current: page, pageSize: 20, total, showSizeChanger: false, onChange: setPage }}
       columns={[
-        { title: 'Mã khiếu nại', key: 'id', width: 140, render: (_, row) => <><Typography.Text strong>#{row.complaint_id}</Typography.Text><div>Đơn #{row.order_id}</div></> },
-        { title: 'Khách hàng', key: 'customer', width: 175, render: (_, row) => { const customer = usersById.get(row.customer_id); return <><Typography.Text strong>{customer?.full_name || `Khách hàng #${row.customer_id}`}</Typography.Text>{customer && <div style={{ overflowWrap: 'anywhere' }}><Typography.Text type="secondary">{customer.email}{customer.phone ? ` · ${customer.phone}` : ''}</Typography.Text></div>}</> } },
-        { title: 'Nội dung / Lý do', key: 'description', ellipsis: true, render: (_, row) => <><Typography.Text strong>{row.complaint_type}</Typography.Text><Typography.Paragraph ellipsis={{ rows: 2, tooltip: row.description }} style={{ margin: 0 }}>{row.description}</Typography.Paragraph></> },
-        { title: 'Trạng thái', key: 'status', width: 200, render: (_, row) => <ComplaintStatusBadge status={row.status} /> },
+        { title: 'Mã khiếu nại', key: 'id', width: 130, render: (_, row) => <><Typography.Text strong>#{row.complaint_id}</Typography.Text><div>Đơn #{row.order_id}</div></> },
+        { title: 'Khách hàng', key: 'customer', width: 235, render: (_, row) => { const customer = usersById.get(row.customer_id); return <Flex vertical gap={2} style={{ minWidth: 0 }}><Typography.Text strong ellipsis={{ tooltip: true }}>{customer?.full_name || `Khách hàng #${row.customer_id}`}</Typography.Text>{customer ? <><Typography.Text type="secondary" ellipsis={{ tooltip: customer.email }} style={{ whiteSpace: 'nowrap' }}>{customer.email}</Typography.Text><Typography.Text type="secondary" style={{ whiteSpace: 'nowrap' }}>{customer.phone || 'Chưa ghi nhận SĐT'}</Typography.Text></> : null}</Flex> } },
+        { title: 'Nội dung / Lý do', key: 'description', width: 250, ellipsis: true, render: (_, row) => <><Typography.Text strong>{row.complaint_type}</Typography.Text><Typography.Paragraph ellipsis={{ rows: 2, tooltip: row.description }} style={{ margin: 0 }}>{row.description}</Typography.Paragraph></> },
+        { title: 'Trạng thái', key: 'status', width: 175, render: (_, row) => <ComplaintStatusBadge status={row.status} /> },
         { title: 'Người phụ trách', key: 'staff', width: 140, render: (_, row) => row.assigned_to ? usersById.get(row.assigned_to)?.full_name || `Nhân viên #${row.assigned_to}` : 'Chưa phân công' },
         { title: 'Thời gian tạo', dataIndex: 'created_at', width: 140, render: complaintDate },
         { title: 'Thao tác', key: 'action', width: 110, render: (_, row) => <Button type="link" size="small" onClick={event => { event.stopPropagation(); setSelected(row.complaint_id) }}>Xem chi tiết</Button> },

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { clearEnvironmentSnapshot } from '../../dashboard/utils/environment-history-snapshot'
 import { useNotificationStore } from '../../notifications/store/notification.store'
 import { authApi } from '../api/auth.api'
 import { tokenStorage } from '../../../shared/api/token-storage'
@@ -229,6 +230,7 @@ export const useAuthStore = create<AuthState>((set) => {
   },
 
   logout: () => {
+    clearEnvironmentSnapshot()
     /*
      * ⚠ **Thu hồi refresh token ở BE** (best-effort).
      *

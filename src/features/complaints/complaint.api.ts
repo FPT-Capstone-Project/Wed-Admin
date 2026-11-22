@@ -31,7 +31,7 @@ export const complaintApi = {
 export async function fetchComplaintSummary(signal?: AbortSignal) {
   const counts = await Promise.all(STATUS_OPTIONS.map(async ({ value }) => [value, (await complaintApi.list({ page: 1, pageSize: 1, status: value }, signal)).total] as const))
   const count = Object.fromEntries(counts)
-  return { total: counts.reduce((sum, [, value]) => sum + value, 0), open: count.OPEN, processing: count.IN_PROGRESS + count.WAITING_CUSTOMER, closed: count.RESOLVED + count.REJECTED }
+  return { total: counts.reduce((sum, [, value]) => sum + value, 0), open: count.PENDING, processing: count.UNDER_REVIEW + count.NEED_MORE_INFO + count.RESOLVING, closed: count.RESOLVED + count.REJECTED + count.CLOSED }
 }
 
 /** Server has no search parameter; bound client search to 20 pages of 100. */

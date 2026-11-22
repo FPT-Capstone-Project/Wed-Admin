@@ -1,25 +1,22 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App } from 'antd'
-import { showApiError } from '../../../shared/api/error-mapper'
-import { issuesApi, type IssueQuery } from './issues.api'
+import { useSyncExternalStore } from 'react'
+import { useQuery, keepPreviousData } from '@tanstack/react-query'
+import { issuesApi, type Issue, type IssueQuery } from './issues.api'
 export const issueKeys = { all: ['issues'] as const }
-export const useIssues = (query: IssueQuery) => useQuery({ queryKey: ['issues', 'list', query], queryFn: () => issuesApi.list(query) })
-export const useIssue = (id: number) => useQuery({ queryKey: ['issues', 'detail', id], queryFn: () => issuesApi.detail(id) })
-export const useConsultations = (id: number) => useQuery({ queryKey: ['issues', 'consultations', id], queryFn: () => issuesApi.consultations(id) })
-export const useTreatments = (id: number) => useQuery({ queryKey: ['issues', 'treatments', id], queryFn: () => issuesApi.treatments(id) })
-export function useIssueActions() {
-  const client = useQueryClient()
-  const { message } = App.useApp()
-  const options = {
-    onSuccess: async () => { await client.invalidateQueries({ queryKey: issueKeys.all }); void message.success('Đã cập nhật hồ sơ bệnh học') },
-    onError: (error: Error) => {
-      showApiError(error, 'cập nhật hồ sơ bệnh học', (text) =>
-        void message.error(text),
-      )
-    },
-  }
-  return {
-    assign: useMutation({ mutationFn: ({ id, expertId }: { id: number; expertId: number }) => issuesApi.assign(id, { expertId }), ...options }),
-    resolve: useMutation({ mutationFn: issuesApi.resolve, ...options }),
-  }
+const subscribe = (notify: () => void) => { document.addEventListener('visibilitychange', notify); return () => document.removeEventListener('visibilitychange', notify) }
+function useVisible() { return useSyncExternalStore(subscribe, () => document.visibilityState === 'visible', () => false) }
+export const useIssues = (query: IssueQuery) => useQuery({ queryKey: ['issues', 'list', query], queryFn: () => issuesApi.list(query), placeholderData: keepPreviousData })
+export function useIssue(id: number, active = true) {
+  const visible = useVisible()
+  return useQuery({ queryKey: ['issues', 'detail', id], queryFn: ({ signal }) => issuesApi.detail(id, signal), enabled: active && visible, refetchInterval: q => active && visible && q.state.data?.status !== 'RESOLVED' ? 5000 : false, refetchIntervalInBackground: false })
+}
+export function useConsultations(issue: Issue | undefined, active: boolean) {
+  return useQuery({ queryKey: ['issues', 'consultations', issue?.issue_id, issue?.consultation_ids.join(',')], queryFn: ({ signal }) => issuesApi.consultations(issue!, signal), enabled: !!issue && active })
+}
+export function useConsultation(id: number, open: boolean) {
+  const visible = useVisible()
+  return useQuery({ queryKey: ['issues', 'consultation', id], queryFn: ({ signal }) => issuesApi.consultation(id, signal), enabled: visible, refetchInterval: q => visible && open && q.state.data?.status !== 'CLOSED' ? 5000 : false, refetchIntervalInBackground: false })
+}
+export function useTreatments(id: number, open = true) {
+  const visible = useVisible()
+  return useQuery({ queryKey: ['issues', 'treatments', id], queryFn: ({ signal }) => issuesApi.treatments(id, signal), enabled: visible, refetchInterval: visible && open ? 5000 : false, refetchIntervalInBackground: false })
 }

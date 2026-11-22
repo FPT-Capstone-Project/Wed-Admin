@@ -1,4 +1,5 @@
 # Project Overview
+- Before modifying WF-06 (issues or expert consultations), read [the WF-06 specification](docs/wf06-issues-expert-consultation.md).
 - Project: mcms-web-admin (IoT / Telemetry monitoring admin dashboard for smart agriculture — Smart Mushroom Cultivation Management System).
 - Tech stack: React 19, TypeScript, Tailwind CSS, Ant Design (`antd`), Recharts, Zustand, TanStack Query, Vite.
 - Architecture: Feature-based (`src/features/...`, `components/`, `routes/`, `stores/`, `types/`).

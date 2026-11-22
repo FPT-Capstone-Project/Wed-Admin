@@ -1,4 +1,4 @@
-import { App, Alert, Button, Card, Descriptions, Drawer, Empty, Flex, Form, Image, Input, Select, Skeleton, Space, Typography } from 'antd'
+import { App, Alert, Button, Card, Descriptions, Drawer, Empty, Flex, Form, Image, Input, Select, Skeleton, Space, Tabs, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import type { UserWithRole } from '../../../types/user.types'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
@@ -17,7 +17,7 @@ interface Props {
 }
 export function ComplaintDetailDrawer({ id, onClose, users, canListUsers, usersFailed }: Props) {
   const query = useComplaintDetail(id)
-  return <Drawer title={id ? `Khiếu nại #${id}` : 'Chi tiết khiếu nại'} open={id != null} onClose={onClose} size={720} destroyOnHidden extra={<Button icon={<ReloadOutlined />} loading={query.isFetching} onClick={() => void query.refetch()}>Tải lại</Button>}>
+  return <Drawer title={id ? `Khiếu nại #${id}` : 'Chi tiết khiếu nại'} open={id != null} onClose={onClose} size={860} destroyOnHidden extra={<Button size="small" icon={<ReloadOutlined />} loading={query.isFetching} onClick={() => void query.refetch()}>Tải lại</Button>}>
     {query.isPending ? <Skeleton active paragraph={{ rows: 10 }} /> : query.isError ? <LoadErrorAlert error={query.error} resource="chi tiết khiếu nại" onRetry={query.refetch} />
       : query.data && <ComplaintDetailContent key={query.data.complaint_id} complaint={query.data} users={users} canListUsers={canListUsers} usersFailed={usersFailed} />}
   </Drawer>
@@ -30,6 +30,7 @@ function ComplaintDetailContent({ complaint, users, canListUsers, usersFailed }:
   const [statusForm] = Form.useForm<{ status: ComplaintStatus; resolution?: string }>()
   const [replyForm] = Form.useForm<{ message: string }>()
   const targetStatus = Form.useWatch('status', statusForm)
+  const assignedTo = Form.useWatch('assignedTo', assignForm)
   const closed = isFinalComplaint(complaint.status)
   const customer = users.find(user => user.user_id === complaint.customer_id)
   const staff = users.filter(user => user.status === 'ACTIVE' && [1, 2].includes(user.role_id))
@@ -45,8 +46,7 @@ function ComplaintDetailContent({ complaint, users, canListUsers, usersFailed }:
       showApiError(friendlyMessage ? { cause: error, friendlyMessage } : error, 'xử lý khiếu nại', text => { void message.error(text) })
     }
   }
-  return <Flex vertical gap={16}>
-    <Space wrap><Typography.Text strong>Đơn hàng #{complaint.order_id}</Typography.Text><ComplaintStatusBadge status={complaint.status} /></Space>
+  const overview = <Flex vertical gap={16}>
     <Descriptions size="small" column={1} bordered items={[
       { key: 'customer', label: 'Khách hàng', children: customer ? `${customer.full_name} · ${customer.email}${customer.phone ? ` · ${customer.phone}` : ''}` : `Khách hàng #${complaint.customer_id}` },
       { key: 'type', label: 'Lý do khiếu nại', children: complaint.complaint_type },
@@ -54,15 +54,17 @@ function ComplaintDetailContent({ complaint, users, canListUsers, usersFailed }:
       { key: 'updated', label: 'Cập nhật', children: complaintDate(complaint.updated_at) },
       { key: 'staff', label: 'Người phụ trách', children: complaint.assigned_staff?.full_name || (complaint.assigned_to ? `Nhân viên #${complaint.assigned_to}` : 'Chưa phân công') },
     ]} />
-    <Typography.Paragraph style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{complaint.description}</Typography.Paragraph>
-    {complaint.image_urls?.length > 0 && <Image.PreviewGroup><Space wrap>{complaint.image_urls.map((url, index) => <Image key={`${url}-${index}`} src={url} alt={`Bằng chứng khiếu nại ${index + 1}`} width={80} height={80} style={{ objectFit: 'cover', borderRadius: 6 }} />)}</Space></Image.PreviewGroup>}
+    <Card size="small" title="Nội dung chi tiết"><Typography.Paragraph style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', marginBottom: 0 }}>{complaint.description}</Typography.Paragraph></Card>
+    {complaint.image_urls?.length > 0 && <Card size="small" title="Hình ảnh đính kèm"><Image.PreviewGroup><Flex gap={10} wrap>{complaint.image_urls.map((url, index) => <div key={`${url}-${index}`} style={{ padding: 6, border: '1px solid var(--mcms-border)', borderRadius: 6, background: 'var(--mcms-surface-muted)' }}><Image src={url} alt={`Bằng chứng khiếu nại ${index + 1}`} width={80} height={80} style={{ objectFit: 'cover', borderRadius: 4, display: 'block' }} /></div>)}</Flex></Image.PreviewGroup></Card>}
     {complaint.resolution && <Alert type="info" title="Kết quả giải quyết" description={<span style={{ whiteSpace: 'pre-wrap' }}>{complaint.resolution}</span>} />}
     <Card size="small" title="Phân công xử lý">
       {!canListUsers ? <Typography.Text type="secondary">Chỉ quản trị viên có quyền tra cứu danh sách tài khoản để phân công. Người phụ trách hiện tại hiển thị ở trên.</Typography.Text>
         : usersFailed ? <Alert type="warning" title="Không tải được danh sách tài khoản. Vui lòng tải lại trang trước khi phân công." />
           : <Form form={assignForm} layout="vertical" initialValues={{ assignedTo: complaint.assigned_to }} disabled={action.isPending} onFinish={values => void submit({ kind: 'assign', payload: { assignedTo: values.assignedTo ?? null } })}>
-            <Form.Item name="assignedTo" label="Người phụ trách"><Select allowClear disabled={action.isPending} placeholder="Chưa phân công" showSearch optionFilterProp="label" options={staff.map(user => ({ value: user.user_id, label: `${user.full_name} · ${user.role_id === 1 ? 'Quản trị viên' : 'Vận hành trang trại'}` }))} /></Form.Item>
-            <Button type="primary" htmlType="submit" loading={action.isPending}>Phân công</Button>
+            <Flex gap={10} align="end">
+              <Form.Item name="assignedTo" label="Người phụ trách" style={{ flex: 1, marginBottom: 0 }}><Select allowClear disabled={action.isPending} placeholder="Chưa phân công" showSearch optionFilterProp="label" options={staff.map(user => ({ value: user.user_id, label: `${user.full_name} · ${user.role_id === 1 ? 'Quản trị viên' : 'Vận hành trang trại'}` }))} /></Form.Item>
+              <Button type="default" htmlType="submit" disabled={(assignedTo ?? null) === (complaint.assigned_to ?? null)} loading={action.isPending}>Phân công</Button>
+            </Flex>
           </Form>}
     </Card>
     <Card size="small" title="Trạng thái & kết quả xử lý">
@@ -71,9 +73,9 @@ function ComplaintDetailContent({ complaint, users, canListUsers, usersFailed }:
         <Form.Item name="resolution" label="Nội dung giải quyết / Lý do" rules={[{ required: targetStatus != null && isFinalComplaint(targetStatus), whitespace: true, message: 'Nhập nội dung giải quyết khi kết thúc khiếu nại.' }, { max: 10000, message: 'Tối đa 10.000 ký tự.' }]}><Input.TextArea rows={3} maxLength={10000} showCount /></Form.Item>
         <Button type="primary" htmlType="submit" loading={action.isPending}>Cập nhật trạng thái</Button>
       </Form>
-      <Typography.Paragraph type="secondary" style={{ marginTop: 8, marginBottom: 0 }}>Hệ thống cho phép nhân viên chuyển trực tiếp giữa các trạng thái, kể cả mở lại khiếu nại đã kết thúc.</Typography.Paragraph>
     </Card>
-    <Card size="small" title="Lịch sử trao đổi">
+  </Flex>
+  const conversation = <Card size="small" title={`Lịch sử trao đổi${complaint.replies.length > 0 ? ` (${complaint.replies.length})` : ''}`}>
       {complaint.replies.length ? <Flex vertical gap={12}>{complaint.replies.map(reply => <div key={reply.reply_id} style={{ padding: 12, border: '1px solid var(--mcms-border)', borderRadius: 6, background: reply.sender_role_id === 3 ? 'var(--mcms-surface)' : 'var(--mcms-surface-muted)' }}>
         <Space wrap><Typography.Text strong>{reply.sender_name}</Typography.Text><Typography.Text type="secondary">{reply.sender_role_id === 3 ? 'Khách hàng' : reply.sender_role_id === 1 ? 'Quản trị viên' : 'Vận hành trang trại'}</Typography.Text></Space>
         <div><Typography.Text type="secondary" style={{ fontSize: 12 }}>{complaintDate(reply.created_at)}</Typography.Text></div>
@@ -84,5 +86,8 @@ function ComplaintDetailContent({ complaint, users, canListUsers, usersFailed }:
         <Button type="primary" htmlType="submit" loading={action.isPending}>Gửi phản hồi</Button>
       </Form>}
     </Card>
+  return <Flex vertical gap={16}>
+    <Space wrap><Typography.Text strong>Đơn hàng #{complaint.order_id}</Typography.Text><ComplaintStatusBadge status={complaint.status} /></Space>
+    <Tabs items={[{ key: 'overview', label: 'Thông tin & Xử lý', children: overview }, { key: 'conversation', label: `Trao đổi${complaint.replies.length > 0 ? ` (${complaint.replies.length})` : ''}`, children: conversation }]} />
   </Flex>
 }

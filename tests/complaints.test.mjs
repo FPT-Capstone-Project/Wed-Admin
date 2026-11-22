@@ -20,11 +20,12 @@ function api(client) {
   return exports
 }
 
-test('complaints expose five Vietnamese states and Vietnam timestamps', () => {
-  assert.equal(Object.keys(COMPLAINT_STATUSES).length, 5)
-  assert.equal(COMPLAINT_STATUSES.WAITING_CUSTOMER.label, 'Chờ khách hàng bổ sung thông tin')
+test('complaints expose seven schema states in Vietnamese and Vietnam timestamps', () => {
+  assert.equal(Object.keys(COMPLAINT_STATUSES).length, 7)
+  assert.equal(COMPLAINT_STATUSES.NEED_MORE_INFO.label, 'Chờ khách hàng bổ sung thông tin')
   assert.equal(isFinalComplaint('RESOLVED'), true)
-  assert.equal(isFinalComplaint('WAITING_CUSTOMER'), false)
+  assert.equal(isFinalComplaint('CLOSED'), true)
+  assert.equal(isFinalComplaint('NEED_MORE_INFO'), false)
   assert.equal(complaintDate(null), '—')
   assert.equal(complaintDate('1970-01-01T00:00:00Z'), '—')
   assert.ok(complaintDate('2026-11-02T18:00:00Z').includes('03/11/2026'))
@@ -35,7 +36,7 @@ test('list keeps the verified flat pagination wrapper; detail unwraps data', asy
   const list = { data: [], page: 2, pageSize: 20, total: 41 }
   const detail = { complaint_id: 7, replies: [] }
   const { complaintApi } = api({ get: async (url, config) => { calls.push([url, config]); return { data: url.endsWith('/7') ? { data: detail } : list } } })
-  assert.equal(await complaintApi.list({ page: 2, pageSize: 20, status: 'OPEN' }), list)
+  assert.equal(await complaintApi.list({ page: 2, pageSize: 20, status: 'PENDING' }), list)
   assert.equal(await complaintApi.detail(7), detail)
   assert.equal(calls[0][0], '/api/complaints')
   assert.equal(calls[0][1].params.page, 2)
@@ -57,7 +58,7 @@ test('all three writes use exactly the Swagger paths and payloads', async () => 
 })
 
 test('KPI totals come from server counts, not the visible page', async () => {
-  const values = { OPEN: 11, IN_PROGRESS: 5, WAITING_CUSTOMER: 3, RESOLVED: 8, REJECTED: 2 }
+  const values = { PENDING: 11, UNDER_REVIEW: 3, NEED_MORE_INFO: 3, RESOLVING: 2, RESOLVED: 5, REJECTED: 2, CLOSED: 3 }
   const { fetchComplaintSummary } = api({ get: async (_url, { params }) => ({ data: { data: [], total: values[params.status], page: 1, pageSize: 1 } }) })
   const result = await fetchComplaintSummary()
   assert.equal(result.total, 29)

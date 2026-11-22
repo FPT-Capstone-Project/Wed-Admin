@@ -16,7 +16,7 @@ export function IssueManagementPage() {
   const [filters, setFilters] = useState<IssueQuery>({ page: 1, pageSize: 20 })
   const [selected, setSelected] = useState<number | null>(null)
   const query = useIssues(filters)
-  return <div><PageHeader title="Sự cố & Bệnh hại" description="Giám sát bệnh học, điều phối chuyên gia và duyệt kết quả điều trị." />
+  return <div><PageHeader title="Sự cố & Bệnh hại" description="Giám sát sự cố, theo dõi tư vấn chuyên gia và lịch sử xử lý. Quản trị viên chỉ xem dữ liệu." actions={<Button onClick={() => void query.refetch()} loading={query.isFetching}>Tải lại</Button>} />
     <Flex gap={12} wrap style={{ marginBottom: 16 }}>
       <Select aria-label="Trạng thái ca bệnh" placeholder="Trạng thái" allowClear style={{ width: 200 }} options={ISSUE_STATUSES.map(value => ({ value, label: statusLabel(ISSUE_STATUS_DICTIONARY, value) }))} onChange={status => setFilters({ ...filters, status, page: 1 })} />
       <Select aria-label="Mức độ nghiêm trọng" placeholder="Mức độ nghiêm trọng" allowClear style={{ width: 200 }} options={['HIGH', 'MEDIUM', 'LOW'].map(value => ({ value, label: statusLabel(ISSUE_SEVERITY_DICTIONARY, value) }))} onChange={severity => setFilters({ ...filters, severity, page: 1 })} />
@@ -29,7 +29,7 @@ export function IssueManagementPage() {
       { title: 'Mức độ', dataIndex: 'severity', render: (value: Issue['severity']) => <StatusBadge {...presentStatus(ISSUE_SEVERITY_DICTIONARY, value)} /> },
       { title: 'Trạng thái', dataIndex: 'status', render: value => <StatusBadge {...presentStatus(ISSUE_STATUS_DICTIONARY, value)} /> },
       { title: 'Thời gian tạo', dataIndex: 'created_at', render: auditDate },
-      { title: 'Thao tác', render: (_, issue) => <Button onClick={() => setSelected(issue.issue_id)}>Hồ sơ / Điều phối</Button> },
+      { title: 'Chi tiết', render: (_, issue) => <Button onClick={() => setSelected(issue.issue_id)}>Xem hồ sơ</Button> },
     ]} />}
     {selected !== null && (
       <Suspense fallback={null}>

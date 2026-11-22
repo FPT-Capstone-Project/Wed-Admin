@@ -121,15 +121,16 @@ export function HarvestRequestManagementPage() {
 
   return (
     <div style={{ fontVariantNumeric: 'tabular-nums' }}>
+      <title>Giao nhận nấm | MCMS Admin</title>
       <PageHeader
-        title="Yêu cầu nhận nấm"
+        title="Giao nhận nấm"
         description="Theo dõi hình thức nhận (tự đến trang trại / giao tận nơi), lịch hẹn và trạng thái bàn giao của khách hàng."
       />
 
       <Flex gap={12} wrap style={{ marginBottom: 16 }}>
         <Input
           allowClear
-          aria-label="Tìm yêu cầu nhận nấm"
+          aria-label="Tìm giao nhận nấm"
           prefix={<SearchOutlined />}
           placeholder="Tìm mã đơn, khách hàng, SĐT, email..."
           style={{ width: 300, maxWidth: '100%' }}
@@ -138,7 +139,7 @@ export function HarvestRequestManagementPage() {
         />
         <Select
           allowClear
-          aria-label="Lọc theo trạng thái yêu cầu"
+          aria-label="Lọc theo trạng thái giao nhận"
           placeholder="Trạng thái"
           style={{ width: 190 }}
           value={statusFilter}
@@ -162,7 +163,7 @@ export function HarvestRequestManagementPage() {
       {query.isError ? (
         <LoadErrorAlert
           error={query.error}
-          resource="danh sách yêu cầu nhận nấm"
+          resource="danh sách giao nhận nấm"
           onRetry={query.refetch}
         />
       ) : (
@@ -170,9 +171,9 @@ export function HarvestRequestManagementPage() {
           <StatGrid columns={4} style={{ marginBottom: 16 }}>
             <StatCard
               loading={query.isLoading}
-              title="Tổng yêu cầu"
+              title="Tổng lượt giao nhận"
               value={summary.total}
-              description="Tất cả yêu cầu trên hệ thống"
+              description="Tất cả lượt giao nhận trên hệ thống"
             />
             <StatCard
               loading={query.isLoading}
@@ -217,10 +218,10 @@ export function HarvestRequestManagementPage() {
               pageSize: 20,
               showSizeChanger: true,
               pageSizeOptions: ['10', '20', '50'],
-              showTotal: (total) => `Tổng ${total} yêu cầu`,
+              showTotal: (total) => `Tổng ${total} lượt`,
             }}
-            emptyTitle="Chưa có yêu cầu nhận nấm nào"
-            emptyDescription="Yêu cầu sẽ xuất hiện khi khách chọn hình thức nhận nấm trên ứng dụng."
+            emptyTitle="Chưa có phiếu giao nhận nào"
+            emptyDescription="Thông tin giao nhận sẽ xuất hiện khi khách chọn hình thức nhận nấm trên ứng dụng."
             expandable={{
               expandedRowRender: (row) => (
                 <div style={{ display: 'grid', gap: 8 }}>
@@ -263,7 +264,7 @@ export function HarvestRequestManagementPage() {
             }}
             columns={[
               {
-                title: 'Yêu cầu / Phiên',
+                title: 'Mã giao nhận / Phiên',
                 key: 'ids',
                 width: 140,
                 render: (_, row) => (
@@ -369,7 +370,7 @@ export function HarvestRequestManagementPage() {
                       row.status,
                       'Chưa xác định',
                     )}
-                    title="Trạng thái yêu cầu nhận nấm"
+                    title="Trạng thái giao nhận nấm"
                     style={{ whiteSpace: 'nowrap' }}
                   />
                 ),

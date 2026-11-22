@@ -1,56 +1,54 @@
 import { useState } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { Button, Card, Descriptions, Drawer, Empty, Flex, Form, Image, Modal, Popconfirm, Select, Typography } from 'antd'
-import { issuesApi, type Consultation, type Evidence } from '../api/issues.api'
-import { useConsultations, useIssue, useIssueActions, useTreatments } from '../api/issues.queries'
+import { Alert, Button, Card, Drawer, Empty, Flex, Select, Tabs, Typography } from 'antd'
+import { useQueryClient } from '@tanstack/react-query'
+import { issueKeys, useConsultations, useIssue } from '../api/issues.queries'
 import { QueryFeedback } from '../../../shared/ui/QueryFeedback'
-import { auditDate } from '../../../shared/ui/audit-format'
-import {
-  ISSUE_STATUS_DICTIONARY,
-  MEDIA_STAGE_DICTIONARY,
-} from '../../../shared/i18n/status/issue'
-import { presentStatus } from '../../../shared/i18n/status/registry'
 import { StatusBadge } from '../../../shared/ui'
-function EvidenceGallery({ media }: { media: Evidence[] }) {
-  return <Image.PreviewGroup><Flex gap={8} wrap>{media.map(item => <div key={item.media_id}>{item.media_stage && <StatusBadge {...presentStatus(MEDIA_STAGE_DICTIONARY, item.media_stage)} title="Giai đoạn bằng chứng" />}{item.media_type === 'VIDEO' ? <video src={item.media_url} controls preload="none" style={{ width: 180 }} /> : <Image width={140} src={item.media_url} alt={item.caption ?? 'Bằng chứng hiện trường'} />}<Typography.Paragraph>{item.caption}</Typography.Paragraph></div>)}</Flex></Image.PreviewGroup>
-}
-function TreatmentLog({ id }: { id: number }) {
-  const query = useTreatments(id)
-  return <><QueryFeedback query={query} />{!query.isError && query.data && (query.data.length ? query.data.map(log => <Card size="small" key={log.treatment_log_id} title={`${log.performed_by_name} · ${auditDate(log.performed_at)}`}><Typography.Paragraph>{log.action_description}</Typography.Paragraph><Typography.Paragraph>Kết quả: {log.result_description ?? 'Chưa ghi nhận'}</Typography.Paragraph><EvidenceGallery media={log.media} /></Card>) : <Empty description="Chưa có nhật ký điều trị" />)}</>
-}
-function AssignExpertModal({ consultation, onClose }: { consultation: Consultation; onClose: () => void }) {
-  const [form] = Form.useForm<{ expertId: number }>()
-  const query = useQuery({ queryKey: ['users', 'experts'], queryFn: issuesApi.experts })
-  const { assign } = useIssueActions()
-  return <Modal open title="Phân công Chuyên gia" onCancel={onClose} onOk={() => form.submit()} confirmLoading={assign.isPending} okButtonProps={{ disabled: !query.data?.length || query.isError }} cancelButtonProps={{ disabled: assign.isPending }} closable={!assign.isPending} mask={{ closable: false }}>
-    <QueryFeedback query={query} />
-    <Form form={form} layout="vertical" onFinish={values => assign.mutate({ id: consultation.consultation_id, ...values }, { onSuccess: onClose })}>
-      <Form.Item name="expertId" label="Chuyên gia nấm học" rules={[{ required: true, message: 'Vui lòng chọn chuyên gia' }]}><Select showSearch optionFilterProp="label" loading={query.isLoading} options={query.data?.map(user => ({ value: user.user_id, label: `${user.full_name} (${user.email})` }))} notFoundContent="Không có chuyên gia đang hoạt động" /></Form.Item>
-    </Form>
-  </Modal>
-}
+import { ISSUE_STATUS_DICTIONARY } from '../../../shared/i18n/status/issue'
+import { presentStatus } from '../../../shared/i18n/status/registry'
+import { ConsultationPanel } from './ConsultationPanel'
+import { EvidenceGallery, SessionInformation } from './IssueShared'
+
 export function IssueDetailDrawer({ id, onClose }: { id: number; onClose: () => void }) {
-  const query = useIssue(id)
-  const consultations = useConsultations(id)
-  const [assigning, setAssigning] = useState<Consultation | null>(null)
-  const { resolve } = useIssueActions()
+  const [tab, setTab] = useState('issue')
+  const query = useIssue(id, tab !== 'session')
+  const lookup = useConsultations(query.data, tab === 'consultations')
+  const [selected, setSelected] = useState<number>()
+  const [refreshing, setRefreshing] = useState(false)
+  const client = useQueryClient()
   const issue = query.data
-  return <Drawer open onClose={onClose} title="Hồ sơ Bệnh học & Điều trị" size={800}>
-    <QueryFeedback query={query} />
-    {!query.isError && issue && <Flex vertical gap={16}>
-      <Descriptions column={1} bordered size="small" items={[{ key: 'id', label: 'Mã ca', children: issue.issue_id }, { key: 'title', label: 'Tên sự cố', children: issue.title }, { key: 'status', label: 'Trạng thái', children: <StatusBadge {...presentStatus(ISSUE_STATUS_DICTIONARY, issue.status)} /> }, { key: 'session', label: 'Phiên / Khay', children: `${issue.session_id ?? '—'} / ${issue.tray_id ?? '—'}` }]} />
-      <Card size="small" title="Triệu chứng ban đầu"><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{issue.description}</Typography.Paragraph><EvidenceGallery media={issue.media ?? []} /></Card>
-      <QueryFeedback query={consultations} />
-      {!consultations.isError && consultations.data?.length === 0 && <Empty description="Chưa có yêu cầu tư vấn chuyên gia cho ca bệnh này" />}
-      {!consultations.isError && consultations.data?.map(consultation => <Card key={consultation.consultation_id} size="small" title={`Tư vấn #${consultation.consultation_id} · ${consultation.expert_name ?? 'Chưa phân công'}`} extra={['WAITING_EXPERT', 'IN_PROGRESS'].includes(issue.status) && ['PENDING', 'IN_PROGRESS'].includes(consultation.status) ? <Button onClick={() => setAssigning(consultation)}>Phân công Chuyên gia</Button> : null}>
-        <Typography.Paragraph>Yêu cầu: {consultation.question}</Typography.Paragraph>
-        <Typography.Title level={5}>Chẩn đoán & Hướng dẫn xử lý</Typography.Title>
-        <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{consultation.diagnosis ?? 'Chưa có chẩn đoán'}</Typography.Paragraph>
-        <Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{consultation.solution ?? 'Chưa có hướng dẫn'}</Typography.Paragraph>
-        <Typography.Title level={5}>Nhật ký điều trị · Chỉ xem</Typography.Title><TreatmentLog id={consultation.consultation_id} />
-      </Card>)}
-      {issue.status === 'MONITORING' && <Popconfirm title="Duyệt hoàn tất xử lý?" description="Xác nhận đã kiểm tra kết quả điều trị và tình trạng ổn định." onConfirm={() => resolve.mutateAsync(id).catch(() => undefined)}><Button type="primary" loading={resolve.isPending}>Duyệt hoàn tất xử lý</Button></Popconfirm>}
-    </Flex>}
-    {assigning && <AssignExpertModal consultation={assigning} onClose={() => setAssigning(null)} />}
+  const consultations = lookup.data?.items ?? []
+  const selectedId = consultations.find(c => c.consultation_id === selected)?.consultation_id ?? consultations[0]?.consultation_id
+
+  async function refresh() {
+    setRefreshing(true)
+    try {
+      // Refresh mounted panels concurrently; hidden history stays lazy and is marked stale.
+      await client.invalidateQueries({ queryKey: issueKeys.all, refetchType: 'none' })
+      await Promise.all([
+        query.refetch(),
+        client.refetchQueries({ queryKey: issueKeys.all, type: 'active', predicate: q => q.queryKey[1] !== 'detail' }),
+      ])
+    } finally { setRefreshing(false) }
+  }
+
+  return <Drawer open onClose={onClose} title="Hồ sơ Sự cố & Điều trị" size={860}
+    extra={<Button size="small" onClick={() => void refresh()} loading={refreshing}>Tải lại</Button>}>
+    <Flex vertical gap={16} style={{ overflowWrap: 'anywhere' }}>
+      <QueryFeedback query={query} />
+      {!query.isError && issue && <>
+        <Typography.Title level={4}>{issue.title}</Typography.Title><StatusBadge {...presentStatus(ISSUE_STATUS_DICTIONARY, issue.status)} />
+        <Tabs activeKey={tab} onChange={setTab} items={[{ key: 'issue', label: 'Thông tin sự cố' }, { key: 'session', label: 'Xem thông tin phiên trồng' }, { key: 'consultations', label: 'Tư vấn & Xử lý' }]} />
+        {tab === 'issue' && <Card size="small" title="Triệu chứng ban đầu"><Typography.Paragraph style={{ whiteSpace: 'pre-wrap' }}>{issue.description}</Typography.Paragraph><EvidenceGallery media={issue.media} /></Card>}
+        {tab === 'session' && <SessionInformation issue={issue} />}
+        {tab === 'consultations' && <>
+          <QueryFeedback query={lookup} />
+          {lookup.data?.truncated && <Alert type="warning" title="Danh sách tư vấn có thể chưa đầy đủ. Vui lòng tải lại sau hoặc liên hệ bộ phận hỗ trợ." />}
+          {consultations.length > 1 && <Select aria-label="Chọn yêu cầu tư vấn" style={{ width: '100%' }} value={selectedId} onChange={setSelected} options={consultations.map(c => ({ value: c.consultation_id, label: `Tư vấn #${c.consultation_id}` }))} />}
+          {lookup.isSuccess && !consultations.length && !lookup.data.truncated && <Empty description="Chưa có yêu cầu tư vấn chuyên gia cho sự cố này." />}
+          {!lookup.isError && selectedId && <><Typography.Title level={5}>Tư vấn #{selectedId}</Typography.Title><ConsultationPanel key={selectedId} id={selectedId} issue={issue} /></>}
+        </>}
+      </>}
+    </Flex>
   </Drawer>
 }

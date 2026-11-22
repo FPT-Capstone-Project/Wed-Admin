@@ -19,6 +19,7 @@ import type { MenuProps } from 'antd'
 import { useEffect, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../../features/auth/store/auth.store'
+import { useEnvironmentHistory } from '../../features/dashboard/hooks/useEnvironmentHistory'
 import { AUTH_EXPIRED_EVENT } from '../../shared/api/client'
 import { NotificationBell } from '../../features/notifications/components/NotificationBell'
 import { resolveUserRole, ROLE_LABELS } from '../../routes/access-policy'
@@ -40,7 +41,7 @@ const PAGE_TITLES: Record<string, string> = {
   '/alerts': 'Cảnh báo & Thông báo',
   '/issues': 'Sự cố & Bệnh hại',
   '/harvests': 'Quản lý Thu hoạch',
-  '/harvest-requests': 'Yêu cầu nhận nấm',
+  '/harvest-requests': 'Giao nhận nấm',
   '/reports': 'Báo cáo & phân tích',
   '/inventory': 'Kho phôi nấm',
   '/orders': 'Quản lý đơn đặt',
@@ -149,6 +150,8 @@ export function AdminLayout() {
   const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const logout = useAuthStore((state) => state.logout)
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+  useEnvironmentHistory({ enabled: isAuthenticated && resolveUserRole(user) === 'ADMIN' })
 
   // ── Sidebar thu gọn / mở rộng ────────────────────────────────────────
   // `collapsed` lưu trong zustand (+ localStorage) ⇒ lựa chọn của user

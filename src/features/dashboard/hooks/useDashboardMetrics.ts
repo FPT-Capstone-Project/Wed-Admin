@@ -2,6 +2,7 @@ import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import { fetchDashboardMetrics } from '../api/dashboard.api'
 import { retryApiErrors } from '../../../shared/api/retry-policy'
 import type { DashboardAnalyticsData } from '../../../types/dashboard'
+import { ENVIRONMENT_HISTORY_KEY } from '../utils/environment-history-snapshot'
 
 /**
  * Hook số liệu tổng quan Dashboard — **chỉ đọc**.
@@ -18,10 +19,9 @@ export const dashboardKeys = {
    *
    * ⚠ Key **không** chứa `from`/`to`: endpoint này luôn trả cửa sổ mặc định
    *   24 giờ (BE quyết định mốc cắt) ⇒ đổi cửa sổ là đổi server state, không
-   *   phải đổi cache key. `refetchInterval` lấy nhịp từ `refreshAfterMs` trong
-   *   response (xem `useEnvironmentHistory`).
+   *   phải đổi cache key. AdminLayout sở hữu nhịp làm mới cố định 5 phút.
    */
-  environmentHistory: () => [...dashboardKeys.all, 'environment-history'] as const,
+  environmentHistory: () => ENVIRONMENT_HISTORY_KEY,
 }
 
 /**

@@ -2,6 +2,7 @@ import { apiClient } from '../../../shared/api/client'
 import { ensureObject } from '../../../shared/api/response-normalizer'
 import { normalizeEnvironmentHistory } from '../utils/environment-history.utils'
 import type { EnvironmentHistoryData } from '../../../types/environment-history'
+import { isEnvironmentHistory } from '../utils/environment-history-snapshot'
 
 /**
  * Dashboard Environment History API — **100% READ-ONLY**.
@@ -43,9 +44,11 @@ export interface EnvironmentHistoryQuery {
  */
 export async function fetchEnvironmentHistory(
   query: EnvironmentHistoryQuery = {},
+  signal?: AbortSignal,
 ): Promise<EnvironmentHistoryData> {
   const response = await apiClient.get<unknown>(ENVIRONMENT_HISTORY_URL, {
     params: query,
+    signal,
   })
 
   // `ensureObject` bóc 1 cấp wrapper `data`; nếu BE trả thẳng object thì trả
@@ -56,5 +59,7 @@ export async function fetchEnvironmentHistory(
     throw new Error('Dữ liệu lịch sử môi trường không đúng định dạng.')
   }
 
-  return normalizeEnvironmentHistory(body)
+  const data = normalizeEnvironmentHistory(body)
+  if (!isEnvironmentHistory(data)) throw new Error('Dữ liệu lịch sử môi trường không đúng định dạng.')
+  return data
 }

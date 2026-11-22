@@ -592,6 +592,92 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/shipments/{id}/details": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Update shipment details without changing its status
+         * @description Admins and Farm Operators may update carrier, tracking code, shipping fee, and handoff time. Delivery time may be changed after delivery.
+         */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    id: number;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": {
+                        carrier: string | null;
+                        trackingCode: string | null;
+                        shippingFee: number;
+                        /** Format: date-time */
+                        shippedAt: string | null;
+                        /** Format: date-time */
+                        deliveredAt?: string | null;
+                    };
+                };
+            };
+            responses: {
+                /** @description Shipment details updated without changing status */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid shipment details or timestamp order */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT token */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Admin or Farm Operator role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Shipment not found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Delivery time cannot be changed before delivery */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/shipments/{id}/status": {
         parameters: {
             query?: never;
@@ -620,6 +706,11 @@ export interface paths {
                     "application/json": {
                         /** @enum {string} */
                         status: "PENDING" | "SHIPPED" | "IN_TRANSIT" | "DELIVERED" | "CANCELLED" | "RETURNED";
+                        /**
+                         * Format: date-time
+                         * @description Optional delivery confirmation time.
+                         */
+                        deliveredAt?: string;
                     };
                 };
             };
@@ -1469,8 +1560,8 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Create a cultivation order for a mushroom type, package, and tray quantity
-         * @description The selected active package must cover the selected active mushroom's growing days. One ACTIVE floor with an approved matching mushroom profile must have enough AVAILABLE trays with ACTIVE positions in the same floor and room, after unexpired HELD reservations. Capacity is never combined across floors. Each tray requires two spawn units. Reservations are consumed after successful payment; Farm Operator selects physical trays later in WF-03.
+         * Create a cultivation order for a mushroom type and tray quantity
+         * @description The server automatically selects an ACTIVE package by mushroom growing_days (7-9 days selects 15 days; 10-15 days selects 20 days). Client package IDs are ignored. If multiple packages match, the lowest package_id is used. One ACTIVE floor with an approved matching mushroom profile must have enough AVAILABLE trays with ACTIVE positions in the same floor and room, after unexpired HELD reservations. Capacity is never combined across floors. Each tray requires two spawn units. Reservations are consumed after successful payment; Farm Operator selects physical trays later in WF-03.
          */
         post: {
             parameters: {
@@ -1492,7 +1583,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Invalid selection or mushroom growing time exceeds the selected package duration */
+                /** @description Invalid selection, unsupported mushroom growing time, or no active package for the required duration */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -1506,7 +1597,7 @@ export interface paths {
                     };
                     content?: never;
                 };
-                /** @description Package or mushroom type not found */
+                /** @description Mushroom type not found */
                 404: {
                     headers: {
                         [name: string]: unknown;
@@ -4480,6 +4571,54 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/consultations/{consultationId}/assign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Expert accepts a pending consultation */
+        patch: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Consultation assigned to the expert and moved to IN_PROGRESS */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Expert or Admin role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Consultation is no longer available */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        trace?: never;
+    };
     "/api/consultations/{consultationId}/respond": {
         parameters: {
             query?: never;
@@ -4508,11 +4647,13 @@ export interface paths {
                     "application/json": {
                         diagnosis: string;
                         solution: string;
+                        /** @description Keep consultation IN_PROGRESS and notify the operator to add information */
+                        needsMoreInfo?: boolean;
                     };
                 };
             };
             responses: {
-                /** @description Expert response submitted; consultation becomes ANSWERED and issue becomes IN_PROGRESS */
+                /** @description Treatment plan marks the consultation ANSWERED and issue IN_PROGRESS; needsMoreInfo keeps both open for operator follow-up */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -4539,7 +4680,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Append follow-up information to the consultation question */
+        /** Send a message or photo as an operator or the assigned expert until closure */
         post: {
             parameters: {
                 query?: never;
@@ -4554,11 +4695,33 @@ export interface paths {
                     "application/json": {
                         message: string;
                     };
+                    "multipart/form-data": {
+                        message?: string;
+                        /**
+                         * Format: binary
+                         * @description Image up to 25 MB
+                         */
+                        file?: string;
+                    };
                 };
             };
             responses: {
-                /** @description Follow-up appended while the expert is diagnosing; status is unchanged */
+                /** @description Message saved in conversation history; workflow status is unchanged */
                 201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Sender is not staff or is an unassigned expert */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Consultation is closed */
+                409: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4919,6 +5082,69 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/customer/sessions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the customer's cultivation sessions and their tray assignments
+         * @description Released assignments do not include location or current physical tray status because trays may have moved or been reused.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    page?: number;
+                    pageSize?: number;
+                    /** @description GROWING excludes completed and cancelled sessions; ALL includes cancelled sessions. */
+                    status?: "ALL" | "GROWING" | "COMPLETED";
+                };
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Owned sessions with tray assignments and pagination */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Invalid pagination or status filter */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Customer role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/customer/orders/{orderId}/cultivation-status": {
         parameters: {
             query?: never;
@@ -4938,7 +5164,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Customer-visible session status, harvest readiness, latest growth progress, assigned trays, and receiving method/status/schedule when selected */
+                /** @description Customer-visible session status, harvest readiness, latest growth progress, assigned trays, and receiving method, status, schedule, address and handover completion time when recorded */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -5082,6 +5308,66 @@ export interface paths {
                 };
                 /** @description Invalid session ID or pagination */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid JWT */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Unsupported role */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Session not found or not accessible */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/customer/sessions/{sessionId}/iot-history/sensors/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get the latest sensor reading for each sensor on the session's assigned floors
+         * @description Customers may access their own session; Admins and Farm Operators may access any session. Readings are scoped to the floor assignment and session period.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    sessionId: number;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Latest reading per sensor */
+                200: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -7057,22 +7343,22 @@ export interface paths {
             };
             requestBody: {
                 content: {
-                    "application/json": {
+                    "multipart/form-data": {
                         complaintType: string;
                         description: string;
-                        imageUrls?: string[];
+                        images?: string[];
                     };
                 };
             };
             responses: {
-                /** @description Complaint created with OPEN status */
+                /** @description Complaint created with PENDING status */
                 201: {
                     headers: {
                         [name: string]: unknown;
                     };
                     content?: never;
                 };
-                /** @description Invalid content or image URLs */
+                /** @description Invalid content or image files */
                 400: {
                     headers: {
                         [name: string]: unknown;
@@ -7108,13 +7394,14 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Staff lists complaints newest first */
+        /** Admin lists all; Farm Operators list the unassigned, own assigned or responded complaints */
         get: {
             parameters: {
                 query?: {
                     page?: number;
                     pageSize?: number;
-                    status?: "OPEN" | "IN_PROGRESS" | "WAITING_CUSTOMER" | "RESOLVED" | "REJECTED";
+                    status?: "PENDING" | "UNDER_REVIEW" | "NEED_MORE_INFO" | "RESOLVING" | "RESOLVED" | "REJECTED" | "CLOSED";
+                    queue?: "UNASSIGNED" | "ASSIGNED" | "RESPONDED";
                 };
                 header?: never;
                 path?: never;
@@ -7122,7 +7409,7 @@ export interface paths {
             };
             requestBody?: never;
             responses: {
-                /** @description Paginated complaints */
+                /** @description Paginated complaint summaries; details are loaded from the complaint detail endpoint */
                 200: {
                     headers: {
                         [name: string]: unknown;
@@ -7223,7 +7510,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Staff or owning customer views complaint details */
+        /** Staff or owning customer views complaint details; operators can access only visible queue items */
         get: {
             parameters: {
                 query?: never;
@@ -7261,7 +7548,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Staff or owning customer replies to an active complaint */
+        /** Admin, assigned Farm Operator or owning customer replies to an active complaint */
         post: {
             parameters: {
                 query?: never;
@@ -7314,7 +7601,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Staff assigns an active Admin or Farm Operator */
+        /** Admin assigns an active Admin or Farm Operator */
         patch: {
             parameters: {
                 query?: never;
@@ -7346,6 +7633,13 @@ export interface paths {
                     };
                     content?: never;
                 };
+                /** @description Admin role required */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
             };
         };
         trace?: never;
@@ -7363,7 +7657,7 @@ export interface paths {
         delete?: never;
         options?: never;
         head?: never;
-        /** Admin or Farm Operator changes directly to any supported status */
+        /** Admin updates status; the assigned Farm Operator submits the resolution */
         patch: {
             parameters: {
                 query?: never;
@@ -7377,7 +7671,7 @@ export interface paths {
                 content: {
                     "application/json": {
                         /** @enum {string} */
-                        status?: "OPEN" | "IN_PROGRESS" | "WAITING_CUSTOMER" | "RESOLVED" | "REJECTED";
+                        status?: "PENDING" | "UNDER_REVIEW" | "NEED_MORE_INFO" | "RESOLVING" | "RESOLVED" | "REJECTED" | "CLOSED";
                         resolution?: string;
                     };
                 };
@@ -11709,12 +12003,7 @@ export interface components {
         };
         CreateCultivationOrderRequest: {
             /**
-             * @description Selected active cultivation package. Its database duration must cover the mushroom growing days.
-             * @example 1
-             */
-            packageId: number;
-            /**
-             * @description Selected mushroom type.
+             * @description Selected active mushroom type. growing_days 7-9 automatically selects an active 15-day package; 10-15 selects an active 20-day package. Other growing times are unsupported.
              * @example 2
              */
             mushroomTypeId: number;

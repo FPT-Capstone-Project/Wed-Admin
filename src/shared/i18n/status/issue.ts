@@ -10,11 +10,24 @@
 
 import type { StatusDictionary, StatusPresentation } from './types'
 
+export const CONSULTATION_STATUS_DICTIONARY: StatusDictionary = {
+  PENDING: { label: 'Chờ tiếp nhận', tone: 'warning' },
+  IN_PROGRESS: { label: 'Đang tư vấn', tone: 'info' },
+  ANSWERED: { label: 'Đã có hướng xử lý', tone: 'info' },
+  CLOSED: { label: 'Đã đóng', tone: 'success' },
+}
+export const TREATMENT_REVIEW_DICTIONARY: StatusDictionary = {
+  NEEDS_MORE_ACTION: { label: 'Cần xử lý thêm', tone: 'warning' },
+  APPROVED: { label: 'Đã duyệt', tone: 'success' },
+  RESOLVED: { label: 'Đã hoàn tất', tone: 'success' },
+}
+
 /** Trạng thái ca bệnh. */
 export type IssueStatusKey =
   | 'OPEN'
   | 'WAITING_EXPERT'
   | 'IN_PROGRESS'
+  | 'WAITING_REVIEW'
   | 'MONITORING'
   | 'RESOLVED'
 
@@ -36,6 +49,7 @@ export const ISSUE_STATUS_DICTIONARY: Record<IssueStatusKey, StatusPresentation>
     OPEN: { label: 'Mới ghi nhận', tone: 'warning' },
     WAITING_EXPERT: { label: 'Chờ chuyên gia', tone: 'warning' },
     IN_PROGRESS: { label: 'Đang xử lý', tone: 'info' },
+    WAITING_REVIEW: { label: 'Chờ duyệt xử lý', tone: 'warning' },
     MONITORING: { label: 'Đang theo dõi', tone: 'info' },
     RESOLVED: { label: 'Đã xử lý', tone: 'success' },
   }

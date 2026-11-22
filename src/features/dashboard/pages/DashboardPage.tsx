@@ -91,7 +91,7 @@ export function DashboardPage() {
   const structure = structureQuery.structure
 
   // ── Môi trường theo tầng: một request cho mọi tầng ───────────────────
-  const environmentQuery = useEnvironmentHistory()
+  const environmentQuery = useEnvironmentHistory({ background: false })
 
   // ── Cảnh báo vận hành (dùng chung query key với RecentAlertsTable) ────
   const alertsQuery = useOperationalAlerts()
@@ -148,43 +148,12 @@ export function DashboardPage() {
    * Giữ tầng thiếu số đo để biểu đồ không che giấu khoảng trống dữ liệu.
    */
 
-  // ── Trạng thái tải: chờ KPI + cơ cấu trang trại ───────────────────────
+  // KPI loads independently so restored environment charts are never hidden by other requests.
   const isInitialLoading =
     metricsQuery.isLoading || structureQuery.isLoading
 
-  // ── Trạng thái lỗi: KPI là nguồn chính → lỗi ở đây chặn cả trang ─────
+  // An error in summary metrics must not hide environment history.
   const isBlockingError = metricsQuery.isError
-
-  if (isInitialLoading) {
-    return (
-      <div className="dashboard-page">
-        <PageHeader
-          title="Tổng quan trang trại"
-          description="Đang tải số liệu thực tế từ hệ thống…"
-          actions={<TodayChip />}
-        />
-        <Skeleton active paragraph={{ rows: 12 }} />
-      </div>
-    )
-  }
-
-  if (isBlockingError) {
-    return (
-      <div className="dashboard-page">
-        <PageHeader
-          title="Tổng quan trang trại"
-          description="Không tải được số liệu từ hệ thống."
-          actions={<TodayChip />}
-        />
-        <Typography.Paragraph type="danger">
-          {getApiErrorMessage(metricsQuery.error)}
-        </Typography.Paragraph>
-        <Typography.Link onClick={() => void metricsQuery.refetch()}>
-          Thử lại
-        </Typography.Link>
-      </div>
-    )
-  }
 
   // Lỗi cơ cấu trang trại (không chặn KPI) → hiển thị chú thích, không vỡ trang.
   const structureErrorMessage = structureQuery.isError
@@ -201,13 +170,15 @@ export function DashboardPage() {
       />
 
       {/* ── KPI Row ─────────────────────────────────────────────────────── */}
-      <QuickSummaryStats
+      {isInitialLoading ? <Skeleton active paragraph={{ rows: 3 }} /> : isBlockingError && !metrics ? (
+        <Alert type="warning" title="Không tải được số liệu tổng quan" description={getApiErrorMessage(metricsQuery.error)} action={<Button onClick={() => void metricsQuery.refetch()}>Thử lại</Button>} />
+      ) : <QuickSummaryStats
         metrics={metrics ?? EMPTY_METRICS}
         totalTrays={summary.totalTrays}
         activeInUseTrays={summary.activeInUseTrays}
         maintenanceTrays={summary.maintenanceTrays}
         activeAlerts={alertsQuery.data?.counts.total ?? 0}
-      />
+      />}
 
       {/* ── Cơ cấu trang trại ───────────────────────────────────────────── */}
       <section className="dashboard-section" aria-labelledby="structure-heading">
@@ -224,6 +195,9 @@ export function DashboardPage() {
               {summary.totalRooms} phòng · {summary.totalFloors} tầng ·{' '}
               {summary.totalTrays} khay
             </Typography.Text>
+            {environmentQuery.data && <div><Typography.Text type="secondary" style={{ fontSize: 12 }}>
+              Cập nhật lúc {new Date(environmentQuery.dataUpdatedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Ho_Chi_Minh' })}
+            </Typography.Text></div>}
           </div>
           <StatusBadge
             tone={structure.devices.offline > 0 ? 'warning' : 'ok'}
@@ -243,7 +217,7 @@ export function DashboardPage() {
 
         <Row gutter={[12, 12]}>
           <Col xs={24} sm={12} xl={8}>
-            <EnvironmentMetricCard
+            {environmentQuery.isPending && !environmentQuery.data ? <Skeleton active paragraph={{ rows: 2 }} /> : <EnvironmentMetricCard
               title="Nhiệt độ trung bình"
               value={temperatureSummary.value}
               unit="°C"
@@ -253,11 +227,11 @@ export function DashboardPage() {
               status={temperatureSummary.label}
               details={temperatureSummary.details}
               target={temperatureSummary.coverageNote}
-            />
+            />}
           </Col>
 
           <Col xs={24} sm={12} xl={8}>
-            <EnvironmentMetricCard
+            {environmentQuery.isPending && !environmentQuery.data ? <Skeleton active paragraph={{ rows: 2 }} /> : <EnvironmentMetricCard
               title="Độ ẩm trung bình"
               value={humiditySummary.value}
               unit="%"
@@ -267,7 +241,7 @@ export function DashboardPage() {
               status={humiditySummary.label}
               details={humiditySummary.details}
               target={humiditySummary.coverageNote}
-            />
+            />}
           </Col>
 
           <Col xs={24} xl={8}>
@@ -289,7 +263,7 @@ export function DashboardPage() {
         </Row>
 
         <div className="dashboard-chart-wrap">
-          {environmentQuery.isError ? (
+          {environmentQuery.isError && (
             <Alert
               type="warning"
               showIcon
@@ -301,16 +275,17 @@ export function DashboardPage() {
                 </Button>
               }
             />
-          ) : environmentQuery.isLoading ? (
+          )}
+          {environmentQuery.isPending && !environmentQuery.data ? (
             <Skeleton active paragraph={{ rows: 6 }} />
-          ) : (
+          ) : environmentQuery.data ? (
             <EnvironmentChart
               data={chartFloors}
               from={environmentQuery.data?.from}
               to={environmentQuery.data?.to}
               bucketMs={environmentQuery.data?.bucketMs}
             />
-          )}
+          ) : null}
         </div>
       </section>
 

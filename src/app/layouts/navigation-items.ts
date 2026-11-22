@@ -113,7 +113,7 @@ export const MENU_GROUPS: MenuGroupDef[] = [
          */
         key: '/harvest-requests',
         icon: 'harvestRequests',
-        label: 'Yêu cầu nhận nấm',
+        label: 'Giao nhận nấm',
       },
       { key: '/complaints', icon: 'complaints', label: 'Khiếu nại' },
       {
