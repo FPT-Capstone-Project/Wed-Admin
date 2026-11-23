@@ -1,6 +1,6 @@
 import { apiClient } from '../../shared/api/client'
 import { ensureObject } from '../../shared/api/response-normalizer'
-import type { AssignPayload, ComplaintDetail, ComplaintList, ComplaintQuery, ReplyPayload, StatusPayload } from './complaint.types'
+import type { AssignPayload, ComplaintDetail, ComplaintList, ComplaintQuery, StatusPayload } from './complaint.types'
 import { STATUS_OPTIONS } from './complaint-status'
 
 export const complaintApi = {
@@ -15,9 +15,6 @@ export const complaintApi = {
     const data = ensureObject<ComplaintDetail>(response.data)
     if (!data || data.complaint_id !== id || !Array.isArray(data.replies)) throw new Error('Dữ liệu chi tiết khiếu nại không đúng định dạng.')
     return data
-  },
-  async reply(id: number, payload: ReplyPayload) {
-    await apiClient.post(`/api/complaints/${id}/replies`, payload, { skipGlobalErrorToast: true })
   },
   async assign(id: number, payload: AssignPayload) {
     await apiClient.patch(`/api/complaints/${id}/assign`, payload, { skipGlobalErrorToast: true })
@@ -45,4 +42,14 @@ export async function fetchComplaintSearch(status: ComplaintQuery['status'], sig
     if (result.data.length < result.pageSize) break
   }
   return { data, incomplete: data.length < first.total }
+}
+
+/** Verify the server state before applying the assignment workflow fallback. */
+export async function assignComplaintForReview(id: number, payload: AssignPayload) {
+  await complaintApi.assign(id, payload)
+  if (payload.assignedTo == null) return
+  const updated = await complaintApi.detail(id)
+  if (updated.status === 'PENDING' && updated.assigned_to === payload.assignedTo) {
+    await complaintApi.status(id, { status: 'UNDER_REVIEW' })
+  }
 }

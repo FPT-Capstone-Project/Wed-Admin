@@ -7,6 +7,81 @@ import { COMPLAINT_STATUSES, complaintDate, isFinalComplaint } from '../src/feat
 const require = createRequire(import.meta.url)
 const ts = require('typescript')
 
+// Exercise component event handlers with lightweight hook/control doubles.
+function drawerHarness() {
+  let mode = 'assign'
+  let selected
+  let original
+  let resets = 0
+  const form = { resetFields: () => { selected = original; resets++ } }
+  const Form = Object.assign('Form', { useForm: () => [form], useWatch: () => selected, Item: 'Form.Item' })
+  const source = readFileSync(new URL('../src/features/complaints/components/ComplaintDetailDrawer.tsx', import.meta.url), 'utf8')
+    + '\nexport { ComplaintHandling, AssignmentForm, AdminDecisionForm }'
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX } }).outputText
+  const exports = {}
+  runInNewContext(code, { exports, require: id => {
+    if (id === 'react/jsx-runtime') return require(id)
+    if (id === 'react') return { useRef: () => ({ current: false }), useState: () => [mode, value => { mode = value }] }
+    if (id === 'antd') return new Proxy({ Form }, { get: (target, name) => target[name] ?? name })
+    if (id.endsWith('complaint-status')) return { COMPLAINT_STATUSES, isFinalComplaint }
+    return {}
+  } })
+  return { ...exports, choose: value => { selected = value }, initialize: value => { original = value; selected = value }, resets: () => resets }
+}
+
+function nodes(element) {
+  if (!element || typeof element !== 'object') return []
+  return [element, ...[element.props?.children].flat(Infinity).flatMap(nodes)]
+}
+
+test('pending routes render exactly one keyed branch and default to assignment', () => {
+  const h = drawerHarness()
+  const props = { complaint: { status: 'PENDING', assigned_to: null }, users: [], pending: false }
+  let tree = h.ComplaintHandling(props)
+  assert.equal(tree.props.title, 'Hướng xử lý khiếu nại')
+  assert.equal(nodes(tree).filter(node => node.type === h.AssignmentForm).length, 1)
+  assert.equal(nodes(tree).filter(node => node.type === h.AdminDecisionForm).length, 0)
+  nodes(tree).find(node => node.type === 'Segmented').props.onChange('decide')
+  tree = h.ComplaintHandling(props)
+  assert.equal(nodes(tree).filter(node => node.type === h.AssignmentForm).length, 0)
+  assert.equal(nodes(tree).find(node => node.type === h.AdminDecisionForm).key, 'decide')
+  nodes(tree).find(node => node.type === 'Segmented').props.onChange('assign')
+  tree = h.ComplaintHandling(props)
+  assert.equal(nodes(tree).find(node => node.type === h.AssignmentForm).key, 'assign')
+})
+
+for (const current of [undefined, 2]) {
+  test(`assignment draft cancel restores ${current ?? 'empty'} without submitting`, () => {
+    const h = drawerHarness()
+    h.initialize(current)
+    let writes = 0
+    const props = { complaint: { status: 'PENDING', assigned_to: current ?? null }, users: [], pending: false, onAssign: () => { writes++ } }
+    let tree = h.AssignmentForm(props)
+    assert.equal(nodes(tree).find(node => node.type === 'Select').props.allowClear, current == null)
+    assert.equal(nodes(tree).find(node => node.props.htmlType === 'submit').props.disabled, true)
+    assert.equal(nodes(tree).some(node => node.props.children === 'Hủy'), false)
+    h.choose(9)
+    tree = h.AssignmentForm(props)
+    assert.equal(nodes(tree).find(node => node.props.htmlType === 'submit').props.disabled, false)
+    nodes(tree).find(node => node.props.children === 'Hủy').props.onClick()
+    assert.equal(h.resets(), 1)
+    tree = h.AssignmentForm(props)
+    assert.equal(nodes(tree).find(node => node.props.htmlType === 'submit').props.disabled, true)
+    assert.equal(nodes(tree).some(node => node.props.children === 'Hủy'), false)
+    assert.equal(writes, 0)
+  })
+}
+
+for (const status of ['UNDER_REVIEW', 'NEED_MORE_INFO', 'RESOLVING']) {
+  test(`${status} renders monitoring and reassignment without decision form`, () => {
+    const h = drawerHarness()
+    const tree = h.ComplaintHandling({ complaint: { status, assigned_to: 2, assigned_staff: { full_name: 'Lan' } }, users: [] })
+    assert.equal(nodes(tree).some(node => node.type === h.AdminDecisionForm), false)
+    assert.equal(nodes(tree).some(node => node.type === h.AssignmentForm), true)
+    assert.match(nodes(tree).find(node => node.type === 'Alert').props.title, /Lan/)
+  })
+}
+
 function api(client) {
   const source = readFileSync(new URL('../src/features/complaints/complaint.api.ts', import.meta.url), 'utf8')
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText
@@ -43,15 +118,13 @@ test('list keeps the verified flat pagination wrapper; detail unwraps data', asy
   assert.equal(calls[1][0], '/api/complaints/7')
 })
 
-test('all three writes use exactly the Swagger paths and payloads', async () => {
+test('admin writes use exactly the Swagger paths and payloads', async () => {
   const calls = []
   const client = Object.fromEntries(['post', 'patch'].map(method => [method, async (url, body) => { calls.push({ method, url, body }) }]))
   const { complaintApi } = api(client)
-  await complaintApi.reply(7, { message: 'Phản hồi' })
   await complaintApi.assign(7, { assignedTo: null })
   await complaintApi.status(7, { status: 'RESOLVED', resolution: 'Đã xử lý' })
   assert.deepEqual(calls, [
-    { method: 'post', url: '/api/complaints/7/replies', body: { message: 'Phản hồi' } },
     { method: 'patch', url: '/api/complaints/7/assign', body: { assignedTo: null } },
     { method: 'patch', url: '/api/complaints/7/status', body: { status: 'RESOLVED', resolution: 'Đã xử lý' } },
   ])
@@ -76,8 +149,36 @@ test('search pagination has a hard cap and reports incomplete results', async ()
   assert.equal(result.incomplete, true)
 })
 
-test('HTTP 409 is preserved for the centralized error mapper', async () => {
-  const conflict = Object.assign(new Error('Complaint is final'), { response: { status: 409 } })
-  const { complaintApi } = api({ post: async () => { throw conflict } })
-  await assert.rejects(complaintApi.reply(7, { message: 'Phản hồi' }), error => error === conflict)
+test('HTTP 409 is preserved for admin status decisions', async () => {
+  const conflict = Object.assign(new Error('Complaint changed'), { response: { status: 409 } })
+  const { complaintApi } = api({ patch: async () => { throw conflict } })
+  await assert.rejects(complaintApi.status(7, { status: 'CLOSED', resolution: 'done' }), error => error === conflict)
+})
+
+for (const [status, assignedTo, expectedFallback] of [
+  ['PENDING', 2, true], ['UNDER_REVIEW', 2, false], ['CLOSED', 2, false], ['PENDING', 9, false],
+]) {
+  test(`assignment checks server state ${status}/${assignedTo} before fallback`, async () => {
+    const calls = []
+    const { assignComplaintForReview } = api({
+      patch: async (url, body) => { calls.push({ url, body }) },
+      get: async () => ({ data: { complaint_id: 7, replies: [], status, assigned_to: assignedTo } }),
+    })
+    await assignComplaintForReview(7, { assignedTo: 2 })
+    assert.equal(calls.length, expectedFallback ? 2 : 1)
+    assert.equal(calls[0].url, '/api/complaints/7/assign')
+    if (expectedFallback) {
+      assert.equal(calls[1].url, '/api/complaints/7/status')
+      assert.equal(calls[1].body.status, 'UNDER_REVIEW')
+    }
+  })
+}
+
+test('assignment propagates partial failure for UI error handling', async () => {
+  const failure = new Error('status update failed')
+  const { assignComplaintForReview } = api({
+    patch: async url => { if (url.endsWith('/status')) throw failure },
+    get: async () => ({ data: { complaint_id: 7, replies: [], status: 'PENDING', assigned_to: 2 } }),
+  })
+  await assert.rejects(assignComplaintForReview(7, { assignedTo: 2 }), error => error === failure)
 })

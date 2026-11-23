@@ -1,4 +1,4 @@
-import { Alert, Button, Flex, Input, Select, Typography } from 'antd'
+import { Alert, Button, Flex, Input, Segmented, Select, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import { useMemo, useState } from 'react'
 import { PageHeader, StatCard, StatGrid } from '../../shared/ui'
@@ -8,12 +8,14 @@ import { useAuthStore } from '../auth/store/auth.store'
 import { useUsers } from '../users/hooks/useUsers'
 import { ComplaintDetailDrawer } from './components/ComplaintDetailDrawer'
 import { ComplaintStatusBadge } from './components/ComplaintStatusBadge'
-import { complaintDate, STATUS_OPTIONS } from './complaint-status'
-import { useComplaints, useComplaintSearch, useComplaintSummary } from './useComplaints'
-import type { Complaint, ComplaintStatus } from './complaint.types'
+import { complaintDate, isFinalComplaint, STATUS_OPTIONS } from './complaint-status'
+import { useComplaints, useComplaintSummary, useComplaintNotificationSync } from './useComplaints'
+import type { Complaint, ComplaintQuery, ComplaintStatus } from './complaint.types'
 
 export function ComplaintsPage() {
+  useComplaintNotificationSync()
   const [status, setStatus] = useState<ComplaintStatus>()
+  const [queue, setQueue] = useState<ComplaintQuery['queue']>()
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(1)
   const [selected, setSelected] = useState<number | null>(null)
@@ -21,20 +23,23 @@ export function ComplaintsPage() {
   const usersQuery = useUsers({}, { enabled: isAdmin, staleTime: 60_000 })
   const users = usersQuery.data ?? []
   const usersById = useMemo(() => new Map(usersQuery.data?.map(user => [user.user_id, user])), [usersQuery.data])
-  const list = useComplaints({ page, pageSize: 20, status }, Boolean(search))
-  const searchQuery = useComplaintSearch(status, Boolean(search))
+  const list = useComplaints({ page, pageSize: 20, status, ...(!isAdmin && queue ? { queue } : {}) }, false)
   const summary = useComplaintSummary()
   const filtered = useMemo(() => {
     const term = search.toLocaleLowerCase('vi-VN').replace(/^#/, '')
-    return (searchQuery.data?.data ?? []).filter(row => {
+    return (list.data?.data ?? []).filter(row => {
+      if (isAdmin && queue) {
+        const ended = isFinalComplaint(row.status) || row.resolved_at != null
+        if (queue === 'RESPONDED' ? !ended : ended || (queue === 'UNASSIGNED' ? row.assigned_to != null : row.assigned_to == null)) return false
+      }
       const customer = usersById.get(row.customer_id)
       return [row.complaint_id, row.order_id, row.customer_id, row.complaint_type, row.description, customer?.full_name, customer?.email, customer?.phone]
         .some(value => value != null && String(value).toLocaleLowerCase('vi-VN').includes(term))
     })
-  }, [searchQuery.data, search, usersById])
-  const activeQuery = search ? searchQuery : list
-  const data = search ? filtered.slice((page - 1) * 20, page * 20) : list.data?.data
-  const total = search ? filtered.length : list.data?.total ?? 0
+  }, [list.data, search, usersById, isAdmin, queue])
+  const activeQuery = list
+  const data = filtered
+  const total = list.data?.total ?? 0
   const counts = summary.data
   const reload = () => {
     void activeQuery.refetch()
@@ -59,8 +64,11 @@ export function ComplaintsPage() {
       <Select aria-label="Trạng thái khiếu nại" placeholder="Tất cả trạng thái" value={status} allowClear options={STATUS_OPTIONS} onChange={value => { setStatus(value); setPage(1) }} style={{ width: 280, maxWidth: '100%' }} />
       <Button icon={<ReloadOutlined />} loading={activeQuery.isFetching || summary.isFetching} onClick={reload}>Tải lại</Button>
     </Flex>
-    {search && <Typography.Paragraph type="secondary">Tìm kiếm trong tối đa 2.000 khiếu nại mới nhất theo trạng thái đang chọn.{!isAdmin && ' Tìm theo tên/email khách hàng chưa khả dụng với quyền hiện tại; có thể tìm bằng mã khách hàng.'}</Typography.Paragraph>}
-    {search && searchQuery.data?.incomplete && <Alert type="warning" title="Kết quả tìm kiếm chưa bao phủ toàn bộ dữ liệu. Chọn trạng thái cụ thể để thu hẹp phạm vi." />}
+    <Segmented aria-label="Hàng đợi khiếu nại" value={queue ?? 'ALL'} options={[
+      { label: 'Tất cả', value: 'ALL' }, { label: 'Chưa phân công', value: 'UNASSIGNED' },
+      { label: 'Đã phân công', value: 'ASSIGNED' }, { label: 'Đã kết thúc', value: 'RESPONDED' },
+    ]} onChange={value => { setQueue(value === 'ALL' ? undefined : value as ComplaintQuery['queue']); setPage(1) }} style={{ marginBottom: 12, maxWidth: '100%', overflowX: 'auto' }} />
+    {(search || (isAdmin && queue)) && <Typography.Paragraph type="secondary">Bộ lọc hàng đợi của quản trị viên và tìm kiếm chỉ áp dụng trên trang hiện tại. Phân trang hiển thị tổng số bản ghi trước các bộ lọc này.</Typography.Paragraph>}
     {activeQuery.isError ? <LoadErrorAlert error={activeQuery.error} resource="danh sách khiếu nại" onRetry={activeQuery.refetch} /> : <DataTable<Complaint>
       rowKey="complaint_id" dataSource={data} loading={activeQuery.isLoading} isFetching={activeQuery.isFetching} scrollX={null} tableLayout="fixed"
       onRow={row => ({ onClick: () => setSelected(row.complaint_id), style: { cursor: 'pointer' } })}

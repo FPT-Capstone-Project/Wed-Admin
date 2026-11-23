@@ -2,7 +2,6 @@ import type { paths } from '../../types/api-schema'
 
 export type ComplaintQuery = NonNullable<paths['/api/complaints']['get']['parameters']['query']>
 export type ComplaintStatus = NonNullable<ComplaintQuery['status']>
-export type ReplyPayload = paths['/api/complaints/{id}/replies']['post']['requestBody']['content']['application/json']
 export type AssignPayload = paths['/api/complaints/{id}/assign']['patch']['requestBody']['content']['application/json']
 export type StatusPayload = paths['/api/complaints/{id}/status']['patch']['requestBody']['content']['application/json']
 
