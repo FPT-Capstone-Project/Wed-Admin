@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { buildPaidOrderRevenue } from '../../analytics/utils/paid-order-revenue.utils'
 import { useQuery, type UseQueryOptions } from '@tanstack/react-query'
 import {
   fetchAllAdminOrders,
@@ -45,7 +46,7 @@ export function useAdminOrders(
 ) {
   const ordersQuery = useQuery<AdminOrderDto[], Error>({
     queryKey: adminOrderKeys.list(query),
-    queryFn: () => fetchAllAdminOrders({ pageSize: query.pageSize ?? 100 }),
+    queryFn: () => fetchAllAdminOrders({ pageSize: query.pageSize ?? 100, maxPages: 20, requireComplete: true }),
     placeholderData: (prev) => prev,
     staleTime: 30_000,
     ...options,
@@ -71,16 +72,26 @@ export function useAdminOrders(
     [ordersQuery.data, sessionsQuery.data?.items, sessionsQuery.data?.complete],
   )
 
+  const revenue = useMemo(() => {
+    try {
+      return { total: Math.round(buildPaidOrderRevenue(ordersQuery.data ?? []).total), error: null }
+    } catch (error) {
+      return { total: null, error: error instanceof Error ? error : new Error('Không thể tính doanh thu đã thu.') }
+    }
+  }, [ordersQuery.data])
+
   return {
+    paidRevenue: revenue.total,
     orders,
     sessions: sessionsQuery.data?.items ?? [],
     isLoading: ordersQuery.isLoading,
     isFetching: ordersQuery.isFetching,
     isError: ordersQuery.isError,
     error: ordersQuery.error ?? null,
-    sourceErrors: sessionsQuery.isError
-      ? [{ source: 'danh sách phiên canh tác', error: sessionsQuery.error }]
-      : [],
+    sourceErrors: [
+      ...(sessionsQuery.isError ? [{ source: 'danh sách phiên canh tác', error: sessionsQuery.error }] : []),
+      ...(revenue.error ? [{ source: 'doanh thu đã thu', error: revenue.error }] : []),
+    ],
     refetch: () => {
       void ordersQuery.refetch()
       void sessionsQuery.refetch()

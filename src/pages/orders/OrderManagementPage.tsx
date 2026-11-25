@@ -86,6 +86,7 @@ export function OrderManagementPage() {
   // ── Data from API (read-only) ──────────────────────────────────────────
   const {
     orders,
+    paidRevenue,
     sessions,
     isLoading,
     isFetching,
@@ -157,7 +158,6 @@ export function OrderManagementPage() {
       total: orders.length,
       pending: tabCounts['PENDING'] ?? 0,
       processing: tabCounts['PROCESSING'] ?? 0,
-      totalAmount: orders.reduce((sum, order) => sum + order.totalAmount, 0),
     }),
     [orders, tabCounts],
   )
@@ -375,11 +375,11 @@ export function OrderManagementPage() {
           description="Phiên đang trong quá trình canh tác"
         />
         <StatCard
-          title="Tổng giá trị"
-          value={formatVND(summary.totalAmount)}
+          title="DOANH THU ĐÃ THU"
+          value={paidRevenue == null ? '—' : formatVND(paidRevenue)}
           tone="info"
           icon={<CreditCardOutlined />}
-          description="Tổng tiền của các đơn đã tạo"
+          description="Tổng đơn đã thanh toán"
         />
       </StatGrid>
 
