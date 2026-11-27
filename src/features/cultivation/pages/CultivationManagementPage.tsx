@@ -10,7 +10,7 @@ Skeleton,
 } from 'antd'
 import { Suspense,useMemo,useState } from 'react'
 import { CultivationGalleryModal } from '../../../app/router/lazy-modals'
-import { MetadataBadge,StatCard } from '../../../shared/ui'
+import { StatCard } from '../../../shared/ui'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
 import { PageHeader } from '../../../shared/ui/PageHeader'
 import { CultivationBatchCard } from '../components/CultivationBatchCard'
@@ -122,10 +122,7 @@ export function CultivationManagementPage() {
 
   return (
     <div>
-      <PageHeader title="Sinh trưởng & thu hoạch" description="Tiến độ mẻ nấm, giai đoạn sinh trưởng và lịch sử kiểm tra phôi (chỉ đọc)" actions={<MetadataBadge
-
-          label="Chế độ chỉ đọc — dữ liệu từ API thật"
-        />} />
+      <PageHeader title="Sinh trưởng & thu hoạch" description="Tiến độ mẻ nấm, giai đoạn sinh trưởng và lịch sử kiểm tra phôi." />
 
       <Flex gap={12} wrap style={{ marginBottom: 20 }}>
         <StatCard

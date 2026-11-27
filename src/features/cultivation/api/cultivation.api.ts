@@ -1,3 +1,4 @@
+import { fetchOptionalRecord } from '../../../shared/api/safe-fetch'
 import { farmApi } from '../../farm/api/farm.api'
 import { fetchAllAdminCultivationSessionsDetailed } from '../../sessions/api/admin-session.api'
 import { toCultivationSession } from '../../sessions/api/admin-session-mapper'
@@ -18,7 +19,7 @@ export async function fetchCultivationBatches(): Promise<BuiltBatches> {
   const inspectionsBySessionId = new Map<number, SpawnInspection[]>()
   await Promise.all(
     sessions.map(async (session) => {
-      const history = await farmApi.getSpawnInspections(session.session_id)
+      const history = await fetchOptionalRecord(() => farmApi.getSpawnInspections(session.session_id))
       if (history) inspectionsBySessionId.set(session.session_id, history.inspections ?? [])
     }),
   )

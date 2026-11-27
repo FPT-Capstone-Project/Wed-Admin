@@ -1,6 +1,4 @@
-import { Flex } from 'antd'
 import { useMasterList } from '../../features/devices/hooks/useIoT'
-import { MetadataBadge } from '../../shared/ui'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { DeviceControlPanel } from './components/DeviceControlPanel'
 import './device-industrial.css'
@@ -21,12 +19,7 @@ export function DeviceManagementPage() {
 
   return (
     <div className="mcms-iot-view">
-      <PageHeader title="Giám sát thiết bị IoT" description={masters.length > 0 ? `${masters.length} bộ điều khiển trung tâm đã đăng ký` : 'Đang tải dữ liệu thiết bị IoT...'} actions={<Flex align="center" gap={16} wrap>
-          <MetadataBadge  label={<>
-            Chỉ giám sát
-          </>} />
-
-        </Flex>} />
+      <PageHeader title="Giám sát thiết bị IoT" description={masters.length > 0 ? `${masters.length} bộ điều khiển trung tâm đã đăng ký` : 'Đang tải dữ liệu thiết bị IoT...'} />
 
       <DeviceControlPanel />
     </div>

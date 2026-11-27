@@ -57,3 +57,13 @@ export async function safeFetchObject<T>(
 ): Promise<T | null> {
   return safeFetch(factory, null as T | null)
 }
+
+/** Missing optional records are empty; transport and server failures remain errors. */
+export async function fetchOptionalRecord<T>(factory: () => Promise<T>): Promise<T | null> {
+  try {
+    return await factory()
+  } catch (error) {
+    if (isNotFoundError(error)) return null
+    throw error
+  }
+}

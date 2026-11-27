@@ -167,10 +167,9 @@ export function ThresholdProfileTab({
         icon={<EyeOutlined />}
         title={
           <Typography.Text style={{ fontSize: 13 }}>
-            <strong>Chế độ chỉ xem:</strong> Các tầng đang bật chế độ{' '}
+            Các tầng đang bật chế độ{' '}
             <StatusBadge tone="ok" label="Tự động" style={{ margin: '0 4px' }} />
             sẽ tự động đồng bộ theo ngưỡng của giống nấm được gán trên khay.
-            Việc đặt / sửa ngưỡng do nhân viên thực hiện trên ứng dụng nhân viên.
           </Typography.Text>
         }
         style={{ marginBottom: 16, borderRadius: 6, borderColor: 'var(--mcms-border)', background: 'var(--mcms-surface-muted)' }}
@@ -198,9 +197,6 @@ export function ThresholdProfileTab({
               label={`${visibleProfiles.length}/${profileCount ?? visibleProfiles.length} giống nấm bạn đang thuê`}
             />
           ) : null}
-          <MetadataBadge
-            label="Chỉ xem — nhân viên thiết lập trên ứng dụng nhân viên"
-          />
           <Button
             size="small"
             onClick={() => {

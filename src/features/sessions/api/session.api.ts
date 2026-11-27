@@ -1,3 +1,6 @@
+import { fetchOptionalRecord } from '../../../shared/api/safe-fetch'
+import { fetchAdminCultivationSession } from './admin-session.api'
+import { toCultivationSession } from './admin-session-mapper'
 import { apiClient } from '../../../shared/api/client'
 import { unwrapListResponse } from '../../../shared/api/list-response'
 import { ensureObject } from '../../../shared/api/response-normalizer'
@@ -49,7 +52,7 @@ export const sessionApi = {
     if (query.userId != null || query.mushroomTypeId != null) {
       const details: CultivationSession[] = []
       for (let offset = 0; offset < sessions.length; offset += 5) {
-        details.push(...await Promise.all(sessions.slice(offset, offset + 5).map(async session => ({ ...session, ...await sessionApi.getById(session.session_id) }))))
+        details.push(...await Promise.all(sessions.slice(offset, offset + 5).map(async session => ({ ...session, ...await fetchOptionalRecord(() => sessionApi.getById(session.session_id)) }))))
       }
       sessions = details
     }
@@ -57,7 +60,12 @@ export const sessionApi = {
     return selectSessions(sessions, query)
   },
   async getById(id: number, includeTrays = false): Promise<CultivationSession> {
-    const response = await apiClient.get<unknown>(`${FARM_SESSIONS_URL}/${id}`)
+    const response = await fetchOptionalRecord(() => apiClient.get<unknown>(`${FARM_SESSIONS_URL}/${id}`))
+    if (!response) {
+      const adminSession = await fetchAdminCultivationSession(id)
+      if (!adminSession) throw new Error('Không tìm thấy phiên canh tác')
+      return toCultivationSession(adminSession)
+    }
     const raw = ensureObject<Record<string, unknown>>(response.data)
     if (!raw) throw new Error('Dữ liệu chi tiết phiên không đúng định dạng')
     const session = normalizeSession(raw)

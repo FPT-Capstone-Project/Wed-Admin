@@ -1,3 +1,4 @@
+import { fetchOptionalRecord } from '../../../shared/api/safe-fetch'
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
 import { farmApi } from '../../farm/api/farm.api'
@@ -7,16 +8,16 @@ import { resolveFarmGrowth, type FarmGrowthRecord } from '../utils/farm-growth.u
 export async function fetchFarmGrowth(sessionId: number) {
   const [spawn, daily, response] = await Promise.all([
     farmApi.getSpawnInspections(sessionId),
-    fetchSessionDailyInspections(sessionId),
-    apiClient.get<unknown>(`/api/cultivation-sessions/admin/${sessionId}/progress`),
+    fetchOptionalRecord(() => fetchSessionDailyInspections(sessionId)),
+    fetchOptionalRecord(() => apiClient.get<unknown>(`/api/cultivation-sessions/admin/${sessionId}/progress`)),
   ])
-  if (daily.pagination.total > daily.inspections.length) {
+  if (daily && daily.pagination.total > daily.inspections.length) {
     throw new Error('Incomplete Farm OP inspection history')
   }
-  const progress = ensureObject<Record<string, unknown>>(response.data)
+  const progress = ensureObject<Record<string, unknown>>(response?.data)
   return resolveFarmGrowth({
     progressHistory: ensureArray<FarmGrowthRecord>(progress?.progress_history),
-    observations: [...(spawn?.inspections ?? []), ...daily.inspections],
+    observations: [...(spawn?.inspections ?? []), ...(daily?.inspections ?? [])],
     sessionStatus: typeof progress?.status === 'string' ? progress.status : null,
   })
 }

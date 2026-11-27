@@ -373,7 +373,6 @@ export function TrayDetailDrawer({
           <InfoCard
 
             title="Lịch sử kiểm tra phôi"
-            subtitle="Chỉ xem — ghi nhận do nhân viên thực hiện trên app"
           >
             {inspectionsLoading ? (
               <Spin tip="Đang tải lịch sử kiểm tra phôi..." />

@@ -55,7 +55,7 @@ export function HarvestManagementPage() {
   const staffName = (id: number | null | undefined, inlineName?: string | null) =>
     inlineName?.trim() || resolveStaffName(staffNames, id)
 
-  return <div style={{ fontVariantNumeric: 'tabular-nums' }}><PageHeader title="Quản lý Thu hoạch" description="Đối soát sản lượng và bàn giao · Chỉ xem. KPI theo bộ lọc; tỷ lệ A/B tính từ khối lượng thương phẩm của các đợt có phẩm cấp A/B." />
+  return <div style={{ fontVariantNumeric: 'tabular-nums' }}><PageHeader title="Quản lý Thu hoạch" description="Đối soát sản lượng và bàn giao. KPI theo bộ lọc; tỷ lệ A/B tính từ khối lượng thương phẩm của các đợt có phẩm cấp A/B." />
     <Flex gap={12} wrap style={{ marginBottom: 16 }}>
       <Select aria-label="Trạng thái thu hoạch" allowClear placeholder="Trạng thái" style={{ width: 180 }} options={selectOptions(HARVEST_STATUS_DICTIONARY, HARVEST_STATUS_FILTER_VALUES)} onChange={status => setFilters({ ...filters, status })} />
       <Select aria-label="Loại nấm" allowClear placeholder="Loại nấm" style={{ width: 190 }} loading={mushrooms.isLoading} options={mushrooms.data?.map(m => ({ value: m.mushroom_type_id, label: m.name }))} onChange={mushroomTypeId => setFilters({ ...filters, mushroomTypeId })} />

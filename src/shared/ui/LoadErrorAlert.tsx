@@ -34,7 +34,7 @@ export function LoadErrorAlert({
 
   const description =
     status === 404
-      ? `Không thể tải ${resource} (Mã lỗi 404: Endpoint phía máy chủ chưa sẵn sàng)`
+      ? `Không thể tải ${resource}. Dữ liệu chưa có hoặc không còn tồn tại.`
       : `Không thể tải ${resource}: ${resolveApiErrorMessage(error, `tải ${resource}`)}`
 
   return (

@@ -213,10 +213,9 @@ export function ReportsAnalyticsPage() {
             Báo cáo & Phân tích Điều hành
           </Flex>
         }
-        description="Số liệu vận hành và doanh thu đã thu, tổng hợp trực tiếp từ hệ thống (chế độ chỉ đọc)."
+        description="Số liệu vận hành và doanh thu đã thu."
         actions={
           <Space wrap>
-            <StatusBadge tone="info" label="Chế độ chỉ đọc" />
             <StatusBadge
               tone="info"
               label={`${formatReportNumber(analytics.totalSessions)} phiên canh tác`}

@@ -437,7 +437,7 @@ export function SessionListPage() {
        */}
       <PageHeader
         title="Quản lý phiên canh tác"
-        description="Theo dõi toàn bộ phiên canh tác của mọi khách hàng — khay đã gán, giai đoạn sinh trưởng, tiến độ và trạng thái thu hoạch. Chỉ đọc."
+        description="Theo dõi toàn bộ phiên canh tác của mọi khách hàng — khay đã gán, giai đoạn sinh trưởng, tiến độ và trạng thái thu hoạch."
         actions={
           <Space wrap>
             <Input

@@ -222,12 +222,7 @@ export function UserManagementPage() {
 
   return (
     <div>
-      <PageHeader title="Quản lý tài khoản"  actions={<Flex align="center" gap={8} wrap>
-          <MetadataBadge  label="Chỉ xem" />
-          <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-            Việc tạo / khoá tài khoản do nhân viên thực hiện trên ứng dụng nhân viên.
-          </Typography.Text>
-        </Flex>} />
+      <PageHeader title="Quản lý tài khoản" />
 
       <StatGrid columns={3}>
         <StatCard

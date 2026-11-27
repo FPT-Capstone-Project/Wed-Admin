@@ -630,11 +630,6 @@ export function DeviceControlPanel() {
             <span>Cấu hình tưới phun sương tự động</span>
           </Flex>
         }
-        extra={
-          <MetadataBadge  label={<>
-            Chỉ xem
-          </>} />
-        }
         style={{ marginBottom: 16 }}
         styles={{ body: { padding: 12 } }}
       >

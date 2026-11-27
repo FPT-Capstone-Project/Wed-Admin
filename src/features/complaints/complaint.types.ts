@@ -22,6 +22,9 @@ export interface Complaint {
   resolved_at: string | null
 }
 export interface ComplaintReply {
+  image_urls?: string[]
+  media_url?: string | null
+  sender_role?: string | null
   reply_id: number
   complaint_id: number
   sender_id: number

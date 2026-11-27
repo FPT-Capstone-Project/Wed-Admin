@@ -535,12 +535,6 @@ function SessionDetailContent({
         ]}
       />
 
-      <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-        Trang quản trị chỉ quan sát dữ liệu. Việc ghi nhận tiến độ, kiểm tra
-        phôi, thu hoạch và chuyển giai đoạn được thực hiện trên ứng dụng của
-        nhân viên.
-      </Typography.Text>
-
       <SessionGalleryModal
         open={galleryOpen}
         onCancel={() => setGalleryOpen(false)}

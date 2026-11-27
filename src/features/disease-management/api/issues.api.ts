@@ -17,6 +17,7 @@ export interface Issue {
   reported_growth_stage: string | null; environment_snapshot: Record<string, unknown> | null
 }
 export interface ConversationMessage {
+  sender_id: number | null; sender_role_id: number | null; sender_role: string | null
   id: string; sender_name: string | null; created_at: string | null; message: string | null; media_url: string | null
   type: string | null; diagnosis: string | null; solution: string | null
 }

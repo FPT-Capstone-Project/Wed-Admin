@@ -341,7 +341,7 @@ export function OrderManagementPage() {
     <div>
       <PageHeader
         title="Quản lý đơn hàng"
-        description="Theo dõi đơn khách đặt từ ứng dụng — trạng thái thanh toán, tiến độ canh tác và lịch sử kiểm tra phôi. Chế độ chỉ xem."
+        description="Theo dõi đơn khách đặt từ ứng dụng — trạng thái thanh toán, tiến độ canh tác và lịch sử kiểm tra phôi."
         actions={
           <StatusBadge
             tone="warning"

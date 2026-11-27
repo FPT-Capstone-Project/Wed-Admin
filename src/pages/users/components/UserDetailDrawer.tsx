@@ -75,12 +75,6 @@ export function UserDetailDrawer({
         open={userId !== null}
         onClose={onClose}
         destroyOnHidden
-        extra={
-          <MetadataBadge
-
-            label="Chỉ xem"
-          />
-        }
       >
         {isLoading && !detail ? (
           <Skeleton active paragraph={{ rows: 6 }} />

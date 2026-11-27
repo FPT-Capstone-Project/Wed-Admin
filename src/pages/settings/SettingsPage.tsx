@@ -1,9 +1,8 @@
-import { Card,Space } from 'antd'
+import { Card } from 'antd'
 import { useMemo } from 'react'
 import { useAuthStore } from '../../features/auth/store/auth.store'
 import { useCustomerMushroomTypeIds } from '../../features/settings/hooks/useCustomerMushroomTypeIds'
 import { useThresholdProfiles } from '../../features/settings/hooks/useThresholdProfiles'
-import { MetadataBadge } from '../../shared/ui'
 import { PageHeader } from '../../shared/ui/PageHeader'
 import { ThresholdProfileTab } from './components/ThresholdProfileTab'
 
@@ -33,7 +32,6 @@ export function SettingsPage() {
   const authUser = useAuthStore((state) => state.user)
 
   const role = normalizeRole(authUser?.role)
-  const isAdmin = role === 'ADMIN'
   const isCustomer = role === 'CUSTOMER'
 
   // Chỉ khách hàng mới bị giới hạn theo vụ thuê của mình.
@@ -49,17 +47,7 @@ export function SettingsPage() {
 
   return (
     <div>
-      <PageHeader title="Hồ sơ Vi khí hậu & Ngưỡng AUTO" description="Theo dõi dải thông số nhiệt độ và độ ẩm chuẩn đang áp dụng cho từng giống nấm." actions={<Space wrap>
-          <MetadataBadge
-
-            label={isAdmin
-              ? 'ADMIN · Chỉ xem'
-              : role === 'OPERATOR'
-                ? 'OPERATOR · Chỉ xem'
-                : 'CUSTOMER · Chỉ xem'}
-          />
-          <MetadataBadge  label="Chỉ xem" />
-        </Space>} />
+      <PageHeader title="Hồ sơ Vi khí hậu & Ngưỡng AUTO" description="Theo dõi dải thông số nhiệt độ và độ ẩm chuẩn đang áp dụng cho từng giống nấm." />
 
       <Card
         style={{

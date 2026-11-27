@@ -1,5 +1,7 @@
+import { ConversationThread } from '../../../shared/ui/ConversationThread'
+import { conversationSide } from '../../../shared/ui/conversation-sender'
 import { useRef, useState } from 'react'
-import { App, Alert, Button, Card, Descriptions, Drawer, Empty, Flex, Form, Image, Input, Popconfirm, Segmented, Select, Skeleton, Space, Tabs, Typography } from 'antd'
+import { App, Alert, Button, Card, Descriptions, Drawer, Flex, Form, Image, Input, Popconfirm, Segmented, Select, Skeleton, Space, Tabs, Typography } from 'antd'
 import { ReloadOutlined } from '@ant-design/icons'
 import type { UserWithRole } from '../../../types/user.types'
 import { LoadErrorAlert } from '../../../shared/ui/LoadErrorAlert'
@@ -59,12 +61,18 @@ function ComplaintDetailContent({ complaint, users, canListUsers, usersFailed }:
 
   </Flex>
   const conversation = <Card size="small" title={`Lịch sử trao đổi${complaint.replies.length > 0 ? ` (${complaint.replies.length})` : ''}`}>
-      <Typography.Paragraph type="secondary">Quản trị viên chỉ theo dõi lịch sử trao đổi giữa khách hàng và nhân viên vận hành.</Typography.Paragraph>
-      {complaint.replies.length ? <Flex vertical gap={12}>{[...complaint.replies].sort((a, b) => (Date.parse(a.created_at) || 0) - (Date.parse(b.created_at) || 0) || a.reply_id - b.reply_id).map(reply => <div key={reply.reply_id} style={{ padding: 12, border: '1px solid var(--mcms-border)', borderRadius: 6, background: reply.sender_role_id === 3 ? 'var(--mcms-surface)' : 'var(--mcms-surface-muted)' }}>
-        <Space wrap><Typography.Text strong>{reply.sender_name}</Typography.Text><Typography.Text type="secondary">{reply.sender_role_id === 3 ? 'Khách hàng' : reply.sender_role_id === 1 ? 'Quản trị viên' : reply.sender_role_id === 2 ? 'Nhân viên vận hành' : 'Người dùng'}</Typography.Text></Space>
-        <div><Typography.Text type="secondary" style={{ fontSize: 12 }}>{complaintDate(reply.created_at)}</Typography.Text></div>
-        <Typography.Paragraph style={{ marginBottom: 0, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{reply.message}</Typography.Paragraph>
-      </div>)}</Flex> : <Empty description="Chưa có trao đổi" image={Empty.PRESENTED_IMAGE_SIMPLE} />}
+      <ConversationThread messages={[...complaint.replies]
+        .sort((a, b) => (Date.parse(a.created_at) || 0) - (Date.parse(b.created_at) || 0) || a.reply_id - b.reply_id)
+        .map(reply => {
+          const side = conversationSide({ senderId: reply.sender_id, roleId: reply.sender_role_id, role: reply.sender_role, externalId: complaint.customer_id })
+          return {
+            id: String(reply.reply_id), senderKey: String(reply.sender_id),
+            senderName: reply.sender_name || users.find(user => user.user_id === reply.sender_id)?.full_name || (side === 'left' ? customer?.full_name : reply.sender_id === complaint.assigned_to ? complaint.assigned_staff?.full_name : null) || 'Người gửi',
+            roleLabel: side === 'left' ? 'Khách hàng' : 'Nhân viên', side,
+            createdAt: reply.created_at, content: reply.message,
+            images: [...(reply.image_urls ?? []), ...(reply.media_url ? [reply.media_url] : [])],
+          }
+        })} />
     </Card>
   return <Flex vertical gap={16}>
     <Space wrap><Typography.Text strong>Đơn hàng #{complaint.order_id}</Typography.Text><ComplaintStatusBadge status={complaint.status} /></Space>

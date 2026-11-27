@@ -267,12 +267,8 @@ export function CultivationBatchCard({
             </div>
           )}
 
-          {/* Footer — read-only, chỉ có nút xem */}
-          <Flex align="center" justify="space-between" wrap="wrap" gap={8}>
-            <Typography.Text type="secondary" style={{ fontSize: 12 }}>
-              Chế độ chỉ đọc — dữ liệu lấy trực tiếp từ hệ thống
-            </Typography.Text>
-            {photos.length > 0 && (
+          {photos.length > 0 && (
+            <Flex align="center" justify="flex-end" wrap="wrap" gap={8}>
               <button
                 type="button"
                 className="cultivation-batch-card-cta"
@@ -281,8 +277,8 @@ export function CultivationBatchCard({
                 <PictureOutlined aria-hidden="true" />
                 <span>Mở thư viện ảnh</span>
               </button>
-            )}
-          </Flex>
+            </Flex>
+          )}
         </Flex>
       </Flex>
     </Card>

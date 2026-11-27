@@ -1,6 +1,6 @@
 import { apiClient } from '../../../shared/api/client'
 import { ensureArray, ensureObject } from '../../../shared/api/response-normalizer'
-import { isNotFoundError } from '../../../shared/api/safe-fetch'
+import { fetchOptionalRecord, isNotFoundError } from '../../../shared/api/safe-fetch'
 import {
   normalizeFarmSession,
   normalizeInspection,
@@ -81,29 +81,31 @@ export const farmApi = {
   async getSpawnInspections(
     sessionId: number,
   ): Promise<SpawnInspectionHistory | null> {
-    const response = await apiClient.get<unknown>(
-      `${BASE}/${sessionId}/spawn-inspections`,
-    )
-    const obj = ensureObject<Record<string, unknown>>(response.data)
-    if (!obj) return null
+    return fetchOptionalRecord(async () => {
+      const response = await apiClient.get<unknown>(
+        `${BASE}/${sessionId}/spawn-inspections`,
+      )
+      const obj = ensureObject<Record<string, unknown>>(response.data)
+      if (!obj) return null
 
-    const inspections = ensureArray<unknown>(
-      obj.inspections ?? obj.data ?? obj,
-    ).map((item) => normalizeInspection(item))
+      const inspections = ensureArray<unknown>(
+        obj.inspections ?? obj.data ?? obj,
+      ).map((item) => normalizeInspection(item))
 
-    return {
-      session_id: pickNumber(obj, 'session_id', 'sessionId') ?? sessionId,
-      inspections,
-      total_checked: pickNumber(obj, 'totalChecked', 'total_checked'),
-      normal_quantity: pickNumber(obj, 'normalQuantity', 'normal_quantity'),
-      warning_quantity: pickNumber(obj, 'warningQuantity', 'warning_quantity'),
-      abnormal_quantity: pickNumber(obj, 'abnormalQuantity', 'abnormal_quantity'),
-      replacement_quantity: pickNumber(
-        obj,
-        'replacementQuantity',
-        'replacement_quantity',
-      ),
-    }
+      return {
+        session_id: pickNumber(obj, 'session_id', 'sessionId') ?? sessionId,
+        inspections,
+        total_checked: pickNumber(obj, 'totalChecked', 'total_checked'),
+        normal_quantity: pickNumber(obj, 'normalQuantity', 'normal_quantity'),
+        warning_quantity: pickNumber(obj, 'warningQuantity', 'warning_quantity'),
+        abnormal_quantity: pickNumber(obj, 'abnormalQuantity', 'abnormal_quantity'),
+        replacement_quantity: pickNumber(
+          obj,
+          'replacementQuantity',
+          'replacement_quantity',
+        ),
+      }
+    })
   },
 }
 

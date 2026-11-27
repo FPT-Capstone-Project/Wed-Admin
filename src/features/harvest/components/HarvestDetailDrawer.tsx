@@ -106,7 +106,7 @@ export function HarvestDetailDrawer({ id, onClose }: { id: number; onClose: () =
   ] : []
 
   return (
-    <Drawer open title={`Chi tiết thu hoạch #${id} · Chỉ xem`} onClose={onClose} size={720}>
+    <Drawer open title={`Chi tiết thu hoạch #${id}`} onClose={onClose} size={720}>
       <QueryFeedback query={query} />
       {!query.isError && h && (
         <Descriptions

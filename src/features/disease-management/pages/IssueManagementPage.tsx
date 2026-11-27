@@ -16,7 +16,7 @@ export function IssueManagementPage() {
   const [filters, setFilters] = useState<IssueQuery>({ page: 1, pageSize: 20 })
   const [selected, setSelected] = useState<number | null>(null)
   const query = useIssues(filters)
-  return <div><PageHeader title="Sự cố & Bệnh hại" description="Giám sát sự cố, theo dõi tư vấn chuyên gia và lịch sử xử lý. Quản trị viên chỉ xem dữ liệu." actions={<Button onClick={() => void query.refetch()} loading={query.isFetching}>Tải lại</Button>} />
+  return <div><PageHeader title="Sự cố & Bệnh hại" description="Giám sát sự cố, theo dõi tư vấn chuyên gia và lịch sử xử lý." actions={<Button onClick={() => void query.refetch()} loading={query.isFetching}>Tải lại</Button>} />
     <Flex gap={12} wrap style={{ marginBottom: 16 }}>
       <Select aria-label="Trạng thái ca bệnh" placeholder="Trạng thái" allowClear style={{ width: 200 }} options={ISSUE_STATUSES.map(value => ({ value, label: statusLabel(ISSUE_STATUS_DICTIONARY, value) }))} onChange={status => setFilters({ ...filters, status, page: 1 })} />
       <Select aria-label="Mức độ nghiêm trọng" placeholder="Mức độ nghiêm trọng" allowClear style={{ width: 200 }} options={['HIGH', 'MEDIUM', 'LOW'].map(value => ({ value, label: statusLabel(ISSUE_SEVERITY_DICTIONARY, value) }))} onChange={severity => setFilters({ ...filters, severity, page: 1 })} />
